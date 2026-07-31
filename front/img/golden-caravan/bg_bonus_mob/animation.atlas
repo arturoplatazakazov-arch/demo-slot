@@ -1,0 +1,11 @@
+animation.png
+size:350,249
+filter:Linear,Linear
+blik_front
+bounds:2,2,245,262
+offsets:7,0,260,262
+rotate:90
+blik_heart2_png
+bounds:266,164,83,82
+offsets:10,9,100,100
+rotate:90

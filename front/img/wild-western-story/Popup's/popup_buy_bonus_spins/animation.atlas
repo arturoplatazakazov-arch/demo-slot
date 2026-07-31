@@ -1,0 +1,24 @@
+animation.png
+size:1871,1000
+filter:Linear,Linear
+pma:true
+BG
+bounds:1868,997,1,1
+acept
+bounds:725,20,191,191
+bg_buy_bonus
+bounds:2,213,1204,785
+buy_bonus 1
+bounds:1208,539,658,459
+cancel
+bounds:918,20,191,191
+input
+bounds:2,2,721,209
+ray_rounded
+bounds:1569,302,260,235
+rays
+bounds:1208,63,359,236
+rays 1
+bounds:1208,301,359,236
+star
+bounds:1569,46,259,254

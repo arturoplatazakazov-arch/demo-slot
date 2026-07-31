@@ -1,0 +1,388 @@
+/* ================================================================
+   Golden Caravan — нижний UI-бар V3
+   Макет: Figma "V3" (file wwwNxOL5m90TfwzYbOS1eD, node 396:1961).
+
+   Грузится ПОСЛЕ golden-caravan.css и переопределяет только бар.
+   Размеры сняты с нативного рендера макета (мобильный фрейм 780px
+   native = 390 CSS, т.е. 2x): круглая кнопка d=48, spin d=100,
+   боковой отступ 10, шаг между кнопками в группе 16, центр кнопок
+   ~91px от низа экрана, строка BALANCE/BET ~18px от низа.
+   ================================================================ */
+
+:root {
+  --v3-green: #20d01e;          /* активное состояние (турбо, авто, ставка) */
+  --v3-green-lt: #cefc58;       /* верх градиента у активных цифр */
+  --v3-gold-lt: #fbe764;        /* кольцо SPIN, светлая часть */
+  --v3-gold-dk: #8d5908;        /* кольцо SPIN, тёмная часть */
+  --v3-ring: rgba(255, 255, 255, 0.92);
+  --v3-fill: rgba(8, 10, 9, 0.62);
+  --v3-panel: rgba(16, 18, 22, 0.92);
+  --v3-btn: 48px;
+  --v3-spin: 100px;
+  /* Отступ ряда кнопок от низа. Тултипы считаются от него же, поэтому при
+     сдвиге кнопок они едут следом (см. .v3-tip / .v3-chips). */
+  --v3-row-bottom: 41px;
+  --v3-font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Baloo 2', sans-serif;
+}
+
+/* Бар стал плавающим оверлеем, а не отдельной строкой в потоке — .screen
+   растягивается на всю высоту, и slot.js (readCellDims/--stage-scale от
+   screenEl.clientHeight) сам пересчитывает масштаб сцены под неё. */
+body.v3 .screen { flex: 1 1 auto; }
+
+.v3-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  height: 190px;
+  font-family: var(--v3-font);
+  /* Затемнение к низу, чтобы кнопки читались на любом фоне барабанов. */
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.35) 38%,
+    rgba(0, 0, 0, 0.78) 66%,
+    rgba(0, 0, 0, 0.95) 100%
+  );
+  pointer-events: none;   /* кликабельны только сами контролы */
+}
+.v3-bar > * { pointer-events: auto; }
+
+/* ---------- Ряд круглых кнопок ---------- */
+.v3-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--v3-row-bottom);
+  height: var(--v3-spin);
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.v3-group { display: flex; align-items: center; gap: 16px; }
+
+/* Базовая круглая кнопка. Переопределяет .ui-icon-btn из golden-caravan.css
+   (класс сохранён — на него завязаны клик-звуки в app.js:setupClickSounds). */
+.v3-bar .ui-icon-btn.v3-btn,
+.v3-bar .ui-icon-btn.v3-tip__step {
+  position: relative;
+  width: var(--v3-btn);
+  height: var(--v3-btn);
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 2px solid var(--v3-ring);
+  background: var(--v3-fill);
+  backdrop-filter: blur(2px);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition: border-color 0.18s ease, color 0.18s ease,
+              box-shadow 0.18s ease, transform 0.1s ease;
+}
+.v3-bar .ui-icon-btn.v3-btn svg,
+.v3-bar .ui-icon-btn.v3-tip__step svg { width: 56%; height: 56%; }
+.v3-bar .ui-icon-btn.v3-btn:active,
+.v3-bar .ui-icon-btn.v3-tip__step:active { transform: scale(0.93); }
+
+/* Активное (зелёное) состояние — общий язык макета: включено = зелёное. */
+.v3-bar .ui-icon-btn.v3-btn.is-active {
+  border-color: var(--v3-green);
+  color: var(--v3-green);
+  box-shadow: 0 0 12px rgba(32, 208, 30, 0.55),
+              inset 0 0 10px rgba(32, 208, 30, 0.25);
+}
+
+/* Оранжевая точка на гамбургере, пока меню раскрыто. */
+.v3-btn__dot {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f0921e;
+  opacity: 0;
+  transform: scale(0.4);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.v3-btn--menu.is-open .v3-btn__dot { opacity: 1; transform: scale(1); }
+
+/* ---------- Флайаут меню (home / sound / info) ---------- */
+.v3-menu { position: relative; }
+.v3-menu__flyout {
+  position: absolute;
+  left: 0;
+  bottom: calc(var(--v3-btn) + 12px);
+  display: flex;
+  flex-direction: column-reverse;   /* info ближе всего к гамбургеру */
+  gap: 12px;
+}
+/* Специфичность здесь намеренно завышена: в golden-caravan.css есть
+   `.ui-icon-btn[data-action="sound"].is-muted { opacity: .4 }` (0,3,0), и с
+   более коротким селектором выключенный звук оставался виден на 40% даже
+   после закрытия меню. В V3 приглушения нет вовсе — состояние mute показано
+   красной обводкой и перечёркнутым динамиком, а прозрачностью распоряжается
+   только флайаут. */
+.v3-bar .v3-menu .v3-menu__flyout > .ui-icon-btn.v3-btn {
+  opacity: 0;
+  transform: translateY(14px) scale(0.8);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.22s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.v3-bar .v3-menu.is-open .v3-menu__flyout > .ui-icon-btn.v3-btn {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+/* Лесенка — кнопки вылетают одна за другой снизу вверх. */
+.v3-menu.is-open .v3-menu__flyout > .v3-btn:nth-child(3) { transition-delay: 0.00s; }
+.v3-menu.is-open .v3-menu__flyout > .v3-btn:nth-child(2) { transition-delay: 0.05s; }
+.v3-menu.is-open .v3-menu__flyout > .v3-btn:nth-child(1) { transition-delay: 0.10s; }
+
+/* Выключенный звук — красная обводка и перечёркнутый динамик
+   (.is-muted вешает sound.js:updateSoundIcon). */
+.v3-bar .ui-icon-btn.v3-btn--sound .v3-slash { opacity: 0; transition: opacity 0.15s ease; }
+.v3-bar .ui-icon-btn.v3-btn--sound.is-muted {
+  border-color: #e0453b;
+  color: #e0453b;
+  box-shadow: 0 0 12px rgba(224, 69, 59, 0.45);
+}
+.v3-bar .ui-icon-btn.v3-btn--sound.is-muted .v3-wave { opacity: 0; }
+.v3-bar .ui-icon-btn.v3-btn--sound.is-muted .v3-slash { opacity: 1; }
+
+/* ---------- Кнопка SPIN ---------- */
+.v3-bar .ui-spin-btn.v3-spin {
+  position: relative;
+  width: var(--v3-spin);
+  height: var(--v3-spin);
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 42%, #262323 0%, #171515 62%, #0f0d0d 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  /* Мягкий ореол вокруг кнопки, как в макете. */
+  box-shadow: 0 0 0 10px rgba(255, 255, 255, 0.05),
+              0 10px 26px rgba(0, 0, 0, 0.55);
+  transition: transform 0.1s ease;
+}
+.v3-bar .ui-spin-btn.v3-spin:active { transform: scale(0.95); }
+
+/* Золотое кольцо — отдельным слоем, чтобы дать градиент по кругу. */
+.v3-spin__ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  padding: 4px;
+  background: conic-gradient(
+    from 210deg,
+    var(--v3-gold-dk) 0deg,
+    var(--v3-gold-lt) 90deg,
+    var(--v3-gold-dk) 190deg,
+    var(--v3-gold-lt) 300deg,
+    var(--v3-gold-dk) 360deg
+  );
+  /* Кольцо, а не диск: вырезаем середину. */
+  -webkit-mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  pointer-events: none;
+}
+.v3-bar .ui-spin-btn.v3-spin .v3-spin__icon { width: 54%; height: 54%; }
+/* Крутится только иконка (.is-spinning вешает app.js:runSpin). */
+.v3-bar .ui-spin-btn.v3-spin.is-spinning .v3-spin__icon { animation: spin-rotate 0.7s linear infinite; }
+
+/* Со счётчиком стрелки расходятся шире, освобождая середину под цифры —
+   как в макете, где число стоит ровно между дугами. */
+.v3-bar .ui-spin-btn.v3-spin.has-count .v3-spin__icon { width: 74%; height: 74%; }
+
+/* Счётчик автоспинов внутри кольца — между стрелками. */
+.v3-spin__count {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #fff;
+  pointer-events: none;
+}
+
+/* ---------- Тултип ставки ---------- */
+.v3-tip {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: calc(var(--v3-row-bottom) + var(--v3-spin) + 11px);   /* над рядом кнопок */
+  height: 72px;
+  padding: 0 12px;
+  border-radius: 16px;
+  background: var(--v3-panel);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.v3-tip[hidden] { display: none; }
+/* Хвостик, указывающий на кнопку ставки. */
+.v3-tip--bet::after {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  right: 22px;
+  width: 20px;
+  height: 20px;
+  background: var(--v3-panel);
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  transform: rotate(45deg);
+  border-bottom-right-radius: 4px;
+}
+.v3-tip__field {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+}
+.v3-tip__label {
+  font-size: 15px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.82);
+  letter-spacing: 0.4px;
+}
+.v3-tip__amount {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  letter-spacing: -0.3px;
+}
+.v3-tip__amount .ui-bet-field__currency { font-size: 24px; font-weight: 700; opacity: 1; }
+/* Степперы в тултипе — та же круглая кнопка, чуть крупнее иконка. */
+.v3-bar .ui-icon-btn.v3-tip__step { border-width: 2px; }
+.v3-bar .ui-icon-btn.v3-tip__step:disabled { opacity: 0.35; cursor: default; }
+
+/* ---------- Чипы автоспинов ---------- */
+.v3-chips {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: calc(var(--v3-row-bottom) + var(--v3-spin) + 11px);
+  height: 58px;
+  display: flex;
+  gap: 12px;
+}
+.v3-chips[hidden] { display: none; }
+.v3-chip {
+  flex: 1 1 0;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  background: rgba(16, 18, 22, 0.9);
+  color: #fff;
+  font-family: var(--v3-font);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.1s ease;
+}
+.v3-chip:active { transform: scale(0.96); }
+.v3-chip.is-active {
+  border-color: var(--v3-green);
+  color: var(--v3-green);
+  box-shadow: 0 0 14px rgba(32, 208, 30, 0.5), inset 0 0 12px rgba(32, 208, 30, 0.18);
+}
+
+/* ---------- Строка BALANCE / BET ---------- */
+.v3-readout {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  padding: 0 14px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.v3-readout__col { display: flex; flex-direction: column; gap: 2px; }
+.v3-readout__col--right { align-items: flex-end; }
+.v3-readout__label {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.6px;
+  color: rgba(255, 255, 255, 0.72);
+}
+.v3-readout__value {
+  font-size: 21px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+}
+.v3-readout__value .ui-balance__currency,
+.v3-readout__value .v3-readout__cur { font-size: 21px; font-weight: 700; opacity: 1; }
+
+/* ---------- Мобильный портрет ----------
+   Затемнение вдвое выше, ряд кнопок поднят на 50px от исходных 41px. */
+@media (max-width: 559px) {
+  .v3-bar {
+    height: 380px;
+    --v3-row-bottom: 91px;
+    /* 1.5× от базовых 48/100. Ряду при этом нужно 4*72 + 150 + 32 = 470px,
+       поэтому на узких телефонах (375–500px) размер упирается в ширину
+       экрана и дальше едет по vw — иначе кнопки просто вылезли бы за край. */
+    --v3-btn: min(72px, 13.4vw);
+    --v3-spin: min(150px, 28vw);
+  }
+}
+
+/* ---------- Узкие экраны ---------- */
+@media (max-width: 420px) {
+  .v3-tip__amount, .v3-tip__amount .ui-bet-field__currency { font-size: 21px; }
+  .v3-chip { font-size: 26px; }
+  .v3-readout__value,
+  .v3-readout__value .ui-balance__currency,
+  .v3-readout__value .v3-readout__cur { font-size: 19px; }
+}
+
+/* ---------- Широкий экран ----------
+   В десктопных фреймах макета кнопки собраны компактным кластером вокруг
+   SPIN по центру, а BALANCE/BET разведены по нижним углам — в отличие от
+   портрета, где ряд кнопок растянут на всю ширину экрана телефона. Без
+   этого на широком мониторе кнопки уезжают в дальние углы. */
+@media (min-width: 560px) {
+  .v3-bar { --v3-row-bottom: 21px; }   /* на 20px ниже исходных 41px */
+  .v3-row {
+    justify-content: center;
+    gap: 24px;                     /* от группы до SPIN */
+  }
+  .v3-tip, .v3-chips {
+    left: 50%;
+    right: auto;
+    width: 460px;
+    transform: translateX(-50%);
+  }
+  .v3-tip--bet::after { right: auto; left: 50%; margin-left: -10px; }
+}
+
+/* ---------- Низкий лендшафт: бар компактнее, чтобы не съедать барабаны ---------- */
+@media (orientation: landscape) and (max-height: 560px) {
+  .v3-bar { height: 150px; --v3-row-bottom: 14px; }
+}

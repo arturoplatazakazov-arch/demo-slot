@@ -1,0 +1,109 @@
+animation.png
+size:586,523
+filter:Linear,Linear
+pma:true
+BG
+bounds:288,360,154,161
+Comp 1_00001
+bounds:509,146,8,5
+Comp 1_00002
+bounds:180,70,11,8
+Comp 1_00003
+bounds:575,129,15,9
+rotate:90
+Comp 1_00004
+bounds:422,238,21,13
+Comp 1_00005
+bounds:417,2,27,17
+Comp 1_00006
+bounds:395,2,31,20
+rotate:90
+Comp 1_00007
+bounds:422,253,37,23
+rotate:90
+Comp 1_00008
+bounds:431,21,41,27
+Comp 1_00009
+bounds:551,46,45,33
+rotate:90
+Comp 1_00010
+bounds:393,35,48,36
+rotate:90
+Comp 1_00011
+bounds:353,32,49,38
+rotate:90
+Comp 1_00012
+bounds:312,27,51,39
+rotate:90
+Comp 1_00013
+bounds:495,49,54,42
+Comp 1_00014
+bounds:437,50,56,43
+Comp 1_00015
+bounds:524,146,58,44
+Comp 1_00016
+bounds:524,192,60,46
+Comp 1_00017
+bounds:359,158,62,47
+rotate:90
+Comp 1_00018
+bounds:408,158,62,48
+rotate:90
+Comp 1_00019
+bounds:458,153,64,49
+Comp 1_00020
+bounds:458,204,63,51
+Comp 1_00021
+bounds:509,93,64,51
+Comp 1_00022
+bounds:367,222,66,53
+rotate:90
+Comp 1_00023
+bounds:260,80,68,54
+rotate:90
+Comp 1_00024
+bounds:527,316,69,56
+rotate:90
+Comp 1_00025
+bounds:437,95,70,56
+Comp 1_00026
+bounds:377,85,71,58
+rotate:90
+Comp 1_00027
+bounds:316,83,73,59
+rotate:90
+Comp 1_00028
+bounds:447,257,74,60
+Comp 1_00029
+bounds:523,240,74,60
+rotate:90
+Comp 1_00030
+bounds:236,16,74,62
+Comp 1_00031
+bounds:282,158,75,62
+Comp 1_00032
+bounds:2,2,76,64
+Comp 1_00033
+bounds:80,2,76,64
+Comp 1_00034
+bounds:158,2,76,64
+Comp 1_00035
+bounds:368,292,77,66
+Comp 1_00036
+bounds:288,222,77,66
+Comp 1_00037
+bounds:447,319,78,66
+Comp 1_00038
+bounds:288,290,78,68
+Comp 1_00039
+bounds:180,80,78,68
+blik_heart2_png
+bounds:180,150,100,100
+cloud
+bounds:2,252,284,269
+gun
+bounds:444,387,138,134
+ramka
+bounds:2,68,176,182
+rul
+bounds:353,2,40,28

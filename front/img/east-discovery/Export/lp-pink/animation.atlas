@@ -1,0 +1,22 @@
+animation.png
+size:676,199
+filter:Linear,Linear
+1light 2
+bounds:571,67,86,61
+offsets:7,6,100,72
+a_new_blick
+bounds:2,2,235,195
+offsets:15,22,250,250
+green_veer_luck
+bounds:571,8,57,57
+offsets:3,3,63,63
+pink_veer
+bounds:239,10,187,159
+rotate:90
+pink_veer_kist
+bounds:571,130,103,67
+offsets:1,0,104,67
+veer_back
+bounds:400,22,175,169
+offsets:6,1,185,170
+rotate:90

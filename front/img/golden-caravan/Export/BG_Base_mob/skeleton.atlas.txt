@@ -1,0 +1,6 @@
+skeleton.png
+size:894,1451
+filter:Linear,Linear
+base_derevo_mob
+bounds:2,2,890,1447
+offsets:92,30,1049,1500

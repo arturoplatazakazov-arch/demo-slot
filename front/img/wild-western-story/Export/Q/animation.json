@@ -1,0 +1,151 @@
+{
+"skeleton": {
+	"hash": "+Z3fl5VjkPI",
+	"spine": "4.1-from-4.2.43",
+	"x": -161.9,
+	"y": -192.51,
+	"width": 323.81,
+	"height": 385.01,
+	"images": "./img/",
+	"audio": "./audio"
+},
+"bones": [
+	{ "name": "root" },
+	{ "name": "main", "parent": "root" },
+	{ "name": "bone_west_q", "parent": "main" },
+	{ "name": "bone_west_q_blik", "parent": "bone_west_q", "x": 46.34, "y": 12.85 },
+	{ "name": "bone_west_q_blik2", "parent": "bone_west_q", "x": -62.18, "y": 11.56 },
+	{ "name": "bone_west_fone", "parent": "bone_west_q" }
+],
+"slots": [
+	{ "name": "свечение_за_коммонки_маленькое_зеленое", "bone": "bone_west_fone", "color": "ffffff00", "attachment": "blik_2", "blend": "screen" },
+	{ "name": "Q", "bone": "bone_west_q", "attachment": "Q" },
+	{ "name": "Q2", "bone": "bone_west_q", "color": "fdff0000", "attachment": "Q", "blend": "additive" },
+	{ "name": "blik_heart2_png", "bone": "bone_west_q_blik", "color": "ffffff00", "attachment": "blik_heart2_png", "blend": "additive" },
+	{ "name": "blik_heart2_png2", "bone": "bone_west_q_blik2", "color": "ffffff00", "attachment": "blik_heart2_png", "blend": "additive" },
+	{ "name": "static", "bone": "root" }
+],
+"skins": [
+	{
+		"name": "default",
+		"attachments": {
+			"blik_heart2_png": {
+				"blik_heart2_png": { "x": -1.44, "y": -0.47, "scaleX": 0.7553, "scaleY": 0.7553, "width": 100, "height": 100 }
+			},
+			"blik_heart2_png2": {
+				"blik_heart2_png": { "x": -1.44, "y": -0.47, "scaleX": 0.7553, "scaleY": 0.7553, "width": 100, "height": 100 }
+			},
+			"Q": {
+				"Q": { "width": 160, "height": 174 }
+			},
+			"Q2": {
+				"Q": { "width": 160, "height": 174 }
+			},
+			"свечение_за_коммонки_маленькое_зеленое": {
+				"blik_2": { "scaleX": 1.619, "scaleY": 1.9251, "width": 200, "height": 200 }
+			}
+		}
+	}
+],
+"animations": {
+	"win": {
+		"slots": {
+			"blik_heart2_png": {
+				"rgba": [
+					{ "color": "ffffff00" },
+					{ "time": 0.3333, "color": "ffffffff" },
+					{ "time": 0.6667, "color": "ffffff00" }
+				]
+			},
+			"blik_heart2_png2": {
+				"rgba": [
+					{ "time": 0.3333, "color": "ffffff00" },
+					{ "time": 0.6667, "color": "ffffffff" },
+					{ "time": 1, "color": "ffffff00" }
+				]
+			},
+			"Q2": {
+				"rgba": [
+					{
+						"color": "fdff0000",
+						"curve": [ 0.222, 0.99, 0.444, 0.99, 0.222, 1, 0.444, 1, 0.222, 0, 0.444, 0, 0.222, 0, 0.444, 0.52 ]
+					},
+					{
+						"time": 0.6667,
+						"color": "fdff0086",
+						"curve": [ 0.878, 0.99, 1.089, 0.99, 0.878, 1, 1.089, 1, 0.878, 0, 1.089, 0, 0.878, 0.52, 1.089, 0 ]
+					},
+					{ "time": 1.3, "color": "fdff0000" }
+				]
+			},
+			"свечение_за_коммонки_маленькое_зеленое": {
+				"rgba": [
+					{
+						"color": "ffffff00",
+						"curve": [ 0.222, 1, 0.444, 1, 0.222, 1, 0.444, 1, 0.222, 1, 0.444, 1, 0.222, 0, 0.444, 1 ]
+					},
+					{
+						"time": 0.6667,
+						"color": "ffffffff",
+						"curve": [ 0.878, 1, 1.089, 1, 0.878, 1, 1.089, 1, 0.878, 1, 1.089, 1, 0.878, 1, 1.089, 0 ]
+					},
+					{ "time": 1.3, "color": "ffffff00" }
+				]
+			}
+		},
+		"bones": {
+			"bone_west_q": {
+				"rotate": [
+					{
+						"curve": [ 0.111, 1.75, 0.222, 5 ]
+					},
+					{
+						"time": 0.3333,
+						"value": 5,
+						"curve": [ 0.556, 5, 0.778, -5 ]
+					},
+					{
+						"time": 1,
+						"value": -5,
+						"curve": [ 1.1, -5, 1.2, -1.58 ]
+					},
+					{ "time": 1.3 }
+				],
+				"scale": [
+					{
+						"curve": [ 0.222, 1, 0.444, 1.1, 0.222, 1, 0.444, 1.1 ]
+					},
+					{
+						"time": 0.6667,
+						"x": 1.1,
+						"y": 1.1,
+						"curve": [ 0.878, 1.1, 1.089, 1, 0.878, 1.1, 1.089, 1 ]
+					},
+					{ "time": 1.3 }
+				]
+			},
+			"bone_west_fone": {
+				"rotate": [
+					{},
+					{ "time": 1.3, "value": 360 }
+				],
+				"scale": [
+					{
+						"x": 0.5,
+						"y": 0.5,
+						"curve": [ 0.111, 0.5, 0.222, 0.85, 0.111, 0.5, 0.222, 0.85 ]
+					},
+					{ "time": 0.3333, "x": 0.85, "y": 0.85, "curve": "stepped" },
+					{
+						"time": 1.1667,
+						"x": 0.85,
+						"y": 0.85,
+						"curve": [ 1.489, 0.85, 0.978, 0.5, 1.489, 0.85, 0.978, 0.5 ]
+					},
+					{ "time": 1.3, "x": 0.5, "y": 0.5 }
+				]
+			}
+		}
+	}
+}
+}

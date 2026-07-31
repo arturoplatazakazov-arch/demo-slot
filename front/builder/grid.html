@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Конструктор слота — Этап 3</title>
+<link rel="stylesheet" href="builder.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <h1>Конструктор слота — Этап 3: сетка и механики <span id="slotName"></span></h1>
+    <div class="topbar__right">
+      <a class="btn" href="new.html">К списку слотов</a>
+    </div>
+  </header>
+
+  <main class="layout">
+
+    <section class="panel">
+      <h2>Размер сетки</h2>
+      <p class="hint">Число барабанов (колонок) и рядов. Движок сейчас рассчитан на равномерную сетку — одинаковое число рядов на каждом барабане.</p>
+      <form id="gridForm" class="create-form">
+        <div class="form-row">
+          <label>Барабаны (колонки)
+            <input type="number" name="reels" min="1" max="10" value="5" required>
+          </label>
+          <label>Ряды
+            <input type="number" name="rows" min="1" max="10" value="3" required>
+          </label>
+        </div>
+
+        <label>Механики</label>
+        <div class="mechanics-grid" id="mechanicsGrid">
+          <label class="mechanic-option"><input type="checkbox" name="mechanics" value="line_pay" checked id="mechanicLinePay"> Line-pay (линии выплат)</label>
+          <label class="mechanic-option"><input type="checkbox" name="mechanics" value="scatter" checked> Scatter / count-pay</label>
+          <label class="mechanic-option"><input type="checkbox" name="mechanics" value="avalanche" id="mechanicAvalanche"> Avalanche (каскад)</label>
+          <label class="mechanic-option"><input type="checkbox" name="mechanics" value="expanding_wild" id="mechanicExpandingWild"> Expanding Wild</label>
+          <label class="mechanic-option"><input type="checkbox" name="mechanics" value="free_spins"> Free Spins</label>
+          <label class="mechanic-option"><input type="checkbox" name="mechanics" value="hold_and_win" id="mechanicHoldAndWin"> Hold and Win</label>
+          <label class="mechanic-option"><input type="checkbox" name="mechanics" value="bonus_buy"> Bonus Buy</label>
+          <label class="mechanic-option"><input type="checkbox" name="mechanics" value="gamble"> Gamble</label>
+          <label class="mechanic-option"><input type="checkbox" name="mechanics" value="jackpot"> Jackpot</label>
+          <label class="mechanic-option"><input type="checkbox" name="mechanics" value="coin_multiplier"> Coin Multiplier</label>
+        </div>
+
+        <button class="btn btn--primary" type="submit">Сохранить</button>
+      </form>
+      <div class="form-status" id="gridStatus"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Конфиг игры (математика)</h2>
+      <p class="hint">
+        Сетка и механики выше — это только список того, что должно быть в игре. Сама играбельная
+        математика (символы, веса, паутейблы, параметры фич) генерируется отдельно, кнопкой ниже,
+        с индустриально-типовыми значениями по умолчанию — их нужно будет прогнать через симулятор
+        и подстроить в редакторе конфига перед публикацией.
+      </p>
+      <button class="btn btn--primary" id="generateConfigBtn" type="button">Сгенерировать конфиг игры</button>
+      <div class="form-status" id="configStatus"></div>
+      <p class="hint" id="configLink" hidden></p>
+    </section>
+
+    <section class="panel">
+      <h2>Дальше</h2>
+      <p class="hint">Сначала сохрани сетку и механики выше, потом переходи к вёрстке.</p>
+      <button class="btn btn--primary" id="toLayoutBtn" type="button">К вёрстке →</button>
+    </section>
+
+  </main>
+
+  <script src="common.js?v=2"></script>
+  <script src="grid.js?v=2"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+animation.png
+size:1502,1011
+filter:Linear,Linear
+1image
+bounds:857,2,643,1007
+offsets:85,0,800,1100
+1image(2)
+bounds:2,134,875,853
+offsets:66,105,1008,1024
+rotate:90

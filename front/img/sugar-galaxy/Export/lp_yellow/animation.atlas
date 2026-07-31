@@ -1,0 +1,16 @@
+animation.png
+size:706,163
+filter:Linear,Linear
+big-blick
+bounds:2,15,146,250
+offsets:0,0,150,250
+rotate:90
+blur_small_150
+bounds:440,18,143,136
+offsets:5,2,150,150
+rotate:90
+yellow
+bounds:578,35,126,126
+yellow_light
+bounds:254,2,184,159
+offsets:8,21,200,200

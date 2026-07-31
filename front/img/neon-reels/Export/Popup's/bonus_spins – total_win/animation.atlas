@@ -1,0 +1,57 @@
+animation.png
+size:1597,1539
+filter:Linear,Linear
+pma:true
+bg
+bounds:1015,50,645,450
+rotate:90
+coin
+bounds:627,4,90,65
+rotate:90
+coin copy
+bounds:2,2,38,54
+rotate:90
+coin copy 3
+bounds:755,32,62,44
+rotate:90
+coin copy 7
+bounds:755,32,62,44
+rotate:90
+coin_2
+bounds:755,32,62,44
+rotate:90
+coin copy 4
+bounds:801,2,46,44
+coin_4
+bounds:801,2,46,44
+coin copy 5
+bounds:801,48,46,45
+rotate:90
+coin_3
+bounds:801,48,46,45
+rotate:90
+coin copy 6
+bounds:694,22,72,59
+rotate:90
+coin_5
+bounds:694,22,72,59
+rotate:90
+coin_1
+bounds:537,2,92,88
+rotate:90
+dark-bg
+bounds:58,39,1,1
+geisha
+bounds:2,42,349,533
+rotate:90
+input
+bounds:1467,295,400,128
+rotate:90
+rays1
+bounds:2,393,1144,885
+rotate:90
+rays2
+bounds:889,697,840,678
+rotate:90
+text
+bounds:537,96,476,295

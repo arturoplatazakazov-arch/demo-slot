@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Amy's Fruit Farm — Admin</title>
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <h1 id="pageTitle">Amy's Fruit Farm — Game Math Admin</h1>
+    <div class="topbar__right">
+      <div class="topbar__status" id="statusLine">Loading…</div>
+      <a class="btn" href="../games.html">В каталог</a>
+    </div>
+  </header>
+
+  <main class="layout">
+
+    <section class="panel" id="configsPanel">
+      <h2>Config versions</h2>
+      <table class="table" id="configsTable">
+        <thead>
+          <tr><th>Version</th><th>Status</th><th>Target RTP</th><th>Notes</th><th>Created</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <button class="btn" id="editDraftBtn" type="button">Edit draft</button>
+      <span class="hint">Creates a new draft cloned from the active config if none exists yet, otherwise opens the existing one.</span>
+    </section>
+
+    <section class="panel" id="editorPanel" hidden>
+      <h2>Editing draft <span id="draftVersionLabel"></span></h2>
+      <p class="hint">Weights control drop chance (relative, not a percentage — a symbol's chance on a reel is its weight ÷ the sum of all symbols' weights on that reel). Max/reel caps how many of this symbol can land on one reel (blank = no cap). Paytable columns are this symbol's actual match-count keys (exact count-in-a-line for regular/wild, count-anywhere for scatter/bonus, minimum-count threshold for avalanche games) — they vary per symbol and per game, not a fixed ×3/×4/×5.</p>
+
+      <div class="table-scroll">
+        <table class="table" id="symbolsTable">
+          <thead>
+            <tr id="symbolsHeadRow">
+              <th>Symbol</th><th>Type</th><th>Art</th>
+              <!-- reel weight <th>s injected here -->
+              <th id="maxPerReelHeader">Max/reel</th>
+              <!-- paytable <th>s injected here (count columns vary per game/grid size) -->
+            </tr>
+          </thead>
+          <tbody id="symbolsBody"></tbody>
+        </table>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn--primary" id="saveSymbolsBtn" type="button">Save draft changes</button>
+        <span class="save-status" id="saveStatus"></span>
+      </div>
+    </section>
+
+    <section class="panel" id="simPanel" hidden>
+      <h2>Test this draft</h2>
+      <div class="sim-form">
+        <label>Spins
+          <input type="number" id="simSpins" value="100000" min="1" max="5000000" step="1000">
+        </label>
+        <label>Bet amount <span class="hint-inline">(optional — default: config min bet)</span>
+          <input type="number" id="simBet" min="1" step="1" placeholder="min_bet">
+        </label>
+        <label>RNG seed <span class="hint-inline">(optional — for a reproducible run)</span>
+          <input type="number" id="simSeed" step="1" placeholder="random">
+        </label>
+        <button class="btn btn--primary" id="runSimBtn" type="button">Run test</button>
+      </div>
+      <div class="sim-status" id="simStatus"></div>
+
+      <div class="sim-report" id="simReport" hidden>
+        <div class="stat-grid">
+          <div class="stat"><span class="stat__label">RTP</span><span class="stat__value" id="statRtp">—</span><span class="stat__sub" id="statRtpTarget"></span></div>
+          <div class="stat"><span class="stat__label">Hit frequency</span><span class="stat__value" id="statHit">—</span></div>
+          <div class="stat"><span class="stat__label">Bonus frequency</span><span class="stat__value" id="statBonus">—</span></div>
+          <div class="stat"><span class="stat__label">Volatility</span><span class="stat__value" id="statVol">—</span></div>
+          <div class="stat"><span class="stat__label">Max win</span><span class="stat__value" id="statMaxWin">—</span></div>
+          <div class="stat"><span class="stat__label">RTP by mechanic</span><span class="stat__value" id="statRtpMechanic">—</span></div>
+        </div>
+        <h3>Win distribution</h3>
+        <div class="histogram" id="histogram"></div>
+      </div>
+
+      <h3>Past test runs on this draft</h3>
+      <table class="table" id="historyTable">
+        <thead><tr><th>When</th><th>Spins</th><th>RTP</th><th>Hit freq</th><th>Bonus freq</th><th>Volatility</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section class="panel" id="publishPanel" hidden>
+      <h2>Publish</h2>
+      <p class="hint">Once you're happy with the test results, publish the draft — it becomes the active config (the game starts using it immediately) and the current active version is archived. This cannot be undone from here.</p>
+      <button class="btn btn--danger" id="publishBtn" type="button">Publish draft as active</button>
+    </section>
+
+  </main>
+
+  <script src="admin.js"></script>
+</body>
+</html>

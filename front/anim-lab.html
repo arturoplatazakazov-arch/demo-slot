@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anim Lab — проверка анимаций</title>
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/games.css">
+<link rel="stylesheet" href="css/anim-lab.css">
+</head>
+<body>
+
+  <canvas id="spineCanvas" class="lab-canvas"></canvas>
+
+  <div class="lab">
+    <header class="lab__header">
+      <a class="lab__back" href="games.html">← Каталог игр</a>
+      <h1 class="lab__title">Anim Lab</h1>
+      <p class="lab__subtitle">Все анимации и статичные элементы проектов — друг под другом, с ручной подстройкой координат</p>
+
+      <div class="lab__toolbar">
+        <div class="lab__tabs" id="gameTabs" role="tablist"></div>
+        <input class="lab__search" id="searchInput" type="text" placeholder="Поиск по названию элемента…">
+        <label class="lab__toggle">
+          <input type="checkbox" id="staticOnlyToggle">
+          Только статика
+        </label>
+        <button class="lab__reset-all" id="resetAllBtn" type="button">Сбросить все смещения</button>
+      </div>
+    </header>
+
+    <main class="lab__list" id="list"></main>
+  </div>
+
+  <script src="vendor/spine-webgl.js"></script>
+  <script src="js/spine-engine.js"></script>
+  <script src="js/slot-calibration.js?v=3"></script>
+  <script src="js/anim-lab-manifest.js?v=5"></script>
+  <script src="js/anim-lab.js?v=11"></script>
+</body>
+</html>

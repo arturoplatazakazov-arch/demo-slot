@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Конструктор слота — Этап 5</title>
+<link rel="stylesheet" href="builder.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <h1>Конструктор слота — Этап 5: тест <span id="slotName"></span></h1>
+    <div class="topbar__right">
+      <a class="btn" href="new.html">К списку слотов</a>
+    </div>
+  </header>
+
+  <main class="layout" style="max-width: 1200px;">
+
+    <section class="panel">
+      <h2>Редактировать</h2>
+      <div class="back-links">
+        <a class="btn" id="backToNameBtn" href="new.html">← Название</a>
+        <a class="btn" id="backToAssetsBtn" href="#">← Материалы</a>
+        <a class="btn" id="backToGridBtn" href="#">← Сетка и механики</a>
+        <a class="btn" id="backToLayoutBtn" href="#">← Вёрстка</a>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Предпросмотр</h2>
+        <div class="form-row" style="gap: 12px;">
+          <label>Устройство
+            <select id="deviceSelect">
+              <option value="desktop">Десктоп 1932×940</option>
+              <option value="mobile">Моби 780×1416</option>
+            </select>
+          </label>
+          <label>Экран
+            <select id="screenSelect">
+              <option value="base">База</option>
+              <option value="bonus">Бонус</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <p class="hint">Собрано из сохранённых данных Этапов 2-4 — фон и объекты в тех же координатах, что и в редакторе вёрстки. До первого тестового спина барабаны — пунктирный плейсхолдер; после спина в них показываются реальные символы, загруженные на Этапе 2.</p>
+      <div class="preview-frame" id="previewFrame">
+        <canvas class="preview-spine-canvas" id="previewSpineCanvas"></canvas>
+        <div class="preview-screen" id="previewScreen"></div>
+        <canvas class="preview-spine-canvas" id="previewSpineOverlayCanvas"></canvas>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Тестовый спин</h2>
+      <p class="hint">
+        Реальный спин на конфиге, сгенерированном на Этапе 3 ("Сгенерировать конфиг игры") — те же веса,
+        паутейблы и движок, что и в проде. Работает и на черновике: конфиг ещё не опубликован, поэтому
+        обычная игровая сессия до него не достанет — это единственный способ увидеть, как слот реально
+        крутится, до публикации.
+      </p>
+      <button class="btn btn--primary" id="testSpinBtn" type="button">Крутить тестовый спин</button>
+      <div class="form-status" id="testSpinStatus"></div>
+      <div id="testSpinResult" hidden></div>
+    </section>
+
+    <section class="panel">
+      <h2>Готово</h2>
+      <p class="hint">Опубликовать слот: конфиг станет активным (как в редакторе математики), слот появится в каталоге и станет доступен для игры по прямой ссылке. Бейдж, описание и обложка — то, что увидят в карточке каталога.</p>
+      <div class="form-row">
+        <label>Бейдж <input type="text" id="publishBadgeInput" placeholder="Например: Farm" maxlength="64"></label>
+        <label>Описание <input type="text" id="publishDescriptionInput" placeholder="Короткое описание для карточки" maxlength="512"></label>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Обложка для каталога</label>
+          <div class="catalog-cover-row">
+            <div class="gallery-item catalog-cover-thumb" id="catalogCoverThumb">
+              <p class="gallery-empty" id="catalogCoverEmpty">Нет обложки</p>
+            </div>
+            <button class="btn" id="catalogCoverBtn" type="button">Загрузить обложку</button>
+            <input type="file" id="catalogCoverInput" accept="image/*" hidden>
+          </div>
+          <div class="form-status" id="catalogCoverStatus"></div>
+        </div>
+      </div>
+      <button class="btn btn--primary" id="publishLiveBtn" type="button">Опубликовать в каталог</button>
+      <div class="form-status" id="previewStatus"></div>
+      <div id="publishResult" hidden></div>
+    </section>
+
+  </main>
+
+  <script src="../vendor/spine-webgl.js"></script>
+  <script src="../js/spine-engine.js"></script>
+  <script src="../js/play/symbols.js?v=1"></script>
+  <script src="common.js?v=6"></script>
+  <script src="preview.js?v=6"></script>
+</body>
+</html>

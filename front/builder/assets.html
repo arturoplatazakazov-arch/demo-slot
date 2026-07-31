@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Конструктор слота — Этап 2</title>
+<link rel="stylesheet" href="builder.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <h1>Конструктор слота — Этап 2: материалы <span id="slotName"></span></h1>
+    <div class="topbar__right">
+      <a class="btn" href="new.html">К списку слотов</a>
+    </div>
+  </header>
+
+  <main class="layout">
+
+    <section class="panel">
+      <h2>Изображение</h2>
+      <p class="hint">Фон, символы, элементы интерфейса, герой — для каждого файла укажи категорию, экран и устройство, под которые он предназначен. «Обложка каталога» — исключение, это одна плоская картинка для карточки в games.html, экран/устройство ей не нужны.</p>
+      <form id="imageForm" class="create-form">
+        <div class="form-row">
+          <label>Категория
+            <select name="category" id="imageCategory" required>
+              <option value="background">Фон</option>
+              <option value="symbol">Символ</option>
+              <option value="ui">UI (кнопки/HUD)</option>
+              <option value="hero">Герой</option>
+              <option value="logo">Логотип</option>
+              <option value="frame">Рамка</option>
+              <option value="reel_background">Фон за барабанами</option>
+              <option value="hud">Счётчик/HUD</option>
+              <option value="catalog">Обложка каталога</option>
+            </select>
+          </label>
+          <label id="imageScreenField">Экран
+            <select name="screen">
+              <option value="base">База</option>
+              <option value="bonus">Бонус</option>
+              <option value="both">Оба экрана</option>
+            </select>
+          </label>
+          <label id="imageDeviceField">Устройство
+            <select name="device">
+              <option value="desktop">Десктоп</option>
+              <option value="mobile">Моби</option>
+              <option value="both">Деск + моби</option>
+            </select>
+          </label>
+        </div>
+        <label>Файл
+          <input type="file" name="file" accept="image/*" required>
+        </label>
+        <button class="btn btn--primary" type="submit">Загрузить изображение</button>
+      </form>
+      <div class="form-status" id="imageStatus"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Звук</h2>
+      <form id="soundForm" class="create-form">
+        <label>Файл
+          <input type="file" name="file" accept="audio/*" required>
+        </label>
+        <button class="btn btn--primary" type="submit">Загрузить звук</button>
+      </form>
+      <div class="form-status" id="soundStatus"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Анимация</h2>
+      <p class="hint">Для анимаций вроде Spine (animation.atlas + animation.json + animation.png) выбери сразу все файлы набора — они лягут в одну папку.</p>
+      <form id="animForm" class="create-form">
+        <label>Название анимации
+          <input type="text" name="name" placeholder="Например: wild" required maxlength="100">
+        </label>
+        <label>Файлы
+          <input type="file" name="files" multiple required>
+        </label>
+        <button class="btn btn--primary" type="submit">Загрузить анимацию</button>
+      </form>
+      <div class="form-status" id="animStatus"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Загруженные материалы</h2>
+        <button class="btn" id="rescanBtn" type="button">Проверить материалы по папкам</button>
+      </div>
+      <p class="hint">Если файлы были скопированы в <code>front/img|sound/&lt;код&gt;</code> вручную, а не через формы выше — эта кнопка их подхватит. У изображений, добавленных так, не известны категория/экран/устройство — их нужно будет разметить ниже.</p>
+      <div class="form-status" id="rescanStatus"></div>
+      <div id="gallery"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Дальше</h2>
+      <p class="hint">Переход к Этапу 3 — размер сетки и механики.</p>
+      <button class="btn btn--primary" id="stageDoneBtn" type="button">Материалы готовы →</button>
+      <div class="form-status" id="stageStatus"></div>
+    </section>
+
+  </main>
+
+  <script src="common.js"></script>
+  <script src="assets.js"></script>
+</body>
+</html>

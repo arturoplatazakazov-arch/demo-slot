@@ -1,0 +1,15 @@
+animation.png
+size:367,254
+filter:Linear,Linear
+pma:true
+a_new_blick
+bounds:2,2,250,250
+bluberry
+bounds:254,98,154,108
+rotate:90
+leaf_l
+bounds:311,49,54,47
+leaf_r
+bounds:311,6,41,41
+leaf_r_b
+bounds:254,25,55,71

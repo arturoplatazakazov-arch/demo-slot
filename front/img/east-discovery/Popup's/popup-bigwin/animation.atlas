@@ -1,0 +1,36 @@
+animation.png
+size:1649,1300
+filter:Linear,Linear
+big_win_text 1_bigwin
+bounds:907,342,591,427
+offsets:9,7,609,441
+coins 1_bigwin
+bounds:1344,150,303,190
+offsets:2,2,307,193
+coins 2_bigwin
+bounds:1506,1010,136,98
+offsets:2,2,140,101
+coins 3_bigwin
+bounds:1500,583,186,144
+offsets:2,2,190,147
+rotate:90
+coins 4_bigwin
+bounds:1506,1110,188,118
+offsets:2,2,191,121
+rotate:90
+plashka_bigwin
+bounds:2,8,612,314
+offsets:4,8,681,324
+ramka_bigwin
+bounds:907,771,597,527
+offsets:1,318,645,846
+sakura_L 1_bigwin
+bounds:965,2,377,338
+offsets:3,3,381,342
+sakura_R 1_bigwin
+bounds:616,19,347,303
+offsets:1,1,349,305
+svechenie_bigwin
+bounds:2,324,974,903
+offsets:10,11,1014,915
+rotate:90

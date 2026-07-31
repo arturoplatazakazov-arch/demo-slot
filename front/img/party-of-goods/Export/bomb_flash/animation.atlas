@@ -1,0 +1,14 @@
+animation.png
+size:187,252
+filter:Linear,Linear
+pma:true
+fire
+bounds:107,26,29,30
+light
+bounds:107,58,77,95
+light_bg
+bounds:2,2,103,121
+lightning
+bounds:2,125,93,125
+lightning_1
+bounds:97,155,88,95

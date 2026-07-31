@@ -1,0 +1,713 @@
+/* Party Gods — avalanche/cascade demo, real Spine exports (see
+   front/img/party-of-goods/). Structurally mirrors east-discovery.css
+   (fixed-pixel grid sized to a real frame.png's hole, Spine canvas,
+   screen-dim/popup plumbing) — differs because this game has no reel-spin
+   at all (avalanche grid renders in place and cascades, never scrolls) and
+   no character/ambient-decoration Spine layers were uploaded for it.
+
+   Layout is driven by the slot-builder manifest (builder draft
+   "sugar-galaxy"): every object (reel background, frame, reel block, logo,
+   buy-bonus, free-spins counter) is absolutely positioned inside #stage at
+   its authored design-px coordinate (manifest x/y are CENTER points, so
+   left/top = x - w/2, y - h/2), and #stage is contain-scaled to the viewport
+   as one unit — matching what front/js/play/manifest-render.js renders from
+   the same manifest, so the hand-built page and the constructor agree. */
+
+:root {
+  --gold: #ffd35c;
+  --gold-dark: #c98a1f;
+  --ink: #2a0f14;
+  --wine: #7a1030;
+  --wine-dark: #4a0a1e;
+  --panel-dark: rgba(10, 4, 6, 0.55);
+  --ui-bg: rgba(20, 6, 10, 0.72);
+  --ui-border: rgba(255, 220, 150, 0.18);
+  --text-cream: #fff6df;
+
+  /* Grid cells from the slot-builder manifest (builder draft "sugar-galaxy"):
+     153w x 124h with a 10px gap — rectangular, NOT square. A 6x5 block of
+     these is exactly 968x660 (the manifest's reel_block size). The 150x150
+     symbol art is scaled to CONTAIN within the cell (object-fit:contain on
+     the static <img>, fit-to-cell on the Spine clip — see slot.js), matching
+     how the constructor preview renders them. JS mirrors these in
+     POG_CELL_W/H/GAP_X/Y (slot.js) — keep them in sync. */
+  --cell-w: 153px;
+  --cell-h: 124px;
+  --cell-gap-x: 10px;
+  --cell-gap-y: 10px;
+  /* Fixed design canvas matching the builder manifest's own coordinate space
+     (desktop 1932x940, mobile portrait 780x1416). #stage is laid out in these
+     design px and contain-scaled to the viewport by --stage-scale (slot.js
+     updateStageScale), exactly like front/js/play/manifest-render.js scales
+     #playScreen — so every object sits at its authored builder coordinate.
+     --design-w/h are overwritten per device at runtime. */
+  --design-w: 1932px;
+  --design-h: 940px;
+  --stage-scale: 1;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #100208;
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  color: var(--text-cream);
+}
+
+/* ---------- Back-to-catalog button ---------- */
+.to-catalog-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 110;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(20, 16, 8, 0.75);
+  border: 1px solid rgba(255, 207, 61, 0.5);
+  color: #ffcf3d;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(4px);
+}
+.to-catalog-btn:hover { background: rgba(20, 16, 8, 0.92); border-color: #ffcf3d; }
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+/* ---------- Dev panel ---------- */
+.dev-panel {
+  position: fixed;
+  top: 52px;
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 260px;
+  align-items: center;
+}
+.dev-btn {
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #222;
+  color: #ddd;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.dev-btn:hover { opacity: 1; }
+.dev-hint {
+  font-size: 10px;
+  color: #999;
+  width: 100%;
+  text-align: right;
+}
+
+/* ---------- Screen (viewport box; #stage is contain-scaled inside it) ---- */
+.screen {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  background: #0a0410;
+}
+
+.layer { position: absolute; }
+
+/* Full-screen static background PNG — a fallback shown underneath the
+   animated Spine background (bgSpineCanvas) in case the skeleton fails. */
+.bg {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+/* Full-screen WebGL canvas the animated Spine background renders onto, plus
+   the invisible anchor rect it's fitted (cover) against — both cover .screen. */
+.bg-spine-canvas { inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.bg-anchor { inset: 0; z-index: 0; pointer-events: none; }
+
+/* ---------- Design-space stage: everything below is authored in builder
+   design px and scaled together as one unit (see file header). ---------- */
+.stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--design-w);
+  height: var(--design-h);
+  transform: translate(-50%, -50%) scale(var(--stage-scale));
+  z-index: 1;
+}
+.stage .obj { position: absolute; }
+
+/* Manifest coords (center x/y -> top-left). Desktop 1932x940. */
+.logo {
+  left: 128px;   /* 254 - 251/2 */
+  top: 128px;    /* 203 - 150/2 */
+  width: 251px;
+  height: 150px;
+  object-fit: contain;
+  z-index: 4;
+}
+
+/* ---------- Reel background art + frame + avalanche grid ---------- */
+.reel-bg {
+  left: 464px;   /* 968 - 1007/2 */
+  top: 124px;    /* 469 - 690/2 */
+  width: 1007px;
+  height: 690px;
+  object-fit: fill;
+  z-index: 0;
+}
+.frame {
+  left: 424px;   /* 966 - 1084/2 */
+  top: 95px;     /* 468 - 746/2 */
+  width: 1084px;
+  height: 746px;
+  object-fit: fill;
+  pointer-events: none;
+  z-index: 1;
+}
+.reel__grid {
+  /* Manifest reel_block: center (966,470), size 968x660. overflow:hidden
+     clips cells to the block while they're mid-animation (spin-start fall/
+     drop-in, cascade drop/refill move cells via `top` past row 0/last). */
+  left: 482px;   /* 966 - 968/2 */
+  top: 140px;    /* 470 - 660/2 */
+  width: 968px;
+  height: 660px;
+  z-index: 2;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.reel__grid-inner {
+  /* 6 cols x 5 rows of --cell-w/--cell-h/--cell-gap-* == exactly 968x660. */
+  position: relative;
+  width: calc(6 * var(--cell-w) + 5 * var(--cell-gap-x));
+  height: calc(5 * var(--cell-h) + 4 * var(--cell-gap-y));
+}
+
+.reel__col {
+  position: absolute;
+  top: 0;
+  width: var(--cell-w);
+  height: 100%;
+}
+.reel__cell {
+  position: absolute;
+  left: 0;
+  width: var(--cell-w);
+  height: var(--cell-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  transition: top 100ms cubic-bezier(0.36, 0.66, 0.32, 1), opacity 280ms ease; /* must match slot.js's CASCADE_DROP_MS */
+}
+.reel__cell img {
+  /* Native size — NOT scaled to the cell (product: "не масштабируй"). The
+     high-pay/wild/scatter/multiplier/bomb art is a 150x150 canvas and the
+     low-pay art 126x126; object-fit:contain would shrink the 150s down to the
+     124px cell height (~83%), making them look smaller than the 126s. Render
+     each at its own canvas size, centred on the cell by .reel__cell's flex;
+     the small vertical overflow past the 124px cell falls into the row gap.
+     applyStaticContentOffset (slot.js) only nudges this via `transform` when a
+     symbol has been calibrated through Anim Lab. */
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+.reel__cell.is-dimmed img { opacity: 0.35; }
+.reel__cell.is-removing { opacity: 0; }
+.reel__cell-anchor {
+  /* No width/height here — slot.js:playSymbolClipOnce sizes this per instance
+     to the cell (cellW x cellH), so fit:1's contain-fit scales the Spine clip
+     into the cell just like the static image's object-fit:contain above.
+     Centered on the cell regardless of size. */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* ---------- Screen dim (before popups / base<->bonus transitions) ---------- */
+.screen-dim {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  z-index: 4; /* above #stage (1), below the symbol/popup canvas (5) */
+}
+.screen-dim.is-active { opacity: 1; }
+.screen-dim.is-opaque { background: #000; }
+
+/* ---------- Popup win-amount overlay (tracks Spine's bone_input bone) ---------- */
+.popup-amount {
+  position: fixed;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  font-family: 'Cinzel', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(16px, 2.2vw, 34px);
+  color: #fff6df;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85), 0 0 14px rgba(255, 211, 92, 0.65);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.popup-amount.is-visible { opacity: 1; }
+
+/* ---------- Per-cascade-step multiplier + win banner (over the grid) ------ */
+.cascade-banner {
+  /* Covers the reel-block rect (manifest 966,470 / 968x660) and centres its
+     content — lives inside #stage, so design-px like everything else. */
+  position: absolute;
+  left: 482px;
+  top: 140px;
+  width: 968px;
+  height: 660px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.cascade-banner.is-visible {
+  opacity: 1;
+}
+.cascade-banner__mult {
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 64px;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 0 4px 0 var(--ink), 0 0 30px rgba(255, 211, 92, 0.8);
+  white-space: nowrap;
+}
+.cascade-banner__win {
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 24px;
+  color: var(--text-cream);
+  background: rgba(10, 4, 6, 0.6);
+  border-radius: 999px;
+  padding: 4px 18px;
+  white-space: nowrap;
+}
+
+/* ---------- Inline win-amount (base wins that never get a Spine popup) ---------- */
+.reel-win-amount-viewport {
+  /* Same reel-block rect as the cascade banner — inside #stage, design px. */
+  position: absolute;
+  left: 482px;
+  top: 140px;
+  width: 968px;
+  height: 660px;
+  z-index: 3;
+  pointer-events: none;
+}
+.reel-win-amount {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.reel-win-amount.is-visible { opacity: 1; }
+.reel-win-amount::before {
+  content: attr(data-amount);
+  font-family: 'Cinzel', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 48px;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 0 4px 0 var(--ink), 0 0 26px rgba(255, 211, 92, 0.75);
+  white-space: nowrap;
+  padding: 6px 22px;
+  background: rgba(10, 4, 6, 0.55);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(255, 211, 92, 0.25);
+}
+
+/* buy_bonus_button.png is a bare purple gem plaque with a starburst glow and
+   no text baked in — needs the same label-overlay treatment as
+   east-discovery's sign. */
+.sign-buy-bonus {
+  /* Manifest buy_bonus: center (256,431), size 400x363 (design px, in #stage). */
+  left: 56px;
+  top: 250px;
+  width: 400px;
+  height: 363px;
+  cursor: pointer;
+  z-index: 3;
+}
+.sign-buy-bonus__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.sign-buy-bonus__label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cinzel', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 40px;
+  line-height: 1.05;
+  text-align: center;
+  color: var(--gold);
+  text-shadow: 0 2px 0 var(--wine-dark);
+  transition: text-shadow 200ms ease;
+  pointer-events: none;
+}
+.sign-buy-bonus:hover .sign-buy-bonus__label {
+  text-shadow: 0 2px 0 var(--wine-dark), 0 0 14px var(--gold), 0 0 28px rgba(255, 211, 92, 0.7);
+}
+.screen[data-mode="freespins"] .sign-buy-bonus { display: none; }
+
+img.is-missing {
+  outline: 2px dashed rgba(255,255,255,0.35);
+  background: rgba(0,0,0,0.25);
+}
+
+.spine-canvas {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ---------- Multi counter (multy_counter.png) — visible in BOTH modes.
+   Base game: current spin's running cascade multiplier (resets each spin).
+   Free spins: the session-wide token-multiplier accumulator (persists
+   across every spin in the round — see slot.js:updateMultiCounter). ---- */
+.multi-counter {
+  /* Manifest's right-side element (multiplier_display.png), center (1623,193),
+     size 242x187 — design px, in #stage. Visible in both modes; also the
+     landing target for flying multiplier tokens (slot.js:flyTokenToBadge). */
+  left: 1502px;
+  top: 99px;
+  width: 242px;
+  height: 187px;
+  z-index: 3;
+}
+.multi-counter__img {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.multi-counter__value {
+  position: absolute;
+  left: 50%;
+  top: 54%;
+  transform: translate(-50%, -50%);
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 44px;
+  color: var(--gold);
+  text-shadow: 0 2px 0 var(--ink);
+  white-space: nowrap;
+}
+
+/* A consumed multiplier token's flight from its cell to .multi-counter
+   (slot.js:flyTokenToBadge) — viewport-space (position:fixed) since the
+   badge sits outside the avalanche grid/canvas entirely. Duration must
+   match slot.js's TOKEN_FLIGHT_MS. Product, this session: 1s total; grows
+   10% by the 0.5s mark then shrinks back to its own size; movement eases
+   in (starts slow, a bit faster by the end) — the 50% keyframe's translate
+   sits at 30% of the total distance (not 50%), so the second half visibly
+   covers more ground in the same time as the first, using a plain `linear`
+   segment interpolation rather than stacking another easing curve on top. */
+.token-flight {
+  position: fixed;
+  z-index: 60;
+  pointer-events: none;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(255, 211, 92, 0.8));
+  animation: token-flight-fly 1000ms linear forwards;
+}
+@keyframes token-flight-fly {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  50% { transform: translate(var(--tf-mid-x), var(--tf-mid-y)) scale(1.1); }
+  100% { transform: translate(var(--tf-end-x), var(--tf-end-y)) scale(1); opacity: 0; }
+}
+
+/* ---------- Free Spins remaining (plain text, bonus-mode only) — no
+   dedicated asset for this ("dress on a hanger" from the reference wasn't
+   uploaded, see front/img/party-of-goods/README.md), so this is a plain
+   styled pill rather than an image-backed counter. ---------- */
+.fs-counter {
+  /* Free-spins remaining, bonus only — a small pill just under the
+     multiplier display (design px, in #stage). */
+  display: none;
+  left: 1502px;
+  top: 300px;
+  width: 242px;
+  padding: 8px 0;
+  border-radius: 999px;
+  background: rgba(10, 4, 6, 0.6);
+  border: 1px solid rgba(255, 211, 92, 0.35);
+  text-align: center;
+  z-index: 3;
+}
+.screen[data-mode="freespins"] .fs-counter { display: block; }
+.fs-counter__label {
+  display: block;
+  font-family: 'Cinzel', 'Baloo 2', system-ui, sans-serif;
+  font-size: 18px;
+  letter-spacing: 0.08em;
+  color: var(--text-cream);
+  opacity: 0.85;
+}
+.fs-counter__value {
+  display: block;
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 40px;
+  color: var(--gold);
+  text-shadow: 0 2px 0 var(--ink);
+  white-space: nowrap;
+}
+
+/* ================================================================
+   Bottom UI bar
+   ================================================================ */
+.ui-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2vw;
+  padding: 1.2vh 2vw;
+  background: var(--ui-bg);
+  border-top: 1px solid var(--ui-border);
+}
+.ui-bar__group { display: flex; align-items: center; gap: 0.8vw; }
+.ui-icon-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.ui-icon-btn svg { width: 55%; height: 55%; }
+.ui-icon-btn:hover { background: rgba(255,255,255,0.14); }
+.ui-icon-btn:active { transform: scale(0.92); }
+.ui-icon-btn--step { font-size: 22px; font-weight: 700; background: rgba(255,255,255,0.1); }
+.ui-icon-btn--accent { background: linear-gradient(180deg, #e0553f, var(--wine-dark)); border-color: rgba(0,0,0,0.2); }
+.ui-bar__bet { gap: 0; }
+.ui-bet-field {
+  min-width: 130px;
+  height: 40px;
+  padding: 0 16px;
+  margin: 0 2px;
+  border-radius: 20px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--ui-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 700;
+}
+.ui-bet-field__currency { font-size: 12px; opacity: 0.7; font-weight: 600; }
+.ui-spin-btn {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 211, 92, 0.85);
+  background: radial-gradient(circle at 35% 30%, #3a1018, #1c060c 75%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.1s ease;
+}
+.ui-spin-btn svg { width: 42%; height: 42%; }
+.ui-spin-btn:active { transform: scale(0.94); }
+.ui-spin-btn.is-spinning svg { animation: spin-rotate 0.7s linear infinite; }
+@keyframes spin-rotate { to { transform: rotate(360deg); } }
+.ui-icon-btn--auto svg text { font-family: 'Baloo 2', sans-serif; }
+.ui-balance { display: flex; align-items: baseline; gap: 6px; font-weight: 700; white-space: nowrap; }
+.ui-balance__label { opacity: 0.75; font-size: 13px; font-weight: 600; }
+.ui-balance__value { color: var(--gold); font-size: 18px; }
+.ui-balance__currency { font-size: 12px; opacity: 0.7; }
+.ui-icon-btn[data-action="sound"].is-muted { opacity: 0.4; }
+.ui-icon-btn[data-action="sound"].is-muted svg path:last-child { display: none; }
+
+/* ---------- Paytable info popup ---------- */
+.info-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 20px;
+}
+.info-popup[hidden] { display: none; }
+.info-popup__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(720px, 90vh);
+  overflow-y: auto;
+  background: var(--wine-dark);
+  border: 3px solid var(--gold-dark);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.info-popup__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-cream);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.info-popup__close:hover { background: rgba(0, 0, 0, 0.55); }
+.info-popup__title {
+  margin: 0 0 6px;
+  color: var(--gold);
+  font-family: 'Cinzel', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  text-align: center;
+  -webkit-text-stroke: 1px var(--ink);
+  text-shadow: 0 2px 0 var(--ink);
+}
+.info-popup__note {
+  text-align: center;
+  font-size: 12px;
+  opacity: 0.75;
+  margin: 0 0 16px;
+}
+.info-popup__list { display: flex; flex-direction: column; gap: 10px; }
+.info-popup__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.info-popup__row img { width: 48px; height: 48px; object-fit: contain; flex-shrink: 0; }
+.info-popup__row-name { flex: 1 1 auto; min-width: 90px; font-weight: 700; }
+.info-popup__row-pays { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; color: var(--text-cream); }
+.info-popup__row-pays span { white-space: nowrap; opacity: 0.9; }
+.info-popup__row-pays b { color: var(--gold); }
+
+@media (max-width: 720px) {
+  .ui-bar { gap: 3vw; padding: 1.2vh 2.5vw; }
+  .ui-balance__label { display: none; }
+  .ui-icon-btn { width: 36px; height: 36px; }
+  .ui-spin-btn { width: 58px; height: 58px; }
+}
+
+/* ================================================================
+   Mobile (portrait) layout — the slot-builder manifest's own mobile screen
+   (design canvas 780x1416). Same design-space model as desktop: #stage is
+   swapped to the mobile canvas (--design-w/h set by slot.js updateStageScale)
+   and every object moves to its mobile builder coordinate. Cell geometry also
+   differs (116x116, gap 18x5) — overridden here, read back by slot.js.
+   ================================================================ */
+@media (orientation: portrait) {
+  :root {
+    --cell-w: 116px;
+    --cell-h: 116px;
+    --cell-gap-x: 18px;
+    --cell-gap-y: 5px;
+  }
+
+  /* logo: center (384,199), size 251x150 */
+  .logo { left: 258px; top: 124px; width: 251px; height: 150px; }
+
+  /* reel background art: center (388,550), size 813x632 */
+  .reel-bg { left: -18px; top: 234px; width: 813px; height: 632px; }
+  /* frame (slot_frame): center (390,547), size 843x679 */
+  .frame { left: -32px; top: 207px; width: 843px; height: 679px; }
+  /* reel_block: center (387,549), size 786x600 */
+  .reel__grid,
+  .cascade-banner,
+  .reel-win-amount-viewport { left: -6px; top: 249px; width: 786px; height: 600px; }
+
+  /* buy_bonus (base): center (133,975), size 400x363 */
+  .sign-buy-bonus { left: -67px; top: 793px; width: 400px; height: 363px; }
+
+  /* free_spins_counter art (multiplier_display.png): center (387,957), size 242x187 */
+  .multi-counter { left: 266px; top: 863px; width: 242px; height: 187px; }
+  .fs-counter { left: 266px; top: 1060px; width: 242px; }
+
+  .ui-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-areas:
+      "icons1 spin icons2"
+      "bet bet balance";
+    gap: 1vh 1vw;
+    justify-items: center;
+    padding: 1vh 3vw;
+  }
+  .ui-bar > *:nth-child(1) { grid-area: icons1; }
+  .ui-bar > *:nth-child(2) { grid-area: bet; }
+  .ui-bar > *:nth-child(3) { grid-area: spin; }
+  .ui-bar > *:nth-child(4) { grid-area: icons2; }
+  .ui-bar > *:nth-child(5) { grid-area: balance; justify-self: end; }
+}

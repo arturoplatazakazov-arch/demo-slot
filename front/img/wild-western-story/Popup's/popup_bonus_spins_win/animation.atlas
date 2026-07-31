@@ -1,0 +1,19 @@
+animation.png
+size:1174,972
+filter:Linear,Linear
+pma:true
+bg_bonus_spins_win
+bounds:2,7,963,571
+rotate:90
+black
+bounds:2,4,1,1
+bonus_spins_win
+bounds:575,501,590,469
+rays
+bounds:813,263,359,236
+rays 1
+bounds:575,140,359,236
+rotate:90
+star
+bounds:813,2,259,255
+rotate:90

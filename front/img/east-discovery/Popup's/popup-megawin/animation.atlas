@@ -1,0 +1,40 @@
+animation.png
+size:1929,1223
+filter:Linear,Linear
+Bag_coins_R 1
+bounds:1562,421,365,347
+offsets:22,18,409,385
+Frame_mega
+bounds:978,770,698,451
+bag_coins_L 1
+bounds:978,54,396,357
+offsets:21,17,448,394
+coins 1_bigwin
+bounds:1678,918,303,190
+offsets:2,2,307,193
+rotate:90
+coins 2_bigwin
+bounds:1716,201,136,98
+offsets:2,2,140,101
+coins 3_bigwin
+bounds:1678,772,186,144
+offsets:2,2,190,147
+coins 4_bigwin
+bounds:1716,301,188,118
+offsets:2,2,191,121
+mega_win 1
+bounds:978,413,582,355
+offsets:6,5,594,364
+plashka_bigwin
+bounds:2,2,612,314
+offsets:4,8,681,324
+sakura_L 1_bigwin
+bounds:1376,34,377,338
+offsets:3,3,381,342
+rotate:90
+sakura_R 1_bigwin
+bounds:616,13,347,303
+offsets:1,1,349,305
+svechenie_bigwin
+bounds:2,318,974,903
+offsets:10,11,1014,915

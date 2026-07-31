@@ -1,0 +1,12 @@
+animation.png
+size:374,254
+filter:Linear,Linear
+pma:true
+a_new_blick
+bounds:2,2,250,250
+leaf
+bounds:254,61,40,66
+pear
+bounds:254,129,118,123
+stem
+bounds:254,26,31,33

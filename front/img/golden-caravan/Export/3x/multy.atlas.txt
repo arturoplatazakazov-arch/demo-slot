@@ -1,0 +1,13 @@
+multy.png
+size:265,188
+filter:Linear,Linear
+multy_x
+bounds:197,24,67,66
+offsets:2,1,71,68
+rotate:90
+multy_x3
+bounds:197,93,66,93
+offsets:2,1,69,96
+scatter_light
+bounds:2,2,193,184
+offsets:4,4,200,192

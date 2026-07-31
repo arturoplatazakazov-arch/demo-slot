@@ -1,0 +1,14 @@
+animation.png
+size:392,254
+filter:Linear,Linear
+pma:true
+a_new_blick
+bounds:2,2,250,250
+corn
+bounds:254,12,85,121
+leaf
+bounds:254,135,136,117
+leaf_l
+bounds:341,76,40,57
+leaf_r
+bounds:341,32,35,42

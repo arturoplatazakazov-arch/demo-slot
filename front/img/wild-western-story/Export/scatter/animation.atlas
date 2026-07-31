@@ -1,0 +1,13 @@
+animation.png
+size:369,186
+filter:Linear,Linear
+pma:true
+blik_heart2_png
+bounds:240,84,100,100
+scatter_fab
+bounds:176,6,178,62
+rotate:90
+scatter_star
+bounds:2,2,172,182
+scatter_text
+bounds:240,48,127,34

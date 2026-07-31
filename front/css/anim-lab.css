@@ -1,0 +1,381 @@
+/* Anim Lab — QA page listing every Spine animation + static image asset,
+   with per-row X/Y nudge controls so misalignments can be measured in px
+   and the same numbers reused as translate() offsets in the real slot CSS/JS. */
+
+.lab-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.lab {
+  position: relative;
+  z-index: 10;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 40px 24px 120px;
+}
+
+.lab__header {
+  margin-bottom: 28px;
+}
+
+.lab__back {
+  display: inline-block;
+  margin-bottom: 14px;
+  color: rgba(255, 246, 223, 0.65);
+  text-decoration: none;
+  font-size: 14px;
+}
+.lab__back:hover { color: var(--gold); }
+
+.lab__title {
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: clamp(28px, 4vw, 40px);
+  margin: 0 0 6px;
+  color: var(--gold);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.4), 0 0 30px rgba(255, 207, 61, 0.2);
+}
+
+.lab__subtitle {
+  margin: 0 0 22px;
+  font-size: 14px;
+  color: rgba(255, 246, 223, 0.6);
+  max-width: 640px;
+}
+
+.lab__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(12, 10, 16, 0.85);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--card-border);
+}
+
+.lab__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lab__tab {
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: var(--text-cream);
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.lab__tab:hover { border-color: var(--gold); }
+.lab__tab.is-active {
+  background: linear-gradient(180deg, var(--gold), var(--gold-dark));
+  color: #2a1c05;
+  border-color: transparent;
+}
+
+.lab__search {
+  flex: 1 1 200px;
+  min-width: 160px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-cream);
+  font-family: inherit;
+  font-size: 13px;
+}
+.lab__search:focus { outline: none; border-color: var(--gold); }
+
+.lab__toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: rgba(255, 246, 223, 0.75);
+  cursor: pointer;
+  user-select: none;
+}
+
+.lab__reset-all {
+  margin-left: auto;
+  border: 1px solid var(--card-border);
+  background: transparent;
+  color: rgba(255, 246, 223, 0.75);
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.lab__reset-all:hover { border-color: var(--gold); color: var(--gold); }
+
+.lab__count {
+  width: 100%;
+  font-size: 12px;
+  color: rgba(255, 246, 223, 0.45);
+}
+
+/* --- element groups --- */
+
+.element {
+  margin-top: 30px;
+  padding-top: 6px;
+}
+
+.element__title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 10px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-cream);
+  border-bottom: 1px solid var(--card-border);
+  padding-bottom: 8px;
+}
+
+.element__game {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 246, 223, 0.4);
+}
+
+.element__badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 207, 61, 0.14);
+  color: var(--gold);
+}
+
+/* --- rows --- */
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 10px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+  background: var(--panel-dark);
+  border: 1px solid transparent;
+}
+.row:hover { border-color: var(--card-border); }
+.row.is-visible { border-color: rgba(255, 207, 61, 0.35); }
+
+.row__frame-wrap {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: min(100%, 640px);
+}
+
+/* Sized in JS to the asset's own real pixel dimensions (see makeFrame in
+   anim-lab.js) — nothing here is scaled to fit; a frame just IS the content's
+   native size, capped + scrollable so huge backgrounds don't blow up the
+   page layout while still rendering at true 100%. */
+.row__frame {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: min(100%, 640px);
+  max-height: 420px;
+  overflow: auto;
+  border: 1px dashed rgba(255, 246, 223, 0.25);
+  border-radius: 8px;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 10px 10px;
+}
+
+.row__frame img.row__img {
+  pointer-events: none;
+  object-fit: none; /* explicit width/height set inline = native size, no scaling */
+}
+
+.row__dims {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 9px;
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 246, 223, 0.6);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.row__phase {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 246, 223, 0.7);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.row--cycle .row__label,
+.row[data-kind="cycle"] .row__label {
+  color: var(--gold);
+}
+
+.row__cross {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.row__cross::before,
+.row__cross::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 207, 61, 0.55);
+}
+.row__cross::before { left: 50%; top: 0; bottom: 0; width: 1px; transform: translateX(-0.5px); }
+.row__cross::after { top: 50%; left: 0; right: 0; height: 1px; transform: translateY(-0.5px); }
+
+.row__meta {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.row__label {
+  flex: 0 0 auto;
+  min-width: 140px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-cream);
+}
+.row__label small {
+  display: block;
+  font-weight: 500;
+  color: rgba(255, 246, 223, 0.45);
+  font-size: 11px;
+}
+
+.row__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.row__field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: rgba(255, 246, 223, 0.6);
+}
+
+.row__field input[type="number"] {
+  width: 64px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--card-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-cream);
+  font-family: 'Roboto Mono', monospace;
+  font-size: 12px;
+}
+.row__field input[type="number"]:focus { outline: none; border-color: var(--gold); }
+
+.row__reset {
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 246, 223, 0.7);
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.row__reset:hover { background: rgba(255, 207, 61, 0.18); color: var(--gold); }
+
+.row__calibrate {
+  border: 1px solid var(--gold);
+  background: transparent;
+  color: var(--gold);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.row__calibrate:hover { background: rgba(255, 207, 61, 0.16); }
+.row__calibrate.is-done {
+  border-color: #6fd67a;
+  color: #6fd67a;
+  background: rgba(111, 214, 122, 0.12);
+}
+.row__calibrate.is-error {
+  border-color: #e2685c;
+  color: #e2685c;
+  background: rgba(226, 104, 92, 0.12);
+}
+.row__calibrate:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.row__calibrate.is-unavailable {
+  border-color: rgba(255, 246, 223, 0.15);
+  color: rgba(255, 246, 223, 0.3);
+  cursor: not-allowed;
+}
+.row__calibrate.is-unavailable:hover { background: transparent; }
+
+.row__readout {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 12px;
+  color: rgba(255, 207, 61, 0.85);
+  min-width: 132px;
+  cursor: pointer;
+}
+.row__readout.is-zero { color: rgba(255, 246, 223, 0.35); }
+
+.lab__empty {
+  padding: 60px 0;
+  text-align: center;
+  color: rgba(255, 246, 223, 0.4);
+  font-size: 14px;
+}
+
+@media (max-width: 720px) {
+  .row { flex-wrap: wrap; }
+  .row__frame-wrap { width: 100%; justify-content: flex-start; }
+  .lab__reset-all { margin-left: 0; }
+}

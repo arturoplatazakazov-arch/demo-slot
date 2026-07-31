@@ -1,0 +1,13 @@
+animation.png
+size:1689,1445
+filter:Linear,Linear
+popup_back_counter
+bounds:5,1293,887,150
+offsets:3,0,892,150
+popup_bg_black
+bounds:2,1442,1,1
+popup_bigwin
+bounds:894,944,600,499
+offsets:0,1,600,501
+popup_light
+bounds:2,2,1685,940

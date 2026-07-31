@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Слот</title>
+<link rel="stylesheet" href="css/play.css">
+</head>
+<body>
+
+  <header class="play-topbar">
+    <a class="play-topbar__back" href="games.html">← В каталог</a>
+    <h1 id="gameName">Загрузка…</h1>
+  </header>
+
+  <main class="play-stage-wrap">
+    <div class="play-frame" id="playFrame">
+      <canvas class="play-spine-canvas" id="playSpineCanvas"></canvas>
+      <div class="play-screen" id="playScreen"></div>
+      <canvas class="play-spine-canvas" id="playSpineOverlayCanvas"></canvas>
+    </div>
+  </main>
+
+  <footer class="play-hud" id="playHud">
+    <div class="play-hud__balance">Баланс: <span id="balanceValue">—</span></div>
+    <div class="play-hud__bet">
+      Ставка:
+      <button id="betDownBtn" type="button">−</button>
+      <span id="betValue">—</span>
+      <button id="betUpBtn" type="button">+</button>
+    </div>
+    <button class="play-hud__spin" id="spinBtn" type="button">Крутить</button>
+    <div class="play-hud__status" id="playStatus"></div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="vendor/spine-webgl.js"></script>
+  <script src="js/spine-engine.js"></script>
+  <script src="js/play/manifest-render.js?v=7"></script>
+  <script src="js/play/symbols.js?v=7"></script>
+  <script src="js/play/engine.js?v=7"></script>
+</body>
+</html>

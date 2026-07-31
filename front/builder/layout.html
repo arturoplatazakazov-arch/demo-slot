@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Конструктор слота — Этап 4</title>
+<link rel="stylesheet" href="builder.css?v=9">
+</head>
+<body>
+
+  <header class="topbar">
+    <h1>Конструктор слота — Этап 4: вёрстка <span id="slotName"></span></h1>
+    <div class="topbar__right">
+      <a class="btn" href="new.html">К списку слотов</a>
+    </div>
+  </header>
+
+  <div class="wizard-progress" id="wizardProgress"></div>
+
+  <div class="editor-body">
+    <div class="canvas-area" id="canvasArea">
+      <div class="stage-wrapper" id="stageWrapper">
+        <canvas class="layout-spine-canvas" id="layoutSpineCanvas"></canvas>
+        <div id="stageContainer"></div>
+        <canvas class="layout-spine-canvas" id="layoutSpineOverlayCanvas"></canvas>
+      </div>
+    </div>
+
+    <aside class="editor-sidebar">
+      <div class="panel" id="stepPanel">
+        <h2 id="stepTitle">—</h2>
+        <p class="hint" id="stepHint"></p>
+
+        <div id="bgControls" class="is-hidden step-controls">
+          <div class="wizard-subblock">
+            <h4>1. Фон экрана</h4>
+            <label>Фон экрана
+              <select id="bgSelect"></select>
+            </label>
+            <label id="bgAnimNameField" class="is-hidden">Анимация
+              <select id="bgAnimNameSelect"></select>
+            </label>
+            <button class="btn" id="addBgBtn" type="button">+ Загрузить фон</button>
+            <input type="file" id="bgFileInput" accept="image/*" hidden>
+            <button class="btn" id="bgFillScreenBtn" type="button">Отцентровать и растянуть на весь экран</button>
+          </div>
+          <div id="namedSpineSlots"></div>
+        </div>
+
+        <div id="slotControls" class="is-hidden step-controls">
+          <button class="btn" id="addReelBlockBtn" type="button">+ Блок барабанов</button>
+          <button class="btn" id="addReelBgBtn" type="button">+ Фон за барабанами</button>
+          <input type="file" id="reelBgFileInput" accept="image/*" hidden>
+          <button class="btn" id="addFrameBtn" type="button">+ Рамка</button>
+          <input type="file" id="frameFileInput" accept="image/*" hidden>
+          <button class="btn" id="addLogoBtn" type="button">+ Логотип</button>
+          <input type="file" id="logoFileInput" accept="image/*" hidden>
+        </div>
+
+        <div id="uiControls" class="is-hidden step-controls">
+          <button class="btn" id="addUiBtn" type="button">+ Загрузить элемент</button>
+          <input type="file" id="uiFileInput" accept="image/*" hidden>
+        </div>
+
+        <div id="hudControls" class="is-hidden step-controls">
+          <button class="btn" id="addHudBtn" type="button">+ Загрузить элемент</button>
+          <input type="file" id="hudFileInput" accept="image/*" hidden>
+        </div>
+
+        <div class="form-status" id="stepStatus"></div>
+
+        <div class="wizard-actions">
+          <button class="btn" id="prevStepBtn" type="button">← Назад</button>
+          <button class="btn" id="skipStepBtn" type="button" hidden>Пропустить — этого элемента нет</button>
+          <button class="btn btn--primary" id="confirmStepBtn" type="button">Подтвердить и продолжить →</button>
+        </div>
+      </div>
+
+      <div class="layers-panel">
+        <h3>Элементы на сцене</h3>
+        <ul class="layers-list" id="layersList"></ul>
+        <p class="palette-empty" id="layersEmpty">Пока ничего не добавлено.</p>
+      </div>
+
+      <div class="props-panel" id="propsPanel" hidden>
+        <h3>Свойства объекта</h3>
+        <p class="props-label" id="propsLabel"></p>
+        <label>X <input type="number" id="propX"></label>
+        <label>Y <input type="number" id="propY"></label>
+        <label>W <input type="number" id="propW"></label>
+        <label>H <input type="number" id="propH"></label>
+        <label id="propCellWField" class="is-hidden">Ширина ячейки <input type="number" id="propCellW" min="1"></label>
+        <label id="propCellHField" class="is-hidden">Высота ячейки <input type="number" id="propCellH" min="1"></label>
+        <label id="propGapXField" class="is-hidden">Отступ X <input type="number" id="propGapX" min="0"></label>
+        <label id="propGapYField" class="is-hidden">Отступ Y <input type="number" id="propGapY" min="0"></label>
+        <label id="propAnimNameField" class="is-hidden">Анимация <select id="propAnimName"></select></label>
+        <label id="propZField">Z-index <input type="number" id="propZ" min="0" step="1"></label>
+        <button class="btn btn--danger" id="propsDeleteBtn" type="button">Удалить</button>
+      </div>
+
+      <div class="asset-palette" id="assetPalette"></div>
+    </aside>
+  </div>
+
+  <script src="../vendor/konva.min.js"></script>
+  <script src="../vendor/spine-webgl.js"></script>
+  <script src="../js/spine-engine.js"></script>
+  <script src="common.js?v=9"></script>
+  <script src="layout.js?v=9"></script>
+</body>
+</html>

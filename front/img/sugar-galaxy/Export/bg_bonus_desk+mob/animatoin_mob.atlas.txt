@@ -1,0 +1,5 @@
+skeleton.png
+size:1254,1254
+filter:Linear,Linear
+bg_bonus
+bounds:2,2,1250,1250

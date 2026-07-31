@@ -1,0 +1,857 @@
+:root {
+  --lacquer-red: #a3242c;
+  --lacquer-red-dark: #6e161c;
+  --gold: #ffd35c;
+  --gold-dark: #c98a1f;
+  --ink: #1c1108;
+  --panel-dark: rgba(10, 4, 2, 0.55);
+  --ui-bg: rgba(20, 8, 6, 0.72);
+  --ui-border: rgba(255, 220, 150, 0.18);
+  --jade: #2f8f5b;
+  --jade-dark: #1c6b40;
+  --text-cream: #fff6df;
+
+  /* matches the native size of bg-base-desk.png */
+  --screen-w: 1932;
+  --screen-h: 938;
+
+  /* Fixed-pixel reel grid: same 200x200 / 10px-gap slots as Amy's Fruit
+     Farm (this frame's hole was sized for the same 5x3 grid — see the
+     inset math below). --reel-frame-w/h come from
+     ReelMath.frameSizeForGrid(1040, 620) with frame.png's own measured hole
+     insets (scanned the mid row/column of its alpha channel: hole
+     x:[171,1183] y:[218,841] of the 1351x1077 source). */
+  --cell-size: 200px;
+  --cell-gap: 10px;
+  --reel-frame-w: 1415px;
+  --reel-frame-h: 1107px;
+  /* No extra shrink requested for this theme yet (Amy's has a -5% fudge on
+     top of the grid-fit size — not carried over here; revisit after visual
+     review). */
+  --reel-frame-scale: 1;
+  --reel-scale: 1;
+  --reel-scale-mobile: 1;
+}
+
+* { box-sizing: border-box; }
+
+/* Below the 1612px design-min width, .screen's own min-width (computed from
+   --reel-scale, frozen at that point — see updateReelScale in slot.js)
+   stays wider than the viewport on purpose: crop the excess instead of a
+   horizontal scrollbar. Needs both html and body — body alone doesn't
+   reliably suppress the viewport/root scrollbar in every browser. */
+html, body {
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #111;
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  color: var(--text-cream);
+}
+
+/* ---------- Back-to-catalog button ---------- */
+.to-catalog-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 110;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(20, 16, 8, 0.75);
+  border: 1px solid rgba(255, 207, 61, 0.5);
+  color: #ffcf3d;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(4px);
+}
+.to-catalog-btn:hover { background: rgba(20, 16, 8, 0.92); border-color: #ffcf3d; }
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+/* ---------- Dev panel (temporary, remove once real game state drives the UI) ---------- */
+.dev-panel {
+  position: fixed;
+  top: 52px;
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 260px;
+  align-items: center;
+}
+.dev-btn {
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #222;
+  color: #ddd;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.dev-btn:hover { opacity: 1; }
+.dev-hint {
+  font-size: 10px;
+  color: #999;
+  width: 100%;
+  text-align: right;
+}
+
+/* ---------- Screen ---------- */
+.screen {
+  position: relative;
+  width: 100%;
+  min-width: calc((var(--reel-frame-w) * var(--reel-frame-scale) + 400px) * var(--reel-scale));
+  height: 940px;
+  margin: 0 auto;
+  overflow: visible;
+  background: #1a0d08;
+}
+
+.layer { position: absolute; }
+
+.bg {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Ambient decoration anchors (bamboo/tree/lanterns — see setupEnvironment in
+   slot.js). Each is a small, edge/corner-pinned sizing/position reference a
+   SpineInstance fits itself into independently — no visual styling of their
+   own, the actual pixels are drawn on #spineCanvas. Only one set (bamboo+
+   tree, or the two lanterns) is ever populated at a time depending on mode,
+   so reusing the same box for both isn't needed. */
+.env-anchor { }
+
+/* Left edge, behind the hero (see .character below and the base-instance
+   draw-order note in setupEnvironment — addBaseBehindAll keeps it there). */
+.env-anchor--bamboo {
+  left: -45%;
+  bottom: 0;
+  width: 100%;
+  height: 105%;
+  z-index: 1;
+}
+.env-anchor--tree {
+  right: -325px;
+  top: 35%;
+  transform: translateY(-64%);
+  width: 42%;
+  height: 84%;
+}
+.env-anchor--lantern-left {
+  left: 0;
+  top: 0;
+  width: 26%;
+  height: 33%;
+}
+.env-anchor--lantern-right {
+  right: 0;
+  top: 0;
+  width: 25%;
+  height: 32%;
+}
+
+.character {
+  left: -3%;
+  bottom: 0;
+  height: 61.5%;
+  /* width:auto alone doesn't work here — this <img> has no src, so with no
+     intrinsic ratio to derive from, auto-width falls back to a fixed ~187px
+     regardless of height (confirmed live: doubling height just pushed the
+     box upward off-screen at the same width, not a bigger render). Hero_base's
+     own Spine bounds (351.12 x 541.05, confirmed via skeleton.getBoundsRect)
+     give the real ratio so width actually scales with height. */
+  aspect-ratio: 351.12 / 541.05;
+  width: auto;
+  object-fit: contain;
+}
+
+.logo {
+  top: 2%;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 22.5%;
+  object-fit: contain;
+  z-index: 3;
+}
+
+.reel {
+  position: absolute;
+  left: 50%;
+  top: 57%;
+  transform: translate(-50%, -50%) scale(calc(var(--reel-frame-scale) * var(--reel-scale)));
+  width: var(--reel-frame-w);
+  height: var(--reel-frame-h);
+}
+.reel__frame { position: absolute; width: 100%; height: 100%; }
+
+.reel__bg {
+  /* Halfway from the measured hole edge toward the frame's outer edge (see
+     ReelMath.BG_HOLE_INSET's derivation — same halving applied here to the
+     insets measured for frame.png). */
+  position: absolute;
+  inset: 17.121% 10.218% 5.956% 8.329%;
+  background: var(--panel-dark);
+}
+
+.reel__frame {
+  inset: 0;
+  object-fit: fill;
+  pointer-events: none;
+  /* Above .spine-canvas (z-index 5) — masks any ambient-decoration piece
+     (bamboo especially, on mobile — see .env-anchor--bamboo's mobile
+     override) that overlaps the frame's own footprint. Symbols/win clips
+     stay visually unaffected since they're sized to the frame's inner hole,
+     never reaching the border this actually covers. */
+  z-index: 6;
+}
+
+.reel__grid {
+  /* Precise frame-hole inset, measured from frame.png's alpha channel
+     (mid-row/mid-column scan): top 218/1077, right 168/1351, bottom
+     236/1077, left 171/1351. */
+  position: absolute;
+  inset: 20.241% 12.435% 21.913% 12.657%;
+  display: flex;
+  flex-direction: row;
+  gap: var(--cell-gap);
+}
+
+/* One reel = a masked viewport (3 cells tall) over a taller vertical strip
+   of cells — see style.css (Amy's Fruit Farm) for the full mechanics
+   writeup. BUG FIX (reported live: symbols visible above the frame during
+   spin): the top bleed here was originally BG_HOLE_INSET.top * 1107 ≈ 112px
+   — that fraction was derived from Amy's Fruit Farm's frame art and just
+   reused against this frame's own height, but this frame's top border is
+   NOT solid wood all the way across like Amy's rope braid — it's an ornate
+   pagoda roof that tapers off well before the hole's left/right edges,
+   leaving real transparent gaps there. Scanned frame.png's alpha channel
+   directly above the hole at each of the 5 reel-column x-positions: the
+   two outer columns are only opaque from ~76-84px above the hole edge
+   (everything above that, up to the image top, is transparent — genuinely
+   open sky in the art, not antialiasing); the inner 3 columns are opaque
+   almost the whole way up. 112px bled well past that outer-column limit,
+   so a scrolling symbol was visible through the gap. Capped to 65px —
+   comfortably inside the ~76-84px measured-safe budget on every column —
+   with no top fade needed (same as Amy's: it stays fully covered by the
+   frame's opaque pixels, doesn't need to hide itself via the mask). */
+.reel__col {
+  position: relative;
+  width: var(--cell-size);
+  height: calc(100% + 85px);
+  margin-top: -65px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 680px, transparent 695px);
+  mask-image: linear-gradient(to bottom, #000 680px, transparent 695px);
+  transition: transform 200ms ease, filter 200ms ease;
+}
+.reel__col.is-anticipating {
+  /* The waiting column doesn't scale up — it just gets the z-index/glow to
+     read as "the one in suspense" without visibly growing (no screen zoom
+     either; that was removed per product). */
+  z-index: 2;
+  filter: drop-shadow(0 0 14px rgba(255, 211, 92, 0.85));
+}
+.reel__strip {
+  position: absolute;
+  top: 65px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cell-gap);
+}
+.reel__cell {
+  position: relative;
+  width: var(--cell-size);
+  height: var(--cell-size);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+.reel__cell img {
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+.reel__cell.is-dimmed img {
+  opacity: 0.3;
+}
+.reel__cell-anchor {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.reel__strip.is-looping {
+  animation: reel-loop var(--reel-loop-duration, 420ms) linear infinite;
+}
+@keyframes reel-loop {
+  from { transform: translateY(0); }
+  to { transform: translateY(var(--reel-loop-distance, 0)); }
+}
+
+/* ---------- Screen dim (before popups / base<->bonus transitions) ---------- */
+.screen-dim {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  /* Above .logo (3) so the logo actually darkens instead of showing through —
+     still below .spine-canvas (5), so a popup drawn on the canvas stays
+     bright (the canvas's own base-layer content, e.g. the character or a
+     still-looping win symbol, is dimmed separately — see stage.setBaseDim,
+     wired from pushScreenDim/popScreenDim in slot.js). */
+  z-index: 4;
+}
+.screen-dim.is-active { opacity: 1; }
+.screen-dim.is-opaque { background: #000; }
+
+/* ---------- Popup win-amount overlay ---------- */
+.popup-amount {
+  position: fixed;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(16px, 2.2vw, 34px);
+  color: #fff6df;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85), 0 0 14px rgba(255, 211, 92, 0.65);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.popup-amount.is-visible { opacity: 1; }
+
+/* ---------- Coin multiplier value ("10X", "1000X", ...) ---------- */
+/* Tracks the coin skeleton's own "multy" bone (see COIN_MULTIPLIER_BONE in
+   slot.js) — same fixed+translate(-50%,-50%) bone-tracking idea as
+   .popup-amount, but one element per landed coin instead of a single shared
+   one. Luckiest Guy (already loaded for .fs-counter__value) is the closest
+   match in this project's font set to the reference's chunky gold numerals. */
+.coin-multiplier-amount {
+  position: fixed;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  font-family: 'Luckiest Guy', cursive;
+  font-weight: 400;
+  font-size: clamp(14px, 1.6vw, 26px);
+  color: var(--gold);
+  -webkit-text-stroke: 1.5px var(--ink);
+  text-shadow: 0 2px 0 var(--ink), 0 0 10px rgba(255, 211, 92, 0.6);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 17;
+}
+
+/* ---------- Inline win-amount (base wins that never get a Spine popup) ---------- */
+.reel-win-amount-viewport {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(calc(var(--reel-frame-scale) * var(--reel-scale)));
+  width: var(--reel-frame-w);
+  height: var(--reel-frame-h);
+  z-index: 16;
+  pointer-events: none;
+}
+.reel-win-amount {
+  position: absolute;
+  inset: 20.241% 12.435% 21.913% 12.657%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.reel-win-amount.is-visible { opacity: 1; }
+.reel-win-amount::before {
+  content: attr(data-amount);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 64px;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 0 4px 0 var(--ink), 0 0 26px rgba(255, 211, 92, 0.75);
+  white-space: nowrap;
+  padding: 6px 22px;
+  background: rgba(10, 4, 2, 0.55);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(255, 211, 92, 0.25);
+}
+
+/* buy-bonus-button.png is a bamboo pole + hanging red flag, not a
+   self-contained plank like Amy's sign — the container box is the whole
+   350x712 image, but the label needs to sit over just the cloth part
+   (roughly the upper-middle band of the image). Positions are a first
+   visual estimate — confirm/adjust once rendered live. */
+.sign-buy-bonus {
+  right: 3%;
+  top: 40%;
+  width: 16.5%;
+  aspect-ratio: 350 / 712;
+  height: auto;
+  cursor: pointer;
+  /* Above .spine-canvas (z-index 5) — the ambient background layer
+     (setupEnvironment in slot.js) can paint large opaque decoration (trees,
+     etc.) across much of the screen and would otherwise cover this. */
+  z-index: 6;
+}
+.sign-buy-bonus__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.sign-buy-bonus__label {
+  position: absolute;
+  left: 39%;
+  top: 21%;
+  height: 27%;
+  width: 52%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Fredoka', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 2.1vw;
+  line-height: 1.05;
+  text-align: center;
+  color: var(--gold);
+  -webkit-text-stroke: 1px var(--lacquer-red-dark);
+  text-shadow: 0 2px 0 var(--lacquer-red-dark);
+  transition: text-shadow 200ms ease;
+  pointer-events: none;
+}
+.sign-buy-bonus:hover .sign-buy-bonus__label {
+  text-shadow: 0 2px 0 var(--lacquer-red-dark), 0 0 14px var(--gold), 0 0 28px rgba(255, 211, 92, 0.7);
+}
+.screen[data-mode="freespins"] .sign-buy-bonus { display: none; }
+
+/* Missing-asset placeholder (dev-time only) */
+.is-missing-placeholder {
+  outline: 2px dashed rgba(255,255,255,0.4);
+  background: rgba(0,0,0,0.3);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.6);
+  font-size: 0.75vw;
+  text-align: center;
+  padding: 4px;
+}
+.is-missing-placeholder::after { content: attr(data-asset) " missing"; }
+
+img.is-missing {
+  outline: 2px dashed rgba(255,255,255,0.35);
+  background: rgba(0,0,0,0.25);
+}
+
+.spine-canvas {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ---------- Free Spins counter (free-spins-counter.png, a hanging lantern) ---------- */
+.fs-counter {
+  display: none;
+  right: calc(3% - 4px);
+  top: calc(14% + 4px);
+  width: 11%;
+  z-index: 6; /* same reasoning as .sign-buy-bonus above */
+}
+.screen[data-mode="freespins"] .fs-counter { display: block; }
+
+.fs-counter__img {
+  position: relative;
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.fs-counter__value {
+  position: absolute;
+  left: 50%;
+  /* Lower-middle of the lantern's glowing body — first visual estimate. */
+  top: 58%;
+  transform: translate(-50%, -50%);
+  font-family: 'Luckiest Guy', cursive;
+  font-weight: 400;
+  font-size: 2.3vw;
+  color: var(--gold);
+  -webkit-text-stroke: 1px var(--ink);
+  text-shadow: 0 2px 0 var(--ink);
+  white-space: nowrap;
+}
+
+/* ================================================================
+   Bottom UI bar
+   ================================================================ */
+.ui-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2vw;
+  padding: 1.2vh 2vw;
+  background: var(--ui-bg);
+  border-top: 1px solid var(--ui-border);
+}
+
+.ui-bar__group {
+  display: flex;
+  align-items: center;
+  gap: 0.8vw;
+}
+
+.ui-icon-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.ui-icon-btn svg { width: 55%; height: 55%; }
+.ui-icon-btn:hover { background: rgba(255,255,255,0.14); }
+.ui-icon-btn:active { transform: scale(0.92); }
+
+.ui-icon-btn--step {
+  font-size: 22px;
+  font-weight: 700;
+  background: rgba(255,255,255,0.1);
+}
+.ui-icon-btn--accent {
+  background: linear-gradient(180deg, #e0553f, var(--lacquer-red-dark));
+  border-color: rgba(0,0,0,0.2);
+}
+
+.ui-bar__bet {
+  gap: 0;
+}
+
+.ui-bet-field {
+  min-width: 130px;
+  height: 40px;
+  padding: 0 16px;
+  margin: 0 2px;
+  border-radius: 20px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--ui-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 700;
+}
+.ui-bet-field__currency {
+  font-size: 12px;
+  opacity: 0.7;
+  font-weight: 600;
+}
+
+.ui-spin-btn {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 211, 92, 0.85);
+  background: radial-gradient(circle at 35% 30%, #3a1410, #1c0a06 75%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.1s ease;
+}
+.ui-spin-btn svg { width: 42%; height: 42%; }
+.ui-spin-btn:active { transform: scale(0.94); }
+.ui-spin-btn.is-spinning svg { animation: spin-rotate 0.7s linear infinite; }
+@keyframes spin-rotate { to { transform: rotate(360deg); } }
+
+.ui-icon-btn--auto svg text { font-family: 'Baloo 2', sans-serif; }
+
+.ui-balance {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.ui-balance__label { opacity: 0.75; font-size: 13px; font-weight: 600; }
+.ui-balance__value { color: var(--gold); font-size: 18px; }
+.ui-balance__currency { font-size: 12px; opacity: 0.7; }
+
+.ui-icon-btn[data-action="sound"].is-muted { opacity: 0.4; }
+.ui-icon-btn[data-action="sound"].is-muted svg path:last-child { display: none; }
+
+/* ---------- Paytable info popup ---------- */
+.info-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 20px;
+}
+.info-popup[hidden] { display: none; }
+
+.info-popup__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(720px, 90vh);
+  overflow-y: auto;
+  background: var(--lacquer-red-dark);
+  border: 3px solid var(--gold-dark);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.info-popup__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-cream);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.info-popup__close:hover { background: rgba(0, 0, 0, 0.55); }
+
+.info-popup__title {
+  margin: 0 0 16px;
+  color: var(--gold);
+  font-family: 'Fredoka', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  text-align: center;
+  -webkit-text-stroke: 1px var(--ink);
+  text-shadow: 0 2px 0 var(--ink);
+}
+
+.info-popup__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.info-popup__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.info-popup__row img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.info-popup__row-name {
+  flex: 1 1 auto;
+  min-width: 90px;
+  font-weight: 700;
+}
+.info-popup__row-pays {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-cream);
+}
+.info-popup__row-pays span { white-space: nowrap; opacity: 0.9; }
+.info-popup__row-pays b { color: var(--gold); }
+
+@media (max-width: 720px) {
+  .ui-bar { gap: 3vw; padding: 1.2vh 2.5vw; }
+  .ui-balance__label { display: none; }
+  .ui-icon-btn { width: 36px; height: 36px; }
+  .ui-spin-btn { width: 58px; height: 58px; }
+}
+
+/* ================================================================
+   EXPERIMENTAL: desktop "fit everything, no scroll" layout
+   ================================================================
+   Same experiment as Amy's Fruit Farm (see style.css) — toggled via the
+   dev-panel "fit-screen" button (slot.js setupDevPanel), not the default.
+   .screen is normally a fixed 940px tall regardless of viewport, so a short
+   viewport can need to scroll; this pins .screen to the viewport box and
+   turns .ui-bar into a translucent overlay instead of a row that competes
+   for height with it — see ReelMath.fitScale (reel-math.js) for the
+   width+height-aware scale this needs. */
+body.layout-fit {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+body.layout-fit .screen {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  min-width: 0;
+  margin: 0;
+}
+body.layout-fit .ui-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  background: rgba(20, 8, 6, 0.42);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* ================================================================
+   Mobile (portrait) layout — same breakpoint/technique as Amy's Fruit
+   Farm (see style.css), numbers re-derived from this theme's mobile bg
+   art (bg-base-mob.jpg / bg-bonus-mob.jpg, 779x1416 / 780x1416) — first
+   pass, expect follow-up tweaks once seen live.
+   ================================================================ */
+@media (orientation: portrait) {
+  :root {
+    --ui-bar-h-mobile: 128px;
+  }
+
+  html, body { overflow-x: hidden; }
+
+  .screen {
+    width: 100vw;
+    min-width: 0;
+    height: calc(100vh - var(--ui-bar-h-mobile));
+    height: calc(100dvh - var(--ui-bar-h-mobile));
+    min-height: 0;
+    margin: 0;
+  }
+
+  .logo {
+    top: 2%;
+    height: 11%;
+  }
+
+  .reel,
+  .reel-win-amount-viewport {
+    left: 50%;
+    top: 13%;
+    transform-origin: 50% 0%;
+    transform: translateX(-50%) scale(calc(var(--reel-scale-mobile) * 1.321925));
+  }
+
+  .character {
+    left: 0;
+    bottom: 0;
+    height: 43%;
+    width: auto;
+  }
+
+  /* Mobile reel deliberately bleeds edge-to-edge (see .reel above — there's
+     no side margin left for bamboo to sit in without overlapping it), so
+     shrink it down into the same bottom-left band as .character (behind it,
+     per addBaseBehindAll) instead of the tall desktop strip, and lean on
+     .reel__frame's z-index (above) to mask whatever still peeks out. */
+  .env-anchor--bamboo {
+    left: 0;
+    bottom: 0;
+    width: 20%;
+    height: 40%;
+  }
+  .env-anchor--tree {
+    right: 0;
+    top: 0;
+    width: 22%;
+    height: 12%;
+  }
+  .env-anchor--lantern-left {
+    left: 0px;
+    top: 0;
+    width: 43%;
+    height: 14%;
+  }
+  .env-anchor--lantern-right {
+    right: 0;
+    top: 0;
+    width: 42%;
+    height: 14%;
+  }
+
+  .sign-buy-bonus {
+    right: 4%;
+    top: 58%;
+    width: 30%;
+  }
+  .sign-buy-bonus__label { font-size: 4.4vw; }
+
+  .fs-counter {
+    right: calc(6% - 4px);
+    top: calc(70% + 4px);
+    width: 30%;
+    height: auto;
+  }
+  .fs-counter__value { font-size: 6.6vw; }
+
+  .ui-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-areas:
+      "icons1 spin icons2"
+      "bet bet balance";
+    gap: 1vh 1vw;
+    justify-items: center;
+    padding: 1vh 3vw;
+  }
+  .ui-bar > *:nth-child(1) { grid-area: icons1; }
+  .ui-bar > *:nth-child(2) { grid-area: bet; }
+  .ui-bar > *:nth-child(3) { grid-area: spin; }
+  .ui-bar > *:nth-child(4) { grid-area: icons2; }
+  .ui-bar > *:nth-child(5) { grid-area: balance; justify-self: end; }
+}

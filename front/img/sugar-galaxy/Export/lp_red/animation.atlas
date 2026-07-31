@@ -1,0 +1,15 @@
+animation.png
+size:288,301
+filter:Linear,Linear
+blik_heart2_png
+bounds:204,216,83,82
+offsets:10,9,100,100
+rotate:90
+blur_small_150
+bounds:2,2,143,136
+offsets:5,2,150,150
+red
+bounds:147,12,126,126
+red_light
+bounds:2,140,200,159
+offsets:0,21,200,200

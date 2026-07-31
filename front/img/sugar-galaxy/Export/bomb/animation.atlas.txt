@@ -1,0 +1,12 @@
+skeleton.png
+size:385,188
+filter:Linear,Linear
+bomb
+bounds:262,63,121,123
+offsets:0,4,121,127
+bomb-fire
+bounds:262,29,39,32
+offsets:7,13,53,53
+light 2
+bounds:2,2,258,184
+offsets:22,18,302,218

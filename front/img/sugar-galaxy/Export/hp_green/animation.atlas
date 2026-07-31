@@ -1,0 +1,24 @@
+animation.png
+size:203,567
+filter:Linear,Linear
+blik_heart2_png
+bounds:118,2,83,82
+offsets:10,9,100,100
+blue smoke
+bounds:2,375,190,195
+offsets:5,4,200,200
+rotate:90
+green_light
+bounds:2,214,195,159
+offsets:4,21,200,200
+rare_blue_light-1
+bounds:100,86,126,87
+offsets:0,3,126,91
+rotate:90
+rare_green
+bounds:2,86,126,96
+offsets:0,17,126,126
+rotate:90
+rare_green_light
+bounds:2,10,114,74
+offsets:2,6,118,82

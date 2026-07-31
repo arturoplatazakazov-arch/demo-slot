@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Amy's Fruit Farm — demo</title>
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/style.css?v=22">
+</head>
+<body>
+
+  <a class="to-catalog-btn" href="games.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    В каталог
+  </a>
+
+  <!-- DEV-ONLY панель: переключение режима и ручной запуск win/popup анимаций без бэкенда. Убрать, когда подключим реальное состояние игры. -->
+  <div class="dev-panel">
+    <button class="dev-btn" id="devToggle" type="button">mode: base</button>
+    <button class="dev-btn" data-popup="bigWin" type="button">Big Win</button>
+    <button class="dev-btn" data-popup="epicWin" type="button">Epic Win</button>
+    <button class="dev-btn" data-popup="megaWin" type="button">Mega Win</button>
+    <button class="dev-btn" data-popup="bonusSpinsWin" type="button">Bonus Spins Win</button>
+    <button class="dev-btn" data-popup="bonusSpinsTotalWin" type="button">Bonus Total Win</button>
+    <button class="dev-btn" data-popup="buyFreeSpins" type="button">Buy Free Spins</button>
+    <a class="dev-btn" href="admin/index.html" target="_blank" rel="noopener">Admin</a>
+    <button class="dev-btn" id="devFitToggle" type="button">fit-screen: on</button>
+    <span class="dev-hint">клик по символу в сетке — превью его win-анимации</span>
+  </div>
+
+  <div class="screen" id="screen" data-mode="base">
+
+    <img class="layer bg" id="bgLayer" src="img/amys-fruit-farm/img/bg_base_game.png" alt="bg_base_game">
+
+    <img class="layer character" id="character" src="img/amys-fruit-farm/Export/girl_base/static.png" alt="girl_base / girl_bonus">
+
+    <img class="layer logo" src="img/amys-fruit-farm/img/logo_amys_fruit_farm.png" alt="logo_amys_fruit_farm">
+
+    <div class="reel">
+      <div class="reel__bg"></div>
+      <div class="reel__grid" id="reelGrid"></div>
+      <img class="reel__frame" src="img/amys-fruit-farm/img/reel_frame.png" alt="reel_frame">
+    </div>
+
+    <!-- Small wins never get a Spine popup (only big/mega/epic do) — this is
+         the only place their amount is shown at all. Deliberately NOT nested
+         inside .reel: .reel has no z-index of its own, so it stacks below
+         #spineCanvas as a whole regardless of any z-index set on its
+         children — the amount would render but sit behind the win
+         animation's canvas graphics. This wrapper replicates .reel's
+         position/scale directly so it lines up with the grid while living
+         in the same stacking context as #spineCanvas, above it. -->
+    <div class="reel-win-amount-viewport">
+      <div class="reel-win-amount" id="reelWinAmount"></div>
+    </div>
+
+    <div class="layer sign-buy-bonus">
+      <img class="sign-buy-bonus__img" src="img/amys-fruit-farm/img/sign_buy_bonus.png" alt="">
+      <span class="sign-buy-bonus__label">BUY<br>BONUS</span>
+    </div>
+
+    <!-- Затемнение экрана перед попапом / переходом base<->bonus; сидит ниже
+         spine-canvas по стэку, поэтому сам попап (тоже рисуется на канвасе)
+         остаётся ярким, а фон/персонаж/статичные символы под ним темнеют. -->
+    <div class="layer screen-dim" id="screenDim"></div>
+
+    <!-- Полноэкранный WebGL-канвас для всех Spine-анимаций (персонаж, символы, попапы победы) -->
+    <canvas class="layer spine-canvas" id="spineCanvas"></canvas>
+
+    <!-- Сумма выигрыша, наложенная поверх поля "bone_input_number" внутри
+         Spine-попапа — позиция синхронизируется с костью каждый кадр (см. slot.js). -->
+    <div class="popup-amount" id="popupAmount"></div>
+
+    <div class="fs-counter layer" id="freeSpinsCounter">
+      <img class="fs-counter__img" src="img/amys-fruit-farm/img/sign_freespins_counter.png" alt="">
+      <span class="fs-counter__value" id="freeSpinsValue">319</span>
+    </div>
+
+  </div>
+
+  <!-- Paytable info popup — filled from session-start's `symbols` field
+       (server-authoritative, so it always matches whatever config/weights
+       are currently live, including admin-panel edits). -->
+  <div class="info-popup" id="infoPopup" hidden>
+    <div class="info-popup__panel">
+      <button class="info-popup__close" id="infoPopupClose" type="button" aria-label="Закрыть">×</button>
+      <h2 class="info-popup__title">Paytable</h2>
+      <div class="info-popup__list" id="infoPopupList"></div>
+    </div>
+  </div>
+
+  <!-- Свёрстано вручную: нижний UI-бар. Будет меняться под реальную логику. -->
+  <div class="ui-bar">
+
+    <div class="ui-bar__group">
+      <button class="ui-icon-btn" data-action="home" aria-label="Домой">
+        <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9a1 1 0 0 0 1 1H10v-6h4v6h3.5a1 1 0 0 0 1-1v-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="ui-icon-btn" data-action="sound" aria-label="Звук">
+        <svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <button class="ui-icon-btn" data-action="info" aria-label="Информация">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><line x1="12" y1="11" x2="12" y2="16.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="7.5" r="1.2" fill="currentColor"/></svg>
+      </button>
+    </div>
+
+    <div class="ui-bar__group ui-bar__bet">
+      <button class="ui-icon-btn ui-icon-btn--step" data-action="bet-minus" aria-label="Уменьшить ставку">−</button>
+      <div class="ui-bet-field">
+        <span class="ui-bet-field__value" id="betValue">100,000</span>
+        <span class="ui-bet-field__currency">FUN</span>
+      </div>
+      <button class="ui-icon-btn ui-icon-btn--step ui-icon-btn--accent" data-action="bet-plus" aria-label="Увеличить ставку">+</button>
+    </div>
+
+    <button class="ui-spin-btn" data-action="spin" aria-label="Спин">
+      <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.6-5.9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+
+    <div class="ui-bar__group">
+      <button class="ui-icon-btn" data-action="turbo" aria-label="Турбо">
+        <svg viewBox="0 0 24 24"><path d="M13 3 5 14h5l-1 7 8-11h-5l1-7Z" fill="currentColor"/></svg>
+      </button>
+      <button class="ui-icon-btn ui-icon-btn--auto" data-action="autoplay" aria-label="Автоигра">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><text x="12" y="16" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">A</text></svg>
+      </button>
+    </div>
+
+    <div class="ui-balance">
+      <span class="ui-balance__label">BALANCE:</span>
+      <span class="ui-balance__value" id="balanceValue">1,000,000</span>
+      <span class="ui-balance__currency">FUN</span>
+    </div>
+
+  </div>
+
+  <script src="vendor/spine-webgl.js"></script>
+  <script src="js/spine-engine.js?v=5"></script>
+  <script src="js/slot-calibration.js?v=3"></script>
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/sound.js?v=5"></script>
+  <script src="js/reel-math.js?v=6"></script>
+  <script src="js/slot.js?v=22"></script>
+  <script src="js/app.js?v=5"></script>
+</body>
+</html>

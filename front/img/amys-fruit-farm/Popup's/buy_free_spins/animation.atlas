@@ -1,0 +1,25 @@
+animation.png
+size:1908,1151
+filter:Linear,Linear
+pma:true
+bg
+bounds:889,80,708,389
+bg_black
+bounds:2,2,1,1
+btn-accept
+bounds:1731,392,142,102
+btn-cancel
+bounds:1731,496,143,102
+buy_free_spins
+bounds:1599,14,376,307
+rotate:90
+circle
+bounds:1731,600,162,159
+input copy
+bounds:1731,761,388,101
+rotate:90
+rays1
+bounds:2,5,1144,885
+rotate:90
+rays2
+bounds:889,471,840,678

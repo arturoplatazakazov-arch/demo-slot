@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Конструктор слота — Этап 1</title>
+<link rel="stylesheet" href="builder.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <h1>Конструктор слота — Этап 1: название</h1>
+    <div class="topbar__right">
+      <a class="btn" href="../games.html">В каталог</a>
+    </div>
+  </header>
+
+  <main class="layout">
+
+    <section class="panel">
+      <h2>Название нового слота</h2>
+      <p class="hint">
+        По названию генерируется код слота (латиницей) и создаются папки под материалы:
+        <code>front/img/&lt;код&gt;</code>, <code>front/sound/&lt;код&gt;</code>, <code>front/js/&lt;код&gt;</code>.
+      </p>
+      <form id="createForm" class="create-form">
+        <label>
+          Название
+          <input type="text" id="nameInput" placeholder="Например: Дикий Восток" required maxlength="255">
+        </label>
+        <button class="btn btn--primary" type="submit">Создать слот</button>
+      </form>
+      <div class="form-status" id="formStatus"></div>
+    </section>
+
+    <section class="panel" id="draftsPanel">
+      <h2>Слоты в разработке</h2>
+      <p class="hint">Этапы 1–5 (название, материалы, сетка/механики, вёрстка, тест) готовы.</p>
+      <table class="table" id="draftsTable">
+        <thead><tr><th>Название</th><th>Код</th><th>Этап</th><th>Обновлён</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="hint" id="draftsEmpty" hidden>Пока нет ни одного слота в разработке.</p>
+    </section>
+
+  </main>
+
+  <script src="common.js"></script>
+  <script src="new.js"></script>
+</body>
+</html>

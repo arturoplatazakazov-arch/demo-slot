@@ -1,0 +1,29 @@
+animation.png
+size:1469,1043
+filter:Linear,Linear
+1 000 000 usd (2)
+bounds:2,27,300,38
+offsets:2,2,304,41
+buy-free-spins 1
+bounds:907,2,492,253
+offsets:2,1,495,254
+nefrit-accepn 1
+bounds:1367,451,161,96
+offsets:1,1,163,97
+rotate:90
+nefrit-bg 1
+bounds:907,257,784,458
+offsets:4,3,793,464
+rotate:90
+nefrit-decline 1
+bounds:1367,288,161,96
+offsets:1,1,163,97
+rotate:90
+nefrit-input 1
+bounds:1367,614,427,100
+offsets:2,1,431,101
+rotate:90
+svechenie_bigwin
+bounds:2,67,974,903
+offsets:10,11,1014,915
+rotate:90

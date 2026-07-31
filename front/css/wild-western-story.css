@@ -1,0 +1,797 @@
+/* Wild Western Story — theme styles, adapted from east-discovery.css.
+   Mechanics-parity with East Discovery MINUS coins & Hold & Win, so all of
+   that theme's coin-multiplier / hold&win / collector / ambient-environment /
+   standing-character styling is dropped here.
+
+   Asset note: the uploaded backgrounds (bg_base.png = desert sunset,
+   bg_bonus.png = night town) are scene-only — the wooden reel frame, the
+   logo plate and the decorative props (bull skull, hat, cactus, lanterns)
+   seen in the design mockups were NOT delivered as separate assets. Until a
+   real frame.png lands, the reels sit on a CSS placeholder panel/border
+   (.reel__bg) positioned with the same proven geometry as East Discovery's
+   frame hole. Swap that for the frame <img> when the art arrives. */
+
+:root {
+  --wood: #7a4a24;
+  --wood-dark: #4a2a13;
+  --wood-light: #a9713b;
+  --gold: #ffcf5c;
+  --gold-dark: #c9871f;
+  --ink: #2a160a;
+  --panel-dark: rgba(12, 6, 3, 0.62);
+  --ui-bg: rgba(24, 12, 6, 0.74);
+  --ui-border: rgba(255, 205, 120, 0.20);
+  --leather: #8a3a20;
+  --leather-dark: #5c2213;
+  --text-cream: #fff3df;
+
+  /* matches the native size of bg_base.png (desert sunset scene) */
+  --screen-w: 1932;
+  --screen-h: 946;
+
+  /* Fixed-pixel reel grid: 200x200 / 10px-gap 5x3 slots (1040x620 content).
+     --reel-frame-w/h are sized so Frame.png's measured transparent hole
+     (native 1245x894: x[130,1125], y[100,705] -> left 10.44% right 9.56%
+     top 11.19% bottom 21.03%) maps onto that 1040x620 grid: 1040/0.80=1300w,
+     620/0.6778=915h. --reel-grid-inset below IS those hole insets, so the
+     grid lands exactly inside the frame opening. */
+  --cell-size: 200px;
+  --cell-gap: 10px;
+  --reel-frame-w: 1300px;
+  --reel-frame-h: 915px;
+  --reel-grid-inset: 11.19% 9.56% 21.03% 10.44%;
+  --reel-frame-scale: 0.9;
+  --reel-scale: 1;
+  --reel-scale-mobile: 1;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #140a05;
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  color: var(--text-cream);
+}
+
+/* ---------- Back-to-catalog button ---------- */
+.to-catalog-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 110;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(24, 16, 8, 0.75);
+  border: 1px solid rgba(255, 207, 92, 0.5);
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(4px);
+}
+.to-catalog-btn:hover { background: rgba(24, 16, 8, 0.92); border-color: var(--gold); }
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+/* ---------- Dev panel (temporary) ---------- */
+.dev-panel {
+  position: fixed;
+  top: 52px;
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 260px;
+  align-items: center;
+}
+.dev-btn {
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #222;
+  color: #ddd;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.dev-btn:hover { opacity: 1; }
+.dev-hint {
+  font-size: 10px;
+  color: #999;
+  width: 100%;
+  text-align: right;
+}
+
+/* ---------- Screen ---------- */
+.screen {
+  position: relative;
+  width: 100%;
+  min-width: calc((var(--reel-frame-w) * var(--reel-frame-scale) + 400px) * var(--reel-scale));
+  height: 940px;
+  margin: 0 auto;
+  overflow: visible;
+  background: #201007;
+}
+
+.layer { position: absolute; }
+
+.bg {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.logo {
+  top: -3.5%;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 24%;
+  object-fit: contain;
+  z-index: 4;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
+}
+
+/* ---------- Reel area ----------
+   Frame.png (wooden reel frame) overlays the grid; .reel__bg is a dark panel
+   filling the frame hole behind the symbols. */
+.reel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(calc(var(--reel-frame-scale) * var(--reel-scale)));
+  width: var(--reel-frame-w);
+  height: var(--reel-frame-h);
+}
+
+.reel__bg {
+  position: absolute;
+  /* Fills the frame opening behind the symbols. */
+  inset: var(--reel-grid-inset);
+  background:
+    linear-gradient(180deg, rgba(24, 12, 6, 0.72), rgba(8, 4, 2, 0.82)),
+    var(--panel-dark);
+  border-radius: 10px;
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.65);
+}
+
+.reel__frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  /* Above .spine-canvas (z-index 5) so the wooden border masks any symbol/
+     win-clip pixels that overflow the opening during landing. */
+  z-index: 6;
+}
+
+.reel__grid {
+  /* Frame.png's measured hole inset — the 1040x620 grid fits the opening. */
+  position: absolute;
+  inset: var(--reel-grid-inset);
+  display: flex;
+  flex-direction: row;
+  gap: var(--cell-gap);
+  z-index: 1;
+}
+
+/* One reel = a masked viewport (3 cells tall) over a taller vertical strip —
+   mechanics identical to the other themes; pixel constants reused from East
+   Discovery's frame geometry (BG_HOLE_INSET.top * 1107 ≈ 112px bleed). */
+.reel__col {
+  position: relative;
+  width: var(--cell-size);
+  height: calc(100% + 132px);
+  margin-top: -112px;
+  overflow: hidden;
+  /* Fade BOTH ends: the column bleeds ~10px above the frame's top edge (its
+     top border is thinner than the 112px bleed), so without a top fade the
+     scrolling symbols flash above the frame during a spin. Opaque only inside
+     the frame opening (~112px..727px, i.e. the hole); everything above/below
+     is transparent so nothing shows outside the wooden frame. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 100px, #000 112px, #000 727px, transparent 742px);
+  mask-image: linear-gradient(to bottom, transparent 100px, #000 112px, #000 727px, transparent 742px);
+  transition: transform 200ms ease, filter 200ms ease;
+}
+.reel__col.is-anticipating {
+  /* The waiting column doesn't scale up — it just gets the z-index/glow to
+     read as "the one in suspense" without visibly growing (no screen zoom
+     either; that was removed per product). */
+  z-index: 2;
+  filter: drop-shadow(0 0 14px rgba(255, 205, 92, 0.9));
+}
+.reel__strip {
+  position: absolute;
+  top: 112px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cell-gap);
+}
+.reel__cell {
+  position: relative;
+  width: var(--cell-size);
+  height: var(--cell-size);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+.reel__cell img {
+  /* No max-width/height cap on purpose: several symbol PNGs are 220px, larger
+     than the 200px cell. Capping them to the cell shrinks the static ~10%
+     below the size the Spine animation renders at (which isn't capped), so the
+     symbol appeared to grow after its win animation. Rendering at natural size
+     keeps static and animation the same size. Cell is overflow:visible, same
+     as the Spine instance which also overflows. */
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+.reel__cell.is-dimmed img {
+  opacity: 0.3;
+}
+.reel__cell-anchor {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.reel__strip.is-looping {
+  animation: reel-loop var(--reel-loop-duration, 420ms) linear infinite;
+}
+@keyframes reel-loop {
+  from { transform: translateY(0); }
+  to { transform: translateY(var(--reel-loop-distance, 0)); }
+}
+
+/* ---------- Screen dim (before popups / base<->bonus transitions) ---------- */
+.screen-dim {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  /* Same z-index as .logo (4, the highest other layer/z:auto element here) —
+     ties break by DOM order, and this sits later in markup, so it still
+     paints above the logo. Deliberately still below .spine-canvas (5), so a
+     popup drawn on the canvas stays bright (the canvas's own base-layer
+     content, e.g. a still-looping win symbol, is dimmed separately — see
+     stage.setBaseDim, wired from pushScreenDim/popScreenDim in slot.js). */
+  z-index: 4;
+}
+.screen-dim.is-active { opacity: 1; }
+.screen-dim.is-opaque { background: #000; }
+
+/* ---------- Popup win-amount overlay ---------- */
+.popup-amount {
+  position: fixed;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(16px, 2.2vw, 34px);
+  color: var(--text-cream);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85), 0 0 14px rgba(255, 205, 92, 0.65);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.popup-amount.is-visible { opacity: 1; }
+
+/* ---------- Inline win-amount (base wins that never get a Spine popup) ---------- */
+.reel-win-amount-viewport {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(calc(var(--reel-frame-scale) * var(--reel-scale)));
+  width: var(--reel-frame-w);
+  height: var(--reel-frame-h);
+  z-index: 16;
+  pointer-events: none;
+}
+.reel-win-amount {
+  position: absolute;
+  inset: var(--reel-grid-inset);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.reel-win-amount.is-visible { opacity: 1; }
+.reel-win-amount::before {
+  content: attr(data-amount);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 64px;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 0 4px 0 var(--ink), 0 0 26px rgba(255, 205, 92, 0.75);
+  white-space: nowrap;
+  padding: 6px 22px;
+  background: rgba(12, 6, 3, 0.55);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(255, 205, 92, 0.25);
+}
+
+/* ---------- Buy Bonus sign (Buy-bonus-button.png — a wooden arrow signpost) ----------
+   Desktop: to the right of the reel frame, vertically centered on it.
+   Mobile: moved to the ground centered below the reels (portrait media query). */
+.sign-buy-bonus {
+  right: 4%;
+  top: 56%;
+  transform: translateY(-50%);
+  width: 12%;
+  aspect-ratio: 244 / 248;
+  height: auto;
+  cursor: pointer;
+  z-index: 7;
+}
+.sign-buy-bonus__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5));
+}
+.sign-buy-bonus__label {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  height: 34%;
+  width: 74%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Rye', 'Luckiest Guy', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 1.5vw;
+  line-height: 1.05;
+  text-align: center;
+  color: var(--gold);
+  -webkit-text-stroke: 1px var(--leather-dark);
+  text-shadow: 0 2px 0 var(--leather-dark);
+  transition: text-shadow 200ms ease;
+  pointer-events: none;
+}
+.sign-buy-bonus:hover .sign-buy-bonus__label {
+  text-shadow: 0 2px 0 var(--leather-dark), 0 0 14px var(--gold), 0 0 28px rgba(255, 205, 92, 0.7);
+}
+.screen[data-mode="freespins"] .sign-buy-bonus { display: none; }
+
+/* ---------- Environment props (static art around the frame) ----------
+   The delivered Export/enviroment/* spine skeletons ship without a texture
+   atlas/PNG, so they can't animate through the engine yet — these are the
+   static PNGs (skull_bone, light lantern, hat, cactus_1/2) placed as
+   decoration. Positions are a first pass; calibrate against the mockup. */
+.prop {
+  position: absolute;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  z-index: 7;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5));
+}
+.prop--skull   { top: 6%;  left: 14%;  width: 17%; }
+.prop--lantern { top: 12%; right: 17%; width: 7.5%; }
+.prop--hat     { bottom: 9%; left: 25%; width: 12%; }
+.prop--cactus1 { bottom: 0%; left: 4%;  width: 9%; }
+.prop--cactus2 { bottom: 0%; right: 4%; width: 9%; }
+
+/* Missing-asset placeholder (dev-time only) — sized so a not-yet-delivered
+   symbol (e.g. the WILD art) shows as a tidy dashed box with its alt text,
+   not a tiny broken-image glyph. */
+img.is-missing {
+  width: 55%;
+  height: 55%;
+  object-fit: contain;
+  outline: 2px dashed rgba(255, 205, 120, 0.5);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+.spine-canvas {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ---------- Free Spins counter (free-spins-counter.png — a wooden sign) ---------- */
+.fs-counter {
+  display: none;
+  right: 10%;
+  bottom: 50px;
+  width: 12%;
+  z-index: 6;
+}
+.screen[data-mode="freespins"] .fs-counter { display: block; }
+
+.fs-counter__img {
+  position: relative;
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5));
+}
+.fs-counter__value {
+  position: absolute;
+  left: 50%;
+  /* Centered on the board (upper ~55% of the art; the post is below). */
+  top: 37%;
+  transform: translate(-50%, -50%);
+  font-family: 'Luckiest Guy', cursive;
+  font-weight: 400;
+  font-size: 2.4vw;
+  color: var(--gold);
+  -webkit-text-stroke: 1px var(--ink);
+  text-shadow: 0 2px 0 var(--ink);
+  white-space: nowrap;
+}
+
+/* ================================================================
+   Bottom UI bar
+   ================================================================ */
+.ui-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2vw;
+  padding: 1.2vh 2vw;
+  background: var(--ui-bg);
+  border-top: 1px solid var(--ui-border);
+}
+
+.ui-bar__group {
+  display: flex;
+  align-items: center;
+  gap: 0.8vw;
+}
+
+.ui-icon-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.ui-icon-btn svg { width: 55%; height: 55%; }
+.ui-icon-btn:hover { background: rgba(255, 255, 255, 0.14); }
+.ui-icon-btn:active { transform: scale(0.92); }
+
+.ui-icon-btn--step {
+  font-size: 22px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.1);
+}
+.ui-icon-btn--accent {
+  background: linear-gradient(180deg, #d8712f, var(--leather-dark));
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.ui-bar__bet {
+  gap: 0;
+}
+
+.ui-bet-field {
+  min-width: 130px;
+  height: 40px;
+  padding: 0 16px;
+  margin: 0 2px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--ui-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 700;
+}
+.ui-bet-field__currency {
+  font-size: 12px;
+  opacity: 0.7;
+  font-weight: 600;
+}
+
+.ui-spin-btn {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 205, 92, 0.85);
+  background: radial-gradient(circle at 35% 30%, #4a1e10, #24100a 75%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.1s ease;
+}
+.ui-spin-btn svg { width: 42%; height: 42%; }
+.ui-spin-btn:active { transform: scale(0.94); }
+.ui-spin-btn.is-spinning svg { animation: spin-rotate 0.7s linear infinite; }
+@keyframes spin-rotate { to { transform: rotate(360deg); } }
+
+.ui-icon-btn--auto svg text { font-family: 'Baloo 2', sans-serif; }
+
+.ui-balance {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.ui-balance__label { opacity: 0.75; font-size: 13px; font-weight: 600; }
+.ui-balance__value { color: var(--gold); font-size: 18px; }
+.ui-balance__currency { font-size: 12px; opacity: 0.7; }
+
+.ui-icon-btn[data-action="sound"].is-muted { opacity: 0.4; }
+.ui-icon-btn[data-action="sound"].is-muted svg path:last-child { display: none; }
+
+/* ---------- Paytable info popup ---------- */
+.info-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 20px;
+}
+.info-popup[hidden] { display: none; }
+
+.info-popup__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(720px, 90vh);
+  overflow-y: auto;
+  background: var(--leather-dark);
+  border: 3px solid var(--gold-dark);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.info-popup__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-cream);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.info-popup__close:hover { background: rgba(0, 0, 0, 0.55); }
+
+.info-popup__title {
+  margin: 0 0 16px;
+  color: var(--gold);
+  font-family: 'Rye', 'Luckiest Guy', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 24px;
+  text-align: center;
+  -webkit-text-stroke: 1px var(--ink);
+  text-shadow: 0 2px 0 var(--ink);
+}
+
+.info-popup__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.info-popup__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.info-popup__row img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.info-popup__row-name {
+  flex: 1 1 auto;
+  min-width: 90px;
+  font-weight: 700;
+}
+.info-popup__row-pays {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-cream);
+}
+.info-popup__row-pays span { white-space: nowrap; opacity: 0.9; }
+.info-popup__row-pays b { color: var(--gold); }
+
+@media (max-width: 720px) {
+  .ui-bar { gap: 3vw; padding: 1.2vh 2.5vw; }
+  .ui-balance__label { display: none; }
+  .ui-icon-btn { width: 36px; height: 36px; }
+  .ui-spin-btn { width: 58px; height: 58px; }
+}
+
+/* ================================================================
+   EXPERIMENTAL: desktop "fit everything, no scroll" layout
+   ================================================================
+   Same experiment as Amy's Fruit Farm (see style.css) — toggled via the
+   dev-panel "fit-screen" button (slot.js setupDevPanel), not the default.
+   .screen is normally a fixed 940px tall regardless of viewport, so a short
+   viewport can need to scroll; this pins .screen to the viewport box and
+   turns .ui-bar into a translucent overlay instead of a row that competes
+   for height with it — see ReelMath.fitScale (reel-math.js) for the
+   width+height-aware scale this needs. */
+body.layout-fit {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+body.layout-fit .screen {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  min-width: 0;
+  margin: 0;
+}
+body.layout-fit .ui-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  background: rgba(24, 12, 6, 0.42);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* ================================================================
+   Mobile (portrait) layout — mobile bg art is 780x1416
+   (mob_Base_bg.png / mob_Bonus_bg.png). First pass; calibrate live.
+   ================================================================ */
+@media (orientation: portrait) {
+  :root {
+    --ui-bar-h-mobile: 128px;
+  }
+
+  html, body { overflow-x: hidden; }
+
+  /* fit-to-screen (body.layout-fit) is a desktop-only experiment made the
+     default in slot.js init — neutralize it in portrait so the dedicated
+     mobile layout below always wins (otherwise body.layout-fit .screen's
+     100dvh height and the translucent ui-bar overlay override it). */
+  body.layout-fit {
+    height: auto;
+    overflow: visible;
+  }
+  body.layout-fit .screen {
+    width: 100vw;
+    height: calc(100vh - var(--ui-bar-h-mobile));
+    height: calc(100dvh - var(--ui-bar-h-mobile));
+    min-width: 0;
+    margin: 0;
+  }
+  body.layout-fit .ui-bar {
+    position: sticky;
+    background: var(--ui-bg);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .screen {
+    width: 100vw;
+    min-width: 0;
+    height: calc(100vh - var(--ui-bar-h-mobile));
+    height: calc(100dvh - var(--ui-bar-h-mobile));
+    min-height: 0;
+    margin: 0;
+  }
+
+  .logo {
+    top: 7%;
+    height: 18.4%;
+  }
+
+  /* Slot 5% smaller on mobile (1.28 * 0.95 = 1.216). */
+  .reel,
+  .reel-win-amount-viewport {
+    left: 50%;
+    top: 15%;
+    transform-origin: 50% 0%;
+    transform: translateX(-50%) scale(calc(var(--reel-scale-mobile) * 1.216));
+  }
+
+  /* Mobile prop placement/sizing (overrides the desktop .prop--* rules). */
+  .prop--skull   { top: 15%; left: -13%; width: 28%; }
+  .prop--hat     { bottom: 39%; left: -4%; width: 31%; }
+  .prop--cactus1 { bottom: 0%; left: 4%;  width: 39%; }
+  .prop--cactus2 { bottom: 0%; right: 4%; width: 29%; }
+
+  .sign-buy-bonus {
+    left: 50%;
+    right: auto;
+    top: auto;
+    bottom: 16%;
+    width: 49%;
+    transform: translateX(-50%);
+  }
+  .sign-buy-bonus__label { font-size: 3.6vw; }
+
+  .fs-counter {
+    left: 50%;
+    right: auto;
+    top: auto;
+    bottom: 5%;
+    width: 26%;
+    height: auto;
+    transform: translateX(-50%);
+  }
+  .fs-counter__value { font-size: 5.6vw; }
+
+  .ui-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-areas:
+      "icons1 spin icons2"
+      "bet bet balance";
+    gap: 1vh 1vw;
+    justify-items: center;
+    padding: 1vh 3vw;
+  }
+  .ui-bar > *:nth-child(1) { grid-area: icons1; }
+  .ui-bar > *:nth-child(2) { grid-area: bet; }
+  .ui-bar > *:nth-child(3) { grid-area: spin; }
+  .ui-bar > *:nth-child(4) { grid-area: icons2; }
+  .ui-bar > *:nth-child(5) { grid-area: balance; justify-self: end; }
+}

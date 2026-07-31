@@ -1,0 +1,19 @@
+animation.png
+size:1914,1151
+filter:Linear,Linear
+pma:true
+bg
+bounds:889,76,708,393
+bg_black
+bounds:2,2,1,1
+big_win
+bounds:1599,31,438,313
+rotate:90
+input copy
+bounds:1731,561,588,153
+rotate:90
+rays1
+bounds:2,5,1144,885
+rotate:90
+rays2
+bounds:889,471,840,678

@@ -1,0 +1,15 @@
+animation.png
+size:1413,375
+filter:Linear,Linear
+pma:true
+girl
+bounds:2,2,371,850
+rotate:90
+hand
+bounds:854,162,211,433
+rotate:90
+leg
+bounds:854,56,104,419
+rotate:90
+spit
+bounds:1275,5,136,155

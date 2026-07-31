@@ -1,0 +1,256 @@
+{
+  "neon-reels": {
+    "coin": {
+      "anim": {
+        "dx": 0.0,
+        "dy": -4.0
+      }
+    },
+    "geisha": {
+      "anim": {
+        "dx": 0.0,
+        "dy": -1.0
+      }
+    },
+    "k": {
+      "anim": {
+        "dx": -10.0,
+        "dy": 0.0
+      }
+    },
+    "q": {
+      "anim": {
+        "dx": -14.0,
+        "dy": 0.0
+      }
+    },
+    "samurai": {
+      "anim": {
+        "dx": -22.0,
+        "dy": 10.0
+      }
+    },
+    "scatter": {
+      "static": {
+        "dx": -5.0,
+        "dy": 2.0
+      }
+    },
+    "sensei": {
+      "anim": {
+        "dx": -7.0,
+        "dy": -5.0
+      }
+    },
+    "wild": {
+      "anim": {
+        "dx": 4.0,
+        "dy": -32.0
+      }
+    },
+    "yakudza": {
+      "anim": {
+        "dx": 8.0,
+        "dy": -3.0
+      }
+    }
+  },
+  "party-of-goods": {
+    "blue": {
+      "anim": {
+        "dx": 3.0,
+        "dy": -1.0
+      }
+    },
+    "boom": {
+      "static": {
+        "dx": -2.0,
+        "dy": -4.0
+      }
+    },
+    "cupidon": {
+      "anim": {
+        "dx": 0.0,
+        "dy": 9.0
+      }
+    },
+    "green": {
+      "static": {
+        "dx": 0.0,
+        "dy": -1.0
+      }
+    },
+    "red": {
+      "static": {
+        "dx": 0.0,
+        "dy": -2.0
+      }
+    },
+    "scatter": {
+      "anim": {
+        "dx": 0.0,
+        "dy": -9.0
+      }
+    },
+    "wild": {
+      "anim": {
+        "dx": 1.0,
+        "dy": -8.0
+      }
+    },
+    "x2": {
+      "anim": {
+        "dx": 0.0,
+        "dy": -1.0
+      }
+    },
+    "x5": {
+      "static": {
+        "dx": -2.0,
+        "dy": 0.0
+      }
+    },
+    "x7": {
+      "static": {
+        "dx": -1.0,
+        "dy": 0.0
+      }
+    },
+    "yellow": {
+      "anim": {
+        "dx": 0.0,
+        "dy": -4.0
+      }
+    },
+    "zeus": {
+      "anim": {
+        "dx": 0.0,
+        "dy": 6.0
+      }
+    }
+  },
+  "sugar-galaxy": {
+    "bomb": {
+      "anim": {
+        "dx": 8.0,
+        "dy": -9.0
+      }
+    },
+    "hp_blue": {
+      "anim": {
+        "dx": 0.0,
+        "dy": 1.0
+      }
+    },
+    "hp_green": {
+      "anim": {
+        "dx": 0.0,
+        "dy": 4.0
+      }
+    },
+    "hp_red": {
+      "anim": {
+        "dx": 0.0,
+        "dy": 1.0
+      }
+    },
+    "hp_yellow": {
+      "static": {
+        "dx": -1.0,
+        "dy": 4.0
+      }
+    },
+    "lp_blue": {
+      "anim": {
+        "dx": 3.0,
+        "dy": 3.0
+      }
+    },
+    "lp_green": {
+      "anim": {
+        "dx": 14.0,
+        "dy": -23.0
+      }
+    },
+    "lp_red": {
+      "anim": {
+        "dx": 18.0,
+        "dy": -17.0
+      }
+    },
+    "scatter": {
+      "anim": {
+        "dx": 1.0,
+        "dy": -1.0
+      }
+    },
+    "wild": {
+      "anim": {
+        "dx": -18.0,
+        "dy": 5.0
+      }
+    },
+    "x2": {
+      "static": {
+        "dx": 3.0,
+        "dy": -5.0
+      }
+    },
+    "x3": {
+      "static": {
+        "dx": 2.0,
+        "dy": -4.0
+      }
+    },
+    "x5": {
+      "static": {
+        "dx": 3.0,
+        "dy": -5.0
+      }
+    },
+    "x7": {
+      "static": {
+        "dx": 5.0,
+        "dy": -5.0
+      }
+    }
+  },
+  "wild-western-story": {
+    "gun": {
+      "anim": {
+        "dx": -2.0,
+        "dy": 0.0
+      }
+    },
+    "j": {
+      "static": {
+        "dx": -12.0,
+        "dy": 0.0
+      }
+    },
+    "scatter": {
+      "anim": {
+        "dx": -3.0,
+        "dy": 2.0
+      }
+    },
+    "whiskey": {
+      "static": {
+        "dx": 0.0,
+        "dy": -3.0
+      }
+    },
+    "wild": {
+      "anim": {
+        "dx": 1.0,
+        "dy": -2.0
+      }
+    },
+    "wolf": {
+      "anim": {
+        "dx": -2.0,
+        "dy": 1.0
+      }
+    }
+  }
+}

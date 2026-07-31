@@ -1,0 +1,8 @@
+{
+  "name": "amys-fruit-farm-front",
+  "private": true,
+  "description": "Static frontend for the demo-slot backend — no build step, plain scripts.",
+  "scripts": {
+    "test": "node --test tests/**/*.test.js"
+  }
+}

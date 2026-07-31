@@ -1,0 +1,32 @@
+animation.png
+size:2013,1312
+filter:Linear,Linear
+bg_bonus-spins-tot-win 1
+bounds:907,463,847,560
+offsets:3,2,853,563
+rotate:90
+coins-L 1
+bounds:1469,663,340,492
+offsets:3,3,345,496
+rotate:90
+coins-R 1
+bounds:994,109,352,467
+offsets:2,3,356,471
+rotate:90
+coins-bot 1
+bounds:497,16,495,318
+offsets:3,2,500,322
+coins-top 1
+bounds:2,2,493,332
+offsets:2,2,497,335
+plashka_bigwin
+bounds:1469,49,612,314
+offsets:4,8,681,324
+rotate:90
+svechenie_bigwin
+bounds:2,336,974,903
+offsets:10,11,1014,915
+rotate:90
+text-bonus-spins-tot-win 1
+bounds:1469,1005,542,305
+offsets:2,1,545,306

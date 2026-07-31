@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Каталог игр — demo</title>
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/games.css?v=2">
+</head>
+<body>
+
+  <div class="lobby">
+    <div class="lobby__header">
+      <h1 class="lobby__title">Каталог игр</h1>
+      <p class="lobby__subtitle">Выберите слот, чтобы начать демо-игру</p>
+    </div>
+
+    <ul class="game-grid" id="gameGrid">
+      <li class="static-card">
+        <a class="game-card" href="builder/new.html">
+          <div class="game-card__media">
+            <span class="game-card__badge">Новый</span>
+          </div>
+          <div class="game-card__body">
+            <h2 class="game-card__name">Создать слот</h2>
+            <p class="game-card__desc">Запустить конструктор нового слота</p>
+            <span class="game-card__play">
+              <svg viewBox="0 0 24 24"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z" fill="currentColor"/></svg>
+              Начать
+            </span>
+          </div>
+        </a>
+      </li>
+
+      <li class="static-card">
+        <a class="game-card" href="anim-lab.html">
+          <div class="game-card__media">
+            <span class="game-card__badge">QA</span>
+          </div>
+          <div class="game-card__body">
+            <h2 class="game-card__name">Anim Lab</h2>
+            <p class="game-card__desc">Все анимации и статика всех слотов с подстройкой координат</p>
+            <span class="game-card__play">
+              <svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4Z" fill="currentColor"/></svg>
+              Открыть
+            </span>
+          </div>
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/games-catalog.js"></script>
+</body>
+</html>

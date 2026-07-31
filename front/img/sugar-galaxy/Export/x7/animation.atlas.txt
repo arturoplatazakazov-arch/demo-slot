@@ -1,0 +1,14 @@
+multy.png
+size:323,157
+filter:Linear,Linear
+big-blick
+bounds:2,9,146,250
+offsets:0,0,150,250
+rotate:90
+multy_x
+bounds:254,2,55,58
+offsets:1,2,58,62
+rotate:90
+multy_x7
+bounds:254,59,67,96
+offsets:2,3,71,101

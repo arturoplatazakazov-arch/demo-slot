@@ -1,0 +1,43 @@
+animation.png
+size:1844,745
+filter:Linear,Linear
+pma:true
+bg_bonus_spins_total_win
+bounds:2,2,864,741
+black
+bounds:868,4,1,1
+bonus_spins_total_win 1
+bounds:868,132,611,402
+rotate:90
+coin_l_1
+bounds:868,41,89,83
+rotate:90
+coin_l_2
+bounds:953,50,80,75
+rotate:90
+coin_l_3
+bounds:957,28,20,17
+rotate:90
+coin_l_4
+bounds:937,16,23,18
+rotate:90
+coin_l_5
+bounds:868,7,40,32
+coin_r_1
+bounds:1030,57,69,73
+coin_r_2
+bounds:1101,70,60,54
+rotate:90
+coin_r_3
+bounds:910,10,29,25
+rotate:90
+input
+bounds:1272,22,721,209
+rotate:90
+ray_rounded 1
+bounds:1483,7,260,235
+rotate:90
+rays
+bounds:1483,269,359,236
+rays 1
+bounds:1483,507,359,236

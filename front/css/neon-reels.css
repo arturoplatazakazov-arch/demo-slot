@@ -1,0 +1,671 @@
+/* Neon Reels — game frontend, built from the slot-builder manifest
+   (builder_drafts row for game code "neon-reels", stage 5). Unlike the
+   frame-hole-measured layout of east-discovery.css, every decorative /
+   HUD element here is positioned straight from the manifest's own design
+   coordinates: a fixed-size .stage (1932x940 desktop, 780x1416 mobile —
+   the manifest's layouts.<device>.w/h) scaled to the viewport by JS
+   (--stage-scale), with each child pinned by its manifest center point and
+   size in raw design px. Reel/frame/logo/buy-bonus/free-spins-counter
+   rects all come verbatim from the manifest's layouts.<device>.screens.
+
+   The reel grid keeps a fixed intrinsic size (990x590, 190px cells / 10px
+   gap = the desktop reel_block) so the reel-loop scroll math in slot.js
+   works in one constant unit (NR_ROW_STEP) on every device — mobile just
+   scales the whole .reel down (transform: scale) to the mobile reel_block
+   size, rather than using smaller cells. */
+
+:root {
+  --neon-cyan: #2ff3ff;
+  --neon-cyan-dim: #0e8ea3;
+  --neon-magenta: #ff3df0;
+  --neon-purple: #8a2be2;
+  --gold: #ffd35c;
+  --ink: #06010f;
+  --text-cream: #eafcff;
+  --ui-bg: rgba(10, 4, 26, 0.78);
+  --ui-border: rgba(74, 240, 255, 0.28);
+
+  /* Active design box — swapped for the portrait one in the media query
+     below. slot.js reads matchMedia('(orientation: portrait)') to keep its
+     stage-scale math in sync with whichever of these is live. */
+  --design-w: 1932px;
+  --design-h: 940px;
+
+  --stage-scale: 1;
+  /* Mobile reel scale: mobile reel_block (690x410) over the intrinsic reel
+     size (990x590) = 0.69697. Applied on top of --stage-scale on .reel. */
+  --reel-fit: 1;
+}
+
+* { box-sizing: border-box; }
+
+html, body { overflow: hidden; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #05010d;
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  color: var(--text-cream);
+}
+
+/* ---------- Back-to-catalog button ---------- */
+.to-catalog-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 110;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(8, 2, 24, 0.75);
+  border: 1px solid var(--neon-cyan);
+  color: var(--neon-cyan);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 0 12px rgba(47, 243, 255, 0.35);
+}
+.to-catalog-btn:hover { background: rgba(8, 2, 24, 0.95); }
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+/* ---------- Dev panel ---------- */
+.dev-panel {
+  position: fixed;
+  top: 52px;
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 260px;
+  align-items: center;
+}
+.dev-btn {
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #40306b;
+  background: #170a2e;
+  color: #d7c9ff;
+  cursor: pointer;
+  opacity: 0.8;
+}
+.dev-btn:hover { opacity: 1; border-color: var(--neon-magenta); }
+.dev-hint {
+  font-size: 10px;
+  color: #8f7fc0;
+  width: 100%;
+  text-align: right;
+}
+
+/* ---------- Stage (fixed design box, scaled to viewport) ---------- */
+.screen {
+  position: relative;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--design-w);
+  height: var(--design-h);
+  transform: translate(-50%, -50%) scale(var(--stage-scale));
+  transition: transform 500ms ease;
+  transform-origin: center center;
+}
+
+.layer { position: absolute; }
+
+/* Direct child of .screen (NOT .stage — see the HTML) so it covers the full,
+   unscaled viewport (object-fit: cover, cropping as needed) instead of being
+   letterboxed together with the rest of the design box: --stage-scale is a
+   "contain" fit (Math.min of width/height ratios — see updateStageScale in
+   slot.js), so on any viewport whose aspect ratio isn't exactly the design's
+   1932:940, the scaled .stage leaves empty bars on two sides. The background
+   shouldn't show those bars — every other game's .bg fills edge-to-edge the
+   same way (see e.g. style.css). */
+.bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Every positioned art element is pinned by its manifest CENTER point via
+   translate(-50%, -50%), so the mobile overrides only need to restate the
+   center + size. */
+.reel-bg,
+.frame,
+.logo,
+.sign-buy-bonus,
+.fs-counter,
+.reel {
+  transform: translate(-50%, -50%);
+}
+
+/* Desktop: enlarge the reel frame + reel background by 3% about their own
+   centre (they stay pinned on the reel). Reset to 1x in the portrait block
+   below so mobile keeps its manifest size. */
+.reel-bg,
+.frame {
+  transform: translate(-50%, -50%) scale(1.03);
+}
+
+.reel-bg {
+  left: 969px; top: 486px;
+  width: 1079px; height: 700px;
+  object-fit: fill;
+  z-index: 1;
+}
+
+/* ---------- Reel ---------- */
+/* Intrinsic 990x590 (desktop reel_block); mobile scales it via --reel-fit. */
+.reel {
+  left: 966px; top: 470px;
+  width: 990px; height: 590px;
+  transform: translate(-50%, -50%) scale(var(--reel-fit));
+  /* AT REST nothing clips at all — a symbol's art (authored on a 220px canvas,
+     ~15px past its 190px cell on every side) and its Spine win animation can
+     overflow their cell/the grid freely; overlaps are intentional. */
+  overflow: visible;
+  z-index: 2;
+}
+/* While a spin runs (.is-spinning, toggled by slot.js) the scrolling filler
+   must be hidden. Clip to the frame's HOLE edge (where the opaque border
+   begins), NOT its outer edge: insets are relative to the .reel box (990x590,
+   design px), and the transparent opening reaches only ~16px above / ~18px
+   below / ~25px past each side of the grid (measured from frame-2.png's alpha
+   channel). A resting symbol's art overflows its cell ~15px, which is inside
+   that hole, so the top/bottom values (-18/-20, a hair into the border) keep
+   that overflow visible while the clip line itself stays hidden under the
+   border. Going further out (e.g. to the frame's OUTER edge) re-exposed the
+   hole margin below the last row, briefly flashing the next filler row on
+   settle. Left/right stay wide open (-400) so wide/high-value symbols are
+   never cut on the sides. Retune if the frame scale (currently 1.03) changes. */
+.reel.is-spinning { clip-path: inset(-18px -400px -20px -400px); }
+.reel__grid {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+.reel__col {
+  position: relative;
+  width: 190px;
+  height: 100%;
+  transition: transform 200ms ease, filter 200ms ease;
+}
+.reel__col.is-anticipating {
+  /* The waiting column doesn't scale up — it just gets the z-index/glow to
+     read as "the one in suspense" without visibly growing (no stage zoom
+     either; that was removed per product). */
+  z-index: 3;
+  filter: drop-shadow(0 0 16px rgba(47, 243, 255, 0.9));
+}
+.reel__strip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.reel__cell {
+  position: relative;
+  width: 190px;
+  height: 190px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+/* static.png is authored on a shared 220x220 canvas (symbol content padded
+   inside) — render at native size, centered, uncropped, so it lines up with
+   where the Spine win clip draws (both centered on the cell). */
+.reel__cell img {
+  width: 220px;
+  height: 220px;
+  object-fit: contain;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+.reel__cell.is-dimmed img { opacity: 0.3; }
+.reel__cell-anchor {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.reel__strip.is-looping {
+  animation: reel-loop var(--reel-loop-duration, 420ms) linear infinite;
+}
+@keyframes reel-loop {
+  from { transform: translateY(0); }
+  to { transform: translateY(var(--reel-loop-distance, 0)); }
+}
+
+/* Frame sits above the reel (manifest z2) and masks the reel's outer edge. */
+.frame {
+  left: 966px; top: 487px;
+  width: 1170px; height: 762px;
+  object-fit: fill;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.logo {
+  left: 976px; top: 79px;
+  width: 400px; height: 193px;
+  object-fit: contain;
+  z-index: 7;
+}
+
+/* ---------- Buy-bonus button (Buy_bonus_button-2.png, label baked in) ---------- */
+.sign-buy-bonus {
+  left: 1637px; top: 460px;
+  width: 226px; height: 294px;
+  cursor: pointer;
+  z-index: 6;
+}
+.sign-buy-bonus__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  transition: filter 180ms ease;
+}
+.sign-buy-bonus:hover .sign-buy-bonus__img {
+  filter: drop-shadow(0 0 18px rgba(255, 61, 240, 0.85));
+}
+.screen[data-mode="freespins"] .sign-buy-bonus { display: none; }
+
+/* ---------- Screen dim + Spine canvas ----------
+   Both are direct children of .screen (NOT .stage), so they cover the full
+   unscaled viewport area. The canvas MUST stay unscaled: spine-engine.js
+   positions every instance by reading each anchor's on-screen (post-
+   transform) rect against this canvas's own rect — the reel cells live in
+   the scaled .stage and report scaled rects, which only line up if the
+   canvas they're drawn onto is the plain viewport. */
+.screen-dim {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  z-index: 8;
+}
+.screen-dim.is-active { opacity: 1; }
+.screen-dim.is-opaque { background: #000; }
+
+.spine-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9;
+}
+
+/* ---------- Popup win-amount overlay (tracks the popup's bone_input) ---------- */
+.popup-amount {
+  position: fixed;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(16px, 2.2vw, 34px);
+  color: var(--text-cream);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85), 0 0 16px rgba(47, 243, 255, 0.7);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.popup-amount.is-visible { opacity: 1; }
+
+/* ---------- Coin multiplier value ("10X", "1000X", ...) ---------- */
+.coin-multiplier-amount {
+  position: fixed;
+  left: 0;
+  top: 0;
+  /* +3px nudge lowers the value 3px relative to the coin's bone_numb anchor */
+  transform: translate(-50%, calc(-50% + 3px));
+  font-family: 'Luckiest Guy', cursive;
+  font-weight: 400;
+  font-size: clamp(14px, 1.6vw, 26px);
+  color: var(--gold);
+  -webkit-text-stroke: 1.5px var(--ink);
+  text-shadow: 0 2px 0 var(--ink), 0 0 12px rgba(255, 211, 92, 0.7);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 17;
+}
+
+/* ---------- Inline win-amount (base wins with no Spine popup) ---------- */
+/* BUG FIX: the win-amount number sometimes rendered BEHIND the winning
+   symbol's own animation. Root cause: .reel-win-amount-viewport used to live
+   INSIDE .stage, but .stage has its own `transform` (needed for --stage-
+   scale) — a transform creates a new stacking context, so the viewport's own
+   z-index:16 only ever competed against .stage's OTHER children, never
+   against #spineCanvas (z-index 9), which is a SIBLING of .stage, not a
+   descendant. Since .stage itself has no z-index (auto), the entire .stage
+   — win-amount included — lost to any sibling with an explicit z-index,
+   regardless of what z-index the nested viewport claimed. Every other game
+   avoids this by keeping .reel-win-amount-viewport OUTSIDE the
+   transformed/scaled element (see style.css's version of this same fix) —
+   mirrored here via .reel-win-amount-stage-anchor: a sibling of .stage that
+   replicates its exact position/scale (same --design-w/h box, same
+   --stage-scale), so .reel-win-amount-viewport's own left/top/scale numbers
+   (still measured in the 1932x940 design box) don't need to change at all. */
+.reel-win-amount-stage-anchor {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--design-w);
+  height: var(--design-h);
+  transform: translate(-50%, -50%) scale(var(--stage-scale));
+  transform-origin: center center;
+  z-index: 16; /* above #spineCanvas (9) */
+  pointer-events: none;
+}
+.reel-win-amount-viewport {
+  position: absolute;
+  left: 966px; top: 470px;
+  width: 990px; height: 590px;
+  transform: translate(-50%, -50%) scale(var(--reel-fit));
+  pointer-events: none;
+}
+.reel-win-amount {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.reel-win-amount.is-visible { opacity: 1; }
+.reel-win-amount::before {
+  content: attr(data-amount);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 72px;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 0 4px 0 var(--ink), 0 0 28px rgba(47, 243, 255, 0.8);
+  white-space: nowrap;
+  padding: 6px 26px;
+  background: rgba(6, 1, 15, 0.6);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(47, 243, 255, 0.35), 0 0 24px rgba(138, 43, 226, 0.4);
+}
+
+/* ---------- Free Spins counter ---------- */
+.fs-counter {
+  display: none;
+  left: 1727px; top: 721px;
+  width: 304px; height: 206px;
+  z-index: 6;
+}
+.screen[data-mode="freespins"] .fs-counter { display: block; }
+.fs-counter__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.fs-counter__value {
+  position: absolute;
+  left: 50%;
+  top: 54%;
+  transform: translate(-50%, -50%);
+  font-family: 'Luckiest Guy', cursive;
+  font-weight: 400;
+  font-size: 56px;
+  color: var(--gold);
+  -webkit-text-stroke: 1.5px var(--ink);
+  text-shadow: 0 2px 0 var(--ink), 0 0 14px rgba(255, 211, 92, 0.6);
+  white-space: nowrap;
+}
+
+img.is-missing {
+  outline: 2px dashed rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* ================================================================
+   Bottom UI bar
+   ================================================================ */
+.ui-bar {
+  flex: 0 0 auto;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2vw;
+  padding: 1.2vh 2vw;
+  background: var(--ui-bg);
+  border-top: 1px solid var(--ui-border);
+  box-shadow: 0 -2px 20px rgba(47, 243, 255, 0.15);
+}
+.ui-bar__group { display: flex; align-items: center; gap: 0.8vw; }
+
+.ui-icon-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(47, 243, 255, 0.06);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.ui-icon-btn svg { width: 55%; height: 55%; }
+.ui-icon-btn:hover { background: rgba(47, 243, 255, 0.16); }
+.ui-icon-btn:active { transform: scale(0.92); }
+.ui-icon-btn--step { font-size: 22px; font-weight: 700; background: rgba(255, 255, 255, 0.1); }
+.ui-icon-btn--accent {
+  background: linear-gradient(180deg, var(--neon-magenta), var(--neon-purple));
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.ui-bar__bet { gap: 0; }
+.ui-bet-field {
+  min-width: 130px;
+  height: 40px;
+  padding: 0 16px;
+  margin: 0 2px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--ui-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 700;
+}
+.ui-bet-field__currency { font-size: 12px; opacity: 0.7; font-weight: 600; }
+
+.ui-spin-btn {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid var(--neon-cyan);
+  background: radial-gradient(circle at 35% 30%, #2a0e4a, #0a0320 75%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.1s ease, box-shadow 0.2s ease;
+  box-shadow: 0 0 18px rgba(47, 243, 255, 0.5);
+}
+.ui-spin-btn:hover { box-shadow: 0 0 26px rgba(47, 243, 255, 0.8); }
+.ui-spin-btn svg { width: 42%; height: 42%; }
+.ui-spin-btn:active { transform: scale(0.94); }
+.ui-spin-btn.is-spinning svg { animation: spin-rotate 0.7s linear infinite; }
+@keyframes spin-rotate { to { transform: rotate(360deg); } }
+
+.ui-icon-btn--auto svg text { font-family: 'Baloo 2', sans-serif; }
+
+.ui-balance {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.ui-balance__label { opacity: 0.75; font-size: 13px; font-weight: 600; }
+.ui-balance__value { color: var(--neon-cyan); font-size: 18px; text-shadow: 0 0 10px rgba(47, 243, 255, 0.5); }
+.ui-balance__currency { font-size: 12px; opacity: 0.7; }
+
+.ui-icon-btn[data-action="sound"].is-muted { opacity: 0.4; }
+.ui-icon-btn[data-action="sound"].is-muted svg path:last-child { display: none; }
+
+/* ---------- Paytable info popup ---------- */
+.info-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  padding: 20px;
+}
+.info-popup[hidden] { display: none; }
+.info-popup__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(720px, 90vh);
+  overflow-y: auto;
+  background: linear-gradient(160deg, #1a0938, #0b0420);
+  border: 2px solid var(--neon-cyan);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(47, 243, 255, 0.25);
+}
+.info-popup__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-cream);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.info-popup__close:hover { background: rgba(0, 0, 0, 0.55); }
+.info-popup__title {
+  margin: 0 0 16px;
+  color: var(--neon-cyan);
+  font-family: 'Fredoka', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  text-align: center;
+  text-shadow: 0 0 14px rgba(47, 243, 255, 0.6);
+}
+.info-popup__list { display: flex; flex-direction: column; gap: 10px; }
+.info-popup__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.info-popup__row img { width: 48px; height: 48px; object-fit: contain; flex-shrink: 0; }
+.info-popup__row-name { flex: 1 1 auto; min-width: 90px; font-weight: 700; }
+.info-popup__row-pays { display: flex; gap: 10px; font-size: 13px; color: var(--text-cream); }
+.info-popup__row-pays span { white-space: nowrap; opacity: 0.9; }
+.info-popup__row-pays b { color: var(--neon-cyan); }
+
+@media (max-width: 720px) {
+  .ui-bar { gap: 3vw; padding: 1.2vh 2.5vw; }
+  .ui-balance__label { display: none; }
+  .ui-icon-btn { width: 36px; height: 36px; }
+  .ui-spin-btn { width: 58px; height: 58px; }
+}
+
+/* ================================================================
+   Mobile (portrait) — swaps the design box to the manifest's mobile
+   layout (780x1416) and restates each element's center + size from
+   layouts.mobile.screens.
+   ================================================================ */
+@media (orientation: portrait) {
+  :root {
+    --design-w: 780px;
+    --design-h: 1416px;
+    /* mobile reel_block 690 / intrinsic reel 990 */
+    --reel-fit: 0.69697;
+  }
+
+  /* No desktop 2% enlargement on mobile — restore plain centring. */
+  .reel-bg,
+  .frame { transform: translate(-50%, -50%); }
+  .reel-bg { left: 381px; top: 503px; width: 730px; height: 515px; }
+  .reel,
+  .reel-win-amount-viewport { left: 380px; top: 502px; }
+  .frame { left: 381px; top: 512px; width: 808px; height: 593px; }
+  .logo { left: 390px; top: 180px; width: 400px; height: 193px; }
+  .sign-buy-bonus { left: 97px; top: 945px; width: 226px; height: 294px; }
+  .fs-counter { left: 659px; top: 902px; width: 271px; height: 184px; }
+
+  .fs-counter__value { font-size: 44px; }
+
+  .ui-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-areas:
+      "icons1 spin icons2"
+      "bet bet balance";
+    gap: 1vh 1vw;
+    justify-items: center;
+    padding: 1vh 3vw;
+  }
+  .ui-bar > *:nth-child(1) { grid-area: icons1; }
+  .ui-bar > *:nth-child(2) { grid-area: bet; }
+  .ui-bar > *:nth-child(3) { grid-area: spin; }
+  .ui-bar > *:nth-child(4) { grid-area: icons2; }
+  .ui-bar > *:nth-child(5) { grid-area: balance; justify-self: end; }
+}

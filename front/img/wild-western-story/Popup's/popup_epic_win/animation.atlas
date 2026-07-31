@@ -1,0 +1,39 @@
+animation.png
+size:1673,729
+filter:Linear,Linear
+pma:true
+BG
+bounds:625,147,1,1
+Epic_Win 1
+bounds:1281,140,587,390
+rotate:90
+Epic_bg_elemens 1
+bounds:2,240,1066,487
+coin_l_1
+bounds:625,181,57,57
+coin_l_2
+bounds:684,182,61,56
+coin_l_3
+bounds:652,137,18,17
+rotate:90
+coin_l_4
+bounds:652,157,22,17
+rotate:90
+coin_l_5
+bounds:747,151,42,33
+rotate:90
+coin_r_1
+bounds:747,195,43,47
+rotate:90
+coin_r_2
+bounds:796,194,39,44
+coin_r_3
+bounds:625,150,29,25
+rotate:90
+input 1
+bounds:1070,6,721,209
+rotate:90
+ray_rounded 1
+bounds:363,3,260,235
+rays
+bounds:2,2,359,236

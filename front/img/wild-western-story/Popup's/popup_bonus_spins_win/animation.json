@@ -1,0 +1,357 @@
+{
+"skeleton": {
+	"hash": "U36lrbwUs1k",
+	"spine": "4.1-from-4.2.43",
+	"x": -967,
+	"y": -483.8,
+	"width": 1934,
+	"height": 967.6,
+	"images": "./img/",
+	"audio": "./audio"
+},
+"bones": [
+	{ "name": "root" },
+	{ "name": "main", "parent": "root" },
+	{ "name": "main_text", "parent": "main", "x": 0.17, "y": 126.2 },
+	{ "name": "main_bg", "parent": "main" },
+	{ "name": "bone_light", "parent": "main", "scaleX": 4, "scaleY": 4.1 },
+	{ "name": "bone_light2", "parent": "main", "scaleX": 4, "scaleY": 4.1 },
+	{ "name": "main_star", "parent": "main", "x": 374.17, "y": -29.01 },
+	{ "name": "bone_main_star_number", "parent": "main_star" }
+],
+"slots": [
+	{ "name": "black", "bone": "main", "attachment": "black" },
+	{ "name": "rays 1", "bone": "bone_light2", "attachment": "rays 1" },
+	{ "name": "rays", "bone": "bone_light", "attachment": "rays" },
+	{ "name": "bg_bonus_spins_win", "bone": "main_bg", "attachment": "bg_bonus_spins_win" },
+	{ "name": "bonus_spins_win", "bone": "main_text", "attachment": "bonus_spins_win" },
+	{ "name": "star", "bone": "main_star", "attachment": "star" }
+],
+"skins": [
+	{
+		"name": "default",
+		"attachments": {
+			"bg_bonus_spins_win": {
+				"bg_bonus_spins_win": { "x": 54.5, "y": -12.5, "width": 963, "height": 571 }
+			},
+			"black": {
+				"black": { "scaleX": 1934, "scaleY": 940, "width": 1, "height": 1 }
+			},
+			"bonus_spins_win": {
+				"bonus_spins_win": { "x": 7.83, "y": -60.7, "width": 590, "height": 469 }
+			},
+			"rays": {
+				"rays": { "width": 359, "height": 236 }
+			},
+			"rays 1": {
+				"rays 1": { "width": 359, "height": 236 }
+			},
+			"star": {
+				"star": { "x": -1.67, "y": -34.49, "width": 259, "height": 255 }
+			}
+		}
+	}
+],
+"animations": {
+	"end": {
+		"slots": {
+			"bg_bonus_spins_win": {
+				"rgba": [
+					{ "color": "ffffffff" },
+					{ "time": 1, "color": "ffffff00" }
+				]
+			},
+			"black": {
+				"rgba": [
+					{
+						"color": "ffffffff",
+						"curve": [ 0.333, 1, 0.667, 1, 0.333, 1, 0.667, 1, 0.333, 1, 0.667, 1, 0.333, 1, 0.667, 0 ]
+					},
+					{ "time": 1, "color": "ffffff00" }
+				]
+			},
+			"bonus_spins_win": {
+				"rgba": [
+					{ "color": "ffffffff" },
+					{ "time": 1, "color": "ffffff00" }
+				]
+			},
+			"rays": {
+				"rgba": [
+					{ "color": "ffffffff" },
+					{ "time": 1, "color": "ffffff00" }
+				]
+			},
+			"rays 1": {
+				"rgba": [
+					{ "color": "ffffffff" },
+					{ "time": 1, "color": "ffffff00" }
+				]
+			},
+			"star": {
+				"rgba": [
+					{ "color": "ffffffff" },
+					{ "time": 1, "color": "ffffff00" }
+				]
+			}
+		},
+		"bones": {
+			"main_bg": {
+				"translate": [
+					{},
+					{ "time": 1, "y": 59.5 }
+				],
+				"scale": [
+					{
+						"curve": [ 0.333, 0.967, 0.667, 0, 0.333, 0.967, 0.667, 0 ]
+					},
+					{ "time": 1, "x": 0, "y": 0 }
+				]
+			},
+			"main_star": {
+				"translate": [
+					{
+						"curve": [ 0.333, 0, 0.667, -372.55, 0.333, 0, 0.667, 64.28 ]
+					},
+					{ "time": 1, "x": -372.55, "y": 64.28 }
+				],
+				"scale": [
+					{
+						"curve": [ 0.333, 1.048, 0.667, 0, 0.333, 1.048, 0.667, 0 ]
+					},
+					{ "time": 1, "x": 0, "y": 0 }
+				]
+			},
+			"main_text": {
+				"translate": [
+					{},
+					{ "time": 1, "y": -93.21 }
+				],
+				"scale": [
+					{
+						"curve": [ 0.333, 0.9, 0.667, 0, 0.333, 0.9, 0.667, 0 ]
+					},
+					{ "time": 1, "x": 0, "y": 0 }
+				]
+			}
+		}
+	},
+	"idle": {
+		"slots": {
+			"rays": {
+				"rgba": [
+					{ "color": "ffffffff" },
+					{ "time": 1.3333, "color": "ffffff89" },
+					{ "time": 2, "color": "ffffffff" }
+				]
+			},
+			"rays 1": {
+				"rgba": [
+					{ "color": "ffffffff" },
+					{ "time": 0.6667, "color": "ffffff89" },
+					{ "time": 2, "color": "ffffffff" }
+				]
+			}
+		},
+		"bones": {
+			"bone_light": {
+				"scale": [
+					{
+						"curve": [ 0.222, 1.064, 0.444, 1.193, 0.222, 1.064, 0.444, 1.193 ]
+					},
+					{
+						"time": 0.6667,
+						"x": 1.193,
+						"y": 1.193,
+						"curve": [ 1.111, 1.193, 1.556, 1.064, 1.111, 1.193, 1.556, 1.064 ]
+					},
+					{ "time": 2 }
+				]
+			},
+			"bone_light2": {
+				"scale": [
+					{
+						"curve": [ 0.333, 1.167, 0.667, 1.5, 0.333, 1.167, 0.667, 1.5 ]
+					},
+					{
+						"time": 1,
+						"x": 1.5,
+						"y": 1.5,
+						"curve": [ 1.333, 1.5, 1.667, 1.167, 1.333, 1.5, 1.667, 1.167 ]
+					},
+					{ "time": 2 }
+				]
+			},
+			"main_bg": {
+				"scale": [
+					{
+						"curve": [ 0.333, 1, 0.667, 1.1, 0.333, 1, 0.667, 1.1 ]
+					},
+					{
+						"time": 1,
+						"x": 1.1,
+						"y": 1.1,
+						"curve": [ 1.333, 1.1, 1.667, 1.033, 1.333, 1.1, 1.667, 1.033 ]
+					},
+					{ "time": 2 }
+				]
+			},
+			"main_star": {
+				"scale": [
+					{
+						"curve": [ 0.333, 1, 0.667, 0.856, 0.333, 1, 0.667, 0.856 ]
+					},
+					{
+						"time": 1,
+						"x": 0.856,
+						"y": 0.856,
+						"curve": [ 1.333, 0.856, 1.667, 0.952, 1.333, 0.856, 1.667, 0.952 ]
+					},
+					{ "time": 2 }
+				]
+			},
+			"main_text": {
+				"scale": [
+					{
+						"curve": [ 0.111, 1.067, 0.222, 1.1, 0.111, 1.067, 0.222, 1.1 ]
+					},
+					{
+						"time": 0.3333,
+						"x": 1.1,
+						"y": 1.1,
+						"curve": [ 0.444, 1.1, 0.556, 1, 0.444, 1.1, 0.556, 1 ]
+					},
+					{
+						"time": 0.6667,
+						"curve": [ 0.789, 1, 0.911, 1.1, 0.789, 1, 0.911, 1.1 ]
+					},
+					{
+						"time": 1.0333,
+						"x": 1.1,
+						"y": 1.1,
+						"curve": [ 1.144, 1.1, 1.256, 1, 1.144, 1.1, 1.256, 1 ]
+					},
+					{
+						"time": 1.3667,
+						"curve": [ 1.467, 1, 1.567, 1.1, 1.467, 1, 1.567, 1.1 ]
+					},
+					{
+						"time": 1.6667,
+						"x": 1.1,
+						"y": 1.1,
+						"curve": [ 1.778, 1.1, 1.889, 1.033, 1.778, 1.1, 1.889, 1.033 ]
+					},
+					{ "time": 2 }
+				]
+			}
+		}
+	},
+	"start": {
+		"slots": {
+			"bg_bonus_spins_win": {
+				"rgba": [
+					{ "color": "ffffff00" },
+					{ "time": 1, "color": "ffffffff" }
+				]
+			},
+			"black": {
+				"rgba": [
+					{
+						"color": "ffffff00",
+						"curve": [ 0.333, 1, 0.667, 1, 0.333, 1, 0.667, 1, 0.333, 1, 0.667, 1, 0.333, 0, 0.667, 1 ]
+					},
+					{ "time": 1, "color": "ffffffff" }
+				]
+			},
+			"bonus_spins_win": {
+				"rgba": [
+					{ "color": "ffffff00" },
+					{ "time": 1, "color": "ffffffff" }
+				]
+			},
+			"rays": {
+				"rgba": [
+					{ "color": "ffffff00" },
+					{ "time": 1, "color": "ffffffff" }
+				]
+			},
+			"rays 1": {
+				"rgba": [
+					{ "color": "ffffff00" },
+					{ "time": 1, "color": "ffffffff" }
+				]
+			},
+			"star": {
+				"rgba": [
+					{ "color": "ffffff00" },
+					{ "time": 1, "color": "ffffffff" }
+				]
+			}
+		},
+		"bones": {
+			"main_bg": {
+				"translate": [
+					{
+						"y": 59.5,
+						"curve": [ 0.333, 0, 0.667, 0, 0.333, 59.5, 0.667, 0 ]
+					},
+					{ "time": 1 }
+				],
+				"scale": [
+					{
+						"x": 0,
+						"y": 0,
+						"curve": [ 0.333, 0, 0.667, 1, 0.333, 0, 0.667, 1 ]
+					},
+					{ "time": 1 }
+				]
+			},
+			"main_star": {
+				"translate": [
+					{
+						"x": -372.55,
+						"y": 64.28,
+						"curve": [ 0.333, -372.55, 0.667, 0, 0.333, 64.28, 0.667, 0 ]
+					},
+					{ "time": 1 }
+				],
+				"scale": [
+					{
+						"x": 0,
+						"y": 0,
+						"curve": [ 0.333, 0, 0.667, 1, 0.333, 0, 0.667, 1 ]
+					},
+					{ "time": 1 }
+				]
+			},
+			"main_text": {
+				"translate": [
+					{
+						"y": -93.21,
+						"curve": [ 0.333, 0, 0.667, 0, 0.333, -93.21, 0.667, 0 ]
+					},
+					{ "time": 1 }
+				],
+				"scale": [
+					{
+						"x": 0,
+						"y": 0,
+						"curve": [ 0.25, 0, 0.25, 1, 0.25, 0, 0.25, 1 ]
+					},
+					{
+						"time": 0.5,
+						"curve": [ 0.578, 1, 0.656, 0.9, 0.578, 1, 0.656, 0.9 ]
+					},
+					{
+						"time": 0.7333,
+						"x": 0.9,
+						"y": 0.9,
+						"curve": [ 0.822, 0.9, 0.911, 0.947, 0.822, 0.9, 0.911, 0.947 ]
+					},
+					{ "time": 1 }
+				]
+			}
+		}
+	}
+}
+}

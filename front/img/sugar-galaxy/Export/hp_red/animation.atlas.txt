@@ -1,0 +1,20 @@
+skeleton.png
+size:360,297
+filter:Linear,Linear
+blik_heart2_png
+bounds:246,11,83,82
+offsets:10,9,100,100
+blue smoke
+bounds:2,105,190,195
+offsets:5,4,200,200
+rotate:90
+rare_red
+bounds:2,4,114,99
+offsets:6,17,126,126
+rare_red_light
+bounds:118,2,126,91
+offsets:0,0,126,96
+red_light
+bounds:199,95,200,159
+offsets:0,21,200,200
+rotate:90

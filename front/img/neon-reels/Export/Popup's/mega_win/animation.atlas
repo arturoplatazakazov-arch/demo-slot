@@ -1,0 +1,47 @@
+animation.png
+size:1861,1204
+filter:Linear,Linear
+pma:true
+Mega_Win
+bounds:1536,3,519,305
+rotate:90
+bg
+bounds:889,72,645,450
+coin
+bounds:1731,645,90,65
+coin copy
+bounds:113,2,38,54
+coin copy 3
+bounds:2,12,62,44
+coin copy 7
+bounds:2,12,62,44
+coin_2
+bounds:2,12,62,44
+coin copy 4
+bounds:153,10,46,44
+rotate:90
+coin_4
+bounds:153,10,46,44
+rotate:90
+coin copy 5
+bounds:66,10,46,45
+rotate:90
+coin_3
+bounds:66,10,46,45
+rotate:90
+coin copy 6
+bounds:1731,584,72,59
+coin_5
+bounds:1731,584,72,59
+coin_1
+bounds:1731,712,92,88
+dark-bg
+bounds:2,9,1,1
+input
+bounds:1731,802,400,128
+rotate:90
+rays1
+bounds:2,58,1144,885
+rotate:90
+rays2
+bounds:889,524,840,678

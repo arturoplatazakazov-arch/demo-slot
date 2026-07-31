@@ -1,0 +1,34 @@
+animation.png
+size:1090,1030
+filter:Linear,Linear
+pma:true
+BG
+bounds:1084,1027,1,1
+big_win 1
+bounds:725,2,543,363
+rotate:90
+big_win_bg_elements 1
+bounds:2,547,1080,481
+coin_l_1
+bounds:625,277,57,57
+coin_l_2
+bounds:2,40,61,56
+coin_l_3
+bounds:46,20,18,17
+rotate:90
+coin_l_4
+bounds:110,79,22,17
+coin_l_5
+bounds:2,5,42,33
+coin_r_1
+bounds:65,49,43,47
+coin_r_2
+bounds:684,290,39,44
+coin_r_3
+bounds:625,250,29,25
+input 1
+bounds:2,336,721,209
+ray_rounded 1
+bounds:363,99,260,235
+rays
+bounds:2,98,359,236
