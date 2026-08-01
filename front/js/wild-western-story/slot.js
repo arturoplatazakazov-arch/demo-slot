@@ -109,6 +109,101 @@ let reelCols = [];
 // Cleared at the start of every spin, same lifecycle as the small cell instances.
 let expandedWildOverlays = [];
 
+// --- Win-line animation (trial, this game only — see front/img/wild-western-story/Win_Lines) ---
+//
+// One Spine skeleton shipping 11 named animations ("1".."11"), one per
+// payline. The backend defines 20 paylines total (app/seed/wild_western_story.py),
+// but only these 11 are actually live for the client — animation name ==
+// payline index for 1-11; a win on any other payline index just shows no
+// line art (no asset for it yet).
+const WIN_LINE_ASSET_PATH = `${ASSET_ROOT}/Win_Lines`;
+const WIN_LINE_MAX_INDEX = 11;
+let winLineResourcePromise = null;
+
+// This skeleton's animation.json has no setup-pose bounds baked in (its
+// "skeleton" block only carries hash/version, no x/y/width/height — some
+// export configs omit it), so resource.bounds comes back empty and the
+// normal fit-to-anchor math (SpineInstance._placeInAnchor) would divide by
+// an undefined width/height. Same class of problem as wild's small-variant
+// override above, just needing the union across every animation (each
+// payline's own line occupies a different slice of the grid) instead of one
+// named slot — sample each animation's AABB at a few points in its
+// timeline via the runtime's own Skeleton.getBounds and take the union, so
+// every payline's line ends up sized/centered consistently within the same
+// box (the full reel), not rescaled per animation.
+function computeWinLineBoundsOverride(resource) {
+  try {
+    const probe = new spine.Skeleton(resource.skeletonData);
+    const state = new spine.AnimationState(resource.animationStateData);
+    const offset = new spine.Vector2();
+    const size = new spine.Vector2();
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    const SAMPLES_PER_ANIM = 6;
+    for (const anim of resource.skeletonData.animations) {
+      const duration = anim.duration || 0;
+      for (let i = 0; i <= SAMPLES_PER_ANIM; i++) {
+        probe.setToSetupPose();
+        state.clearTracks();
+        state.setAnimation(0, anim.name, false);
+        state.update((duration * i) / SAMPLES_PER_ANIM);
+        state.apply(probe);
+        probe.updateWorldTransform();
+        probe.getBounds(offset, size);
+        if (size.x > 0 && size.y > 0) {
+          minX = Math.min(minX, offset.x);
+          minY = Math.min(minY, offset.y);
+          maxX = Math.max(maxX, offset.x + size.x);
+          maxY = Math.max(maxY, offset.y + size.y);
+        }
+      }
+    }
+    if (!isFinite(minX)) return null;
+    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+  } catch (err) {
+    console.warn('win-line bounds compute failed:', err);
+    return null;
+  }
+}
+
+function getWinLineResource() {
+  if (!winLineResourcePromise) {
+    winLineResourcePromise = loadSpineResource(WIN_LINE_ASSET_PATH).then((resource) => {
+      resource.winLineBoundsOverride = computeWinLineBoundsOverride(resource);
+      return resource;
+    });
+  }
+  return winLineResourcePromise;
+}
+
+let winLineInstance = null;
+
+// Drawn as an overlay (not base), same layer as popups — so it always
+// renders on top of every base-layer win clip (the winning symbols' own
+// glow/loop), never underneath them. Anchored to .reel__grid, i.e. the
+// frame's actual opening, so it's centered on the reel regardless of
+// viewport scale.
+async function showWinLine(payline) {
+  if (payline == null || payline < 1 || payline > WIN_LINE_MAX_INDEX) {
+    hideWinLine();
+    return;
+  }
+  const resource = await getWinLineResource();
+  if (!winLineInstance) {
+    winLineInstance = resource.createInstance();
+    winLineInstance.anchorEl = document.querySelector('.reel__grid');
+    winLineInstance.fit = 1;
+    winLineInstance.boundsOverride = resource.winLineBoundsOverride;
+    stage.addOverlay(winLineInstance);
+  }
+  winLineInstance.play(String(payline), true);
+}
+
+function hideWinLine() {
+  if (!winLineInstance) return;
+  stage.removeOverlay(winLineInstance);
+  winLineInstance = null;
+}
+
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -226,6 +321,7 @@ function teardownCellInstances() {
     clearTimeout(multiLineSequenceTimeout);
     multiLineSequenceTimeout = null;
   }
+  hideWinLine();
   for (const overlay of expandedWildOverlays) {
     if (overlay.winLoopTimeout) clearTimeout(overlay.winLoopTimeout);
     stage.removeOverlay(overlay);
@@ -361,7 +457,7 @@ function setCellDimmed(info, dimmed) {
 
 let multiLineSequenceTimeout = null;
 
-function playMultiLineWinSequence(groups, allWinInfos) {
+function playMultiLineWinSequence(groups, allWinInfos, lineWins) {
   const playPhaseOnce = (activeInfos) => {
     const activeSet = new Set(activeInfos);
     for (const info of cellInfos) {
@@ -376,6 +472,14 @@ function playMultiLineWinSequence(groups, allWinInfos) {
   let groupIndex = -1;
   const step = () => {
     const activeInfos = groupIndex === -1 ? allWinInfos : groups[groupIndex];
+    // groups[i] < lineWins.length corresponds 1:1 to lineWins[i] (see
+    // buildWinGroups/ReelMath.collectWinGroups — line wins are spread before
+    // count wins, positions-only, so index is the only way back to a
+    // payline). The "all together" phase (groupIndex -1) mixes lines, so no
+    // single line's art applies there.
+    const win = groupIndex >= 0 ? lineWins[groupIndex] : null;
+    if (win) showWinLine(win.payline);
+    else hideWinLine();
     playPhaseOnce(activeInfos).then(() => {
       multiLineSequenceTimeout = setTimeout(() => {
         multiLineSequenceTimeout = null;
@@ -426,8 +530,15 @@ function playWinCells(winningCells, lineWins, countWins) {
   const groups = buildWinGroups(lineWins, countWins);
 
   if (groups.length > 1) {
-    playMultiLineWinSequence(groups, allWinInfos);
+    playMultiLineWinSequence(groups, allWinInfos, lineWins);
   } else {
+    // Single group: it's a line win iff lineWins has exactly the one entry
+    // (a lone count-pay/scatter win has no line shape to draw).
+    if (lineWins && lineWins.length === 1 && countWins && countWins.length === 0) {
+      showWinLine(lineWins[0].payline);
+    } else {
+      hideWinLine();
+    }
     for (const info of allWinInfos) previewSymbolWin(info);
   }
 }
@@ -1059,6 +1170,8 @@ async function init() {
 
   buildReelGrid();
   stage = new SpineEngine.SpineStage(document.getElementById('spineCanvas'));
+  window.__debugStage = stage;
+  window.__debugGetWinLineInstance = () => winLineInstance;
   setupDevPanel();
 
   await Promise.all(cellInfos.map((info) => setCellSymbol(info, info.symbol)));

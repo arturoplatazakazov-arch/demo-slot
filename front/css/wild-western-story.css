@@ -739,7 +739,7 @@ body.layout-fit .ui-bar {
   }
 
   .logo {
-    top: 7%;
+    top: calc(7% + 30px);
     height: 18.4%;
   }
 
@@ -762,7 +762,7 @@ body.layout-fit .ui-bar {
     left: 50%;
     right: auto;
     top: auto;
-    bottom: 16%;
+    bottom: calc(16% - 30px);
     width: 49%;
     transform: translateX(-50%);
   }

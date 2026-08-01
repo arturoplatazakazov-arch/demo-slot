@@ -422,7 +422,9 @@ function playSymbolClipOnce(info, kind) {
         }
         const instance = resource.createInstance();
         instance.anchorEl = info.anchor || info.cell;
-        instance.fit = 1;
+        // Match the static <img>'s --symbol-scale (1 desktop / <1 mobile) so the
+        // win-clip is the same size as the resting tile it replaces.
+        instance.fit = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--symbol-scale')) || 1;
         // Center the clip on the skeleton ORIGIN, not the exported setup-pose
         // bbox center. The rare exports (faraon/skorobei/snake) bake an
         // off-centre glow into their skeleton bounds, dragging bounds-center

@@ -1,4 +1,4 @@
-// Golden Caravan — поведение нижнего бара V3 (макет Figma "V3").
+// Поведение нижнего бара V3 (макет Figma "V3") — общее для всех слотов.
 //
 // Слой поверх app.js, НЕ дублирующий его логику: спин, ставка, звук и info
 // по-прежнему живут в app.js/sound.js и цепляются к своим data-action. Здесь
@@ -23,6 +23,59 @@
   const spinCount = document.getElementById('v3SpinCount');
   const betValue = document.getElementById('betValue');
   const betMirror = document.getElementById('v3BetMirror');
+
+  // ---------- Доворот стрелок SPIN ----------
+  //
+  // app.js каждого слота вешает .is-spinning на время запроса и анимации
+  // каскада и снимает её сразу, как только спин отыгран. Если повесить
+  // вращение прямо на этот класс, стрелки обрываются на произвольном угле.
+  // Поэтому вращает отдельный класс .is-rotating: ставим его вместе с
+  // .is-spinning, а снимаем только на границе оборота (animationiteration),
+  // то есть анимация всегда доходит до целого круга.
+
+  const spinIcon = spinBtn.querySelector('.v3-spin__icon');
+  let stopPending = false;
+
+  // Страховка: если animationiteration почему-то не придёт (вкладка была
+  // скрыта и анимации не тикали, анимацию отключили в настройках системы),
+  // стрелки не должны остаться крутиться навсегда.
+  let stopFallbackId = 0;
+
+  function turnMs() {
+    const raw = getComputedStyle(bar).getPropertyValue('--v3-spin-turn').trim();
+    const ms = raw.endsWith('ms') ? parseFloat(raw) : parseFloat(raw) * 1000;
+    return Number.isFinite(ms) && ms > 0 ? ms : 700;
+  }
+
+  function startRotation() {
+    stopPending = false;
+    clearTimeout(stopFallbackId);
+    spinBtn.classList.add('is-rotating');
+  }
+
+  function finishRotation() {
+    if (!spinBtn.classList.contains('is-rotating')) return;
+    stopPending = true;
+    clearTimeout(stopFallbackId);
+    stopFallbackId = setTimeout(() => {
+      if (stopPending) {
+        stopPending = false;
+        spinBtn.classList.remove('is-rotating');
+      }
+    }, turnMs() + 250);
+  }
+
+  spinIcon.addEventListener('animationiteration', () => {
+    if (!stopPending) return;
+    stopPending = false;
+    clearTimeout(stopFallbackId);
+    spinBtn.classList.remove('is-rotating');
+  });
+
+  new MutationObserver(() => {
+    if (spinBtn.classList.contains('is-spinning')) startRotation();
+    else finishRotation();
+  }).observe(spinBtn, { attributes: true, attributeFilter: ['class'] });
 
   // ---------- Тултипы: одновременно открыт максимум один ----------
 

@@ -467,6 +467,7 @@ async function spinStartTransition(newGrid) {
   // ячейку") — not a single revealScatterLandings() pass after the whole
   // wave settles, which would fire every scatter's clip in lockstep
   // regardless of how early its own cell actually landed.
+  const scatterLandingPromises = [];
   for (let row = GRID_ROWS - 1; row >= 0; row--) {
     const rowOrderIndex = GRID_ROWS - 1 - row;
     for (let col = 0; col < GRID_COLS; col++) {
@@ -477,11 +478,23 @@ async function spinStartTransition(newGrid) {
         info.cell.style.top = `${rowTop(row)}px`;
       }, delay);
       if (info.symbol === 'scatter') {
-        setTimeout(() => playSymbolClipOnce(info, 'landing'), delay + CASCADE_DROP_MS);
+        scatterLandingPromises.push(
+          new Promise((resolve) => {
+            setTimeout(() => playSymbolClipOnce(info, 'landing').then(resolve), delay + CASCADE_DROP_MS);
+          }),
+        );
       }
     }
   }
-  await wait(SPIN_START_WAVE_MS);
+  // Landing is always primary (product, this session): if this same grid
+  // also has a win, playAvalanche's next step is celebrateStep — the
+  // winning line's own animation — which must never start while a
+  // scatter's landing clip here is still playing. The wave timer alone
+  // doesn't guarantee that: a scatter's clip starts once *its own* cell
+  // finishes falling and then plays out on its own schedule, which can run
+  // past SPIN_START_WAVE_MS — so wait for every scheduled clip too, not
+  // just the wave.
+  await Promise.all([wait(SPIN_START_WAVE_MS), ...scatterLandingPromises]);
 }
 
 // Scatter ships a "landing" clip separate from "win" (see SYMBOL_CLIPS) —

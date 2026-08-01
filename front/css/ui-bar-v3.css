@@ -26,6 +26,7 @@
   /* Отступ ряда кнопок от низа. Тултипы считаются от него же, поэтому при
      сдвиге кнопок они едут следом (см. .v3-tip / .v3-chips). */
   --v3-row-bottom: 41px;
+  --v3-spin-turn: 0.7s;         /* длительность одного оборота стрелок */
   --v3-font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Baloo 2', sans-serif;
 }
 
@@ -209,8 +210,15 @@
   pointer-events: none;
 }
 .v3-bar .ui-spin-btn.v3-spin .v3-spin__icon { width: 54%; height: 54%; }
-/* Крутится только иконка (.is-spinning вешает app.js:runSpin). */
-.v3-bar .ui-spin-btn.v3-spin.is-spinning .v3-spin__icon { animation: spin-rotate 0.7s linear infinite; }
+/* Крутится только иконка. Вращением управляет НЕ .is-spinning (его ставит и
+   снимает app.js каждого слота), а .is-rotating — её вешает js/ui-bar-v3.js и
+   снимает лишь на границе оборота, чтобы стрелки не обрывались на полпути,
+   когда спин закончился быстрее анимации.
+   Кейфреймы свои, а не spin-rotate из css слота, — бар остаётся самодостаточным. */
+@keyframes v3-spin-rotate { to { transform: rotate(360deg); } }
+.v3-bar .ui-spin-btn.v3-spin.is-rotating .v3-spin__icon {
+  animation: v3-spin-rotate var(--v3-spin-turn) linear infinite;
+}
 
 /* Со счётчиком стрелки расходятся шире, освобождая середину под цифры —
    как в макете, где число стоит ровно между дугами. */

@@ -492,7 +492,20 @@
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\([g.get\\('code'\\) for g in \\(d if isinstance\\(d,list\\) else d.get\\('games',[]\\)\\)]\\)\")",
       "Read(//private/tmp/demo_slot_pgdata/**)",
       "Bash(curl -s -o /dev/null -w 'status=%{http_code}\\\\n' -X OPTIONS http://127.0.0.1:8000/api/v1/session/start -H 'Origin: http://localhost:8123' -H 'Access-Control-Request-Method: POST' -D -)",
-      "Bash(awk '{print \"  \"$9\" \"$5\" байт\"}')"
+      "Bash(awk '{print \"  \"$9\" \"$5\" байт\"}')",
+      "Bash(sed -n '/^function playSymbolClipOnce/,/^}/p' golden-caravan/slot.js)",
+      "Bash(sed -n '/^function playSymbolClipOnce/,/^}/p' sugar-galaxy/slot.js)",
+      "Read(//tmp/**)",
+      "Bash(sed -n '/^function createCellNode/,/^}/p' golden-caravan/slot.js)",
+      "Bash(sed -n '/^function createCellNode/,/^}/p' sugar-galaxy/slot.js)",
+      "Bash(node --check js/sugar-galaxy/game.js)",
+      "Bash(cp demo_slot/front/css/sugar-galaxy.css demo_slot_v2/front/css/sugar-galaxy.css)",
+      "Bash(cp demo_slot/front/sugar-galaxy.html demo_slot_v2/front/sugar-galaxy.html)",
+      "Bash(awk 'NR>=740 && NR<=790' wild-western-story.css)",
+      "Bash(cd /Users/arturkasian/demo_slot/front *)",
+      "Bash(curl -s -o /dev/null -w \"4175: %{http_code}\\\\n\" --max-time 2 \"http://127.0.0.1:4175/golden-caravan.html\")",
+      "Bash(curl -s --max-time 2 \"http://127.0.0.1:4175/js/ui-bar-v3.js\")",
+      "Bash(node --check js/wild-western-story/slot.js)"
     ]
   }
 }

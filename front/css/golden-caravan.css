@@ -32,6 +32,9 @@
   --cell-h: 116px;
   --cell-gap-x: 10px;
   --cell-gap-y: 10px;
+  /* Uniform symbol shrink (static <img> + spine clip). 1 = native (desktop);
+     mobile overrides it so symbols fit their pitch and gaps open up. */
+  --symbol-scale: 1;
   /* How far the reel-grid clip box extends past the reel_block on each side.
      Set to the FRAME's inner opening (measured from frame.png's transparent
      hole: the opening is only ~22px wider and ~6px taller than the reel_block
@@ -255,10 +258,16 @@ body {
   transition: top 100ms cubic-bezier(0.36, 0.66, 0.32, 1), opacity 280ms ease; /* must match slot.js's CASCADE_DROP_MS */
 }
 .reel__cell img {
-  /* Native size, centred on the cell by the flex above; the small overflow past
-     the cell edge falls into the gap. applyStaticContentOffset (slot.js) only
-     nudges this via `transform` when a symbol has been calibrated. */
+  /* Native canvas size (200/300px), centred on the cell by the flex above. The
+     symbol art is far bigger than the cell, so at 1:1 neighbouring symbols
+     overlap and there's no visible gap no matter the --cell-gap. --symbol-scale
+     shrinks every symbol uniformly (mobile only) so the art sits inside its
+     column pitch and real gaps open up between elements. The matching spine
+     win-clips read the same --symbol-scale (slot.js:playSymbolClipOnce).
+     applyStaticContentOffset (slot.js) only overrides `transform` when a symbol
+     has been calibrated — never for this game, so this scale stays applied. */
   pointer-events: none;
+  transform: scale(var(--symbol-scale, 1));
   transition: opacity 200ms ease;
 }
 .reel__cell.is-dimmed img { opacity: 0.35; }
@@ -676,14 +685,18 @@ img.is-missing {
    ================================================================ */
 @media (orientation: portrait) {
   :root {
-    /* slot bg / frame / logo are +7% on mobile (product). The reel (barabaan)
-       was shrunk 10% then bumped back up 5% (product): 96.3*1.05=101.115, gaps
-       10.11, so the reel_block is 657x546 — still smaller than the (unchanged)
-       frame, i.e. the reels sit inside with margin. */
-    --cell-w: 101.1px;
-    --cell-h: 101.1px;
-    --cell-gap-x: 10.11px;
-    --cell-gap-y: 10.11px;
+    /* Mobile reel: the gap between cells was doubled (product: "увеличь отступ в
+       два раза") and the whole reel_block shrunk 5% (product: 657x546 -> 624x517).
+       gap 10.11 -> 20.22; the cell then falls out of block=6*cell+5*gap:
+       (624.3-5*20.22)/6 = 87.2, so the reels sit inside the (unchanged) frame with
+       wider spacing. */
+    --cell-w: 87.2px;
+    --cell-h: 87.2px;
+    --cell-gap-x: 20.22px;
+    --cell-gap-y: 20.22px;
+    /* Shrink symbols so the ~120px art fits the ~107px column pitch and real
+       gaps open between elements (product: "стоят впритык"). */
+    --symbol-scale: 0.8;
     /* Sides aren't clipped (clip-path); bleed-y keeps the vertical fall-clip. */
     --grid-bleed-x: 14px;
     --grid-bleed-y: 1px;
@@ -699,15 +712,15 @@ img.is-missing {
   .reel-bg { left: -4px; top: 195px; width: 781px; height: 631px; }
   /* frame (slot_frame): center (391.5,507), 769x644 -> +7% (823x689) */
   .frame { left: -20px; top: 162px; width: 823px; height: 689px; }
-  /* reel_block: center (390,511), reel -10% +5% -> 657x546 */
+  /* reel_block: center (390,511), gap x2 + block -5% -> 624x517 */
   .cascade-banner,
-  .reel-win-amount-viewport { left: 61px; top: 238px; width: 657px; height: 546px; }
+  .reel-win-amount-viewport { left: 78px; top: 253px; width: 624px; height: 517px; }
   /* Clip box centred on the reel_block; top/bottom clip the falls. */
   .reel__grid {
-    left: calc(61px - var(--grid-bleed-x));
-    top: calc(238px - var(--grid-bleed-y));
-    width: calc(657px + 2 * var(--grid-bleed-x));
-    height: calc(546px + 2 * var(--grid-bleed-y));
+    left: calc(78px - var(--grid-bleed-x));
+    top: calc(253px - var(--grid-bleed-y));
+    width: calc(624px + 2 * var(--grid-bleed-x));
+    height: calc(517px + 2 * var(--grid-bleed-y));
   }
 
   /* buy_bonus (base): center (639,1063), size 400x356 */
