@@ -10,6 +10,7 @@ from app.api.v1 import api_v1_router
 from app.core.config import get_settings
 from app.core.db import AsyncSessionLocal
 from app.seed.amys_fruit_farm import get_or_seed_active_config as get_or_seed_amys_fruit_farm
+from app.seed.dirty_money_mafia import get_or_seed_active_config as get_or_seed_dirty_money_mafia
 from app.seed.east_discovery import get_or_seed_active_config as get_or_seed_east_discovery
 from app.seed.golden_caravan import get_or_seed_active_config as get_or_seed_golden_caravan
 from app.seed.neon_reels import get_or_seed_active_config as get_or_seed_neon_reels
@@ -23,12 +24,13 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Dev convenience: make sure the demo games the frontend expects
-    # ("amys-fruit-farm", "east-discovery", "golden-caravan", "neon-reels",
-    # "party-of-goods", "sugar-galaxy", "wild-western-story") exist on boot. A
-    # real deployment manages configs through the admin API, not an app-startup
-    # side effect.
+    # ("amys-fruit-farm", "dirty-money-mafia", "east-discovery",
+    # "golden-caravan", "neon-reels", "party-of-goods", "sugar-galaxy",
+    # "wild-western-story") exist on boot. A real deployment manages configs
+    # through the admin API, not an app-startup side effect.
     async with AsyncSessionLocal() as db:
         await get_or_seed_amys_fruit_farm(db)
+        await get_or_seed_dirty_money_mafia(db)
         await get_or_seed_east_discovery(db)
         await get_or_seed_golden_caravan(db)
         await get_or_seed_neon_reels(db)

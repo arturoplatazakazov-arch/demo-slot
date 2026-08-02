@@ -1,0 +1,16 @@
+animation.png
+size:1773,1018
+filter:Linear,Linear
+MAFIA_BW_bg-money
+bounds:1295,270,746,476
+offsets:1,1,748,478
+rotate:90
+MAFIA_BW_big-win
+bounds:669,74,590,208
+offsets:3,3,597,214
+MAFIA_BW_input
+bounds:2,2,665,280
+offsets:5,5,674,286
+MAFIA_BW_rays1
+bounds:2,284,1291,732
+offsets:13,17,1342,755

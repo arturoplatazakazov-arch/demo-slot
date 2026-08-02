@@ -113,11 +113,17 @@ let expandedWildOverlays = [];
 //
 // One Spine skeleton shipping 11 named animations ("1".."11"), one per
 // payline. The backend defines 20 paylines total (app/seed/wild_western_story.py),
-// but only these 11 are actually live for the client — animation name ==
-// payline index for 1-11; a win on any other payline index just shows no
-// line art (no asset for it yet).
+// but only these 11 are actually live for the client. Animation name is NOT
+// the payline index — confirmed against the client's own line reference,
+// this session: animations "1".."5" line up with payline indices 1-5, but
+// "6".."11" are indices 12-17 (the backend's indices 6-11 are shapes the
+// client doesn't use and have no line art at all). A win on any payline
+// index missing from this map just shows no line art.
+const PAYLINE_TO_WIN_LINE_ANIMATION = {
+  1: '1', 2: '2', 3: '3', 4: '4', 5: '5',
+  12: '6', 13: '7', 14: '8', 15: '9', 16: '10', 17: '11',
+};
 const WIN_LINE_ASSET_PATH = `${ASSET_ROOT}/Win_Lines`;
-const WIN_LINE_MAX_INDEX = 11;
 let winLineResourcePromise = null;
 
 // This skeleton's animation.json has no setup-pose bounds baked in (its
@@ -127,63 +133,41 @@ let winLineResourcePromise = null;
 // an undefined width/height. Same class of problem as wild's small-variant
 // override above, just needing the union across every animation (each
 // payline's own line occupies a different slice of the grid) instead of one
-// named slot — sample each animation's AABB at a few points in its
-// timeline via the runtime's own Skeleton.getBounds and take the union, so
-// every payline's line ends up sized/centered consistently within the same
-// box (the full reel), not rescaled per animation.
-function computeWinLineBoundsOverride(resource) {
-  try {
-    const probe = new spine.Skeleton(resource.skeletonData);
-    const state = new spine.AnimationState(resource.animationStateData);
-    const offset = new spine.Vector2();
-    const size = new spine.Vector2();
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    const SAMPLES_PER_ANIM = 6;
-    for (const anim of resource.skeletonData.animations) {
-      const duration = anim.duration || 0;
-      for (let i = 0; i <= SAMPLES_PER_ANIM; i++) {
-        probe.setToSetupPose();
-        state.clearTracks();
-        state.setAnimation(0, anim.name, false);
-        state.update((duration * i) / SAMPLES_PER_ANIM);
-        state.apply(probe);
-        probe.updateWorldTransform();
-        probe.getBounds(offset, size);
-        if (size.x > 0 && size.y > 0) {
-          minX = Math.min(minX, offset.x);
-          minY = Math.min(minY, offset.y);
-          maxX = Math.max(maxX, offset.x + size.x);
-          maxY = Math.max(maxY, offset.y + size.y);
-        }
-      }
-    }
-    if (!isFinite(minX)) return null;
-    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
-  } catch (err) {
-    console.warn('win-line bounds compute failed:', err);
-    return null;
-  }
-}
+// named slot.
+//
+// Precomputed once (union of all 11 animations' AABB, sampled across each
+// timeline via the runtime's own Skeleton.getBounds) rather than recomputed
+// live in the browser — that scan is real per-frame Spine runtime work
+// (skeleton pose + world-transform + bounds, x11 animations x7 samples)
+// which is cheap on desktop but blocked the main thread long enough on a
+// real mobile device to trip the browser's own "page unresponsive" state
+// (reported live, this session). If Win_Lines/animation.json is ever
+// replaced, recompute this once (e.g. temporarily reinstate the scan,
+// log the result, paste it back in here) rather than doing it on every load.
+const WIN_LINE_BOUNDS_OVERRIDE = { x: -433.9161688016173, y: -211.514175415039, width: 856.6346179651904, height: 438.3254852294921 };
 
 function getWinLineResource() {
-  if (!winLineResourcePromise) {
-    winLineResourcePromise = loadSpineResource(WIN_LINE_ASSET_PATH).then((resource) => {
-      resource.winLineBoundsOverride = computeWinLineBoundsOverride(resource);
-      return resource;
-    });
-  }
+  if (!winLineResourcePromise) winLineResourcePromise = loadSpineResource(WIN_LINE_ASSET_PATH);
   return winLineResourcePromise;
 }
 
 let winLineInstance = null;
+let winLineLoopTimeout = null;
 
 // Drawn as an overlay (not base), same layer as popups — so it always
 // renders on top of every base-layer win clip (the winning symbols' own
 // glow/loop), never underneath them. Anchored to .reel__grid, i.e. the
 // frame's actual opening, so it's centered on the reel regardless of
-// viewport scale.
+// viewport scale. Always plays the clip exactly ONCE and resolves when it
+// settles — never loop:true here. The caller owns the repeat cadence
+// (previewWinLine below for a lone win; playMultiLineWinSequence's own
+// per-phase step() for a multi-line win) — looping internally on top of
+// that used to race the caller's own timer on a different clock, which is
+// what caused the line to visibly play twice per symbol-glow cycle
+// (product, this session).
 async function showWinLine(payline) {
-  if (payline == null || payline < 1 || payline > WIN_LINE_MAX_INDEX) {
+  const animName = PAYLINE_TO_WIN_LINE_ANIMATION[payline];
+  if (!animName) {
     hideWinLine();
     return;
   }
@@ -191,14 +175,44 @@ async function showWinLine(payline) {
   if (!winLineInstance) {
     winLineInstance = resource.createInstance();
     winLineInstance.anchorEl = document.querySelector('.reel__grid');
-    winLineInstance.fit = 1;
-    winLineInstance.boundsOverride = resource.winLineBoundsOverride;
+    winLineInstance.fit = 0.9; // product, this session: "уменьшить на 10%"
+    winLineInstance.boundsOverride = WIN_LINE_BOUNDS_OVERRIDE;
     stage.addOverlay(winLineInstance);
   }
-  winLineInstance.play(String(payline), true);
+  await new Promise((resolve) => {
+    winLineInstance.play(animName, false);
+    winLineInstance.onSettle = () => {
+      winLineInstance.onSettle = null;
+      resolve();
+    };
+  });
+}
+
+// Lone-line case only (playWinCells' single-group branch): repeats showWinLine
+// on the exact same play-once/pause/repeat cadence previewSymbolWin already
+// uses for the winning symbols themselves (WIN_LOOP_PAUSE_MS), so the line
+// pulses in lockstep with their glow instead of drifting against it.
+function previewWinLine(payline) {
+  if (winLineLoopTimeout) {
+    clearTimeout(winLineLoopTimeout);
+    winLineLoopTimeout = null;
+  }
+  const playOnce = () => {
+    showWinLine(payline).then(() => {
+      winLineLoopTimeout = setTimeout(() => {
+        winLineLoopTimeout = null;
+        playOnce();
+      }, WIN_LOOP_PAUSE_MS);
+    });
+  };
+  playOnce();
 }
 
 function hideWinLine() {
+  if (winLineLoopTimeout) {
+    clearTimeout(winLineLoopTimeout);
+    winLineLoopTimeout = null;
+  }
   if (!winLineInstance) return;
   stage.removeOverlay(winLineInstance);
   winLineInstance = null;
@@ -535,7 +549,7 @@ function playWinCells(winningCells, lineWins, countWins) {
     // Single group: it's a line win iff lineWins has exactly the one entry
     // (a lone count-pay/scatter win has no line shape to draw).
     if (lineWins && lineWins.length === 1 && countWins && countWins.length === 0) {
-      showWinLine(lineWins[0].payline);
+      previewWinLine(lineWins[0].payline);
     } else {
       hideWinLine();
     }
@@ -1170,8 +1184,11 @@ async function init() {
 
   buildReelGrid();
   stage = new SpineEngine.SpineStage(document.getElementById('spineCanvas'));
-  window.__debugStage = stage;
-  window.__debugGetWinLineInstance = () => winLineInstance;
+  // Warmed up here, not on first use — a cold getWinLineResource() load
+  // (network + parse) on a player's first win would delay the line's own
+  // first .play() well past the symbols' (already-loaded by then), breaking
+  // "starts the same instant" (product, this session).
+  getWinLineResource();
   setupDevPanel();
 
   await Promise.all(cellInfos.map((info) => setCellSymbol(info, info.symbol)));

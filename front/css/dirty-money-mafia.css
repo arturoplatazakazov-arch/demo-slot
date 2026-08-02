@@ -1,0 +1,556 @@
+/* Dirty Money / MAFIA — 5x3 line-pay slot with expanding wild + scatter free
+   spins. Structurally css/golden-caravan.css (design-space #stage scaled as one
+   unit) with css/wild-western-story.css's scrolling-reel column mechanics
+   dropped in, since this game DOES spin (golden-caravan is an avalanche).
+
+   Layout is driven 1:1 by the slot-builder manifest (builder draft
+   "dirty-money-mafia"): every object sits at its authored design-px coordinate
+   inside #stage — manifest x/y are CENTER points, so left/top = x - w/2,
+   y - h/2 — and #stage is contain-scaled to the viewport. Same coordinate
+   space front/js/play/manifest-render.js renders from, so this hand-built page
+   and the constructor preview agree pixel for pixel. Each rule below carries
+   the manifest numbers it was derived from; re-derive them if the draft moves.
+
+   Design canvases (manifest layouts.<device>.w/h): desktop 1932x940, mobile
+   portrait 780x1416. */
+
+:root {
+  --gold: #f4c752;
+  --gold-dark: #a4791b;
+  --ink: #1b1208;
+  --wine: #5b1a1c;
+  --wine-dark: #2c0c0e;
+  --ui-bg: rgba(18, 12, 8, 0.74);
+  --ui-border: rgba(244, 199, 82, 0.2);
+  --text-cream: #fff3dc;
+
+  /* Grid cells straight from the manifest's reel_block: desktop 990x590 for a
+     5x3 block => 190x190 cells, 10px gaps (5*190+4*10=990, 3*190+2*10=590).
+     slot.js mirrors these via readCellDims() — keep in sync. */
+  --cell-w: 190px;
+  --cell-h: 190px;
+  --cell-gap-x: 10px;
+  --cell-gap-y: 10px;
+  /* Symbol art is authored on a 200x200 canvas (220 for scatter/wild), i.e.
+     slightly larger than a cell — rendered at native size on purpose so
+     statics and Spine win-clips agree; the overflow is absorbed by the frame
+     opening's own margin (--grid-bleed-*). Mobile shrinks it to the smaller
+     cell pitch. */
+  --symbol-scale: 1;
+
+  /* How far the scroll-clip box extends past reel_block on each side: exactly
+     the frame's inner opening. Measured off Frame.png (native 1163x758,
+     transparent hole x 81..1081, y 76..702); at its rendered desktop size
+     (1193x779 centred on 967,463) the hole is 1025.8x643.3 centred on
+     (966.5,473) — i.e. ~18px wider and ~27px taller than the 990x590 block on
+     each side. So the reels are clipped exactly at the golden border: the
+     spinning strip disappears behind it instead of past the frame. */
+  --grid-bleed-x: 18px;
+  --grid-bleed-y: 27px;
+
+  /* Overwritten per device at runtime by slot.js updateStageScale(). */
+  --design-w: 1932px;
+  --design-h: 940px;
+  --stage-scale: 1;
+}
+
+* { box-sizing: border-box; }
+
+html, body { overflow-x: hidden; }
+
+body {
+  margin: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #08060a;
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  color: var(--text-cream);
+}
+
+/* ---------- Back-to-catalog button ---------- */
+.to-catalog-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 110;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(18, 12, 8, 0.75);
+  border: 1px solid rgba(244, 199, 82, 0.5);
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(4px);
+}
+.to-catalog-btn:hover { background: rgba(18, 12, 8, 0.92); border-color: var(--gold); }
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+/* ---------- Dev panel ---------- */
+.dev-panel {
+  position: fixed;
+  top: 52px;
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 260px;
+  align-items: center;
+}
+.dev-btn {
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #222;
+  color: #ddd;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.dev-btn:hover { opacity: 1; }
+.dev-hint {
+  font-size: 10px;
+  color: #999;
+  width: 100%;
+  text-align: right;
+}
+
+/* ---------- Screen (viewport box; #stage is contain-scaled inside it) ---- */
+.screen {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  background: #08060a;
+}
+
+.layer { position: absolute; }
+
+/* Background art is authored at exactly the design canvas size (desktop
+   1932x940, mobile 780x1416 — manifest layouts.<device>.backgrounds), so it
+   fills the screen box on both axes with nothing cropped. */
+.bg {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  z-index: 0;
+}
+
+/* ---------- Design-space stage ----------
+   Two stages share one transform: #stage sits BELOW the Spine canvas (symbols,
+   win-clips, popups all draw there), #stageFront above it, and holds only the
+   reel frame — so a win-clip overflowing the reel opening is masked by the
+   golden border instead of drawing over it. */
+.stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--design-w);
+  height: var(--design-h);
+  transform: translate(-50%, -50%) scale(var(--stage-scale));
+  z-index: 1;
+}
+.stage--front {
+  z-index: 6; /* above .spine-canvas (5) */
+  pointer-events: none;
+}
+.stage .obj { position: absolute; }
+
+/* ---------- Manifest objects (desktop 1932x940) ---------------------------
+   Each comment records the manifest's own center x/y + size. */
+
+/* slot_logo: center (962,86), 594x145 */
+.logo {
+  left: 665px;
+  top: 13.5px;
+  width: 594px;
+  height: 145px;
+  object-fit: contain;
+  z-index: 4;
+  pointer-events: none;
+}
+
+/* slot_reel_background (slot_bg.png): center (968,471), 1050x692 */
+.reel-bg {
+  left: 443px;
+  top: 125px;
+  width: 1050px;
+  height: 692px;
+  object-fit: fill;
+  z-index: 0;
+}
+
+/* slot_frame (Frame.png): center (967,463), 1193x779 */
+.frame {
+  left: 370.5px;
+  top: 73.5px;
+  width: 1193px;
+  height: 779px;
+  object-fit: fill;
+  pointer-events: none;
+}
+
+/* system.reel_block: center (966,470), 990x590 — grown by --grid-bleed-* to the
+   frame's opening, which is where the scrolling strips get clipped. */
+.reel__grid {
+  left: calc(471px - var(--grid-bleed-x));   /* 966 - 990/2 - bleed */
+  top: calc(175px - var(--grid-bleed-y));    /* 470 - 590/2 - bleed */
+  width: calc(990px + 2 * var(--grid-bleed-x));
+  height: calc(590px + 2 * var(--grid-bleed-y));
+  z-index: 2;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.reel__grid-inner {
+  /* Exactly the manifest reel_block: 5 cols x 3 rows of --cell-* + gaps. */
+  position: relative;
+  width: calc(5 * var(--cell-w) + 4 * var(--cell-gap-x));
+  height: calc(3 * var(--cell-h) + 2 * var(--cell-gap-y));
+}
+
+/* One reel = an absolutely-placed column; the strip inside it is what scrolls.
+   No per-column mask is needed — .reel__grid already clips at the frame
+   opening, and a column that clipped itself would also cut the symbol overlap
+   into its neighbours' gaps. */
+.reel__col {
+  position: absolute;
+  top: 0;
+  width: var(--cell-w);
+  height: 100%;
+}
+.reel__col.is-anticipating {
+  /* The suspense column doesn't grow — just a glow + stacking bump, same
+     treatment as the other themes (no screen zoom, per product). */
+  z-index: 2;
+  filter: drop-shadow(0 0 16px rgba(244, 199, 82, 0.9));
+}
+.reel__strip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cell-gap-y);
+}
+.reel__strip.is-looping {
+  animation: reel-loop var(--reel-loop-duration, 420ms) linear infinite;
+}
+@keyframes reel-loop {
+  from { transform: translateY(0); }
+  to { transform: translateY(var(--reel-loop-distance, 0)); }
+}
+
+.reel__cell {
+  position: relative;
+  width: var(--cell-w);
+  height: var(--cell-h);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+.reel__cell img {
+  /* Native canvas size (200/220px) on a 190px cell, centred by the flex above:
+     capping it to the cell would shrink the static below the size the Spine
+     win-clip renders at, so the symbol would visibly grow when it wins.
+     --symbol-scale shrinks both together (mobile). applyStaticContentOffset
+     (slot.js) only overrides `transform` for a calibrated symbol. */
+  pointer-events: none;
+  transform: scale(var(--symbol-scale, 1));
+  transition: opacity 200ms ease;
+}
+.reel__cell.is-dimmed img { opacity: 0.3; }
+.reel__cell-anchor {
+  /* Sized per-instance by slot.js:setCellSymbol; centred on the cell. */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* buy_bonus (buy_bonus_button.png), base mode only: center (1725,621), 400x400 */
+.sign-buy-bonus {
+  left: 1525px;
+  top: 421px;
+  width: 400px;
+  height: 400px;
+  cursor: pointer;
+  z-index: 3;
+}
+.sign-buy-bonus__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  transition: filter 200ms ease;
+}
+.sign-buy-bonus:hover .sign-buy-bonus__img {
+  filter: drop-shadow(0 0 16px rgba(244, 199, 82, 0.75));
+}
+.screen[data-mode="freespins"] .sign-buy-bonus { display: none; }
+
+/* free_spins_counter (Free_Spins_counter.png), bonus mode only:
+   center (1672,749), 399x208 */
+.fs-counter {
+  display: none;
+  left: 1472.5px;
+  top: 645px;
+  width: 399px;
+  height: 208px;
+  z-index: 3;
+}
+.screen[data-mode="freespins"] .fs-counter { display: block; }
+.fs-counter__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.fs-counter__value {
+  position: absolute;
+  left: 50%;
+  /* The plate's number window sits in the lower half of the art. */
+  top: 63%;
+  transform: translate(-50%, -50%);
+  font-family: 'Luckiest Guy', cursive;
+  font-weight: 400;
+  font-size: 54px;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 0 3px 0 var(--ink);
+  white-space: nowrap;
+}
+
+/* ---------- Screen dim (before popups / base<->bonus transitions) ---------- */
+.screen-dim {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  z-index: 4; /* above #stage (1), below the symbol/popup canvas (5) */
+}
+.screen-dim.is-active { opacity: 1; }
+.screen-dim.is-opaque { background: #000; }
+/* #stageFront has to sit ABOVE the Spine canvas (that's the whole point — the
+   frame masks win-clips that overflow the reel opening), which also puts it
+   above .screen-dim. Fine for the partial dim behind a win popup, but during
+   the opaque base<->bonus blackout it left the frame and logo lit up over solid
+   black. Fade them with the blackout instead; the popup, drawn on the canvas,
+   is unaffected. */
+.screen-dim.is-opaque ~ .stage--front { opacity: 0; }
+.stage--front { transition: opacity 320ms ease; }
+
+/* ---------- Popup win-amount overlay ---------- */
+.popup-amount {
+  position: fixed;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(16px, 2.2vw, 34px);
+  color: var(--text-cream);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85), 0 0 14px rgba(244, 199, 82, 0.65);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.popup-amount.is-visible { opacity: 1; }
+
+/* ---------- Inline win-amount (wins below the big/mega/epic popup threshold) --
+   Same box as the reel_block, so the amount reads centred on the reels. */
+.reel-win-amount-viewport {
+  left: 471px;
+  top: 175px;
+  width: 990px;
+  height: 590px;
+  z-index: 3;
+  pointer-events: none;
+}
+.reel-win-amount {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.reel-win-amount.is-visible { opacity: 1; }
+.reel-win-amount::before {
+  content: attr(data-amount);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 64px;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 0 4px 0 var(--ink), 0 0 26px rgba(244, 199, 82, 0.75);
+  white-space: nowrap;
+  padding: 6px 22px;
+  background: rgba(8, 4, 2, 0.55);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(244, 199, 82, 0.25);
+}
+
+/* Missing-asset placeholder (dev-time only). */
+img.is-missing {
+  width: 55%;
+  height: 55%;
+  object-fit: contain;
+  outline: 2px dashed rgba(244, 199, 82, 0.5);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+.spine-canvas {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ---------- Paytable info popup ---------- */
+.info-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 20px;
+}
+.info-popup[hidden] { display: none; }
+.info-popup__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(720px, 90vh);
+  overflow-y: auto;
+  background: var(--wine-dark);
+  border: 3px solid var(--gold-dark);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.info-popup__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-cream);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.info-popup__close:hover { background: rgba(0, 0, 0, 0.55); }
+.info-popup__title {
+  margin: 0 0 6px;
+  color: var(--gold);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 24px;
+  text-align: center;
+  -webkit-text-stroke: 1px var(--ink);
+  text-shadow: 0 2px 0 var(--ink);
+}
+.info-popup__note {
+  text-align: center;
+  font-size: 12px;
+  opacity: 0.75;
+  margin: 0 0 16px;
+}
+.info-popup__list { display: flex; flex-direction: column; gap: 10px; }
+.info-popup__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.info-popup__row img { width: 48px; height: 48px; object-fit: contain; flex-shrink: 0; }
+.info-popup__row-name { flex: 1 1 auto; min-width: 90px; font-weight: 700; }
+.info-popup__row-pays { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; color: var(--text-cream); }
+.info-popup__row-pays span { white-space: nowrap; opacity: 0.9; }
+.info-popup__row-pays b { color: var(--gold); }
+
+/* ================================================================
+   Mobile (portrait) — the manifest's own mobile screen (canvas 780x1416).
+   #stage swaps to that canvas (slot.js sets --design-w/h) and every object
+   moves to its mobile builder coordinate. reel_block is 740x440 there =>
+   140x140 cells, 10px gaps.
+   ================================================================ */
+@media (orientation: portrait) {
+  :root {
+    --cell-w: 140px;
+    --cell-h: 140px;
+    --cell-gap-x: 10px;
+    --cell-gap-y: 10px;
+    /* 200px art on a 140px cell reads as "symbols stuck together" — shrink
+       both static and win-clip so real gaps open up. */
+    --symbol-scale: 0.74;
+    /* Frame.png rendered at 882x568 centred on (385,492): its hole works out
+       to 758.4x469 centred on (384.6,499.5) — ~9px/~14.5px past the 740x440
+       reel_block on each side. */
+    --grid-bleed-x: 9px;
+    --grid-bleed-y: 14px;
+  }
+
+  /* slot_logo: center (384,189), 552x135 */
+  .logo { left: 108px; top: 121.5px; width: 552px; height: 135px; }
+
+  /* slot_reel_background: center (385,502), 777x500 */
+  .reel-bg { left: -3.5px; top: 252px; width: 777px; height: 500px; }
+
+  /* slot_frame: center (385,492), 882x568 */
+  .frame { left: -56px; top: 208px; width: 882px; height: 568px; }
+
+  /* system.reel_block: center (385,500), 740x440 */
+  .reel__grid {
+    left: calc(15px - var(--grid-bleed-x));
+    top: calc(280px - var(--grid-bleed-y));
+    width: calc(740px + 2 * var(--grid-bleed-x));
+    height: calc(440px + 2 * var(--grid-bleed-y));
+  }
+  .reel-win-amount-viewport { left: 15px; top: 280px; width: 740px; height: 440px; }
+  .reel-win-amount::before { font-size: 48px; }
+
+  /* buy_bonus: center (599,961), 400x400 */
+  .sign-buy-bonus { left: 399px; top: 761px; width: 400px; height: 400px; }
+
+  /* free_spins_counter: center (575,988), 477x249 */
+  .fs-counter { left: 336.5px; top: 863.5px; width: 477px; height: 249px; }
+  .fs-counter__value { font-size: 64px; }
+}

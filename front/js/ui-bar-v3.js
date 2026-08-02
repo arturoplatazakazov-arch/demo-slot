@@ -50,7 +50,13 @@
   function startRotation() {
     stopPending = false;
     clearTimeout(stopFallbackId);
-    spinBtn.classList.add('is-rotating');
+    // Не трогаем класс, если он уже стоит: classList.add() переписывает
+    // атрибут даже без фактического изменения, а этот вызов происходит из
+    // колбэка MutationObserver, который следит за этим же атрибутом — без
+    // guard'а каждый add порождает новую mutation record и колбэк зацикливает
+    // сам себя бесконечной микротаск-петлёй (замороженная вкладка на клике
+    // по SPIN, пока is-spinning висит на кнопке).
+    if (!spinBtn.classList.contains('is-rotating')) spinBtn.classList.add('is-rotating');
   }
 
   function finishRotation() {

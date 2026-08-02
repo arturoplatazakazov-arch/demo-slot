@@ -739,7 +739,7 @@ body.layout-fit .ui-bar {
   }
 
   .logo {
-    top: calc(7% + 30px);
+    top: calc(7% + 30px - 80px);
     height: 18.4%;
   }
 
@@ -754,7 +754,13 @@ body.layout-fit .ui-bar {
 
   /* Mobile prop placement/sizing (overrides the desktop .prop--* rules). */
   .prop--skull   { top: 15%; left: -13%; width: 28%; }
-  .prop--hat     { bottom: 39%; left: -4%; width: 31%; }
+  /* Bottom edge pinned exactly to .reel's own bottom edge (same top:15% +
+     scaled-height formula as .reel above — product, this session: "шапка
+     [=hat] должна быть прикреплена к нижней части рамки"), instead of the
+     previous eyeballed bottom:39% which left a few px of daylight at this
+     viewport and would drift at others since it wasn't tied to the frame's
+     actual (scale-dependent) position. */
+  .prop--hat     { top: auto; bottom: calc(85% - var(--reel-frame-h) * var(--reel-scale-mobile) * 1.216); left: -4%; width: 31%; }
   .prop--cactus1 { bottom: 0%; left: 4%;  width: 39%; }
   .prop--cactus2 { bottom: 0%; right: 4%; width: 29%; }
 

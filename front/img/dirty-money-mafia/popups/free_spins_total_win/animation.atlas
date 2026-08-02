@@ -1,0 +1,15 @@
+animation.png
+size:2030,1028
+filter:Linear,Linear
+MAFIA_BSTW_TEXT
+bounds:1295,2,592,369
+offsets:1,1,594,371
+MAFIA_BSTW_bg
+bounds:1295,373,733,653
+offsets:1,1,736,655
+MAFIA_BSTW_input
+bounds:2,60,646,232
+offsets:2,1,651,234
+MAFIA_BW_rays1
+bounds:2,294,1291,732
+offsets:13,17,1342,755
