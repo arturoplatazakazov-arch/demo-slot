@@ -19,11 +19,14 @@
 
   document.documentElement.classList.add('in-telegram');
 
-  // The public games.html catalog still links to the builder/anim-lab/admin
-  // utility pages — none of that belongs in the portfolio mini-app, so the
-  // escape hatch to it is hidden until tg.html (portfolio catalog) exists.
+  // Inside Telegram all "to catalog" navigation leads to tg.html (the
+  // portfolio catalog: games only) instead of games.html, which still links
+  // to the builder/anim-lab/admin utility pages. Covers the top-left overlay
+  // button here and the V3 bar's home button via window.CATALOG_URL (see
+  // ui-bar-v3.js).
+  window.CATALOG_URL = 'tg.html';
   document.querySelectorAll('.to-catalog-btn').forEach((el) => {
-    el.style.setProperty('display', 'none', 'important');
+    el.setAttribute('href', 'tg.html');
   });
 
   if (!tg || forced && tg.platform === 'unknown') return; // browser test run

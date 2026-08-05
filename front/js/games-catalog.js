@@ -9,6 +9,11 @@ const ADMIN_ICON = '<svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2
 
 function gameCardHtml(entry) {
   const playUrl = entry.catalog_play_url || `play.html?slug=${encodeURIComponent(entry.code)}`;
+  // tg.html (портфолио для Telegram Mini App) выставляет CATALOG_PORTFOLIO:
+  // карточки те же, но без кнопки «Админка» — наружу только игры.
+  const adminLink = window.CATALOG_PORTFOLIO
+    ? ''
+    : `<a class="game-card__admin" href="admin/index.html?game=${encodeURIComponent(entry.code)}">${ADMIN_ICON} Админка</a>`;
   return `
     <div class="game-card">
       <a class="game-card__media" href="${playUrl}">
@@ -20,7 +25,7 @@ function gameCardHtml(entry) {
         <p class="game-card__desc">${entry.catalog_description || ''}</p>
         <div class="game-card__actions">
           <a class="game-card__play" href="${playUrl}">${PLAY_ICON} Играть</a>
-          <a class="game-card__admin" href="admin/index.html?game=${encodeURIComponent(entry.code)}">${ADMIN_ICON} Админка</a>
+          ${adminLink}
         </div>
       </div>
     </div>
