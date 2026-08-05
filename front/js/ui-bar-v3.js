@@ -180,7 +180,10 @@
   // В старом баре кнопка была декоративной; ведём туда же, куда ссылка
   // "В каталог" в шапке.
   bar.querySelector('[data-action="home"]').addEventListener('click', () => {
-    window.location.href = 'games.html';
+    // В Telegram Mini App telegram.js подменяет каталог на tg.html (портфолио
+    // без сервисных страниц) — читаем на клике, а не на старте, т.к. порядок
+    // подключения скриптов на страницах различается.
+    window.location.href = window.CATALOG_URL || 'games.html';
   });
 
   // Выбор пункта меню закрывает флайаут — кроме звука, чтобы было видно,
