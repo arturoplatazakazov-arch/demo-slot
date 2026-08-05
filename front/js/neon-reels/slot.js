@@ -259,6 +259,7 @@ function createCellNode(code) {
 
   const img = document.createElement('img');
   img.alt = code;
+  img.decoding = 'async'; // strips rebuild mid-animation; keep decode off the main thread
   img.src = `${ASSET_ROOT}/Export/${SYMBOL_FOLDERS[code]}/${staticFileFor(code)}`;
   img.addEventListener('error', () => img.classList.add('is-missing'), { once: true });
   applyStaticContentOffset(img, code);
