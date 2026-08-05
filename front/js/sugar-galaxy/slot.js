@@ -1070,7 +1070,8 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
 
       const instance = resource.createInstance();
       instance.anchorEl = document.getElementById('screen');
-      instance.fit = 1;
+      // Portrait doubles the popup (product); glow overflow accepted.
+      instance.fit = isMobileLayout() ? 2 : 1;
       stage.addOverlay(instance);
       startPopupAmountTracking(instance, amount);
 

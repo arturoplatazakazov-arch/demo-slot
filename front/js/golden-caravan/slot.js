@@ -902,7 +902,8 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
 
       const instance = resource.createInstance();
       instance.anchorEl = document.getElementById('screen');
-      instance.fit = POPUP_FIT; // scale up (rays overflow) — see POPUP_FIT
+      // Portrait scales popups a further 1.5x (product); glow overflow accepted.
+      instance.fit = POPUP_FIT * (isMobileLayout() ? 1.5 : 1); // scale up (rays overflow) — see POPUP_FIT
       stage.addOverlay(instance);
       startPopupAmountTracking(instance, amount);
 
