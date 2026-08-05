@@ -54,13 +54,19 @@ if (sfxGain) {
   sfxGain.connect(sfxCtx.destination);
 }
 const sfxBuffers = {};
+// Exposed via Sound.preloadPromises so the boot preloader can count each
+// decode toward its progress bar; every promise resolves (errors swallowed),
+// so awaiting them can't hang the loader on the known-missing coinLand file.
+const sfxLoadPromises = [];
 if (sfxCtx) {
   for (const [name, src] of Object.entries(SOUND_FILES)) {
-    fetch(src)
-      .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()))
-      .then((ab) => sfxCtx.decodeAudioData(ab))
-      .then((buf) => { sfxBuffers[name] = buf; })
-      .catch(() => {}); // missing file (coinLand) — fine to ignore
+    sfxLoadPromises.push(
+      fetch(src)
+        .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()))
+        .then((ab) => sfxCtx.decodeAudioData(ab))
+        .then((buf) => { sfxBuffers[name] = buf; })
+        .catch(() => {}), // missing file (coinLand) — fine to ignore
+    );
   }
 }
 
@@ -155,6 +161,7 @@ const Sound = {
   playMusic,
   setMuted,
   toggleMuted,
+  preloadPromises: sfxLoadPromises,
   get muted() {
     return muted;
   },
