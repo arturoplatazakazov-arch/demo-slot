@@ -9,7 +9,7 @@
 // A '?api=<url>' query string on the page URL overrides this at runtime,
 // which is handy for pointing a local page at a staging backend.
 window.SLOT_CONFIG = {
-  apiBaseUrl: '',
+  apiBaseUrl: 'https://api-production-ea3c.up.railway.app/api/v1',
 };
 
 // Dev-only UI (mode toggle, forced Big/Epic/Mega Win popups, feature-buy
