@@ -696,7 +696,38 @@ img.is-missing {
   opacity: 0;
   pointer-events: none;
 }
+/* Logo: gentle bob + pulsing neon glow behind it. Both keyframes animate
+   only transform/opacity (composited, no repaints) and exist only while the
+   overlay does — done() removes the whole subtree, so the game never pays
+   for this. :empty hides the block when the logo file is absent (the img
+   removes itself onerror). */
 .preloader__logo:empty { display: none; }
+.preloader__logo {
+  position: relative;
+  width: min(40vw, 200px);
+}
+.preloader__logo::before {
+  content: '';
+  position: absolute;
+  inset: -16%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 61, 240, 0.4), rgba(47, 243, 255, 0.14) 62%, transparent);
+  animation: preloader-glow 2.8s ease-in-out infinite;
+}
+.preloader__logo img {
+  display: block;
+  width: 100%;
+  animation: preloader-bob 2.8s ease-in-out infinite;
+}
+@keyframes preloader-bob {
+  0%, 100% { transform: translateY(7px); }
+  50% { transform: translateY(-7px); }
+}
+@keyframes preloader-glow {
+  0%, 100% { opacity: 0.5; transform: scale(0.94); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
 .preloader__bar {
   width: min(62vw, 420px);
   height: 8px;

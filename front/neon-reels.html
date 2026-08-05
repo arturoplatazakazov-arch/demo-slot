@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Neon Reels — demo</title>
 <link rel="stylesheet" href="css/fonts.css">
-<link rel="stylesheet" href="css/neon-reels.css?v=13">
+<link rel="stylesheet" href="css/neon-reels.css?v=14">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 </head>
 <body>
@@ -14,7 +14,10 @@
        прогресс двигает js/neon-reels/preloader.js, задачи считает slot.js.
        Место под лого зарезервировано: .preloader__logo (пока пустое). -->
   <div class="preloader" id="preloader">
-    <div class="preloader__logo" id="preloaderLogo"></div>
+    <!-- onerror-remove: пока файла лого нет, контейнер пустеет и :empty прячет
+         его вместе со свечением — прелоадер выглядит как раньше, без битой
+         иконки и зазора. -->
+    <div class="preloader__logo" id="preloaderLogo"><img src="img/neon-reels/preloader-logo.png" alt="" onerror="this.remove()"></div>
     <div class="preloader__bar"><div class="preloader__fill" id="preloaderFill"></div></div>
     <div class="preloader__pct" id="preloaderPct">0%</div>
   </div>
