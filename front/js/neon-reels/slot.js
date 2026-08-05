@@ -105,7 +105,9 @@ const POPUP_CLIPS = { start: 'start', idle: 'idle', end: 'end' };
 const COIN_MULTIPLIER_BONE = 'bone_numb';
 
 const DIM_TRANSITION_MS = 320;
-const REEL_LOOP_STEP_MS = 420;
+// 420 -> 300: the falling loop read as sluggish at spin start (product);
+// rows now scroll a third faster while the landing easing stays untouched.
+const REEL_LOOP_STEP_MS = 300;
 const REEL_LAND_FILLER_COUNT = 14;
 const REEL_LAND_DURATION_MS = 750;
 const REEL_LAND_STAGGER_MS = 110;
@@ -616,6 +618,10 @@ function setReelSpinning(on) {
   if (reelEl) reelEl.classList.toggle('is-spinning', on);
 }
 
+// Invalidates a pending (double-rAF-delayed) loop start when a newer spin
+// supersedes it — see the tail of startReelLoop.
+let reelLoopGeneration = 0;
+
 function startReelLoop() {
   Sound.playSfx('spinStart');
   setReelSpinning(true);
@@ -639,9 +645,19 @@ function startReelLoop() {
     stripEl.style.setProperty('--reel-loop-distance', `${NR_ROW_STEP * GRID_ROWS}px`);
     stripEl.style.setProperty('--reel-loop-duration', `${REEL_LOOP_STEP_MS}ms`);
     stripEl.style.transform = 'translateY(0px)';
-    void stripEl.offsetHeight;
-    stripEl.classList.add('is-looping');
   }
+
+  // Start the loop animation two frames AFTER the rebuild, not in the same
+  // frame: kicking the CSS animation while the browser is still laying out /
+  // rasterizing five freshly rebuilt strips drops its first frames on
+  // mobile, so the fall opened at a visible crawl and read as lag (reported
+  // live). Two rAFs = one full frame for layout+raster to land; the ~32ms
+  // start delay is imperceptible next to the whole-spin duration.
+  const gen = ++reelLoopGeneration;
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (gen !== reelLoopGeneration) return; // superseded by a newer spin
+    for (const { stripEl } of reelCols) stripEl.classList.add('is-looping');
+  }));
 }
 
 function stopReelLoop() {
