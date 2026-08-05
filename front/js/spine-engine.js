@@ -3,6 +3,18 @@
 // arbitrary DOM elements (so the DOM/CSS layout stays the single source of truth
 // for where things sit on screen, and Spine only has to know how to draw itself there).
 
+// Cap the effective devicePixelRatio at 2. On 3x phone screens the full-window
+// WebGL canvas otherwise gets a ~1170x2530 backing store — 2.25x the fill/
+// composite cost of 2x for glow-heavy effect art where the extra density is
+// invisible. Every consumer (vendor renderer.resize, _placeInAnchor, each
+// game's worldToScreen) reads window.devicePixelRatio, so overriding the
+// getter keeps canvas size and coordinate math consistent everywhere.
+if ((window.devicePixelRatio || 1) > 2) {
+  try {
+    Object.defineProperty(window, 'devicePixelRatio', { get: () => 2, configurable: true });
+  } catch { /* leave the native value if the platform forbids the override */ }
+}
+
 const spineResourceCache = new Map();
 
 function spineLoadTextureAtlas(assetManager, path) {
@@ -162,18 +174,32 @@ class SpineStage {
     this.overlayInstances = []; // always drawn on top of base (popups)
     this.baseDimmed = false; // see setBaseDim below
 
+    // The stage is empty most of the time (win/popup animations only exist
+    // after a landing), but SpineCanvas still ticks its rAF loop every frame.
+    // Doing the resize/clear/composite of a full-window canvas 60 times a
+    // second with nothing to draw is pure GPU waste that competes with the
+    // CSS reel animation on mobile webviews — so an empty stage renders
+    // exactly once (to clear the last drawn frame) and then leaves the GL
+    // state untouched until an instance is added again.
+    this._idleCleared = false;
+
     this.spineCanvas = new spine.SpineCanvas(canvasEl, {
       pathPrefix: '',
       webglConfig: { alpha: true },
       app: {
         update: (canvas, delta) => {
+          if (!this.baseInstances.length && !this.overlayInstances.length) return;
           for (const inst of this.baseInstances) inst.update(delta, canvasEl);
           for (const inst of this.overlayInstances) inst.update(delta, canvasEl);
         },
         render: (canvas) => {
+          const empty = !this.baseInstances.length && !this.overlayInstances.length;
+          if (empty && this._idleCleared) return;
           const renderer = canvas.renderer;
           renderer.resize(spine.ResizeMode.Expand);
           canvas.clear(0, 0, 0, 0);
+          this._idleCleared = empty;
+          if (empty) return;
           renderer.begin();
           for (const inst of this.baseInstances) renderer.drawSkeleton(inst.skeleton, inst.resource.premultipliedAlpha);
           for (const inst of this.overlayInstances) renderer.drawSkeleton(inst.skeleton, inst.resource.premultipliedAlpha);
