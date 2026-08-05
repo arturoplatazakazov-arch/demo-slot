@@ -39,25 +39,58 @@ let currentMusicKey = null;
 let musicUnlocked = false;
 let pendingMusicKey = 'base';
 
+// Preload every SFX up front: creating a fresh Audio at play time means the
+// fetch/decode starts when the sound should already be audible, which on
+// mobile webviews (Telegram Mini App) makes every effect land late and adds
+// main-thread hiccups mid-spin. One element per SFX is fetched once at page
+// load (~300KB total); overlapping plays clone the element, hitting the HTTP
+// cache instead of the network.
+const sfxCache = {};
+for (const [name, src] of Object.entries(SOUND_FILES)) {
+  const audio = new Audio(src);
+  audio.preload = 'auto';
+  sfxCache[name] = audio;
+}
+
 function playSfx(name) {
   if (muted) return;
-  const src = SOUND_FILES[name];
-  if (!src) return;
-  const audio = new Audio(src);
+  const cached = sfxCache[name];
+  if (!cached) return;
+  const audio = (cached.paused || cached.ended) ? cached : cached.cloneNode(true);
   audio.volume = SFX_VOLUME;
+  if (audio.readyState > 0) audio.currentTime = 0;
   audio.play().catch(() => {}); // autoplay-blocked / missing file — fine to ignore
 }
+
+// Music tracks are ~2MB each, so they'd compete with the game art if fetched
+// immediately; elements are created up front but only start buffering after
+// window 'load'. By the time the first gesture unlocks playback the track is
+// (mostly) buffered, so the background music starts on time instead of
+// trailing the game by however long the fetch takes.
+const musicCache = {};
+for (const [key, src] of Object.entries(MUSIC_FILES)) {
+  const audio = new Audio();
+  audio.preload = 'none';
+  audio.src = src;
+  audio.loop = true;
+  musicCache[key] = audio;
+}
+window.addEventListener('load', () => {
+  for (const audio of Object.values(musicCache)) {
+    audio.preload = 'auto';
+    audio.load();
+  }
+});
 
 function playMusic(key) {
   pendingMusicKey = key;
   if (!musicUnlocked || currentMusicKey === key) return;
   if (currentMusic) currentMusic.pause();
 
-  const src = MUSIC_FILES[key];
-  if (!src) return;
-  const audio = new Audio(src);
-  audio.loop = true;
+  const audio = musicCache[key];
+  if (!audio) return;
   audio.volume = muted ? 0 : MUSIC_VOLUME;
+  if (audio.readyState > 0) audio.currentTime = 0;
   audio.play().catch(() => {});
   currentMusic = audio;
   currentMusicKey = key;
