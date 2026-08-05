@@ -676,6 +676,12 @@ img.is-missing {
     --cell-gap-y: 5px;
   }
 
+  /* Mobile cells (116x116) are much smaller than the native 150x150 symbol
+     art, so — unlike desktop where native size is intended — contain-fit the
+     static into the cell here (the Spine win-clips are fitted to the cell in
+     JS the same way, see playSymbolClipOnce/isMobileLayout). */
+  .reel__cell img { width: 100%; height: 100%; object-fit: contain; }
+
   /* logo: center (384,199), size 251x150 */
   .logo { left: 258px; top: 124px; width: 251px; height: 150px; }
 

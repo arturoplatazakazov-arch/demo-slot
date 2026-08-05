@@ -465,8 +465,20 @@ function setCellActive(info, active) {
   }
 }
 
+// Matches .reel__cell.is-dimmed img's own opacity (0.3) — that CSS rule only
+// dims the DOM <img>, which is invisible whenever the cell has a live Spine
+// instance instead (wild/scatter's persistent idle loop — see
+// SPECIAL_SYMBOLS/setCellActive: img.style.visibility is 'hidden' the whole
+// time the instance is on stage). Without this, a wild sitting idle outside
+// the winning line stayed at full brightness while every other losing cell
+// dimmed around it (product, this session).
+const CELL_DIM_TINT = 0.3;
 function setCellDimmed(info, dimmed) {
   info.cell.classList.toggle('is-dimmed', dimmed);
+  if (info.instance) {
+    const c = dimmed ? CELL_DIM_TINT : 1;
+    info.instance.skeleton.color.set(c, c, c, 1);
+  }
 }
 
 let multiLineSequenceTimeout = null;

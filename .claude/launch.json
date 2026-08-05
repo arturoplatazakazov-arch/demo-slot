@@ -12,6 +12,12 @@
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "http.server", "4199", "--directory", "front"],
       "port": 4199
+    },
+    {
+      "name": "front-static-tg",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "4311", "--directory", "front"],
+      "port": 4311
     }
   ]
 }

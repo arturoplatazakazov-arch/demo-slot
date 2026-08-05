@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Конструктор · Ассеты</title>
+<link rel="stylesheet" href="../css/fonts.css">
+<link rel="stylesheet" href="builder.css?v=1">
+<link rel="stylesheet" href="assets.css?v=1">
+</head>
+<body>
+
+  <header class="builder-top">
+    <div class="builder-brand">Slot<span>Builder</span> v2</div>
+    <nav class="stepper">
+      <a class="step is-done" href="setup.html"><span class="step__num">1</span>Настройка</a>
+      <span class="step__sep"></span>
+      <a class="step is-active" href="assets.html"><span class="step__num">2</span>Ассеты</a>
+      <span class="step__sep"></span>
+      <a class="step" href="layout.html"><span class="step__num">3</span>Вёрстка</a>
+    </nav>
+    <div style="width:110px"></div>
+  </header>
+
+  <main class="builder-main">
+    <div class="page-head">
+      <h1 class="page-title">Ассеты</h1>
+      <p class="page-sub">Перетащи файл в нужный слот — он сам ляжет под правильным именем в нужную папку. Список собран под твою базу и механики.</p>
+    </div>
+
+    <div class="assets-progress" id="progress"></div>
+    <div id="slotArea"></div>
+  </main>
+
+  <footer class="builder-foot">
+    <div class="foot-info" id="footInfo"></div>
+    <div class="foot-spacer"></div>
+    <a class="btn btn--ghost" href="setup.html">← Назад</a>
+    <a class="btn btn--primary" id="nextBtn" href="layout.html">Далее: Вёрстка →</a>
+  </footer>
+
+  <script src="registry.js?v=1"></script>
+  <script src="draft.js?v=1"></script>
+  <script src="assets.js?v=1"></script>
+</body>
+</html>

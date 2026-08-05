@@ -53,11 +53,12 @@ const SYMBOL_CODES = Object.keys(SYMBOL_FOLDERS);
 // never was).
 const FILLER_CODES = SYMBOL_CODES.filter((c) => c !== 'scatter' && c !== 'wild');
 
-// rare_red is the one symbol delivered without a Spine export (its folder holds
-// static.png and nothing else) — it stays a still tile, and its "win animation"
-// is just the dim/highlight beat every other symbol gets, held for
-// STATIC_WIN_HOLD_MS. Swap it out of this set once the export lands.
-const SPINE_SYMBOLS = new Set(SYMBOL_CODES.filter((c) => c !== 'rare_red'));
+// Every symbol now ships a Spine export (rare_red's landed last and had to be
+// renamed from rare_red.{json,png,atlas.txt} to the animation.* names the
+// loader expects — scripts/check_spine_assets.py --fix does the atlas page
+// name). A code left out of this set falls back to a still tile whose "win
+// animation" is just the dim/highlight beat, held for STATIC_WIN_HOLD_MS.
+const SPINE_SYMBOLS = new Set(SYMBOL_CODES);
 const STATIC_WIN_HOLD_MS = 900;
 
 // Only scatter ships a live idle loop for the resting grid; every other symbol
@@ -143,6 +144,12 @@ const SYMBOL_LAYOUT = [
 // straight from the builder manifest — stay the single source of truth.
 let cellW = 190, cellH = 190, gapX = 10, gapY = 10;
 let colStep = cellW + gapX, rowStep = cellH + gapY;
+// Cached alongside the cell dims: --symbol-scale used to be re-read straight
+// from getComputedStyle inside setCellSymbol, i.e. once per cell — 15 forced
+// style recalcs on every landing, in the middle of the busiest frame of a spin.
+// It only ever changes with the device breakpoint, so read it where the rest of
+// the geometry is read.
+let cachedSymbolScale = 1;
 function readCellDims() {
   const cs = getComputedStyle(document.documentElement);
   const num = (name, fallback) => parseFloat(cs.getPropertyValue(name)) || fallback;
@@ -152,9 +159,10 @@ function readCellDims() {
   gapY = num('--cell-gap-y', 10);
   colStep = cellW + gapX;
   rowStep = cellH + gapY;
+  cachedSymbolScale = num('--symbol-scale', 1);
 }
 function symbolScale() {
-  return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--symbol-scale')) || 1;
+  return cachedSymbolScale;
 }
 
 let stage = null;
@@ -163,9 +171,22 @@ let reelCols = [];
 // Reel-height "big wild" overlays currently on screen (see revealExpandedWild).
 // Cleared at the start of every spin, same lifecycle as the cell instances.
 let expandedWildOverlays = [];
+// True from the moment the reels start spinning until they've landed and any
+// expanding wild has finished growing — the window in which nothing may tear
+// the grid down from under the animation (see handleResize/flushDeviceRebuild).
+let reelsBusy = false;
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// A Spine clip's completion drives the spin's own sequencing, so one clip that
+// never settles (its instance pulled off the stage, a bad export, ...) would
+// hang the spin and leave the SPIN button disabled for good. Bound every such
+// await — same guard golden-caravan uses for its cascade clips.
+const CLIP_TIMEOUT_MS = 4000;
+function withTimeout(promise, ms = CLIP_TIMEOUT_MS) {
+  return Promise.race([promise, wait(ms)]);
 }
 
 function randomSymbolCode() {
@@ -220,28 +241,37 @@ async function cellSpineBox(code) {
 
 // --- wild: picking the small variant out of the shared export ---------------
 //
-// The wild export holds both variants in ONE skeleton, and its setup pose is the
-// reel-height one: slot "wild-win-big_0" (a 211x593 region) is attached, while
-// the grid-cell tile — slot "wild-move_0", a 210x205 region — has no attachment
-// at all. So an untouched instance in a grid cell draws the full-height mobster
-// figure hanging out of its cell. `win-small` doesn't fix that on its own: it
-// only keys the sparkle/smoke slots, never the two variant slots.
+// The wild export holds both variants in ONE skeleton. The rigged art (wild_bg,
+// wild_frame*, wild_hero*, wild_text, ...) IS the reel-height wild — `move`
+// raises bone "bone" ~198px to grow it — and alongside it the export ships two
+// flat, single-image GUIDE regions the artist left in: "wild-win-big_0" (the
+// grown wild, 211x593) and "wild-move_0" (the grid tile, 210x205). Both `move`
+// and `win-big` null the guides out; only the SETUP pose has "wild-win-big_0"
+// attached, which is why an untouched instance dropped in a grid cell drew a
+// full-height figure hanging out of it.
 //
-// Attach the small region and drop every big-variant slot (keeping the shared
-// blik/smoke FX), then measure THAT attachment's own world bounds for the
-// fit box — no hand-tuned offset, so a re-export can't silently shift it.
+// There is no rigged "small" pose to use for the grid, so the cell renders the
+// wild-move_0 guide (that flat image is exactly the tile art) with every rigged
+// slot dropped, keeping the shared blik/smoke FX so `win-small` still sparkles.
+// The fit box comes from that attachment's own world bounds — no hand-tuned
+// offset, so a re-export can't silently shift it.
 const WILD_SMALL_SLOT = 'wild-move_0';
+const WILD_GUIDE_SLOTS = ['wild-move_0', 'wild-win-big_0'];
 const WILD_SHARED_FX_SLOT = /^(blik|wild_smoke)/;
 
-function applyWildSmallSkin(skeleton) {
-  for (const slot of skeleton.slots) {
-    const name = slot.data.name;
-    if (name === WILD_SMALL_SLOT) {
-      slot.setAttachment(skeleton.getAttachment(slot.data.index, WILD_SMALL_SLOT));
-    } else if (!WILD_SHARED_FX_SLOT.test(name)) {
-      slot.setAttachment(null);
-    }
-  }
+// Re-applied on every frame (see makeWildSmallInstance), so it resolves the
+// slot list and the small attachment ONCE per instance rather than walking all
+// 22 slots and regex-testing each name 60 times a second.
+function makeWildSmallSkinApplier(skeleton) {
+  const smallSlot = skeleton.findSlot(WILD_SMALL_SLOT);
+  const smallAttachment = smallSlot && skeleton.getAttachment(smallSlot.data.index, WILD_SMALL_SLOT);
+  const hide = skeleton.slots.filter(
+    (slot) => slot.data.name !== WILD_SMALL_SLOT && !WILD_SHARED_FX_SLOT.test(slot.data.name),
+  );
+  return () => {
+    if (smallSlot) smallSlot.setAttachment(smallAttachment);
+    for (const slot of hide) slot.setAttachment(null);
+  };
 }
 
 function attachmentBounds(skeleton, slotName) {
@@ -265,16 +295,17 @@ function attachmentBounds(skeleton, slotName) {
 // tile's footprint if the export ever stops shipping that slot.
 function makeWildSmallInstance(resource, fallbackBox) {
   const instance = resource.createInstance();
-  applyWildSmallSkin(instance.skeleton);
+  const applySkin = makeWildSmallSkinApplier(instance.skeleton);
+  applySkin();
   instance.skeleton.updateWorldTransform();
   const box = attachmentBounds(instance.skeleton, WILD_SMALL_SLOT) || fallbackBox;
   // The clip re-asserts the setup pose's attachments on every apply(), so
-  // re-hide the big-variant slots each frame (same technique golden-caravan
-  // uses for its boom export's additive layers).
+  // re-hide the rigged slots each frame (same technique golden-caravan uses for
+  // its boom export's additive layers).
   const baseUpdate = instance.update.bind(instance);
   instance.update = (delta, canvasEl) => {
     baseUpdate(delta, canvasEl);
-    applyWildSmallSkin(instance.skeleton);
+    applySkin();
   };
   return { instance, box };
 }
@@ -298,6 +329,10 @@ function createCellNode(code) {
 
   const img = document.createElement('img');
   img.alt = code;
+  // A landing rebuilds 17 cells per column (3 result + 14 filler) x 5 columns —
+  // ~85 fresh <img> in one burst, right when the reels are scrolling. Async
+  // decoding keeps that off the main thread so the scroll doesn't hitch.
+  img.decoding = 'async';
   img.src = `${ASSET_ROOT}/${SYMBOL_FOLDERS[code]}/${staticFileFor(code)}`;
   img.addEventListener('error', () => img.classList.add('is-missing'), { once: true });
   applyStaticContentOffset(img, code);
@@ -585,6 +620,7 @@ function showInlineWinAmount(amount) {
 
 function startReelLoop() {
   Sound.playSfx('spinStart');
+  reelsBusy = true;
   teardownCellInstances();
   for (let col = 0; col < GRID_COLS; col++) {
     const { stripEl } = reelCols[col];
@@ -615,6 +651,7 @@ function startReelLoop() {
 }
 
 function stopReelLoop() {
+  reelsBusy = false;
   for (const { stripEl } of reelCols) {
     stripEl.classList.remove('is-looping');
   }
@@ -718,12 +755,44 @@ function settleColumnCells(cellEls, col, finalCodes) {
 
 // --- Expanding wild ---------------------------------------------------------
 //
-// The wild export bundles both sizes in one skeleton (see
-// computeWildSmallBoundsOverride). When a reel expands, grow one reel-height
-// overlay over that whole column via the `move` clip and fade the 3 small wild
-// cells out underneath it.
+// The wild export bundles both sizes in one skeleton (see makeWildSmallInstance).
+// When a reel expands, grow one reel-height overlay over that whole column via
+// the `move` clip and fade the 3 small wild cells out underneath it.
 
 const BIG_WILD_FIT = 1.0;
+
+// Same problem as the grid tile, other end. `resource.bounds` (the declared
+// 316x684 setup box) is 15% taller than the reel-height wild actually is, so
+// fitting the overlay to it left the wild well short of the frame opening
+// instead of filling it edge to edge the way East Discovery's / Wild Western's
+// do. Measure the real thing instead — in its settled pose (frame 0 of
+// `win-big` already carries move's +198 bone translate), and counting only the
+// core art: the sparkle/smoke layers pulse well past the frame over the clip
+// (592 -> 625 tall), so including them would make the fit wobble by ~6%.
+const WILD_FX_SLOT = /^(blik|wild_smoke)/;
+
+function computeBigWildBounds(resource) {
+  try {
+    const probe = new spine.Skeleton(resource.skeletonData);
+    probe.setToSetupPose();
+    const state = new spine.AnimationState(resource.animationStateData);
+    state.setAnimation(0, 'win-big', true);
+    state.update(0);
+    state.apply(probe);
+    for (const slot of probe.slots) {
+      if (WILD_FX_SLOT.test(slot.data.name) || WILD_GUIDE_SLOTS.includes(slot.data.name)) slot.setAttachment(null);
+    }
+    probe.updateWorldTransform();
+    const offset = new spine.Vector2();
+    const size = new spine.Vector2();
+    probe.getBounds(offset, size);
+    if (!(size.x > 0 && size.y > 0)) return null;
+    return { x: offset.x, y: offset.y, width: size.x, height: size.y };
+  } catch (err) {
+    console.warn('big-wild bounds compute failed:', err);
+    return null;
+  }
+}
 
 function fadeCellsToTransparent(infos, durationMs) {
   const targets = infos.filter((info) => info.instance);
@@ -752,14 +821,24 @@ function fadeCellsToTransparent(infos, durationMs) {
 // export ships no separate idle_big.
 async function revealExpandedWild(col, { win = false } = {}) {
   const { stripEl } = reelCols[col];
-  const gridEl = document.querySelector('.reel__grid-inner');
+  // The frame's actual opening, not .reel__grid-inner (the bare 3-row block):
+  // the wild should reach the golden border top and bottom, same as the other
+  // games' expanding wilds.
+  const openingEl = document.querySelector('.reel__grid');
   const resource = await getSymbolResource('wild');
+  if (resource.bigWildBounds === undefined) resource.bigWildBounds = computeBigWildBounds(resource);
   const overlay = resource.createInstance();
-  overlay.anchorEl = stripEl;        // horizontal centre = this reel column
-  overlay.heightAnchorEl = gridEl;   // vertical extent = the 3-row block
+  // The setup pose still carries the flat "wild-win-big_0" guide image on top of
+  // the rigged art — `move` nulls it, but not before the first frame draws.
+  for (const name of WILD_GUIDE_SLOTS) {
+    const slot = overlay.skeleton.findSlot(name);
+    if (slot) slot.setAttachment(null);
+  }
+  overlay.anchorEl = stripEl;         // horizontal centre = this reel column
+  overlay.heightAnchorEl = openingEl; // vertical extent = the frame opening
   overlay.fitMode = 'height';
   overlay.fit = BIG_WILD_FIT;
-  overlay.boundsOverride = resource.bounds; // the tall setup-pose box, NOT the small override
+  overlay.boundsOverride = resource.bigWildBounds || resource.bounds;
   overlay.reelCol = col;
   overlay.winLoopTimeout = null;
   stage.addOverlay(overlay);
@@ -769,14 +848,16 @@ async function revealExpandedWild(col, { win = false } = {}) {
   const fadeDone = fadeCellsToTransparent(fadeInfos, 450);
 
   Sound.playSfx('wildGrow');
-  await new Promise((res) => {
-    overlay.play('move', false);
-    overlay.onSettle = () => {
-      overlay.onSettle = null;
-      res();
-    };
-  });
-  await fadeDone;
+  await withTimeout(
+    new Promise((res) => {
+      overlay.play('move', false);
+      overlay.onSettle = () => {
+        overlay.onSettle = null;
+        res();
+      };
+    }),
+  );
+  await withTimeout(fadeDone);
   if (win) {
     Sound.playSfx('wildWin');
     overlay.play('win-big', true);
@@ -829,6 +910,18 @@ function winningColumnSet(lineWins, countWins) {
 // Columns from firstAnticipationCol onward land ONE AT A TIME, never in
 // parallel: a single reel is revealed, then the next, so the suspense reads.
 async function landReels(grid, anticipationColumns = [], wildEvents = [], lineWins = [], countWins = []) {
+  reelsBusy = true;
+  try {
+    await landReelsInner(grid, anticipationColumns, wildEvents, lineWins, countWins);
+  } finally {
+    reelsBusy = false;
+    // An orientation flip that arrived mid-spin was parked instead of ripping
+    // the grid out from under the landing — apply it now.
+    await flushDeviceRebuild();
+  }
+}
+
+async function landReelsInner(grid, anticipationColumns, wildEvents, lineWins, countWins) {
   teardownCellInstances();
   const winningCols = winningColumnSet(lineWins, countWins);
 
@@ -1131,22 +1224,33 @@ function updateBgForLayout() {
 }
 
 let lastMobile = null;
+let pendingDeviceRebuild = false;
 
+// Cell geometry differs per device (190px vs 140px cells) and every cell/strip
+// carries pixel positions, so flipping orientation has to rebuild the grid onto
+// the new pitch. It must NEVER do that mid-spin, though: the rebuild tears down
+// every cell instance AND the expanding-wild overlay, so the `move` clip the
+// spin is awaiting can no longer complete — landReels then hangs forever and
+// the spin button stays disabled for good. (Hit for real: a spurious portrait/
+// landscape flip during a spin killed the game on the expanding wild.) Defer to
+// the end of the spin instead — see flushDeviceRebuild's call in landReels.
 async function handleResize() {
   updateStageScale();
   updateBgForLayout();
   const nowMobile = isMobileLayout();
-  if (nowMobile !== lastMobile) {
-    lastMobile = nowMobile;
-    // Cell geometry differs per device (190px vs 140px) and every cell/strip
-    // carries pixel positions, so rebuild the grid onto the new pitch.
-    const snapshot = cellInfos.map((info) => (info ? info.symbol : null));
-    teardownCellInstances();
-    buildReelGrid();
-    await Promise.all(
-      cellInfos.map((info, i) => setCellSymbol(info, snapshot[i] || info.symbol)),
-    );
-  }
+  if (nowMobile === lastMobile) return;
+  lastMobile = nowMobile;
+  pendingDeviceRebuild = true;
+  await flushDeviceRebuild();
+}
+
+async function flushDeviceRebuild() {
+  if (!pendingDeviceRebuild || reelsBusy) return;
+  pendingDeviceRebuild = false;
+  const snapshot = cellInfos.map((info) => (info ? info.symbol : null));
+  teardownCellInstances();
+  buildReelGrid();
+  await Promise.all(cellInfos.map((info, i) => setCellSymbol(info, snapshot[i] || info.symbol)));
 }
 
 async function init() {

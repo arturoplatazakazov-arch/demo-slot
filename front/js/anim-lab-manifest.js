@@ -11,7 +11,9 @@
 // same-folder filename quirks), but some games (golden-caravan) keep it in
 // a wholly separate Export/ tree with its own folder names (see
 // STATIC_DIR_OVERRIDES) because the slot-builder normalized only the Spine
-// clips into flat top-level folders.
+// clips into flat top-level folders. A few symbols (see
+// STATIC_ONLY_SYMBOLS) have no Spine export at all — animations is empty,
+// so anim-lab.js only ever renders their plain static row.
 window.ANIM_LAB_MANIFEST = 
 {
   "games": [
@@ -42,6 +44,10 @@ window.ANIM_LAB_MANIFEST =
     {
       "slug": "golden-caravan",
       "label": "Golden Caravan"
+    },
+    {
+      "slug": "dirty-money-mafia",
+      "label": "Dirty Money Mafia"
     }
   ],
   "spineItems": [
@@ -2301,6 +2307,291 @@ window.ANIM_LAB_MANIFEST =
       "width": 157,
       "height": 150,
       "staticFolder": "img/golden-caravan/Export/wild",
+      "staticFile": "static.png",
+      "staticWidth": 200,
+      "staticHeight": 200
+    },
+    {
+      "game": "dirty-money-mafia",
+      "gameLabel": "Dirty Money Mafia",
+      "name": "WOF",
+      "folder": "img/dirty-money-mafia/WOF",
+      "kind": "symbol",
+      "animations": [
+        "animation"
+      ],
+      "hasStatic": true,
+      "width": 300,
+      "height": 300,
+      "staticFolder": "img/dirty-money-mafia/WOF",
+      "staticFile": "static.png",
+      "staticWidth": 200,
+      "staticHeight": 200
+    },
+    {
+      "game": "dirty-money-mafia",
+      "gameLabel": "Dirty Money Mafia",
+      "name": "common_blue",
+      "folder": "img/dirty-money-mafia/common_blue",
+      "kind": "symbol",
+      "animations": [
+        "win"
+      ],
+      "hasStatic": true,
+      "width": 203,
+      "height": 203,
+      "staticFolder": "img/dirty-money-mafia/common_blue",
+      "staticFile": "static.png",
+      "staticWidth": 200,
+      "staticHeight": 200
+    },
+    {
+      "game": "dirty-money-mafia",
+      "gameLabel": "Dirty Money Mafia",
+      "name": "common_green",
+      "folder": "img/dirty-money-mafia/common_green",
+      "kind": "symbol",
+      "animations": [
+        "win"
+      ],
+      "hasStatic": true,
+      "width": 203,
+      "height": 203,
+      "staticFolder": "img/dirty-money-mafia/common_green",
+      "staticFile": "buba-win_0.png",
+      "staticWidth": 200,
+      "staticHeight": 200
+    },
+    {
+      "game": "dirty-money-mafia",
+      "gameLabel": "Dirty Money Mafia",
+      "name": "common_red",
+      "folder": "img/dirty-money-mafia/common_red",
+      "kind": "symbol",
+      "animations": [
+        "win"
+      ],
+      "hasStatic": true,
+      "width": 203,
+      "height": 203,
+      "staticFolder": "img/dirty-money-mafia/common_red",
+      "staticFile": "animation.png",
+      "staticWidth": 200,
+      "staticHeight": 200
+    },
+    {
+      "game": "dirty-money-mafia",
+      "gameLabel": "Dirty Money Mafia",
+      "name": "common_yellow",
+      "folder": "img/dirty-money-mafia/common_yellow",
+      "kind": "symbol",
+      "animations": [
+        "win"
+      ],
+      "hasStatic": true,
+      "width": 201,
+      "height": 201,
+      "staticFolder": "img/dirty-money-mafia/common_yellow",
+      "staticFile": "static.png",
+      "staticWidth": 200,
+      "staticHeight": 200
+    },
+    {
+      "game": "dirty-money-mafia",
+      "gameLabel": "Dirty Money Mafia",
+      "name": "popups/big_win",
+      "folder": "img/dirty-money-mafia/popups/big_win",
+      "kind": "popup",
+      "animations": [
+        "end",
+        "full",
+        "idle",
+        "start"
+      ],
+      "hasStatic": false,
+      "width": 1342,
+      "height": 755
+    },
+    {
+      "game": "dirty-money-mafia",
+      "gameLabel": "Dirty Money Mafia",
+      "name": "popups/buy_free_spins",
+      "folder": "img/dirty-money-mafia/popups/buy_free_spins",
+      "kind": "popup",
+      "animations": [
+        "end",
+        "full",
+        "idle",
+        "start"
+      ],
+      "hasStatic": false,
+      "width": 686,
+      "height": 686
+    },
+    {
+      "game": "dirty-money-mafia",
+      "gameLabel": "Dirty Money Mafia",
+      "name": "popups/epic_win",
+      "folder": "img/dirty-money-mafia/popups/epic_win",
+      "kind": "popup",
+      "animations": [
+        "end",
+        "full",
+        "idle",
+        "start"
+      ],
+      "hasStatic": false,
+      "width": 1342,
+      "height": 814
+    },
+    {
+      "game": "dirty-money-mafia",
+      "gameLabel": "Dirty Money Mafia",
+      "name": "popups/free_spins_total_win",
+      "folder": "img/dirty-money-mafia/popups/free_spins_total_win",
+      "kind": "popup",
+      "animations": [
+        "end",
+        "full",
+        "idle",
+        "start"
+      ],
+      "hasStatic": false,
+      "width": 1342,
+      "height": 808
+    },
+    {
+      "game": "dirty-money-mafia",
+      "gameLabel": "Dirty Money Mafia",
+      "name": "popups/free_spins_win",
+      "folder": "img/dirty-money-mafia/popups/free_spins_win",
+      "kind": "popup",
+      "animations": [
+        "end",
+        "full",
+        "idle",
+        "start"
+      ],
+      "hasStatic": false,
+      "width": 1342,
+      "height": 755
+    },
+    {
+      "game": "dirty-money-mafia",
+      "gameLabel": "Dirty Money Mafia",
+      "name": "popups/mega_win",
+      "folder": "img/dirty-money-mafia/popups/mega_win",
+      "kind": "popup",
+      "animations": [
+        "end",
+        "full",
+        "idle",
+        "start"
+      ],
+      "hasStatic": false,
+      "width": 1342,
+      "height": 814
+    },
+    {
+      "game": "dirty-money-mafia",
+      "gameLabel": "Dirty Money Mafia",
+      "name": "rare_blue",
+      "folder": "img/dirty-money-mafia/rare_blue",
+      "kind": "symbol",
+      "animations": [
+        "win"
+      ],
+      "hasStatic": true,
+      "width": 302,
+      "height": 270,
+      "staticFolder": "img/dirty-money-mafia/rare_blue",
+      "staticFile": "static.png",
+      "staticWidth": 200,
+      "staticHeight": 200
+    },
+    {
+      "game": "dirty-money-mafia",
+      "gameLabel": "Dirty Money Mafia",
+      "name": "rare_green",
+      "folder": "img/dirty-money-mafia/rare_green",
+      "kind": "symbol",
+      "animations": [
+        "win"
+      ],
+      "hasStatic": true,
+      "width": 248,
+      "height": 252,
+      "staticFolder": "img/dirty-money-mafia/rare_green",
+      "staticFile": "static.png",
+      "staticWidth": 200,
+      "staticHeight": 200
+    },
+    {
+      "game": "dirty-money-mafia",
+      "gameLabel": "Dirty Money Mafia",
+      "name": "rare_yellow",
+      "folder": "img/dirty-money-mafia/rare_yellow",
+      "kind": "symbol",
+      "animations": [
+        "win"
+      ],
+      "hasStatic": true,
+      "width": 300,
+      "height": 300,
+      "staticFolder": "img/dirty-money-mafia/rare_yellow",
+      "staticFile": "static.png",
+      "staticWidth": 200,
+      "staticHeight": 200
+    },
+    {
+      "game": "dirty-money-mafia",
+      "gameLabel": "Dirty Money Mafia",
+      "name": "scatter",
+      "folder": "img/dirty-money-mafia/scatter",
+      "kind": "symbol",
+      "animations": [
+        "idle",
+        "landing",
+        "win"
+      ],
+      "hasStatic": true,
+      "width": 335,
+      "height": 300,
+      "staticFolder": "img/dirty-money-mafia/scatter",
+      "staticFile": "static.png",
+      "staticWidth": 220,
+      "staticHeight": 220
+    },
+    {
+      "game": "dirty-money-mafia",
+      "gameLabel": "Dirty Money Mafia",
+      "name": "wild",
+      "folder": "img/dirty-money-mafia/wild",
+      "kind": "symbol",
+      "animations": [
+        "move",
+        "win-big",
+        "win-small"
+      ],
+      "hasStatic": true,
+      "width": 316,
+      "height": 684,
+      "staticFolder": "img/dirty-money-mafia/wild",
+      "staticFile": "static-small.png",
+      "staticWidth": 220,
+      "staticHeight": 220
+    },
+    {
+      "game": "dirty-money-mafia",
+      "gameLabel": "Dirty Money Mafia",
+      "name": "rare_red",
+      "folder": "img/dirty-money-mafia/rare_red",
+      "kind": "symbol",
+      "animations": [],
+      "hasStatic": true,
+      "width": 200,
+      "height": 200,
+      "staticFolder": "img/dirty-money-mafia/rare_red",
       "staticFile": "static.png",
       "staticWidth": 200,
       "staticHeight": 200

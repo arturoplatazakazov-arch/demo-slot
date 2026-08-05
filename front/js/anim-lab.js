@@ -25,16 +25,17 @@
   const rows = []; // every row controller, for filtering + reset-all
   let activeGame = 'all';
 
-  // East Discovery's, Wild Western Story's, Sugar Galaxy's, and Golden
-  // Caravan's Spine exports use straight (non-premultiplied) alpha, unlike
-  // the other games here — see the same flag in east-discovery/slot.js,
-  // wild-western-story/slot.js, sugar-galaxy/slot.js, and
-  // golden-caravan/slot.js. Loading them as premultiplied (the
+  // East Discovery's, Wild Western Story's, Sugar Galaxy's, Golden
+  // Caravan's, and Dirty Money Mafia's Spine exports use straight
+  // (non-premultiplied) alpha, unlike the other games here — see the same
+  // flag in each one's own slot.js. Loading them as premultiplied (the
   // SpineResource.load default) gives glow/gradient attachments a hard,
   // wrongly-colored edge instead of a soft one — checked every game's own
   // slot.js by hand (`grep premultipliedAlpha`) rather than assuming, since
   // this list has been missing an entry before.
-  const STRAIGHT_ALPHA_GAMES = new Set(['east-discovery', 'wild-western-story', 'sugar-galaxy', 'golden-caravan']);
+  const STRAIGHT_ALPHA_GAMES = new Set([
+    'east-discovery', 'wild-western-story', 'sugar-galaxy', 'golden-caravan', 'dirty-money-mafia',
+  ]);
   function spineLoadOptions(game) {
     return STRAIGHT_ALPHA_GAMES.has(game) ? { premultipliedAlpha: false } : undefined;
   }
@@ -98,6 +99,17 @@
       rare_faraon: 'rare_faraon', rare_skorobei: 'rare_skorobei', rare_snake: 'rare_snake',
       common_blue: 'common_blue', common_green: 'common_green', common_red: 'common_red', common_yellow: 'common_yellow',
       multiplier_x2: 'x2', multiplier_x3: 'x3', multiplier_x5: 'x5',
+    },
+    // Folder name == symbol code here too (slot-builder assembled game,
+    // 1:1 contract with app/seed/dirty_money_mafia.py — see slot.js's own
+    // comment on SYMBOL_FOLDERS). WOF (wheel of fortune) deliberately
+    // absent: uploaded but no mechanic/layout references it yet, same
+    // "real Spine export, not a real grid symbol" case as every other
+    // game's standalone VFX/unused clip.
+    'dirty-money-mafia': {
+      scatter: 'scatter', wild: 'wild', rare_red: 'rare_red',
+      rare_blue: 'rare_blue', rare_green: 'rare_green', rare_yellow: 'rare_yellow',
+      common_blue: 'common_blue', common_green: 'common_green', common_red: 'common_red', common_yellow: 'common_yellow',
     },
   };
 
@@ -502,12 +514,18 @@
         else anchor.style.transform = t;
       },
       // Always an object (never omitted) so the row always shows a
-      // Калибровать button — when there's no game code to write to (e.g.
-      // Neon Reels, which has no neon-reels.html/slot.js yet), it renders
-      // disabled with a tooltip explaining why, instead of just silently
-      // not being there (which reads as a bug, not "nothing to calibrate").
+      // Калибровать button — when there's no game code to write to, it
+      // renders disabled with a tooltip explaining why, instead of just
+      // silently not being there (which reads as a bug, not "nothing to
+      // calibrate"). One honest message covering both actual causes: the
+      // whole game has no real slot.js yet (Neon Reels), or the game does
+      // but this particular folder just isn't a referenced grid symbol
+      // (e.g. dirty-money-mafia's WOF — uploaded but no mechanic/layout
+      // uses it yet, same as any other game's standalone unused clip).
       calibrate: !code
-        ? { unavailable: `Нет игры для калибровки — у ${item.gameLabel} ещё нет своего slot.js` }
+        ? {
+            unavailable: `«${item.name}» не привязан к коду символа в реальной игре — либо у ${item.gameLabel} ещё нет своего slot.js, либо это загруженный, но не используемый ассет`,
+          }
         : {
             // Already-saved calibration (loaded before render() ran) — the
             // row should open showing what's actually live on the real

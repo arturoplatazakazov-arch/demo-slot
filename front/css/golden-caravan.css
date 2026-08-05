@@ -690,16 +690,20 @@ img.is-missing {
        gap 10.11 -> 20.22; the cell then falls out of block=6*cell+5*gap:
        (624.3-5*20.22)/6 = 87.2, so the reels sit inside the (unchanged) frame with
        wider spacing. */
-    --cell-w: 87.2px;
-    --cell-h: 87.2px;
-    --cell-gap-x: 20.22px;
-    --cell-gap-y: 20.22px;
-    /* Shrink symbols so the ~120px art fits the ~107px column pitch and real
-       gaps open between elements (product: "стоят впритык"). */
+    /* 5px gap between elements (product), cells enlarged so the block keeps its
+       footprint: block 625x520 = 6*100+5*5 x 5*100+4*5. */
+    --cell-w: 100px;
+    --cell-h: 100px;
+    --cell-gap-x: 5px;
+    --cell-gap-y: 5px;
+    /* Shrink symbols so the art fits its cell and gaps open between elements. */
     --symbol-scale: 0.8;
-    /* Sides aren't clipped (clip-path); bleed-y keeps the vertical fall-clip. */
+    /* Sides aren't clipped (clip-path). bleed-y is generous (25px) so resting
+       top/bottom symbols are NOT cropped (product: "статика не обрезалась") — the
+       reel is smaller than the frame, so this still clips the multi-row spin
+       falls behind the golden border (opening margin ~30px). */
     --grid-bleed-x: 14px;
-    --grid-bleed-y: 1px;
+    --grid-bleed-y: 25px;
   }
 
   /* hero (base): center (203,1025), size 400x400 */
@@ -712,15 +716,15 @@ img.is-missing {
   .reel-bg { left: -4px; top: 195px; width: 781px; height: 631px; }
   /* frame (slot_frame): center (391.5,507), 769x644 -> +7% (823x689) */
   .frame { left: -20px; top: 162px; width: 823px; height: 689px; }
-  /* reel_block: center (390,511), gap x2 + block -5% -> 624x517 */
+  /* reel_block: center (390,511), gap 5 -> 625x520 */
   .cascade-banner,
-  .reel-win-amount-viewport { left: 78px; top: 253px; width: 624px; height: 517px; }
+  .reel-win-amount-viewport { left: 78px; top: 251px; width: 625px; height: 520px; }
   /* Clip box centred on the reel_block; top/bottom clip the falls. */
   .reel__grid {
     left: calc(78px - var(--grid-bleed-x));
-    top: calc(253px - var(--grid-bleed-y));
-    width: calc(624px + 2 * var(--grid-bleed-x));
-    height: calc(517px + 2 * var(--grid-bleed-y));
+    top: calc(251px - var(--grid-bleed-y));
+    width: calc(625px + 2 * var(--grid-bleed-x));
+    height: calc(520px + 2 * var(--grid-bleed-y));
   }
 
   /* buy_bonus (base): center (639,1063), size 400x356 */

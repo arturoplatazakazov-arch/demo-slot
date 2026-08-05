@@ -122,6 +122,109 @@ let stage = null;
 let cellInfos = [];
 let reelCols = [];
 
+// --- Win-line animation (see front/img/neon-reels/Win_Lines) ---------------
+//
+// One Spine skeleton shipping 11 named animations ("1".."11"), one per
+// payline — ported from wild-western-story/slot.js once confirmed there.
+// The backend defines only these 11 paylines now (the other 9 shapes were
+// removed from every 5x3 game's config, product this session — no art for
+// them, so they no longer pay at all). Animation name is NOT the payline
+// index: "1".."5" line up with payline indices 1-5, but "6".."11" are
+// indices 12-17 (see app/seed/neon_reels.py's Payline rows).
+const PAYLINE_TO_WIN_LINE_ANIMATION = {
+  1: '1', 2: '2', 3: '3', 4: '4', 5: '5',
+  12: '6', 13: '7', 14: '8', 15: '9', 16: '10', 17: '11',
+};
+const WIN_LINE_ASSET_PATH = `${ASSET_ROOT}/Win_Lines`;
+let winLineResourcePromise = null;
+
+// Precomputed once against the shared Win_Lines asset (union of all 11
+// animations' AABB) rather than recomputed live in the browser — see
+// wild-western-story/slot.js's own comment on this constant: that scan is
+// real per-frame Spine runtime work which blocked the main thread long
+// enough on a real mobile device to trip the browser's "page unresponsive"
+// state. Same asset file byte-for-byte, so the same box applies here.
+const WIN_LINE_BOUNDS_OVERRIDE = { x: -433.9161688016173, y: -211.514175415039, width: 856.6346179651904, height: 438.3254852294921 };
+
+function getWinLineResource() {
+  if (!winLineResourcePromise) {
+    // Confirmed straight (non-premultiplied) alpha — this game's own
+    // loadSpineResource wrapper defaults to premultipliedAlpha:true for its
+    // own exports, so this bypasses it and calls SpineResource.load
+    // directly rather than inherit the wrong flag.
+    winLineResourcePromise = SpineEngine.SpineResource.load(stage.assetManager, WIN_LINE_ASSET_PATH, {
+      premultipliedAlpha: false,
+    });
+  }
+  return winLineResourcePromise;
+}
+
+let winLineInstance = null;
+let winLineLoopTimeout = null;
+
+// Drawn as an overlay (not base), same layer as popups — so it always
+// renders on top of every base-layer win clip (the winning symbols' own
+// glow/loop), never underneath them. Anchored to .reel__grid, i.e. the
+// frame's actual opening, so it's centered on the reel regardless of
+// viewport scale. Always plays the clip exactly ONCE and resolves when it
+// settles — never loop:true (that raced the caller's own repeat timer on a
+// different clock and made the line visibly play twice per symbol-glow
+// cycle). The caller owns the repeat cadence: previewWinLine below for a
+// lone win, playMultiLineWinSequence's own per-phase step() for a
+// multi-line win.
+async function showWinLine(payline) {
+  const animName = PAYLINE_TO_WIN_LINE_ANIMATION[payline];
+  if (!animName) {
+    hideWinLine();
+    return;
+  }
+  const resource = await getWinLineResource();
+  if (!winLineInstance) {
+    winLineInstance = resource.createInstance();
+    winLineInstance.anchorEl = document.querySelector('.reel__grid');
+    winLineInstance.fit = 0.9; // product, this session: "уменьшить на 10%"
+    winLineInstance.boundsOverride = WIN_LINE_BOUNDS_OVERRIDE;
+    stage.addOverlay(winLineInstance);
+  }
+  await new Promise((resolve) => {
+    winLineInstance.play(animName, false);
+    winLineInstance.onSettle = () => {
+      winLineInstance.onSettle = null;
+      resolve();
+    };
+  });
+}
+
+// Lone-line case only (playWinCells' single-group branch): repeats showWinLine
+// on the exact same play-once/pause/repeat cadence previewSymbolWin already
+// uses for the winning symbols themselves (WIN_LOOP_PAUSE_MS), so the line
+// pulses in lockstep with their glow instead of drifting against it.
+function previewWinLine(payline) {
+  if (winLineLoopTimeout) {
+    clearTimeout(winLineLoopTimeout);
+    winLineLoopTimeout = null;
+  }
+  const playOnce = () => {
+    showWinLine(payline).then(() => {
+      winLineLoopTimeout = setTimeout(() => {
+        winLineLoopTimeout = null;
+        playOnce();
+      }, WIN_LOOP_PAUSE_MS);
+    });
+  };
+  playOnce();
+}
+
+function hideWinLine() {
+  if (winLineLoopTimeout) {
+    clearTimeout(winLineLoopTimeout);
+    winLineLoopTimeout = null;
+  }
+  if (!winLineInstance) return;
+  stage.removeOverlay(winLineInstance);
+  winLineInstance = null;
+}
+
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -199,6 +302,7 @@ function teardownCellInstances() {
     clearTimeout(multiLineSequenceTimeout);
     multiLineSequenceTimeout = null;
   }
+  hideWinLine();
   stopCoinMultiplierTracking();
   for (const info of cellInfos) {
     if (!info) continue;
@@ -299,13 +403,25 @@ function setCellActive(info, active) {
   }
 }
 
+// Matches .reel__cell.is-dimmed img's own opacity (0.3) — that CSS rule only
+// dims the DOM <img>, which is invisible whenever the cell has a live Spine
+// instance instead (wild/scatter's persistent idle loop — see
+// SPECIAL_SYMBOLS/setCellActive: img.style.visibility is 'hidden' the whole
+// time the instance is on stage). Without this, a wild sitting idle outside
+// the winning line stayed at full brightness while every other losing cell
+// dimmed around it (product, this session).
+const CELL_DIM_TINT = 0.3;
 function setCellDimmed(info, dimmed) {
   info.cell.classList.toggle('is-dimmed', dimmed);
+  if (info.instance) {
+    const c = dimmed ? CELL_DIM_TINT : 1;
+    info.instance.skeleton.color.set(c, c, c, 1);
+  }
 }
 
 let multiLineSequenceTimeout = null;
 
-function playMultiLineWinSequence(groups, allWinInfos) {
+function playMultiLineWinSequence(groups, allWinInfos, lineWins) {
   const playPhaseOnce = (activeInfos) => {
     const activeSet = new Set(activeInfos);
     for (const info of cellInfos) {
@@ -320,6 +436,14 @@ function playMultiLineWinSequence(groups, allWinInfos) {
   let groupIndex = -1;
   const step = () => {
     const activeInfos = groupIndex === -1 ? allWinInfos : groups[groupIndex];
+    // groups[i] < lineWins.length corresponds 1:1 to lineWins[i] (see
+    // buildWinGroups/ReelMath.collectWinGroups — line wins are spread before
+    // count wins, positions-only, so index is the only way back to a
+    // payline). The "all together" phase (groupIndex -1) mixes lines, so no
+    // single line's art applies there.
+    const win = groupIndex >= 0 ? lineWins[groupIndex] : null;
+    if (win) showWinLine(win.payline);
+    else hideWinLine();
     playPhaseOnce(activeInfos).then(() => {
       multiLineSequenceTimeout = setTimeout(() => {
         multiLineSequenceTimeout = null;
@@ -370,8 +494,15 @@ function playWinCells(winningCells, lineWins, countWins) {
   const groups = buildWinGroups(lineWins, countWins);
 
   if (groups.length > 1) {
-    playMultiLineWinSequence(groups, allWinInfos);
+    playMultiLineWinSequence(groups, allWinInfos, lineWins);
   } else {
+    // Single group: it's a line win iff lineWins has exactly the one entry
+    // (a lone count-pay/scatter win has no line shape to draw).
+    if (lineWins && lineWins.length === 1 && countWins && countWins.length === 0) {
+      previewWinLine(lineWins[0].payline);
+    } else {
+      hideWinLine();
+    }
     for (const info of allWinInfos) previewSymbolWin(info);
   }
 }
@@ -405,12 +536,23 @@ function stopCoinMultiplierTracking() {
   coinMultiplierTrackers = [];
 }
 
+// Plays the coin's single clip exactly once as it lands, then pulls the
+// spine off stage so the cell's static PNG (info.img) is the resting art
+// again — the value label is what persists, not a repeating animation
+// (product, this session: was alpha:0 + loop:true, i.e. invisible AND
+// looping forever — the landing flourish should actually be seen once, not
+// hidden). Matches east-discovery/slot.js's own showCoinMultiplierLabel.
 function showCoinMultiplierLabel(info, value) {
   const instance = info.instance;
   if (!instance) return;
-  instance.skeleton.color.a = 0; // keep only the tracked label, not the played clip
+  info.img.style.visibility = 'hidden';
   stage.addBase(instance);
-  instance.play(clipName('coin', 'idle'), true);
+  instance.play(clipName('coin', 'idle'), false);
+  instance.onSettle = () => {
+    instance.onSettle = null;
+    stage.removeBase(instance);
+    info.img.style.visibility = '';
+  };
 
   const el = document.createElement('div');
   el.className = 'coin-multiplier-amount';
@@ -939,6 +1081,11 @@ async function init() {
 
   buildReelGrid();
   stage = new SpineEngine.SpineStage(document.getElementById('spineCanvas'));
+  // Warmed up here, not on first use — a cold getWinLineResource() load
+  // (network + parse) on a player's first win would delay the line's own
+  // first .play() well past the symbols' (already-loaded by then), breaking
+  // "starts the same instant" (product, this session).
+  getWinLineResource();
   setupDevPanel();
 
   await Promise.all(cellInfos.map((info) => setCellSymbol(info, info.symbol)));

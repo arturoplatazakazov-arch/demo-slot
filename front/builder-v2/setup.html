@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Конструктор · Настройка</title>
+<link rel="stylesheet" href="../css/fonts.css">
+<link rel="stylesheet" href="builder.css?v=1">
+</head>
+<body>
+
+  <header class="builder-top">
+    <div class="builder-brand">Slot<span>Builder</span> v2</div>
+    <nav class="stepper">
+      <a class="step is-active" href="setup.html"><span class="step__num">1</span>Настройка</a>
+      <span class="step__sep"></span>
+      <a class="step" id="stepAssets" href="assets.html"><span class="step__num">2</span>Ассеты</a>
+      <span class="step__sep"></span>
+      <a class="step" id="stepLayout" href="layout.html"><span class="step__num">3</span>Вёрстка</a>
+    </nav>
+    <div style="width:110px"></div>
+  </header>
+
+  <main class="builder-main">
+    <div class="page-head">
+      <h1 class="page-title">Новая игра</h1>
+      <p class="page-sub">Задай базовые параметры — конструктор подстроит ассеты и палитру вёрстки под них.</p>
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="gameName">Название игры</label>
+      <input class="input" id="gameName" type="text" placeholder="Например, Cosmic Fruits" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label class="field__label">Размер барабана</label>
+      <p class="field__hint">Определяет движок (линии или аваланч) и какие механики доступны.</p>
+      <div class="card-grid" id="baseGrid"></div>
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="gapInput">Отступ между элементами барабана</label>
+      <p class="field__hint">Зазор между ячейками, px.</p>
+      <input class="input" id="gapInput" type="number" min="0" max="60" step="1" value="10" style="max-width:160px">
+    </div>
+
+    <div class="field">
+      <label class="field__label">Механики</label>
+      <p class="field__hint">Показаны только совместимые с выбранной базой.</p>
+      <div id="mechArea"><div class="empty-note">Сначала выбери размер барабана.</div></div>
+    </div>
+  </main>
+
+  <footer class="builder-foot">
+    <div class="foot-info" id="footInfo">Черновик не сохранён</div>
+    <div class="foot-spacer"></div>
+    <button class="btn btn--ghost" id="resetBtn" type="button">Сбросить</button>
+    <button class="btn btn--primary" id="nextBtn" type="button" disabled>Далее: Ассеты →</button>
+  </footer>
+
+  <script src="registry.js?v=1"></script>
+  <script src="draft.js?v=1"></script>
+  <script src="setup.js?v=1"></script>
+</body>
+</html>

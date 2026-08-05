@@ -532,14 +532,16 @@ function playSymbolClipOnce(info, kind) {
   return getSymbolResource(info.symbol).then(
     (resource) =>
       new Promise((resolve) => {
-        // Size the anchor to the skeleton's own setup-pose bounds so fit:1's
-        // contain-fit resolves to exactly 1 — true native scale, matching the
-        // native-size static <img> above (product: "не масштабируй"), not the
-        // shrunk-to-cell size. getBoundingClientRect reflects the ambient
-        // --stage-scale transform, so this tracks the page scale automatically.
+        // Desktop: size the anchor to the skeleton's own setup-pose bounds so
+        // fit:1 resolves to native scale, matching the native-size static <img>
+        // (product: "не масштабируй"). Mobile: the 116px cell is far smaller
+        // than the 150px art, so fit the clip to the cell instead — matching
+        // the static's contain-fit in the portrait media query. getBounding-
+        // ClientRect reflects --stage-scale, so this tracks the page scale.
         if (info.anchor) {
-          info.anchor.style.width = `${resource.bounds.width}px`;
-          info.anchor.style.height = `${resource.bounds.height}px`;
+          const mobile = isMobileLayout();
+          info.anchor.style.width = `${mobile ? cellW : resource.bounds.width}px`;
+          info.anchor.style.height = `${mobile ? cellH : resource.bounds.height}px`;
           window.SlotCalibration?.applyAnchorOffset(info.anchor, 'sugar-galaxy', info.symbol);
         }
         const instance = resource.createInstance();

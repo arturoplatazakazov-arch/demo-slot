@@ -1,0 +1,47 @@
+/* Constructor v2 — Page 2 (Assets) specifics. */
+.assets-progress {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 22px; padding: 14px 16px;
+  background: var(--bg-card); border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+}
+.assets-progress__bar { flex: 1 1 auto; height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.assets-progress__fill { height: 100%; width: 0; background: var(--good); transition: width .2s; }
+.assets-progress__txt { font-weight: 700; font-size: 14px; white-space: nowrap; }
+
+.slot-group { margin-bottom: 26px; }
+.slot-group__title { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: var(--text-faint); margin: 0 0 12px; }
+.slot-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+
+.slot {
+  border: 1.5px dashed var(--line-strong); border-radius: var(--radius);
+  background: var(--bg-card); padding: 14px; display: flex; gap: 14px; align-items: center;
+  transition: border-color .12s, background .12s;
+}
+.slot.is-over { border-color: var(--accent); background: var(--accent-soft); }
+.slot.is-done { border-style: solid; border-color: var(--good); }
+.slot.is-optional { opacity: 0.92; }
+
+.slot__thumb {
+  flex: 0 0 auto; width: 58px; height: 58px; border-radius: var(--radius-sm);
+  background: var(--bg); border: 1px solid var(--line-strong);
+  display: grid; place-items: center; overflow: hidden; color: var(--text-faint);
+}
+.slot__thumb img { width: 100%; height: 100%; object-fit: contain; }
+.slot__thumb-kind { font-size: 20px; }
+
+.slot__body { min-width: 0; flex: 1 1 auto; }
+.slot__label { font-weight: 700; font-size: 14.5px; display: flex; align-items: center; gap: 8px; }
+.slot__tag { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px;
+  color: var(--accent); background: var(--accent-soft); padding: 2px 7px; border-radius: 999px; }
+.slot__opt { font-size: 10.5px; color: var(--text-faint); }
+.slot__path { font-size: 11.5px; color: var(--text-faint); font-family: ui-monospace, monospace; margin-top: 3px; word-break: break-all; }
+.slot__file { font-size: 12.5px; color: var(--good); margin-top: 4px; }
+
+.slot__actions { flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px; }
+.slot__btn {
+  font-size: 12px; font-weight: 700; padding: 7px 12px; border-radius: 999px;
+  border: 1px solid var(--line-strong); background: var(--bg-elev); color: var(--text); cursor: pointer;
+}
+.slot__btn:hover { background: var(--bg-card-hover); }
+.slot__btn--remove { color: var(--bad); border-color: transparent; background: transparent; padding: 4px 8px; }

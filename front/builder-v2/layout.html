@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Конструктор · Вёрстка</title>
+<link rel="stylesheet" href="../css/fonts.css">
+<link rel="stylesheet" href="builder.css?v=1">
+<link rel="stylesheet" href="layout.css?v=1">
+</head>
+<body>
+
+  <header class="builder-top">
+    <div class="builder-brand">Slot<span>Builder</span> v2</div>
+    <nav class="stepper">
+      <a class="step is-done" href="setup.html"><span class="step__num">1</span>Настройка</a>
+      <span class="step__sep"></span>
+      <a class="step is-done" href="assets.html"><span class="step__num">2</span>Ассеты</a>
+      <span class="step__sep"></span>
+      <a class="step is-active" href="layout.html"><span class="step__num">3</span>Вёрстка</a>
+    </nav>
+    <div style="width:110px"></div>
+  </header>
+
+  <div class="lay-toolbar">
+    <div class="lay-tabs" id="screenTabs"></div>
+    <div class="lay-toolbar__spacer"></div>
+    <div class="lay-preview" id="previewToggle" title="Граница гибкой оси">
+      <button class="lay-seg" data-bound="min" type="button">min</button>
+      <button class="lay-seg is-on" data-bound="max" type="button">max</button>
+    </div>
+    <div class="lay-dims" id="dimsLabel"></div>
+    <button class="lay-editbtn" id="editToggle" type="button">✎ Редактировать</button>
+  </div>
+
+  <div class="lay-body">
+    <div class="lay-stagewrap" id="stageWrap">
+      <div class="lay-stage-scaler" id="stageScaler">
+        <div class="lay-stage" id="stage">
+          <div class="lay-stage__ruler lay-stage__ruler--h"></div>
+          <div class="lay-stage__ruler lay-stage__ruler--v"></div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="lay-palette" id="palette">
+      <div class="lay-palette__title">Элементы</div>
+      <div class="lay-palette__hint">Клик — добавить на текущий экран. Уже на сцене — подсвечены.</div>
+      <div class="lay-palette__list" id="paletteList"></div>
+    </aside>
+  </div>
+
+  <!-- Floating properties popover for the selected element. -->
+  <div class="lay-props" id="props" hidden>
+    <div class="lay-props__head">
+      <span class="lay-props__role" id="propRole"></span>
+      <button class="lay-props__close" id="propClose" type="button">×</button>
+    </div>
+
+    <div class="lay-props__block">
+      <div class="lay-props__label">Выравнивание / якорь</div>
+      <div class="lay-anchorgrid" id="anchorGrid"></div>
+    </div>
+
+    <div class="lay-props__row">
+      <label>Смещение X<input type="number" id="propDx"></label>
+      <label>Смещение Y<input type="number" id="propDy"></label>
+    </div>
+    <div class="lay-props__row">
+      <label>Ширина<input type="number" id="propW"></label>
+      <label>Высота<input type="number" id="propH"></label>
+    </div>
+    <div class="lay-props__row">
+      <label>Слой (z-index)<input type="number" id="propZ"></label>
+      <label>Роль / функция
+        <select id="propRoleSel"></select>
+      </label>
+    </div>
+
+    <div class="lay-props__foot">
+      <button class="slot__btn slot__btn--remove" id="propDelete" type="button">Удалить</button>
+      <button class="btn btn--primary" id="propSave" type="button" style="padding:8px 18px">Сохранить</button>
+    </div>
+  </div>
+
+  <footer class="builder-foot">
+    <div class="foot-info" id="footInfo"></div>
+    <div class="foot-spacer"></div>
+    <a class="btn btn--ghost" href="assets.html">← Назад</a>
+    <button class="btn btn--primary" id="doneBtn" type="button">Готово (сохранить черновик)</button>
+  </footer>
+
+  <script src="registry.js?v=1"></script>
+  <script src="draft.js?v=1"></script>
+  <script src="layout.js?v=1"></script>
+</body>
+</html>
