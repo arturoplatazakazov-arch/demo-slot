@@ -5,10 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Amy's Fruit Farm — demo</title>
 <link rel="stylesheet" href="css/fonts.css">
-<link rel="stylesheet" href="css/style.css?v=22">
+<link rel="stylesheet" href="css/preloader.css?v=1">
+<link rel="stylesheet" href="css/style.css?v=23">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 </head>
 <body>
+
+  <!-- Boot preloader: статичная разметка (видна с первого кадра), прогресс
+       ведёт js/preloader.js, задачи считает preloadAssets в slot.js игры. -->
+  <div class="preloader" id="preloader">
+    <div class="preloader__logo" id="preloaderLogo"><img src="img/preloader-logo.png" alt="" onerror="this.remove()"></div>
+    <div class="preloader__bar"><div class="preloader__fill" id="preloaderFill"></div></div>
+    <div class="preloader__pct" id="preloaderPct">0%</div>
+  </div>
+
 
   <a class="to-catalog-btn" href="games.html">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
@@ -197,11 +207,12 @@
   <script src="js/slot-calibration.js?v=3"></script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="js/telegram.js?v=2"></script>
+  <script src="js/preloader.js?v=1"></script>
   <script src="js/config.js"></script>
   <script src="js/api.js"></script>
-  <script src="js/sound.js?v=5"></script>
+  <script src="js/sound.js?v=6"></script>
   <script src="js/reel-math.js?v=6"></script>
-  <script src="js/slot.js?v=26"></script>
+  <script src="js/slot.js?v=27"></script>
   <script src="js/app.js?v=5"></script>
   <!-- Поведение нижнего бара V3: флайаут, тултипы, заглушки авто/турбо. -->
   <script src="js/ui-bar-v3.js?v=4"></script>

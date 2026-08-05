@@ -1,4 +1,4 @@
-// Progress UI for the boot preloader (markup lives in neon-reels.html, tasks
+// Progress UI for the boot preloader (shared by every game page; tasks
 // are registered by slot.js's preloadAssets). Pure view: add() grows the task
 // total, step() marks one finished, done() plays the fade-out and removes the
 // overlay. Safe to call in any order — done() wins over everything after it.

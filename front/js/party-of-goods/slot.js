@@ -1170,6 +1170,62 @@ function updateBgForLayout() {
   document.getElementById('bgLayer').src = bgSrcFor(screen.dataset.mode || 'base');
 }
 
+// --- Boot preloader --------------------------------------------------------
+// Mirror of neon-reels' warmup (see front/js/neon-reels/slot.js for the full
+// rationale): decode symbol statics, load every Spine export the first
+// minutes will touch, warm the SFX buffers and compile the WebGL shaders —
+// all behind the progress overlay driven by js/preloader.js. Every task
+// resolves (errors swallowed) and the whole thing is capped by a timeout, so
+// nothing can strand the overlay.
+const PRELOAD_TIMEOUT_MS = 12000;
+
+function preloadImage(src) {
+  const img = new Image();
+  img.src = src;
+  return img.decode ? img.decode() : new Promise((res) => {
+    img.onload = res;
+    img.onerror = res;
+  });
+}
+
+// One transparent draw through the full pipeline (texture upload + shader
+// compile) so the first real win animation doesn't pay for it.
+async function warmUpWebGl(resourcePromise) {
+  const resource = await resourcePromise;
+  const instance = resource.createInstance();
+  instance.anchorEl = document.getElementById('screen');
+  instance.skeleton.color.set(1, 1, 1, 0);
+  stage.addOverlay(instance);
+  await wait(120);
+  stage.removeOverlay(instance);
+}
+
+function preloadAssets() {
+  const P = window.Preloader;
+  const track = (promise) => {
+    if (P) P.add(1);
+    return Promise.resolve(promise)
+      .catch(() => {})
+      .finally(() => { if (P) P.step(); });
+  };
+
+  const tasks = [];
+  for (const code of SYMBOL_CODES) {
+    tasks.push(track(preloadImage(`${ASSET_ROOT}/Export/${SYMBOL_FOLDERS[code]}/static.png`)));
+    tasks.push(track(getSymbolResource(code)));
+  }
+  for (const key of Object.keys(POPUP_FOLDERS)) {
+    if (!popupResourceCache[key]) popupResourceCache[key] = loadSpineResource(POPUP_FOLDERS[key]);
+    tasks.push(track(popupResourceCache[key]));
+  }
+  tasks.push(track(preloadImage(bgSrcFor('base'))));
+  tasks.push(track(preloadImage(bgSrcFor('bonus'))));
+  for (const p of Sound.preloadPromises || []) tasks.push(track(p));
+  tasks.push(track(warmUpWebGl(getSymbolResource(SYMBOL_CODES[0]))));
+
+  return Promise.race([Promise.all(tasks), wait(PRELOAD_TIMEOUT_MS)]);
+}
+
 async function init() {
   await SlotCalibration.load(); // must resolve before renderInitialGrid's createCellNode calls applyStaticContentOffset
   Sound.playMusic('base');
@@ -1184,7 +1240,10 @@ async function init() {
   stage = new SpineEngine.SpineStage(document.getElementById('spineCanvas'));
   setupDevPanel();
 
+  await preloadAssets();
   renderInitialGrid(SYMBOL_LAYOUT);
+
+  if (window.Preloader) window.Preloader.done();
 
   window.__slot = { stage, cellInfos };
 }

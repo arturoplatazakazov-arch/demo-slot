@@ -675,79 +675,13 @@ img.is-missing {
   .ui-bar > *:nth-child(4) { grid-area: icons2; }
   .ui-bar > *:nth-child(5) { grid-area: balance; justify-self: end; }
 }
-
-/* ---------- Boot preloader ---------- */
-/* Covers everything (incl. the dev panel, z 100-110) until slot.js finishes
-   warming assets. Background matches the page so nothing peeks through on
-   the first paint. .preloader__logo is an empty slot for future logo art. */
+/* ---------- Boot preloader theme (структура в css/preloader.css) ---------- */
 .preloader {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  background: #08021a;
-  transition: opacity 0.45s ease;
-}
-.preloader.is-done {
-  opacity: 0;
-  pointer-events: none;
-}
-/* Logo: gentle bob + pulsing neon glow behind it. Both keyframes animate
-   only transform/opacity (composited, no repaints) and exist only while the
-   overlay does — done() removes the whole subtree, so the game never pays
-   for this. :empty hides the block when the logo file is absent (the img
-   removes itself onerror). */
-.preloader__logo:empty { display: none; }
-.preloader__logo {
-  position: relative;
-  width: min(40vw, 200px);
-}
-.preloader__logo::before {
-  content: '';
-  position: absolute;
-  inset: -16%;
-  z-index: -1;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(255, 61, 240, 0.4), rgba(47, 243, 255, 0.14) 62%, transparent);
-  animation: preloader-glow 2.8s ease-in-out infinite;
-}
-.preloader__logo img {
-  display: block;
-  width: 100%;
-  animation: preloader-bob 2.8s ease-in-out infinite;
-}
-@keyframes preloader-bob {
-  0%, 100% { transform: translateY(7px); }
-  50% { transform: translateY(-7px); }
-}
-@keyframes preloader-glow {
-  0%, 100% { opacity: 0.5; transform: scale(0.94); }
-  50% { opacity: 1; transform: scale(1.05); }
-}
-.preloader__bar {
-  width: min(62vw, 420px);
-  height: 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(47, 243, 255, 0.45);
-  background: rgba(255, 255, 255, 0.06);
-  overflow: hidden;
-}
-.preloader__fill {
-  height: 100%;
-  width: 0%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta));
-  box-shadow: 0 0 12px rgba(47, 243, 255, 0.7);
-  transition: width 0.25s ease;
-}
-.preloader__pct {
-  font-family: monospace;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--neon-cyan);
+  --pl-bg: #08021a;
+  --pl-accent-a: var(--neon-cyan);
+  --pl-accent-b: var(--neon-magenta);
+  --pl-glow-a: rgba(255, 61, 240, 0.4);
+  --pl-glow-b: rgba(47, 243, 255, 0.14);
+  --pl-border: rgba(47, 243, 255, 0.45);
+  --pl-shadow: rgba(47, 243, 255, 0.7);
 }
