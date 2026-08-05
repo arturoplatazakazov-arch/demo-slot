@@ -1141,7 +1141,10 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
 
       const instance = resource.createInstance();
       instance.anchorEl = document.getElementById('screen');
-      instance.fit = POPUP_FIT;
+      // Portrait doubles the popup (product). The wheel-of-fortune drum is
+      // its own DOM overlay, not a playPopupSequence popup - deliberately
+      // unaffected.
+      instance.fit = POPUP_FIT * (isMobileLayout() ? 2 : 1);
       stage.addOverlay(instance);
       startPopupAmountTracking(instance, key, amount);
 

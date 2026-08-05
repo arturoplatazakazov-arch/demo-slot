@@ -943,7 +943,10 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
 
       const instance = resource.createInstance();
       instance.anchorEl = document.getElementById('screen');
-      instance.fit = 1;
+      // Portrait doubles the popup (product): fine art scale for landscape
+      // reads tiny on a tall phone screen. Glow overflowing the viewport is
+      // accepted (product).
+      instance.fit = isMobileLayout() ? 2 : 1;
       stage.addOverlay(instance);
       startPopupAmountTracking(instance, amount);
 
