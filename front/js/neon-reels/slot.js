@@ -940,6 +940,13 @@ function setFreeSpinsMode(active, amount = 0) {
 const popupResourceCache = {};
 let popupAmountRaf = null;
 
+function getPopupResource(key) {
+  if (!popupResourceCache[key]) {
+    popupResourceCache[key] = loadSpineResource(POPUP_FOLDERS[key]);
+  }
+  return popupResourceCache[key];
+}
+
 function worldToScreen(worldX, worldY, canvasEl) {
   const dpr = window.devicePixelRatio || 1;
   const canvasRect = canvasEl.getBoundingClientRect();
@@ -988,10 +995,7 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
         await wait(DIM_TRANSITION_MS);
       }
 
-      if (!popupResourceCache[key]) {
-        popupResourceCache[key] = loadSpineResource(folder);
-      }
-      const resource = await popupResourceCache[key];
+      const resource = await getPopupResource(key);
 
       const instance = resource.createInstance();
       instance.anchorEl = document.getElementById('screen');
@@ -1066,6 +1070,67 @@ function setupDevPanel() {
   });
 }
 
+// --- Boot preloader --------------------------------------------------------
+
+// Warm everything the first minutes of play will touch, while the progress
+// overlay (front/js/neon-reels/preloader.js) is still up: decoded symbol
+// statics, every Spine export (symbol wins, win lines, popups), both mode
+// backgrounds, SFX buffers, and one invisible WebGL frame so the shaders
+// compile now instead of on the first win. Every task resolves (errors
+// swallowed) and the whole thing is capped by a timeout, so a missing file
+// or dead network can only shorten the warmup — never strand the overlay.
+const PRELOAD_TIMEOUT_MS = 12000;
+
+function preloadImage(src) {
+  const img = new Image();
+  img.src = src;
+  // decode() actually rasterizes now; onload alone would still leave the
+  // first paint of each symbol to decode lazily mid-spin.
+  return img.decode ? img.decode() : new Promise((res) => {
+    img.onload = res;
+    img.onerror = res;
+  });
+}
+
+// One transparent draw through the full pipeline (texture upload + shader
+// compile). Alpha 0 keeps it invisible; the idle-skip render gate sees a
+// non-empty stage, so the frame really renders.
+async function warmUpWebGl() {
+  const resource = await getWinLineResource();
+  const instance = resource.createInstance();
+  instance.anchorEl = document.querySelector('.reel__grid');
+  instance.boundsOverride = WIN_LINE_BOUNDS_OVERRIDE;
+  instance.skeleton.color.set(1, 1, 1, 0);
+  instance.play('1', true);
+  stage.addOverlay(instance);
+  await wait(120); // a couple of frames
+  stage.removeOverlay(instance);
+}
+
+function preloadAssets() {
+  const P = window.Preloader;
+  const track = (promise) => {
+    if (P) P.add(1);
+    return Promise.resolve(promise)
+      .catch(() => {})
+      .finally(() => { if (P) P.step(); });
+  };
+
+  const tasks = [];
+  for (const code of SYMBOL_CODES) {
+    tasks.push(track(preloadImage(`${ASSET_ROOT}/Export/${SYMBOL_FOLDERS[code]}/${staticFileFor(code)}`)));
+    tasks.push(track(getSymbolResource(code)));
+  }
+  for (const key of Object.keys(POPUP_FOLDERS)) tasks.push(track(getPopupResource(key)));
+  tasks.push(track(getWinLineResource()));
+  tasks.push(track(preloadImage(bgSrcFor('base'))));
+  tasks.push(track(preloadImage(bgSrcFor('freespins'))));
+  for (const p of Sound.preloadPromises || []) tasks.push(track(p));
+  tasks.push(track(warmUpWebGl()));
+
+  return Promise.race([Promise.all(tasks), wait(PRELOAD_TIMEOUT_MS)]);
+}
+
 // --- Init ------------------------------------------------------------------
 
 async function init() {
@@ -1087,14 +1152,14 @@ async function init() {
 
   buildReelGrid();
   stage = new SpineEngine.SpineStage(document.getElementById('spineCanvas'));
-  // Warmed up here, not on first use — a cold getWinLineResource() load
-  // (network + parse) on a player's first win would delay the line's own
-  // first .play() well past the symbols' (already-loaded by then), breaking
-  // "starts the same instant" (product, this session).
-  getWinLineResource();
   setupDevPanel();
 
+  // Full warmup behind the boot progress bar (covers what the old lone
+  // getWinLineResource() warmup did and everything else the first minutes
+  // touch), then the attract grid — its resources are all hot by now.
+  await preloadAssets();
   await Promise.all(cellInfos.map((info) => setCellSymbol(info, info.symbol)));
+  if (window.Preloader) window.Preloader.done();
 
   window.__slot = { stage, cellInfos };
 }

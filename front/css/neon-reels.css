@@ -675,3 +675,48 @@ img.is-missing {
   .ui-bar > *:nth-child(4) { grid-area: icons2; }
   .ui-bar > *:nth-child(5) { grid-area: balance; justify-self: end; }
 }
+
+/* ---------- Boot preloader ---------- */
+/* Covers everything (incl. the dev panel, z 100-110) until slot.js finishes
+   warming assets. Background matches the page so nothing peeks through on
+   the first paint. .preloader__logo is an empty slot for future logo art. */
+.preloader {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: #08021a;
+  transition: opacity 0.45s ease;
+}
+.preloader.is-done {
+  opacity: 0;
+  pointer-events: none;
+}
+.preloader__logo:empty { display: none; }
+.preloader__bar {
+  width: min(62vw, 420px);
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(47, 243, 255, 0.45);
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+.preloader__fill {
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta));
+  box-shadow: 0 0 12px rgba(47, 243, 255, 0.7);
+  transition: width 0.25s ease;
+}
+.preloader__pct {
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--neon-cyan);
+}

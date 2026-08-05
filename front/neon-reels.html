@@ -5,10 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Neon Reels — demo</title>
 <link rel="stylesheet" href="css/fonts.css">
-<link rel="stylesheet" href="css/neon-reels.css?v=12">
+<link rel="stylesheet" href="css/neon-reels.css?v=13">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 </head>
 <body>
+
+  <!-- Прелоадер: статическая разметка (видна с первого кадра, до запуска JS);
+       прогресс двигает js/neon-reels/preloader.js, задачи считает slot.js.
+       Место под лого зарезервировано: .preloader__logo (пока пустое). -->
+  <div class="preloader" id="preloader">
+    <div class="preloader__logo" id="preloaderLogo"></div>
+    <div class="preloader__bar"><div class="preloader__fill" id="preloaderFill"></div></div>
+    <div class="preloader__pct" id="preloaderPct">0%</div>
+  </div>
 
   <a class="to-catalog-btn" href="games.html">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
@@ -200,9 +209,10 @@
   <script src="js/fps-meter.js?v=1"></script>
   <script src="js/config.js"></script>
   <script src="js/api.js?v=2"></script>
-  <script src="js/neon-reels/sound.js?v=5"></script>
+  <script src="js/neon-reels/preloader.js?v=1"></script>
+  <script src="js/neon-reels/sound.js?v=6"></script>
   <script src="js/reel-math.js?v=6"></script>
-  <script src="js/neon-reels/slot.js?v=19"></script>
+  <script src="js/neon-reels/slot.js?v=20"></script>
   <script src="js/neon-reels/app.js?v=2"></script>
   <!-- Поведение нижнего бара V3: флайаут, тултипы, заглушки авто/турбо. -->
   <script src="js/ui-bar-v3.js?v=3"></script>
