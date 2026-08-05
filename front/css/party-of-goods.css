@@ -789,3 +789,14 @@ body.layout-fit .ui-bar {
   .ui-bar > *:nth-child(4) { grid-area: icons2; }
   .ui-bar > *:nth-child(5) { grid-area: balance; justify-self: end; }
 }
+
+/* ---------- Boot preloader theme (структура в css/preloader.css) ---------- */
+.preloader {
+  --pl-bg: #0a0e1c;
+  --pl-accent-a: #7ab8ff;
+  --pl-accent-b: #ffd76a;
+  --pl-glow-a: rgba(122,184,255,0.35);
+  --pl-glow-b: rgba(255,215,106,0.12);
+  --pl-border: rgba(122,184,255,0.45);
+  --pl-shadow: rgba(122,184,255,0.6);
+}

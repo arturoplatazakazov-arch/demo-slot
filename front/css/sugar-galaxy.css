@@ -717,3 +717,14 @@ img.is-missing {
   .ui-bar > *:nth-child(4) { grid-area: icons2; }
   .ui-bar > *:nth-child(5) { grid-area: balance; justify-self: end; }
 }
+
+/* ---------- Boot preloader theme (структура в css/preloader.css) ---------- */
+.preloader {
+  --pl-bg: #150a24;
+  --pl-accent-a: #ff7ae0;
+  --pl-accent-b: #8a5cff;
+  --pl-glow-a: rgba(255,122,224,0.35);
+  --pl-glow-b: rgba(138,92,255,0.12);
+  --pl-border: rgba(255,122,224,0.45);
+  --pl-shadow: rgba(255,122,224,0.6);
+}
