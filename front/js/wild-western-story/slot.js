@@ -96,7 +96,6 @@ const POPUP_AMOUNT_BONE = {
 const POPUP_AMOUNT_BONE_FALLBACKS = ['bone_input_number', 'bone_input', 'bone_main_input_number', 'main_input'];
 
 const DIM_TRANSITION_MS = 320;
-const REEL_LOOP_STEP_MS = 420;
 const REEL_LAND_FILLER_COUNT = 14;
 const REEL_LAND_DURATION_MS = 750;
 const REEL_LAND_STAGGER_MS = 110;
@@ -591,36 +590,50 @@ function showInlineWinAmount(amount) {
 // --- Reel motion (game-agnostic — see the other themes for the full writeup
 // of how the masked-column scroll technique works) -----------------------
 
+// No spinning-loop phase (ported from neon-reels, product-approved there:
+// "по ощущениям даже лучше чем у нас на демо"): on spin press the resting
+// symbols drop out of view downward (accelerating, hidden by the column's
+// own overflow clip), the reel stands empty while the server answers, and
+// the finals fall in from the top via landReel's usual eased landing.
+// landReel awaits reelClearDone so no column starts landing while the old
+// symbols are still mid-drop.
+const REEL_CLEAR_MS = 260;
+
+let reelLoopGeneration = 0; // invalidates a pending clear when a newer spin supersedes it
+let reelClearDone = Promise.resolve();
+
 function startReelLoop() {
   Sound.playSfx('spinStart');
   teardownCellInstances();
-  for (let col = 0; col < GRID_COLS; col++) {
-    const { stripEl } = reelCols[col];
-    stripEl.style.transition = 'none';
+  const gen = ++reelLoopGeneration;
+  for (const { stripEl } of reelCols) {
     stripEl.classList.remove('is-looping');
-
-    const currentCodes = ReelMath.currentColumnCodes(cellInfos, GRID_COLS, GRID_ROWS, col).map(
-      (code) => code || randomSymbolCode(),
-    );
-
-    stripEl.innerHTML = '';
-    const randomTrio = [randomSymbolCode(), randomSymbolCode(), randomSymbolCode()];
-    for (const code of ReelMath.buildLoopSequence(currentCodes, randomTrio)) {
-      const { cell } = createCellNode(code);
-      stripEl.appendChild(cell);
-    }
-
-    stripEl.style.setProperty('--reel-loop-distance', `${ReelMath.ROW_STEP * GRID_ROWS}px`);
-    stripEl.style.setProperty('--reel-loop-duration', `${REEL_LOOP_STEP_MS}ms`);
+    stripEl.style.transition = 'none';
     stripEl.style.transform = 'translateY(0px)';
-    void stripEl.offsetHeight;
-    stripEl.classList.add('is-looping');
   }
+  reelClearDone = new Promise((resolve) => {
+    // Two rAFs: one full frame so transition:none + the transform reset
+    // apply before the drop transition starts (a same-frame kickoff drops
+    // frames on mobile and opens the move at a visible crawl).
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (gen !== reelLoopGeneration) return resolve();
+      for (const { stripEl } of reelCols) {
+        stripEl.style.transition = `transform ${REEL_CLEAR_MS}ms cubic-bezier(0.5, 0, 0.9, 0.4)`;
+        stripEl.style.transform = `translateY(${ReelMath.ROW_STEP * (GRID_ROWS + 1)}px)`;
+      }
+      setTimeout(resolve, REEL_CLEAR_MS + 40);
+    }));
+  });
 }
 
 function stopReelLoop() {
+  // Error-path cleanup (see runSpin's catch): the clear-out drop may have
+  // left the strips translated below the hole — put them back before the
+  // caller re-applies the last known grid.
   for (const { stripEl } of reelCols) {
     stripEl.classList.remove('is-looping');
+    stripEl.style.transition = 'none';
+    stripEl.style.transform = 'translateY(0px)';
   }
 }
 
@@ -651,7 +664,11 @@ function landReel(colIndex, finalCodes, delayMs, isAnticipating = false, fillerC
   const prerollCount = isAnticipating ? ANTICIPATION_PREROLL_FILLER_COUNT : 0;
 
   return new Promise((resolve) => {
-    setTimeout(() => {
+    setTimeout(async () => {
+      // Never start landing while the previous symbols are still mid-drop
+      // (clear-out started in startReelLoop) — the rebuild below would
+      // truncate their fall with a visible pop.
+      await reelClearDone;
       stripEl.classList.remove('is-looping');
       stripEl.style.transition = 'none';
       stripEl.innerHTML = '';
