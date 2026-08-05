@@ -39,21 +39,48 @@ let currentMusicKey = null;
 let musicUnlocked = false;
 let pendingMusicKey = 'base';
 
-// Preload every SFX up front: creating a fresh Audio at play time means the
-// fetch/decode starts when the sound should already be audible, which on
-// mobile webviews (Telegram Mini App) makes every effect land late and adds
-// main-thread hiccups mid-spin. One element per SFX is fetched once at page
-// load (~300KB total); overlapping plays clone the element, hitting the HTTP
-// cache instead of the network.
+// SFX go through WebAudio: <audio> elements have an inherent 100-300ms
+// playback latency on mobile (both iOS Safari and the Telegram webview), so
+// even fully-preloaded effects trailed the reel stops they were cued to.
+// Buffers are fetched+decoded once at page load (~300KB total) and each play
+// is a BufferSource start — effectively instant. The preloaded-element path
+// below stays as the fallback for browsers without AudioContext and for any
+// buffer that hasn't finished decoding yet.
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+const sfxCtx = AudioCtx ? new AudioCtx() : null;
+const sfxGain = sfxCtx ? sfxCtx.createGain() : null;
+if (sfxGain) {
+  sfxGain.gain.value = SFX_VOLUME;
+  sfxGain.connect(sfxCtx.destination);
+}
+const sfxBuffers = {};
+if (sfxCtx) {
+  for (const [name, src] of Object.entries(SOUND_FILES)) {
+    fetch(src)
+      .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()))
+      .then((ab) => sfxCtx.decodeAudioData(ab))
+      .then((buf) => { sfxBuffers[name] = buf; })
+      .catch(() => {}); // missing file (coinLand) — fine to ignore
+  }
+}
+
 const sfxCache = {};
 for (const [name, src] of Object.entries(SOUND_FILES)) {
   const audio = new Audio(src);
-  audio.preload = 'auto';
+  audio.preload = sfxCtx ? 'none' : 'auto'; // fallback path only — don't double-fetch
   sfxCache[name] = audio;
 }
 
 function playSfx(name) {
   if (muted) return;
+  if (sfxCtx && sfxBuffers[name]) {
+    if (sfxCtx.state === 'suspended') sfxCtx.resume();
+    const source = sfxCtx.createBufferSource();
+    source.buffer = sfxBuffers[name];
+    source.connect(sfxGain);
+    source.start();
+    return;
+  }
   const cached = sfxCache[name];
   if (!cached) return;
   const audio = (cached.paused || cached.ended) ? cached : cached.cloneNode(true);
@@ -99,6 +126,8 @@ function playMusic(key) {
 function unlockMusic() {
   if (musicUnlocked) return;
   musicUnlocked = true;
+  // Autoplay policy starts the context suspended until a user gesture.
+  if (sfxCtx && sfxCtx.state === 'suspended') sfxCtx.resume();
   playMusic(pendingMusicKey);
 }
 

@@ -725,7 +725,12 @@ function landReel(colIndex, finalCodes, delayMs, isAnticipating = false) {
           if (currentTranslateY() >= -2) removeFiller();
           else requestAnimationFrame(watchSettle);
         };
-        requestAnimationFrame(watchSettle);
+        // The strip can only be near translateY(0) in the transition's final
+        // stretch, so start the per-frame computed-style polling there instead
+        // of on frame one — getComputedStyle forces a style recalc, and doing
+        // that 60x/s across 5 landing columns was real main-thread cost on
+        // phones for frames where the answer was guaranteed "not yet".
+        setTimeout(() => requestAnimationFrame(watchSettle), Math.max(0, REEL_LAND_DURATION_MS - 250));
 
         let settled = false;
         const finish = () => {

@@ -64,14 +64,16 @@ body {
   gap: 6px;
   padding: 8px 14px;
   border-radius: 999px;
-  background: rgba(8, 2, 24, 0.75);
+  background: rgba(8, 2, 24, 0.9);
   border: 1px solid var(--neon-cyan);
   color: var(--neon-cyan);
   font-family: inherit;
   font-size: 13px;
   font-weight: 700;
   text-decoration: none;
-  backdrop-filter: blur(4px);
+  /* backdrop-filter: blur(4px) removed — a fixed blur над анимирующейся
+     страницей ресемплит фон каждый кадр (постоянный GPU-налог на телефонах);
+     плотный фон даёт тот же вид без этого. */
   box-shadow: 0 0 12px rgba(47, 243, 255, 0.35);
 }
 .to-catalog-btn:hover { background: rgba(8, 2, 24, 0.95); }
@@ -226,6 +228,10 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  /* Keep the strips on their own compositor layers permanently: they animate
+     transform on every spin, and the promote/raster/demote cycle at each
+     loop start + landing showed up as start-of-spin stutter on phones. */
+  will-change: transform;
 }
 .reel__cell {
   position: relative;
