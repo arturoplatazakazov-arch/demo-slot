@@ -6,8 +6,8 @@ async def test_start_session_returns_expected_shape(api_client):
     assert body["balance"] == 1_000_000
     assert body["currency"] == "FUN"
     assert body["bet"] == {
-        "min": 10000, "max": 500000, "step": 10000, "default": 100000,
-        "steps": [10000, 25000, 50000, 100000, 250000, 500000],
+        "min": 5500, "max": 275000, "step": 5500, "default": 55000,
+        "steps": [5500, 13750, 27500, 55000, 137500, 275000],
     }
 
     assert {s["code"] for s in body["symbols"]} == {

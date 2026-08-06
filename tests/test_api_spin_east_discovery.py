@@ -19,7 +19,7 @@ _RAW_WILD = 3
 _RAW_COLLECTOR = 4
 _RAW_COIN = 7
 
-BET_AMOUNT = 100000
+BET_AMOUNT = 55000
 
 
 async def _start_session(api_client) -> str:
@@ -202,9 +202,9 @@ async def test_wild_expands_and_schedules_a_walk(api_client, set_rng):
 
     # Reel 2 (0-indexed) expanded to wild top-to-bottom; every payline now
     # runs lp_blue/wild/lp_blue/lp_blue/lp_blue -> a full 5-of-a-kind on all
-    # 20 lines (pays[5]=10, bet_per_line = 100000/20 = 5000).
+    # 11 lines (pays[5]=10, bet_per_line = 55000/11 = 5000).
     assert all(row[2] == "wild" for row in body["grid"])
     assert body["wild_events"] == [{"reel": 2, "event": "expanded"}]
-    assert len(body["line_wins"]) == 20
-    assert body["total_win"] == 1_000_000
-    assert body["balance"] == 1_000_000 - BET_AMOUNT + 1_000_000
+    assert len(body["line_wins"]) == 11
+    assert body["total_win"] == 550_000
+    assert body["balance"] == 1_000_000 - BET_AMOUNT + 550_000

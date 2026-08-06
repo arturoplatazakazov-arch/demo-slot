@@ -112,14 +112,12 @@ let expandedWildOverlays = [];
 //
 // One Spine skeleton shipping 11 named animations ("1".."11"), one per
 // payline — ported from wild-western-story/slot.js once confirmed there.
-// The backend defines only these 11 paylines now (the other 9 shapes were
-// removed from every 5x3 game's config, product this session — no art for
-// them, so they no longer pay at all). Animation name is NOT the payline
-// index: "1".."5" line up with payline indices 1-5, but "6".."11" are
-// indices 12-17 (see app/seed/east_discovery.py's Payline rows).
+// The backend now defines exactly these 11 paylines, renumbered 1..11 in
+// art order (see the game's app/seed PAYLINES) — animation name equals
+// the payline index 1:1 (было 20 линий, лишние 9 платили без арта).
 const PAYLINE_TO_WIN_LINE_ANIMATION = {
-  1: '1', 2: '2', 3: '3', 4: '4', 5: '5',
-  12: '6', 13: '7', 14: '8', 15: '9', 16: '10', 17: '11',
+  1: '1', 2: '2', 3: '3', 4: '4', 5: '5', 6: '6',
+  7: '7', 8: '8', 9: '9', 10: '10', 11: '11',
 };
 const WIN_LINE_ASSET_PATH = `${ASSET_ROOT}/Win_Lines`;
 let winLineResourcePromise = null;

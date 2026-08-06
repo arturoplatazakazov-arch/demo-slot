@@ -10,8 +10,8 @@ _RAW_LP_BLUE = 30
 
 # cost_multiplier=100, so 10000 * 100 = 1,000,000 exactly matches the
 # starting balance (same pattern as test_api_feature_buy.py's free_spins_buy
-# coverage) — 100000 would need a balance 10x the default starting one.
-BET_AMOUNT = 10000
+# coverage) — 55000 would need a balance 10x the default starting one.
+BET_AMOUNT = 5500
 
 
 async def _start_session(api_client) -> str:
