@@ -107,7 +107,7 @@ const COIN_MULTIPLIER_BONE = 'bone_numb';
 const DIM_TRANSITION_MS = 320;
 const REEL_LAND_FILLER_COUNT = 14;
 const REEL_LAND_DURATION_MS = 750;
-const REEL_LAND_STAGGER_MS = 110;
+const REEL_LAND_STAGGER_MS = 100; // 0.1s между колонками (product), отсчёт от конца очистки
 const WIN_LOOP_PAUSE_MS = 500;
 
 // Manifest design boxes (layouts.<device>.w/h) — the .stage's intrinsic size,
@@ -691,11 +691,14 @@ function landReel(colIndex, finalCodes, delayMs, isAnticipating = false) {
   const prerollCount = isAnticipating ? ANTICIPATION_PREROLL_FILLER_COUNT : 0;
 
   return new Promise((resolve) => {
-    setTimeout(async () => {
-      // Never start landing while the previous symbols are still mid-drop
-      // (clear-out started in startReelLoop) — the rebuild below would
-      // truncate their fall with a visible pop.
+    (async () => {
+      // The clear-out drop must finish first, and the per-column stagger
+      // counts from the END of the clear — not from the spin press. Counting
+      // from the press meant every column whose delay was shorter than the
+      // clear duration woke up at the same instant, so the first four reels
+      // landed simultaneously (reported live).
       await reelClearDone;
+      await wait(delayMs);
       stripEl.classList.remove('is-looping');
       stripEl.style.transition = 'none';
       stripEl.innerHTML = '';
@@ -786,7 +789,7 @@ function landReel(colIndex, finalCodes, delayMs, isAnticipating = false) {
       stripEl.style.transform = `translateY(${landStartY}px)`;
       void stripEl.offsetHeight;
       beginLanding();
-    }, delayMs);
+    })();
   });
 }
 
