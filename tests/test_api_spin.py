@@ -21,7 +21,7 @@ async def _start_session(api_client) -> str:
 async def test_spin_response_shape_is_well_formed(api_client):
     session_id = await _start_session(api_client)
     response = await api_client.post(
-        "/api/v1/spin", json={"session_id": session_id, "bet_amount": 100000}
+        "/api/v1/spin", json={"session_id": session_id, "bet_amount": 55000}
     )
     assert response.status_code == 200
     body = response.json()
@@ -29,7 +29,7 @@ async def test_spin_response_shape_is_well_formed(api_client):
     assert len(body["grid"]) == 3
     assert all(len(row) == 5 for row in body["grid"])
     assert all(symbol in VALID_SYMBOLS for row in body["grid"] for symbol in row)
-    assert body["balance"] == 1_000_000 - 100_000 + body["total_win"]
+    assert body["balance"] == 1_000_000 - 55_000 + body["total_win"]
 
 
 async def test_spin_rejects_bet_amount_not_in_steps(api_client):
@@ -53,16 +53,16 @@ async def test_all_premium_symbols_trigger_epic_win_popup(api_client, set_rng):
     set_rng([_RAW_DUCK] * 15)
 
     response = await api_client.post(
-        "/api/v1/spin", json={"session_id": session_id, "bet_amount": 100000}
+        "/api/v1/spin", json={"session_id": session_id, "bet_amount": 55000}
     )
     body = response.json()
 
     assert all(symbol == "duck" for row in body["grid"] for symbol in row)
-    assert len(body["line_wins"]) == 20
+    assert len(body["line_wins"]) == 11
     assert all(w["symbol"] == "duck" and w["count"] == 5 and w["amount"] == 250000 for w in body["line_wins"])
-    assert body["total_win"] == 5_000_000
-    assert body["balance"] == 1_000_000 - 100_000 + 5_000_000
-    assert body["popup"] == {"type": "epicWin", "amount": 5_000_000}
+    assert body["total_win"] == 2_750_000
+    assert body["balance"] == 1_000_000 - 55_000 + 2_750_000
+    assert body["popup"] == {"type": "epicWin", "amount": 2_750_000}
     assert body["feature"] is None
 
 
@@ -71,12 +71,12 @@ async def test_all_cheap_symbols_win_with_no_popup(api_client, set_rng):
     set_rng([_RAW_PEAR] * 15)
 
     response = await api_client.post(
-        "/api/v1/spin", json={"session_id": session_id, "bet_amount": 100000}
+        "/api/v1/spin", json={"session_id": session_id, "bet_amount": 55000}
     )
     body = response.json()
 
     assert all(symbol == "pear" for row in body["grid"] for symbol in row)
-    assert body["total_win"] == 1_000_000  # 20 lines x pays[5]=10 x bet_per_line(5000)
+    assert body["total_win"] == 550_000  # 11 lines x pays[5]=10 x bet_per_line(5000)
     assert body["popup"] is None
     assert body["feature"] is None
 
@@ -94,17 +94,17 @@ async def test_free_spins_trigger_then_a_free_spin_does_not_charge_balance(api_c
     ]
     set_rng(trigger_draws)
     trigger_response = await api_client.post(
-        "/api/v1/spin", json={"session_id": session_id, "bet_amount": 100000}
+        "/api/v1/spin", json={"session_id": session_id, "bet_amount": 55000}
     )
     trigger_body = trigger_response.json()
 
     assert trigger_body["count_wins"] == [{
-        "symbol": "scatter", "count": 3, "amount": 200000,
+        "symbol": "scatter", "count": 3, "amount": 110000,
         "positions": [{"row": 0, "col": 0}, {"row": 0, "col": 1}, {"row": 0, "col": 2}],
     }]
-    assert len(trigger_body["line_wins"]) == 8  # every payline that never crosses row 0
-    assert trigger_body["total_win"] == 600000  # 8 x 50000 line pay + 200000 count pay
-    assert trigger_body["balance"] == 1_000_000 - 100_000 + 600_000
+    assert len(trigger_body["line_wins"]) == 4  # every payline that never crosses row 0 (of the 11: #1,3,7,9)
+    assert trigger_body["total_win"] == 310000  # 4 x 50000 line pay + 110000 count pay
+    assert trigger_body["balance"] == 1_000_000 - 55_000 + 310_000
     assert trigger_body["feature"] == {
         "type": "free_spins", "triggered": True,
         "spins_awarded": 10, "spins_remaining": 10, "total_win": 0, "multiplier": None,
@@ -124,12 +124,12 @@ async def test_free_spins_trigger_then_a_free_spin_does_not_charge_balance(api_c
     )
     free_body = free_spin_response.json()
 
-    assert free_body["total_win"] == 1_000_000  # all 20 lines pay again
-    assert free_body["balance"] == trigger_body["balance"] + 1_000_000  # no bet deducted
+    assert free_body["total_win"] == 550_000  # all 11 lines pay again
+    assert free_body["balance"] == trigger_body["balance"] + 550_000  # no bet deducted
     assert free_body["feature"] == {
         "type": "free_spins", "triggered": False,
-        "spins_awarded": None, "spins_remaining": 9, "total_win": 1_000_000, "multiplier": None,
+        "spins_awarded": None, "spins_remaining": 9, "total_win": 550_000, "multiplier": None,
     }
     # No (re)trigger this spin -> no bonusSpinsWin (that's not a per-spin cash
-    # win popup); the plain inline win-amount display covers the 1,000,000.
+    # win popup); the plain inline win-amount display covers the 550,000.
     assert free_body["popup"] is None

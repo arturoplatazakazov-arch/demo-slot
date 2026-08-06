@@ -34,28 +34,23 @@ CATALOG_COVER_PATH = "img/wild-western-story/img/logo_wildwestern-hero.jpg"
 CATALOG_PLAY_URL = "wild-western-story.html"
 
 # 3 rows x 5 reels, same generic 20-line set as Amy's Fruit Farm / East
-# Discovery. row index: 0=top, 1=mid, 2=bottom.
+# 11 линий = ровно те формы, на которые есть арт Win_Lines (анимации "1".."11"
+# в том же порядке). Раньше здесь был generic-набор из 20 форм: лишние 9 платили
+# без анимации линии (продукт: «лишние выигрышные линии», авг 2026). Индексы в
+# БД теперь 1..11 и совпадают с именами анимаций 1:1 (см. клиентский
+# PAYLINE_TO_WIN_LINE_ANIMATION).
 PAYLINES: list[list[int]] = [
     [1, 1, 1, 1, 1],
     [0, 0, 0, 0, 0],
     [2, 2, 2, 2, 2],
     [0, 1, 2, 1, 0],
     [2, 1, 0, 1, 2],
-    [0, 0, 1, 0, 0],
-    [2, 2, 1, 2, 2],
-    [1, 0, 0, 0, 1],
-    [1, 2, 2, 2, 1],
-    [0, 1, 1, 1, 0],
-    [2, 1, 1, 1, 2],
     [1, 0, 1, 0, 1],
     [1, 2, 1, 2, 1],
     [0, 1, 0, 1, 0],
     [2, 1, 2, 1, 2],
     [0, 2, 0, 2, 0],
     [2, 0, 2, 0, 2],
-    [1, 1, 0, 1, 1],
-    [1, 1, 2, 1, 1],
-    [0, 2, 2, 2, 0],
 ]
 
 _LOW_TIER_PAYS = {"3": 2, "4": 5, "5": 10}
@@ -84,7 +79,7 @@ _SYMBOLS: list[tuple[str, str, str, int, dict, int | None]] = [
 NUM_REELS = 5
 NUM_ROWS = 3
 
-BET_STEPS = [10000, 25000, 50000, 100000, 250000, 500000]
+BET_STEPS = [5500, 13750, 27500, 55000, 137500, 275000]  # кратно 11 линиям (см. PAYLINES)
 
 
 def build_game_config() -> tuple[Game, GameConfig]:
@@ -181,6 +176,29 @@ def _sync_from_seed(db: AsyncSession, config: GameConfig) -> None:
     gained since — but never removes rows, and never touches paylines
     (static)."""
     _, fresh = build_game_config()
+
+    # Пейлайны теперь тоже реконсилируются (исторически «never touches
+    # paylines»): сокращение набора 20 -> 11 (см. комментарий у PAYLINES)
+    # должно доехать до уже засеянных БД — локальной и Railway — без ручной
+    # миграции. Сопоставление по index; лишние строки удаляет каскад
+    # delete-orphan на GameConfig.paylines.
+    # Лестница ставок обязана оставаться кратной числу линий (валидатор
+    # loaders.validate_bet_amount) — реконсилируем вместе с пейлайнами.
+    config.min_bet = fresh.min_bet
+    config.max_bet = fresh.max_bet
+    config.bet_step = fresh.bet_step
+    config.bet_steps = fresh.bet_steps
+    fresh_paylines = {p.index: p for p in fresh.paylines}
+    for payline in list(config.paylines):
+        f = fresh_paylines.get(payline.index)
+        if f is None:
+            config.paylines.remove(payline)
+        else:
+            payline.positions = f.positions
+    existing_indices = {p.index for p in config.paylines}
+    for index, f in fresh_paylines.items():
+        if index not in existing_indices:
+            config.paylines.append(Payline(index=index, positions=f.positions))
 
     fresh_symbols = {s.code: s for s in fresh.symbols}
     for symbol in config.symbols:

@@ -111,16 +111,13 @@ let expandedWildOverlays = [];
 // --- Win-line animation (trial, this game only — see front/img/wild-western-story/Win_Lines) ---
 //
 // One Spine skeleton shipping 11 named animations ("1".."11"), one per
-// payline. The backend defines 20 paylines total (app/seed/wild_western_story.py),
-// but only these 11 are actually live for the client. Animation name is NOT
-// the payline index — confirmed against the client's own line reference,
-// this session: animations "1".."5" line up with payline indices 1-5, but
-// "6".."11" are indices 12-17 (the backend's indices 6-11 are shapes the
-// client doesn't use and have no line art at all). A win on any payline
-// index missing from this map just shows no line art.
+// payline. The backend now defines exactly these 11 paylines, renumbered
+// 1..11 in art order (app/seed/wild_western_story.py PAYLINES) — animation
+// name equals the payline index 1:1 (было 20 линий, лишние 9 платили без
+// арта).
 const PAYLINE_TO_WIN_LINE_ANIMATION = {
-  1: '1', 2: '2', 3: '3', 4: '4', 5: '5',
-  12: '6', 13: '7', 14: '8', 15: '9', 16: '10', 17: '11',
+  1: '1', 2: '2', 3: '3', 4: '4', 5: '5', 6: '6',
+  7: '7', 8: '8', 9: '9', 10: '10', 11: '11',
 };
 const WIN_LINE_ASSET_PATH = `${ASSET_ROOT}/Win_Lines`;
 let winLineResourcePromise = null;
