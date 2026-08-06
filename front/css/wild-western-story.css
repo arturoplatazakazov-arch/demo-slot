@@ -768,7 +768,7 @@ body.layout-fit .ui-bar {
     left: 50%;
     right: auto;
     top: auto;
-    bottom: calc(16% - 30px);
+    bottom: calc(16% - 70px); /* было -30px; продукт: «опусти на 40px вниз» */
     width: 49%;
     transform: translateX(-50%);
   }
