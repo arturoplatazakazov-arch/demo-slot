@@ -1,4 +1,4 @@
-_RAW_PEAR = 120
+_RAW_PEAR = 11000
 _RAW_SCATTER = 0
 
 

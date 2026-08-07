@@ -59,21 +59,26 @@ _WILD_PAYS = {"3": 20, "4": 60, "5": 150}
 _SCATTER_PAYS = {"3": 2, "4": 10, "5": 50}
 
 # code -> (symbol_type, tier, reel_weight (same on all 5 reels), paytable, max_per_reel)
+# Скаттер = ровно 7% всех дро (продукт, авг 2026; 10% давал бесконечный
+# бонус: ретриггер порождал в среднем 1.38 новых фриспинов на спин).
+# Вес скаттера = 7 x исходная сумма остальных, остальные умножены на 93 —
+# их относительные частоты не изменились, total 10400. Триггер ~раз в 18
+# спинов, ветвление ретриггеров 0.58 (конечный бонус, ~x2.4 длина).
 _SYMBOLS: list[tuple[str, str, str, int, dict, int | None]] = [
-    ("scatter", SymbolType.SCATTER.value, "low", 3, _SCATTER_PAYS, 1),
+    ("scatter", SymbolType.SCATTER.value, "low", 728, _SCATTER_PAYS, 1),
     # Weight kept low: expanding_wild turns one drawn wild into up to a full
     # 3-symbol reel (50% of the time — see expand_chance below), so its
     # effective frequency/impact on RTP is much higher than the raw weight
     # suggests. Capped at 1/reel (product convention, same as East
     # Discovery): at most one wild — expanded or not — per reel.
-    ("wild", SymbolType.WILD.value, "high", 1, _WILD_PAYS, 1),
-    ("wolf", SymbolType.REGULAR.value, "high", 8, _HIGH_TIER_PAYS, None),
-    ("whiskey", SymbolType.REGULAR.value, "high", 6, _HIGH_TIER_PAYS, None),
-    ("gun", SymbolType.REGULAR.value, "high", 5, _HIGH_TIER_PAYS, None),
-    ("a", SymbolType.REGULAR.value, "low", 24, _LOW_TIER_PAYS, None),
-    ("k", SymbolType.REGULAR.value, "low", 22, _LOW_TIER_PAYS, None),
-    ("q", SymbolType.REGULAR.value, "low", 20, _LOW_TIER_PAYS, None),
-    ("j", SymbolType.REGULAR.value, "low", 18, _LOW_TIER_PAYS, None),
+    ("wild", SymbolType.WILD.value, "high", 93, _WILD_PAYS, 1),
+    ("wolf", SymbolType.REGULAR.value, "high", 744, _HIGH_TIER_PAYS, None),
+    ("whiskey", SymbolType.REGULAR.value, "high", 558, _HIGH_TIER_PAYS, None),
+    ("gun", SymbolType.REGULAR.value, "high", 465, _HIGH_TIER_PAYS, None),
+    ("a", SymbolType.REGULAR.value, "low", 2232, _LOW_TIER_PAYS, None),
+    ("k", SymbolType.REGULAR.value, "low", 2046, _LOW_TIER_PAYS, None),
+    ("q", SymbolType.REGULAR.value, "low", 1860, _LOW_TIER_PAYS, None),
+    ("j", SymbolType.REGULAR.value, "low", 1674, _LOW_TIER_PAYS, None),
 ]
 
 NUM_REELS = 5

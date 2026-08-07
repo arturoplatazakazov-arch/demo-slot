@@ -6,7 +6,7 @@ resolved via bonus_buy.resolve_bonus_buy_product. See
 tests/test_api_feature_buy.py for the equivalent free_spins_buy coverage
 this mirrors (same FakeRNG/set_rng conventions)."""
 
-_RAW_LP_BLUE = 30
+_RAW_LP_BLUE = 4000
 
 # cost_multiplier=100, so 10000 * 100 = 1,000,000 exactly matches the
 # starting balance (same pattern as test_api_feature_buy.py's free_spins_buy

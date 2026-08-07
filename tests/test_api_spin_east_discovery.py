@@ -13,11 +13,12 @@ VALID_SYMBOLS = {
 # Cumulative reel weights from the seed (app/seed/east_discovery.py's
 # _SYMBOLS order): scatter[0,3) wild[3,4) collector_tiger[4,7) coin[7,11)
 # rare_cat[11,19) rare_fish[19,25) rare_papirus[25,30) lp_blue[30,54)
-# lp_green[54,76) lp_pink[76,96) lp_red[96,114), total 114.
-_RAW_LP_BLUE = 30
-_RAW_WILD = 3
-_RAW_COLLECTOR = 4
-_RAW_COIN = 7
+# новые диапазоны: scatter[0,777) wild[777,870) collector[870,1149)
+# coin[1149,1521) lp_blue[3288,5520) ... total 11100 (скаттер = 7% всех дро).
+_RAW_LP_BLUE = 4000
+_RAW_WILD = 800
+_RAW_COLLECTOR = 900
+_RAW_COIN = 1200
 
 BET_AMOUNT = 55000
 

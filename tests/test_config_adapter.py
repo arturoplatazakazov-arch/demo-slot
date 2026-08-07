@@ -14,7 +14,7 @@ def test_to_reel_set_config_matches_seed_shape():
         "scatter", "wild", "duck", "watermelon", "corn", "blueberry", "strawberry", "cow", "pear", "dog",
     }
     duck = next(s for s in reel_set.symbols if s.code == "duck")
-    assert duck.weights == [8] * NUM_REELS
+    assert duck.weights == [744] * NUM_REELS
     assert duck.pays[3] == Decimal("10")
 
 

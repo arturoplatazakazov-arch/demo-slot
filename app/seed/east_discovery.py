@@ -82,28 +82,33 @@ _COIN_VALUE_WEIGHTS = {"1": 40, "2": 25, "5": 15, "10": 10, "25": 6, "50": 3, "1
 _HOLD_AND_WIN_VALUE_WEIGHTS = {"0": 50, **_COIN_VALUE_WEIGHTS}
 
 # code -> (symbol_type, tier, reel_weight (same on all 5 reels), paytable, max_per_reel)
+# Скаттер = ровно 7% всех дро (продукт, авг 2026; 10% давал бесконечный
+# бонус: ретриггер порождал в среднем 1.38 новых фриспинов на спин).
+# Вес скаттера = 7 x исходная сумма остальных, остальные умножены на 93 —
+# их относительные частоты не изменились, total 11100. Триггер ~раз в 18
+# спинов, ветвление ретриггеров 0.58 (конечный бонус, ~x2.4 длина).
 _SYMBOLS: list[tuple[str, str, str, int, dict, int | None]] = [
-    ("scatter", SymbolType.SCATTER.value, "low", 3, _SCATTER_PAYS, 1),
+    ("scatter", SymbolType.SCATTER.value, "low", 777, _SCATTER_PAYS, 1),
     # Weight kept low: expanding_wild turns one drawn wild into up to a full
     # 3-symbol reel (50% of the time — see expand_chance below), so its
     # effective frequency/impact on RTP is much higher than the raw weight
     # suggests. Still a placeholder — re-tune with the stage-6 simulator.
     # Capped at 1/reel (product): at most one wild — expanded or not — per
     # reel, so a single spin can't land more than 5 total.
-    ("wild", SymbolType.WILD.value, "high", 1, _WILD_PAYS, 1),
+    ("wild", SymbolType.WILD.value, "high", 93, _WILD_PAYS, 1),
     # Trigger-only (Hold & Win) — no own paytable, capped at 1/reel like
     # scatter so "3+ anywhere" stays a meaningful, tunable trigger rate.
-    ("collector_tiger", SymbolType.BONUS.value, "high", 3, _NO_PAYS, 1),
+    ("collector_tiger", SymbolType.BONUS.value, "high", 279, _NO_PAYS, 1),
     # Multiplier-carrier (base-game coin_multiplier combo, Hold & Win money
     # symbol) — no own paytable, no cap (frequency tuned via reel weight).
-    ("coin", SymbolType.BONUS.value, "low", 4, _NO_PAYS, None),
-    ("rare_cat", SymbolType.REGULAR.value, "high", 8, _HIGH_TIER_PAYS, None),
-    ("rare_fish", SymbolType.REGULAR.value, "high", 6, _HIGH_TIER_PAYS, None),
-    ("rare_papirus", SymbolType.REGULAR.value, "high", 5, _HIGH_TIER_PAYS, None),
-    ("lp_blue", SymbolType.REGULAR.value, "low", 24, _LOW_TIER_PAYS, None),
-    ("lp_green", SymbolType.REGULAR.value, "low", 22, _LOW_TIER_PAYS, None),
-    ("lp_pink", SymbolType.REGULAR.value, "low", 20, _LOW_TIER_PAYS, None),
-    ("lp_red", SymbolType.REGULAR.value, "low", 18, _LOW_TIER_PAYS, None),
+    ("coin", SymbolType.BONUS.value, "low", 372, _NO_PAYS, None),
+    ("rare_cat", SymbolType.REGULAR.value, "high", 744, _HIGH_TIER_PAYS, None),
+    ("rare_fish", SymbolType.REGULAR.value, "high", 558, _HIGH_TIER_PAYS, None),
+    ("rare_papirus", SymbolType.REGULAR.value, "high", 465, _HIGH_TIER_PAYS, None),
+    ("lp_blue", SymbolType.REGULAR.value, "low", 2232, _LOW_TIER_PAYS, None),
+    ("lp_green", SymbolType.REGULAR.value, "low", 2046, _LOW_TIER_PAYS, None),
+    ("lp_pink", SymbolType.REGULAR.value, "low", 1860, _LOW_TIER_PAYS, None),
+    ("lp_red", SymbolType.REGULAR.value, "low", 1674, _LOW_TIER_PAYS, None),
 ]
 
 NUM_REELS = 5
