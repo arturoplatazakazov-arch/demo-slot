@@ -4,12 +4,13 @@ VALID_SYMBOLS = {
     "scatter", "wild", "duck", "watermelon", "corn", "blueberry", "strawberry", "cow", "pear", "dog",
 }
 
-# Cumulative reel weights from the seed (scatter[0,3) wild[3,6) duck[6,14)
-# cow[14,20) dog[20,25) watermelon[25,49) corn[49,71) blueberry[71,91)
-# strawberry[91,109) pear[109,125), total 125) — used to force exact symbols
-# via a deterministic FakeRNG in place of the real CSPRNG.
-_RAW_DUCK = 10
-_RAW_PEAR = 120
+# Cumulative reel weights from the seed (scatter[0,840) wild[840,933)
+# duck[933,1677) cow[1677,2235) dog[2235,2700) watermelon[2700,4932)
+# corn[4932,6978) blueberry[6978,8838) strawberry[8838,10512)
+# pear[10512,12000), total 12000) — used to force exact symbols via a
+# deterministic FakeRNG. Scatter is 7% of all draws (see the seed's comment).
+_RAW_DUCK = 1000
+_RAW_PEAR = 11000
 _RAW_SCATTER = 0
 
 

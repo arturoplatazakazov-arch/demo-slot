@@ -75,22 +75,27 @@ _COIN_VALUE_WEIGHTS = {"1": 40, "2": 25, "5": 15, "10": 10, "25": 6, "50": 3, "1
 
 # code -> (symbol_type, tier, reel_weight (same on all 5 reels), paytable, max_per_reel)
 # Codes MUST match front/js/neon-reels/slot.js's SYMBOL_FOLDERS keys.
+# Скаттер = ровно 7% всех дро (продукт, авг 2026; 10% давал бесконечный
+# бонус: ретриггер порождал в среднем 1.38 новых фриспинов на спин).
+# Вес скаттера = 7 x исходная сумма остальных, остальные умножены на 93 —
+# их относительные частоты не изменились, total 11800. Триггер ~раз в 18
+# спинов, ветвление ретриггеров 0.58 (конечный бонус, ~x2.4 длина).
 _SYMBOLS: list[tuple[str, str, str, int, dict, int | None]] = [
-    ("scatter", SymbolType.SCATTER.value, "low", 3, _SCATTER_PAYS, 1),
+    ("scatter", SymbolType.SCATTER.value, "low", 826, _SCATTER_PAYS, 1),
     # Standard substituting wild (no expansion in this game), capped at 1/reel.
-    ("wild", SymbolType.WILD.value, "high", 4, _WILD_PAYS, 1),
+    ("wild", SymbolType.WILD.value, "high", 372, _WILD_PAYS, 1),
     # Multiplier carrier — no own paytable, frequency tuned via reel weight.
-    ("coin", SymbolType.BONUS.value, "low", 4, _NO_PAYS, None),
+    ("coin", SymbolType.BONUS.value, "low", 372, _NO_PAYS, None),
     # High-pay themed characters.
-    ("geisha", SymbolType.REGULAR.value, "high", 8, _HIGH_TIER_PAYS, None),
-    ("samurai", SymbolType.REGULAR.value, "high", 7, _HIGH_TIER_PAYS, None),
-    ("sensei", SymbolType.REGULAR.value, "high", 6, _HIGH_TIER_PAYS, None),
-    ("yakudza", SymbolType.REGULAR.value, "high", 5, _HIGH_TIER_PAYS, None),
+    ("geisha", SymbolType.REGULAR.value, "high", 744, _HIGH_TIER_PAYS, None),
+    ("samurai", SymbolType.REGULAR.value, "high", 651, _HIGH_TIER_PAYS, None),
+    ("sensei", SymbolType.REGULAR.value, "high", 558, _HIGH_TIER_PAYS, None),
+    ("yakudza", SymbolType.REGULAR.value, "high", 465, _HIGH_TIER_PAYS, None),
     # Low-pay letters.
-    ("a", SymbolType.REGULAR.value, "low", 24, _LOW_TIER_PAYS, None),
-    ("k", SymbolType.REGULAR.value, "low", 22, _LOW_TIER_PAYS, None),
-    ("q", SymbolType.REGULAR.value, "low", 20, _LOW_TIER_PAYS, None),
-    ("j", SymbolType.REGULAR.value, "low", 18, _LOW_TIER_PAYS, None),
+    ("a", SymbolType.REGULAR.value, "low", 2232, _LOW_TIER_PAYS, None),
+    ("k", SymbolType.REGULAR.value, "low", 2046, _LOW_TIER_PAYS, None),
+    ("q", SymbolType.REGULAR.value, "low", 1860, _LOW_TIER_PAYS, None),
+    ("j", SymbolType.REGULAR.value, "low", 1674, _LOW_TIER_PAYS, None),
 ]
 
 NUM_REELS = 5

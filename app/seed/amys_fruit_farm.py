@@ -47,24 +47,29 @@ _WILD_PAYS = {"3": 20, "4": 60, "5": 150}
 _SCATTER_PAYS = {"3": 2, "4": 10, "5": 50}
 
 # code -> (symbol_type, tier, reel_weight (same on all 5 reels), paytable, max_per_reel)
+# Скаттер = ровно 7% всех дро (продукт, авг 2026; 10% давал бесконечный
+# бонус: ретриггер порождал в среднем 1.38 новых фриспинов на спин).
+# Вес скаттера = 7 x исходная сумма остальных, остальные умножены на 93 —
+# их относительные частоты не изменились, total 12000. Триггер ~раз в 18
+# спинов, ветвление ретриггеров 0.58 (конечный бонус, ~x2.4 длина).
 _SYMBOLS: list[tuple[str, str, str, int, dict, int | None]] = [
     # At most 1 scatter per reel (so at most 5 on screen) — was piggybacked
     # on free_spins.params.max_per_reel, now a generic per-symbol field.
-    ("scatter", SymbolType.SCATTER.value, "low", 3, _SCATTER_PAYS, 1),
+    ("scatter", SymbolType.SCATTER.value, "low", 840, _SCATTER_PAYS, 1),
     # Weight dropped from 3 -> 1: the expanding_wild feature (see FeatureConfig
     # below) turns one drawn wild into a full 3-symbol reel, so its effective
     # frequency/impact on RTP is much higher than a plain line-pay symbol at
     # the same weight would be. Still a placeholder — re-tune with the
     # stage-6 simulator, not by hand.
-    ("wild", SymbolType.WILD.value, "high", 1, _WILD_PAYS, None),
-    ("duck", SymbolType.REGULAR.value, "high", 8, _HIGH_TIER_PAYS, None),
-    ("cow", SymbolType.REGULAR.value, "high", 6, _HIGH_TIER_PAYS, None),
-    ("dog", SymbolType.REGULAR.value, "high", 5, _HIGH_TIER_PAYS, None),
-    ("watermelon", SymbolType.REGULAR.value, "low", 24, _LOW_TIER_PAYS, None),
-    ("corn", SymbolType.REGULAR.value, "low", 22, _LOW_TIER_PAYS, None),
-    ("blueberry", SymbolType.REGULAR.value, "low", 20, _LOW_TIER_PAYS, None),
-    ("strawberry", SymbolType.REGULAR.value, "low", 18, _LOW_TIER_PAYS, None),
-    ("pear", SymbolType.REGULAR.value, "low", 16, _LOW_TIER_PAYS, None),
+    ("wild", SymbolType.WILD.value, "high", 93, _WILD_PAYS, None),
+    ("duck", SymbolType.REGULAR.value, "high", 744, _HIGH_TIER_PAYS, None),
+    ("cow", SymbolType.REGULAR.value, "high", 558, _HIGH_TIER_PAYS, None),
+    ("dog", SymbolType.REGULAR.value, "high", 465, _HIGH_TIER_PAYS, None),
+    ("watermelon", SymbolType.REGULAR.value, "low", 2232, _LOW_TIER_PAYS, None),
+    ("corn", SymbolType.REGULAR.value, "low", 2046, _LOW_TIER_PAYS, None),
+    ("blueberry", SymbolType.REGULAR.value, "low", 1860, _LOW_TIER_PAYS, None),
+    ("strawberry", SymbolType.REGULAR.value, "low", 1674, _LOW_TIER_PAYS, None),
+    ("pear", SymbolType.REGULAR.value, "low", 1488, _LOW_TIER_PAYS, None),
 ]
 
 NUM_REELS = 5
