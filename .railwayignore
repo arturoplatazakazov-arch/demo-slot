@@ -1,0 +1,12 @@
+# railway up загружает весь каталог, но бэкенд-образу (см. Dockerfile: app/,
+# alembic/, scripts/, pyproject.toml) фронт и ассеты не нужны — без этого
+# бандл ~200МБ и загрузка регулярно падает по таймауту.
+front/
+tests/
+assets_src_backup_20260728/
+.venv/
+.git/
+demo_slot.egg-info/
+uv.lock
+*.md
+*.command
