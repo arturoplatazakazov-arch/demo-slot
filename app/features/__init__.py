@@ -6,6 +6,8 @@ from app.features import (  # noqa: F401  (registers plugins)
     gamble,
     hold_and_win,
     jackpot,
+    multiplier_wild,
+    wheel_of_fortune,
 )
 from app.features.base import BonusFeature, FeatureContext, FeatureResult
 from app.features.registry import ActiveFeature, FeatureRegistry, default_registry

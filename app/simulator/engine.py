@@ -117,6 +117,7 @@ def run_simulation(
     num_spins: int,
     bet_amount: Decimal,
     wild_config: FeatureConfigLike | None = None,
+    multiplier_wild_config: FeatureConfigLike | None = None,
 ) -> SimulationReport:
     """Runs `num_spins` *base-game* bets (i.e. `num_spins` real wagers — any
     free spins a bet triggers happen in addition, fully simulated for
@@ -127,6 +128,7 @@ def run_simulation(
         raise ValueError("bet_amount must be positive")
 
     free_spins_feature = default_registry.get("free_spins")
+    multiplier_wild_feature = default_registry.get("multiplier_wild")
     bet_per_line = bet_amount / Decimal(len(paylines))
 
     state: dict = {}
@@ -151,14 +153,29 @@ def run_simulation(
         apply_expanding_wild(grid, wild_config, state, rng, bet_amount, reel_set)
         evaluation = evaluate_spin(grid, reel_set.symbols, paylines, bet_per_line, bet_amount)
 
+        ctx = FeatureContext(
+            session_state=state, rng=rng, bet_amount=bet_amount,
+            symbols=reel_set.symbols, grid=grid, win_evaluation=evaluation,
+        )
+
+        # Per-wild multipliers on the lines they take part in. Drawn here (not
+        # just when a line already won) because the draw consumes RNG on every
+        # spin a wild lands in production too — skipping it would desync the
+        # simulated sequence from the real one.
+        wild_multiplier_bonus = Decimal(0)
+        if (
+            multiplier_wild_feature is not None
+            and multiplier_wild_config is not None
+            and multiplier_wild_feature.is_triggered(ctx, multiplier_wild_config.params)
+        ):
+            wild_multiplier_bonus = multiplier_wild_feature.execute(
+                ctx, multiplier_wild_config.params
+            ).win_amount
+
         multiplier = Decimal(str(state.get("free_spins_multiplier", "1"))) if was_in_free_spins else Decimal(1)
-        spin_win = evaluation.total_win * multiplier
+        spin_win = (evaluation.total_win + wild_multiplier_bonus) * multiplier
 
         if free_spins_feature is not None and free_spins_config is not None:
-            ctx = FeatureContext(
-                session_state=state, rng=rng, bet_amount=bet_amount,
-                symbols=reel_set.symbols, grid=grid, win_evaluation=evaluation,
-            )
             if free_spins_feature.is_triggered(ctx, free_spins_config.params):
                 result = free_spins_feature.execute(ctx, free_spins_config.params)
                 state.update(result.state_patch)
@@ -319,4 +336,10 @@ def simulate_game_config(
     wild_config = next(
         (fc for fc in game_config.feature_configs if fc.feature_type == "expanding_wild" and fc.enabled), None
     )
-    return run_simulation(reel_set, paylines, free_spins_config, rng, num_spins, stake, wild_config=wild_config)
+    multiplier_wild_config = next(
+        (fc for fc in game_config.feature_configs if fc.feature_type == "multiplier_wild" and fc.enabled), None
+    )
+    return run_simulation(
+        reel_set, paylines, free_spins_config, rng, num_spins, stake,
+        wild_config=wild_config, multiplier_wild_config=multiplier_wild_config,
+    )

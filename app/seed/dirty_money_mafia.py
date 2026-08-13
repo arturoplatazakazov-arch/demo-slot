@@ -67,6 +67,11 @@ PAYLINES: list[list[int]] = [
     [0, 2, 2, 2, 0],
 ]
 
+# The Wheel of Fortune trigger symbol pays nothing on its own — landing 3 of
+# them opens the wheel, and the wheel is the prize (app/features/
+# wheel_of_fortune.py). Same shape as a scatter in that respect, but it's a
+# BONUS symbol type so wins.py's count-pay never picks it up.
+_WOF_PAYS: dict[str, float] = {}
 _COMMON_PAYS = {"3": 2, "4": 5, "5": 10}
 _RARE_PAYS = {"3": 10, "4": 25, "5": 50}
 _WILD_PAYS = {"3": 20, "4": 60, "5": 150}
@@ -78,6 +83,10 @@ _SCATTER_PAYS = {"3": 2, "4": 10, "5": 50}
 # code -> (name, symbol_type, tier, reel_weight (same on all 5 reels), paytable, max_per_reel)
 _SYMBOLS: list[tuple[str, str, str, str, int, dict, int | None]] = [
     ("scatter", "Scatter", SymbolType.SCATTER.value, "low", 3, _SCATTER_PAYS, 1),
+    # Capped at 1/reel like scatter: the wheel needs 3 of these across 5
+    # reels, and letting two stack on one reel would make the trigger far
+    # spikier than the weight suggests.
+    ("wof", "Wheel of Fortune", SymbolType.BONUS.value, "high", 3, _WOF_PAYS, 1),
     # Weight kept low: expanding_wild turns one drawn wild into a full
     # 3-symbol reel half the time (expand_chance below), so its effective
     # impact on RTP is far above the raw weight. Capped at 1/reel — at most
@@ -166,6 +175,30 @@ def build_game_config() -> tuple[Game, GameConfig]:
             ],
         },
         display_order=1,
+    )
+    FeatureConfig(
+        game_config=config,
+        feature_type=FeatureType.WHEEL_OF_FORTUNE.value,
+        enabled=True,
+        params={
+            "trigger_symbol_code": "wof",
+            "trigger_count": 3,
+            # Drum order, clockwise from the top slot — the client labels the
+            # (blank) bullet art from this list, so the prize set is a config
+            # change, not an art change. 8 entries because the wheel art has 8
+            # slots; that count IS tied to the artwork.
+            "segments": [
+                {"type": "multiplier", "value": 2, "weight": 30},
+                {"type": "multiplier", "value": 3, "weight": 22},
+                {"type": "multiplier", "value": 4, "weight": 16},
+                {"type": "multiplier", "value": 5, "weight": 12},
+                {"type": "multiplier", "value": 6, "weight": 8},
+                {"type": "multiplier", "value": 7, "weight": 5},
+                {"type": "multiplier", "value": 8, "weight": 3},
+                {"type": "free_spins", "weight": 4},
+            ],
+        },
+        display_order=3,
     )
     FeatureConfig(
         game_config=config,

@@ -1,0 +1,11 @@
+animation.png
+size:440,256
+filter:Linear,Linear
+blik_bolshoi
+bounds:2,6,266,248
+offsets:20,21,300,300
+lp_vinograd_body
+bounds:270,49,168,205
+lp_vinograd_ochki
+bounds:270,2,148,45
+offsets:2,1,151,47

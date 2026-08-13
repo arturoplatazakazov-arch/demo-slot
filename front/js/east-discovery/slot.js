@@ -1120,6 +1120,7 @@ async function runHoldAndWinSequence(result) {
   }
 
   await wait(300);
+  Sound.playSfx('bonusTotalWin');
   await playPopup('bonusSpinsTotalWin', result.total_win);
   await setFreeSpinsMode(false);
 }

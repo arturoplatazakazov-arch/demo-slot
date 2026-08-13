@@ -36,6 +36,7 @@ function loadSpineResource(folderPath) {
 // (app/seed/dirty_money_mafia.py) — folder name == symbol code here.
 const SYMBOL_FOLDERS = {
   scatter: 'scatter',
+  wof: 'WOF',
   wild: 'wild',
   rare_red: 'rare_red',
   rare_yellow: 'rare_yellow',
@@ -48,10 +49,11 @@ const SYMBOL_FOLDERS = {
 };
 const SYMBOL_CODES = Object.keys(SYMBOL_FOLDERS);
 
-// Codes eligible as random spin-loop filler — excludes scatter and wild (both
-// trigger symbols; blurring them past during a spin reads as a near-miss that
-// never was).
-const FILLER_CODES = SYMBOL_CODES.filter((c) => c !== 'scatter' && c !== 'wild');
+// Codes eligible as random spin-loop filler — excludes scatter, wof and wild
+// (all trigger symbols; blurring them past during a spin reads as a near-miss
+// that never was).
+const TRIGGER_CODES = new Set(['scatter', 'wof', 'wild']);
+const FILLER_CODES = SYMBOL_CODES.filter((c) => !TRIGGER_CODES.has(c));
 
 // Every symbol now ships a Spine export (rare_red's landed last and had to be
 // renamed from rare_red.{json,png,atlas.txt} to the animation.* names the
@@ -68,9 +70,11 @@ const SPECIAL_SYMBOLS = new Set(['scatter']);
 // Delivered clip inventory (read from each animation.json):
 //   scatter        -> idle / landing / win
 //   wild           -> move / win-small / win-big  (no idle of either size)
+//   wof            -> a single clip literally named "animation"
 //   everything else-> win
 const SYMBOL_CLIPS = {
   wild: { win: 'win-small' },
+  wof: { win: 'animation' },
 };
 const DEFAULT_CLIPS = { idle: 'idle', landing: 'landing', win: 'win' };
 function clipName(code, kind) {
@@ -134,7 +138,7 @@ const GRID_ROWS = 3;
 
 // Attract-mode layout shown before the first spin lands.
 const SYMBOL_LAYOUT = [
-  ['scatter', 'common_blue', 'rare_green', 'common_yellow', 'common_green'],
+  ['scatter', 'common_blue', 'rare_green', 'common_yellow', 'wof'],
   ['common_red', 'rare_blue', 'wild', 'rare_red', 'common_blue'],
   ['common_yellow', 'common_green', 'rare_yellow', 'common_red', 'rare_blue'],
 ];
@@ -1080,6 +1084,124 @@ function setFreeSpinsMode(active, amount = 0) {
   );
 }
 
+// --- Wheel of Fortune -------------------------------------------------------
+//
+// Opened when the server reports 3+ wof symbols (spin response's
+// `wheel_of_fortune`). The prize is ALREADY decided server-side — this only
+// labels the drum from `segments`, waits for the player to hit SPIN, and
+// eases the drum onto `segment_index`.
+
+// The drum art has 8 bullet slots, evenly spaced from 12 o'clock, and the
+// pointer sits at 3 o'clock — so segment i is under the pointer once the drum
+// has turned (90 - i*45) degrees. Both constants are dictated by the artwork.
+const WOF_SEGMENT_COUNT = 8;
+const WOF_POINTER_ANGLE = 90;
+const WOF_SPIN_TURNS = 5; // full turns before settling, for the wind-up
+const WOF_SPIN_MS = 4200;
+const WOF_PRIZE_HOLD_MS = 2200;
+
+// The wof symbols pay nothing, so the server never lists them in
+// `winning_cells` and playWinCells skips them — play their own clip here so
+// the trigger reads before the wheel takes over the screen.
+async function celebrateWheelTrigger() {
+  const triggers = cellInfos.filter((info) => info && info.symbol === 'wof');
+  if (triggers.length === 0) return;
+  const winSet = new Set(triggers);
+  for (const info of cellInfos) {
+    if (info) setCellDimmed(info, !winSet.has(info));
+  }
+  await Promise.all(triggers.map((info) => withTimeout(playWinAnimationOnce(info))));
+  for (const info of cellInfos) {
+    if (info) setCellDimmed(info, false);
+  }
+}
+
+function wofSegmentLabel(segment) {
+  return segment.type === 'free_spins' ? 'FREE SPINS' : `x${segment.value}`;
+}
+
+function renderWheelLabels(segments) {
+  const labelsEl = document.getElementById('wofLabels');
+  labelsEl.innerHTML = '';
+  segments.slice(0, WOF_SEGMENT_COUNT).forEach((segment, i) => {
+    const spoke = document.createElement('div');
+    spoke.className = `wof__label${segment.type === 'free_spins' ? ' wof__label--fs' : ''}`;
+    spoke.style.setProperty('--i', String(i));
+    const text = document.createElement('span');
+    text.textContent = wofSegmentLabel(segment);
+    spoke.appendChild(text);
+    labelsEl.appendChild(spoke);
+  });
+}
+
+// Resolves once the wheel has landed and its prize has been shown, so the
+// caller can sequence the payout/bonus entry after it.
+function playWheelOfFortune(wheel) {
+  const popup = document.getElementById('wofPopup');
+  const rotor = document.getElementById('wofRotor');
+  const spinBtn = document.getElementById('wofSpin');
+  const prizeEl = document.getElementById('wofPrize');
+  if (!popup || !wheel) return Promise.resolve();
+
+  renderWheelLabels(wheel.segments || []);
+  prizeEl.hidden = true;
+  prizeEl.classList.remove('is-visible');
+  spinBtn.disabled = false;
+  // Reset without animating back through 5 turns.
+  rotor.style.transition = 'none';
+  rotor.style.setProperty('--wof-angle', '0deg');
+  void rotor.offsetHeight;
+
+  popup.hidden = false;
+  void popup.offsetHeight;
+  popup.classList.add('is-open');
+  Sound.playSfx('popupOpen');
+
+  return new Promise((resolve) => {
+    const start = () => {
+      spinBtn.disabled = true;
+      spinBtn.removeEventListener('click', start);
+      Sound.playSfx('wheelSpin');
+
+      const target = WOF_SPIN_TURNS * 360 + WOF_POINTER_ANGLE - wheel.segment_index * (360 / WOF_SEGMENT_COUNT);
+      rotor.style.transition = `transform ${WOF_SPIN_MS}ms cubic-bezier(0.16, 0.9, 0.2, 1)`;
+      rotor.style.setProperty('--wof-angle', `${target}deg`);
+
+      let settled = false;
+      const finish = async () => {
+        if (settled) return;
+        settled = true;
+        rotor.removeEventListener('transitionend', onEnd);
+
+        const segment = (wheel.segments || [])[wheel.segment_index];
+        prizeEl.textContent =
+          wheel.prize_type === 'free_spins'
+            ? 'FREE SPINS!'
+            : `${segment ? wofSegmentLabel(segment) : ''} — ${Number(wheel.win_amount).toLocaleString('en-US')}`;
+        prizeEl.hidden = false;
+        void prizeEl.offsetHeight;
+        prizeEl.classList.add('is-visible');
+        Sound.playSfx(wheel.prize_type === 'free_spins' ? 'bigWin' : 'smallWin');
+
+        await wait(WOF_PRIZE_HOLD_MS);
+        popup.classList.remove('is-open');
+        Sound.playSfx('popupClose');
+        await wait(DIM_TRANSITION_MS);
+        popup.hidden = true;
+        resolve();
+      };
+      const onEnd = (event) => {
+        if (event.target === rotor && event.propertyName === 'transform') finish();
+      };
+      rotor.addEventListener('transitionend', onEnd);
+      // Same belt-and-braces fallback the reel landing uses: a transitionend
+      // that never fires (tab hidden mid-spin, ...) must not strand the spin.
+      setTimeout(finish, WOF_SPIN_MS + 400);
+    };
+    spinBtn.addEventListener('click', start);
+  });
+}
+
 // --- Popups -----------------------------------------------------------------
 
 const popupResourceCache = {};
@@ -1141,7 +1263,10 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
 
       const instance = resource.createInstance();
       instance.anchorEl = document.getElementById('screen');
-      instance.fit = POPUP_FIT;
+      // Portrait doubles the popup (product). The wheel-of-fortune drum is
+      // its own DOM overlay, not a playPopupSequence popup — deliberately
+      // unaffected (product: "кроме ВОФ попапа").
+      instance.fit = POPUP_FIT * (isMobileLayout() ? 2 : 1);
       stage.addOverlay(instance);
       startPopupAmountTracking(instance, key, amount);
 

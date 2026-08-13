@@ -1,0 +1,14 @@
+animation.png
+size:448,253
+filter:Linear,Linear
+blik_bolshoi
+bounds:2,3,266,248
+offsets:20,21,300,300
+limon_body
+bounds:270,43,176,208
+limon_glaz_leviy
+bounds:335,5,42,36
+offsets:2,1,75,39
+limon_glaz_praviy
+bounds:270,2,63,39
+offsets:28,1,92,41

@@ -33,7 +33,9 @@ class FeatureType(str, enum.Enum):
     GAMBLE = "gamble"
     JACKPOT = "jackpot"
     EXPANDING_WILD = "expanding_wild"
+    MULTIPLIER_WILD = "multiplier_wild"
     COIN_MULTIPLIER = "coin_multiplier"
+    WHEEL_OF_FORTUNE = "wheel_of_fortune"
     # Not a BonusFeature plugin (no is_triggered/execute) — a pure config
     # carrier spin_service.py looks up directly to know a game's base win
     # mechanic is avalanche/cascade (app/engine/avalanche.py) instead of the

@@ -1,0 +1,16 @@
+animation.png
+size:474,259
+filter:Linear,Linear
+blik_bolshoi
+bounds:2,9,266,248
+offsets:20,21,300,300
+lp_klubnika_body
+bounds:270,32,202,225
+lp_klubnika_glaz1
+bounds:321,3,43,27
+offsets:1,1,45,29
+lp_klubnika_glaz2
+bounds:366,10,35,20
+offsets:1,1,37,22
+lp_klubnika_gubi
+bounds:270,2,49,28

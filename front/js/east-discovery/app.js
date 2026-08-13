@@ -25,7 +25,7 @@ const gameState = {
   pendingHoldAndWin: null,
 };
 
-const WIN_TIER_SOUNDS = { bigWin: 'bigWin', epicWin: 'epicWin', megaWin: 'megaWin' };
+const WIN_TIER_SOUNDS = { bigWin: 'bigWin', epicWin: 'epicWin', megaWin: 'megaWin', bonusSpinsTotalWin: 'bonusTotalWin' };
 
 function formatNumber(n) {
   return Number(n).toLocaleString('en-US');

@@ -70,6 +70,15 @@ async function applySpinResult(data) {
 
   playWinCells(data.winning_cells, data.line_wins, data.count_wins);
 
+  // Wheel of Fortune runs BEFORE the bonus-mode switch: when its prize is the
+  // free-spins round, the server has already added those spins to `feature`,
+  // so the wheel has to play out first and the usual blackout + intro popup
+  // then carries the player into the bonus.
+  if (data.wheel_of_fortune) {
+    await celebrateWheelTrigger();
+    await playWheelOfFortune(data.wheel_of_fortune);
+  }
+
   await setFreeSpinsMode(remaining > 0, remaining);
   if (remaining > 0) updateFreeSpinsCounter(remaining);
 

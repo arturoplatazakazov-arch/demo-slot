@@ -6,7 +6,7 @@
 <title>Конструктор · Ассеты</title>
 <link rel="stylesheet" href="../css/fonts.css">
 <link rel="stylesheet" href="builder.css?v=1">
-<link rel="stylesheet" href="assets.css?v=1">
+<link rel="stylesheet" href="assets.css?v=2">
 </head>
 <body>
 
@@ -17,19 +17,34 @@
       <span class="step__sep"></span>
       <a class="step is-active" href="assets.html"><span class="step__num">2</span>Ассеты</a>
       <span class="step__sep"></span>
-      <a class="step" href="layout.html"><span class="step__num">3</span>Вёрстка</a>
+      <a class="step" id="stepLayout" href="layout.html"><span class="step__num">3</span>Вёрстка</a>
     </nav>
     <div style="width:110px"></div>
   </header>
 
-  <main class="builder-main">
+  <main class="builder-main" id="main">
     <div class="page-head">
-      <h1 class="page-title">Ассеты</h1>
-      <p class="page-sub">Перетащи файл в нужный слот — он сам ляжет под правильным именем в нужную папку. Список собран под твою базу и механики.</p>
+      <h1 class="page-title">Ассеты <span class="page-title__slot" id="slotName"></span></h1>
+      <p class="page-sub">Скинь все экспортированные файлы в папку игры — <b>символы и попапы папками</b> (Spine: atlas+json+png), фоны/рамку/логотип/кнопки файлами — и нажми «Систематизировать». Что не разложилось — разметишь руками ниже.</p>
     </div>
 
-    <div class="assets-progress" id="progress"></div>
-    <div id="slotArea"></div>
+    <!-- Folder intake -->
+    <section class="intake">
+      <div class="intake__path">
+        <div class="intake__label">Папка игры на диске</div>
+        <code class="intake__code" id="folderPath">—</code>
+        <button class="slot__btn" id="copyPath" type="button">Скопировать путь</button>
+      </div>
+      <div class="intake__actions">
+        <button class="btn btn--primary" id="rescanBtn" type="button">⟳ Систематизировать</button>
+        <label class="btn btn--ghost" for="folderInput">📁 Загрузить папкой из браузера
+          <input id="folderInput" type="file" webkitdirectory directory multiple hidden>
+        </label>
+      </div>
+      <div class="intake__status" id="status"></div>
+    </section>
+
+    <div id="gallery"></div>
   </main>
 
   <footer class="builder-foot">
@@ -41,6 +56,7 @@
 
   <script src="registry.js?v=1"></script>
   <script src="draft.js?v=1"></script>
-  <script src="assets.js?v=1"></script>
+  <script src="api.js?v=1"></script>
+  <script src="assets.js?v=2"></script>
 </body>
 </html>
