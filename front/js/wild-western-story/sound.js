@@ -17,8 +17,9 @@ const SOUND_FILES = {
   megaWin: GAME + 'WIN_Mega.mp3',
   epicWin: GAME + 'WIN_Epic.mp3',
   wildGrow: GAME + 'WILD_Scale.mp3', // wild expand/scale beat
-  // unique to this game — not delivered yet (404 harmless until they land)
   scatterWin: GAME + 'SCATTER_win.mp3',
+  bonusTotalWin: GAME + 'BONUS_SPINS_TOTAL_WIN.mp3', // free-spins-round-end total payout popup
+  // unique to this game — not delivered yet (404 harmless until it lands)
   wildWin: GAME + 'WILD_Scale_wind.mp3', // longer bed under a wild win
   // shared / repeating (already present in sound/common/)
   click: COMMON + 'Click_UI.mp3',

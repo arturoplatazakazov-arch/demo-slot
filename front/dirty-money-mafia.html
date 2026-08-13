@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dirty Money / MAFIA — demo</title>
 <link rel="stylesheet" href="css/fonts.css">
-<link rel="stylesheet" href="css/dirty-money-mafia.css?v=2">
+<link rel="stylesheet" href="css/dirty-money-mafia.css?v=5">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 </head>
 <body>
@@ -77,6 +77,31 @@
     <!-- Сумма выигрыша, наложенная поверх поп-апа — см. POPUP_AMOUNT_BONE в slot.js. -->
     <div class="popup-amount" id="popupAmount"></div>
 
+    <!-- ================================================================
+         Wheel of Fortune — 3 символа WOF открывают колесо.
+         Собран из нарезок img/dirty-money-mafia/popups/WOF/ (это не Spine):
+         рамка и стрелка неподвижны, крутится только барабан вместе с
+         подписями сегментов. Подписи рисуются из ответа бека, потому что
+         гнёзда на барабане намеренно пустые — см. wheel_of_fortune.py.
+         Сегмент-победитель выбирает СЕРВЕР, клиент только доводит барабан.
+         ================================================================ -->
+    <div class="wof" id="wofPopup" hidden>
+      <img class="wof__title" src="img/dirty-money-mafia/popups/WOF/WOF_text.png" alt="Wheel of Fortune">
+      <div class="wof__wheel">
+        <!-- Барабан + подписи вращаются как одно целое. -->
+        <div class="wof__rotor" id="wofRotor">
+          <img class="wof__drum" src="img/dirty-money-mafia/popups/WOF/WOF_baraban.png" alt="">
+          <div class="wof__labels" id="wofLabels"></div>
+        </div>
+        <img class="wof__frame" src="img/dirty-money-mafia/popups/WOF/WOF_frame.png" alt="">
+        <img class="wof__pointer" src="img/dirty-money-mafia/popups/WOF/WOF_strelka.png" alt="">
+        <button class="wof__spin" id="wofSpin" type="button" aria-label="Крутить колесо">
+          <img src="img/dirty-money-mafia/popups/WOF/WOF_SPIN_BUTTON.png" alt="SPIN">
+        </button>
+      </div>
+      <div class="wof__prize" id="wofPrize" hidden></div>
+    </div>
+
   </div>
 
   <!-- Paytable info popup — заполняется из session-start's `symbols`. -->
@@ -84,7 +109,7 @@
     <div class="info-popup__panel">
       <button class="info-popup__close" id="infoPopupClose" type="button" aria-label="Закрыть">×</button>
       <h2 class="info-popup__title">Paytable</h2>
-      <p class="info-popup__note">20 линий слева направо. WILD расширяется на весь барабан; 3+ SCATTER — фриспины.</p>
+      <p class="info-popup__note">20 линий слева направо. WILD расширяется на весь барабан; 3+ SCATTER — фриспины; 3 WHEEL OF FORTUNE — колесо с множителем ×2…×8 или фриспинами.</p>
       <div class="info-popup__list" id="infoPopupList"></div>
     </div>
   </div>
@@ -198,9 +223,9 @@
   <script src="js/config.js"></script>
   <script src="js/api.js?v=2"></script>
   <script src="js/reel-math.js?v=6"></script>
-  <script src="js/dirty-money-mafia/sound.js?v=1"></script>
-  <script src="js/dirty-money-mafia/slot.js?v=8"></script>
-  <script src="js/dirty-money-mafia/app.js?v=2"></script>
+  <script src="js/dirty-money-mafia/sound.js?v=2"></script>
+  <script src="js/dirty-money-mafia/slot.js?v=9"></script>
+  <script src="js/dirty-money-mafia/app.js?v=3"></script>
   <!-- Поведение нижнего бара V3: флайаут, тултипы, заглушки авто/турбо. -->
   <script src="js/ui-bar-v3.js?v=4"></script>
 </body>

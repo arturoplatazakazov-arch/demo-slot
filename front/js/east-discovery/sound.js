@@ -22,6 +22,7 @@ const SOUND_FILES = {
   wildGrow: GAME + 'WILD_Scale.wav',
   wildWin: GAME + 'WILD_Scale_wind.wav',
   coinLand: GAME + 'HOLD&WIN_Coin.wav',
+  bonusTotalWin: GAME + 'Bonus_spins_total_win.mp3', // free-spins-round-end / Hold & Win total payout popup
   // shared / repeating
   click: COMMON + 'Click_UI.mp3',
   spinStart: COMMON + 'reel-start.mp3',

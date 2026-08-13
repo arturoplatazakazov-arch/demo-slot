@@ -27,8 +27,8 @@ const SOUND_FILES = {
   cascadeDrop: GAME + 'Element_drop.mp3', // element lands on its cell after collapse/refill
   bombExplode: GAME + 'bomb-explode.mp3',
   spinStart: GAME + 'SPIN_Start.mp3', // themed spin-start (overrides the shared one)
-  // unique to this game — not delivered yet (404 harmless until it lands)
   scatterWin: GAME + 'SCATTER_win.mp3',
+  bonusTotalWin: GAME + 'BONUS_SPINS_TOTAL_WIN.wav', // free-spins-round-end total payout popup
   // shared / repeating (already present in sound/common/)
   click: COMMON + 'Click_UI.mp3',
   popupOpen: COMMON + 'Popup-open.mp3',

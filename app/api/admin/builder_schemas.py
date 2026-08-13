@@ -76,9 +76,14 @@ class BuilderStageRequest(BaseModel):
 
 
 class AssetTagRequest(BaseModel):
-    category: AssetCategory
-    screen: AssetScreenTag
-    device: AssetDevice
+    # category null = move the asset back to the "unassigned" bucket without
+    # deleting the file from disk (the v2 constructor's "снять из категории →
+    # в нераспределённые" action). screen/device stay optional so the same
+    # request can carry placement or clear it; the handler nulls them whenever
+    # category is null or catalog.
+    category: AssetCategory | None = None
+    screen: AssetScreenTag | None = None
+    device: AssetDevice | None = None
 
 
 class BuilderGridRequest(BaseModel):

@@ -8,6 +8,7 @@ in builder_schemas.py."""
 import hashlib
 import shutil
 import uuid
+from pathlib import PurePosixPath
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy import delete, select
@@ -241,6 +242,38 @@ async def upload_animation(
     return response
 
 
+@router.post("/games/{slug}/upload-tree")
+async def upload_tree(
+    slug: str,
+    paths: list[str] = Form(...),
+    files: list[UploadFile] = File(...),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Drop a whole folder from the browser into the game's on-disk
+    front/img/<slug>/ tree, preserving sub-folders (Spine bundles stay
+    grouped), then run the same rescan a hand-drop into the folder would.
+    `paths` carries each file's browser-relative path (webkitRelativePath),
+    paired by index with `files`; the selected root dir (first path segment) is
+    stripped so a picked "MyGame" folder's contents land directly under
+    img/<slug>/. Loose files become unassigned images, sub-folders become
+    animation bundles — the rescan below categorizes and spine-fixes them."""
+    await require_manifest(db, slug)  # 404s on unknown slug before touching disk
+    base = (FRONT_DIR / "img" / slug).resolve()
+    for rel, f in zip(paths, files):
+        parts = [p for p in PurePosixPath(rel).parts if p not in ("", ".")]
+        parts = parts[1:] if len(parts) > 1 else parts  # strip selected-root dir
+        if not parts or any(p == ".." for p in parts):
+            continue
+        dest = base.joinpath(*parts)
+        try:
+            dest.resolve().relative_to(base)
+        except ValueError:
+            continue  # path escaped the game folder — skip
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(await f.read())
+    return await rescan_assets(slug, db)
+
+
 @router.post("/games/{slug}/stage", response_model=BuilderGameOut)
 async def set_stage(slug: str, body: BuilderStageRequest, db: AsyncSession = Depends(get_db)) -> BuilderGameOut:
     draft, manifest = await require_manifest(db, slug)
@@ -318,12 +351,14 @@ async def rescan_assets(slug: str, db: AsyncSession = Depends(get_db)) -> dict:
 @router.patch("/games/{slug}/assets/{asset_id}")
 async def tag_asset(slug: str, asset_id: str, body: AssetTagRequest, db: AsyncSession = Depends(get_db)) -> dict:
     draft, manifest = await require_manifest(db, slug)
-    needs_placement = body.category is not AssetCategory.catalog
+    # category null → back to "unassigned" (file stays on disk); catalog and
+    # null both carry no screen/device placement.
+    needs_placement = body.category is not None and body.category is not AssetCategory.catalog
     for img in manifest["assets"]["images"]:
         if img["id"] == asset_id:
-            img["category"] = body.category.value
-            img["screen"] = body.screen.value if needs_placement else None
-            img["device"] = body.device.value if needs_placement else None
+            img["category"] = body.category.value if body.category is not None else None
+            img["screen"] = body.screen.value if (needs_placement and body.screen is not None) else None
+            img["device"] = body.device.value if (needs_placement and body.device is not None) else None
             await save_manifest(db, draft, manifest)
             return manifest
     raise HTTPException(status_code=404, detail=f"image asset '{asset_id}' not found")

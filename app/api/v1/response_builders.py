@@ -60,6 +60,15 @@ def free_spins_feature_out(
     )
 
 
+def multiplier_wilds_out(details: dict | None) -> list[schemas.MultiplierWildOut]:
+    if details is None:
+        return []
+    return [
+        schemas.MultiplierWildOut(row=w["row"], col=w["reel"], multiplier=int(Decimal(w["multiplier"])))
+        for w in details["wilds"]
+    ]
+
+
 def coin_multiplier_out(details: dict | None) -> schemas.CoinMultiplierOut | None:
     if details is None:
         return None
@@ -89,6 +98,19 @@ def hold_and_win_out(result) -> schemas.HoldAndWinOut | None:
         ],
         total_win=int(result.win_amount),
         full_grid=result.details["full_grid"],
+    )
+
+
+def wheel_of_fortune_out(result) -> schemas.WheelOfFortuneOut | None:
+    if result is None:
+        return None
+    details = result.details
+    return schemas.WheelOfFortuneOut(
+        segment_index=details["segment_index"],
+        prize_type=details["prize_type"],
+        multiplier=details.get("multiplier"),
+        win_amount=int(result.win_amount),
+        segments=[schemas.WheelSegmentOut(**s) for s in details["segments"]],
     )
 
 

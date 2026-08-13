@@ -15,6 +15,7 @@ const SOUND_FILES = {
   epicWin: GAME + 'WIN_Epic.mp3',
   wildGrow: GAME + 'WILD_Scale.mp3', // wild expanding over its reel
   wildWin: GAME + 'WILD_Win.mp3',
+  wheelSpin: GAME + 'WHEEL_Spin.mp3', // Wheel of Fortune drum spinning up
   // shared / repeating (already present in sound/common/)
   spinStart: COMMON + 'reel-start.mp3',
   reelStop: COMMON + 'Reel_stop_slot.mp3',

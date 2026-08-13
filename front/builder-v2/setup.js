@@ -2,6 +2,33 @@
 (function () {
   const draft = Draft.load();
 
+  // Backend's ALLOWED_MECHANICS (app/api/admin/builder_schemas.py). v2's own
+  // mechanic taxonomy is richer, so map each v2 id to the closest backend id
+  // (or drop it if there's no equivalent yet) and always add the base's core
+  // win mechanic. Unmapped ids are silently dropped — the grid still saves.
+  const MECHANIC_MAP = {
+    scatter: 'scatter',
+    free_spins: 'free_spins',
+    bonus_buy: 'bonus_buy',
+    expanding_wild: 'expanding_wild',
+    sticky_wild: 'expanding_wild',   // no dedicated sticky-wild feature yet
+    coin_multiplier: 'coin_multiplier',
+    hold_and_win: 'hold_and_win',
+    multiplier_tokens: 'coin_multiplier',
+    bombs: 'avalanche',              // bombs are an avalanche add-on
+  };
+  const ALLOWED_MECHANICS = new Set([
+    'line_pay', 'scatter', 'expanding_wild', 'free_spins',
+    'hold_and_win', 'bonus_buy', 'gamble', 'jackpot', 'coin_multiplier', 'avalanche',
+  ]);
+
+  function backendMechanics() {
+    const base = BASES[draft.base];
+    const core = base.runtime === 'avalanche' ? 'avalanche' : 'line_pay';
+    const mapped = draft.mechanics.map((m) => MECHANIC_MAP[m]).filter(Boolean);
+    return [...new Set([core, ...mapped])].filter((m) => ALLOWED_MECHANICS.has(m));
+  }
+
   const nameEl = document.getElementById('gameName');
   const gapEl = document.getElementById('gapInput');
   const baseGrid = document.getElementById('baseGrid');
@@ -147,10 +174,32 @@
   // --- Wire up ---
   nameEl.addEventListener('input', persist);
   gapEl.addEventListener('input', persist);
-  document.getElementById('nextBtn').addEventListener('click', () => {
+  document.getElementById('nextBtn').addEventListener('click', async () => {
     if (!draft.name || !draft.base) return;
     persist();
-    location.href = 'assets.html';
+    const base = BASES[draft.base];
+    nextBtn.disabled = true;
+    const origLabel = nextBtn.textContent;
+    try {
+      // Create the real game folder once; reuse it on later passes.
+      if (!draft.backendSlug) {
+        footInfo.textContent = 'Создаю папку игры…';
+        const game = await BuilderAPI.request('POST', '/games', { name: draft.name });
+        draft.backendSlug = game.slug;
+        draft.gameId = game.game_id;
+        Draft.save(draft);
+      }
+      // Save grid geometry + mechanics (backend-valid ids).
+      footInfo.textContent = 'Сохраняю сетку и механики…';
+      await BuilderAPI.request('POST', `/games/${draft.backendSlug}/grid`, {
+        reels: base.reels, rows: base.rows, mechanics: backendMechanics(),
+      });
+      location.href = `assets.html?slug=${encodeURIComponent(draft.backendSlug)}`;
+    } catch (err) {
+      nextBtn.disabled = false;
+      nextBtn.textContent = origLabel;
+      footInfo.textContent = `Ошибка бэкенда: ${err.message}. Бэкенд (:8000) запущен?`;
+    }
   });
   document.getElementById('resetBtn').addEventListener('click', () => {
     if (!confirm('Сбросить черновик?')) return;

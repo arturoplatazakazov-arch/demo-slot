@@ -22,8 +22,10 @@ window.Draft = {
       base: null,          // '3x3' | '5x3' | '6x5'
       gap: 10,             // px between reel elements
       mechanics: [],       // mechanic ids
-      assets: {},          // { requiredAssetId: {file, name} }  (page 2)
+      assets: {},          // { requiredAssetId: {file, name} }  (page 2, legacy client-side)
       layout: {},          // { screenId: { elements: [...] } }  (page 3)
+      backendSlug: null,   // slug of the real game folder created via POST /games (page 1)
+      gameId: null,        // backend Game uuid
       updatedAt: null,
     };
   },

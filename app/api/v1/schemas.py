@@ -134,6 +134,16 @@ class WildEventOut(BaseModel):
     event: str  # "expanded" | "walked" | "expired"
 
 
+class MultiplierWildOut(BaseModel):
+    """A wild and the multiplier it rolled this spin (app/features/
+    multiplier_wild.py). `multiplier` is 1 when it stayed a plain WILD — the
+    client still needs that case, it picks the Spine skin from this value."""
+
+    row: int
+    col: int
+    multiplier: int
+
+
 class CoinMultiplierPositionOut(BaseModel):
     row: int
     col: int
@@ -170,6 +180,31 @@ class HoldAndWinOut(BaseModel):
     respins: list[HoldAndWinRespinOut]
     total_win: int
     full_grid: bool
+
+
+class WheelSegmentOut(BaseModel):
+    """One slot on the Wheel of Fortune drum, in drum order — the client
+    renders these as the labels on the (deliberately blank) bullet art. Only
+    the prize is exposed; the segment weights stay server-side so the odds
+    can't be read off the wire."""
+
+    type: str  # "multiplier" | "free_spins"
+    value: int | None = None
+
+
+class WheelOfFortuneOut(BaseModel):
+    """Result of one wheel spin, drawn server-side (app/features/
+    wheel_of_fortune.py). The client animates the drum to `segment_index` and
+    reveals what's already decided here — it never picks the prize.
+
+    `win_amount` is 0 for a free-spins outcome: there the prize is the round
+    itself, and `feature` carries the awarded spins as usual."""
+
+    segment_index: int
+    prize_type: str  # "multiplier" | "free_spins"
+    multiplier: int | None = None
+    win_amount: int = 0
+    segments: list[WheelSegmentOut]
 
 
 class TokenConsumedOut(BaseModel):
@@ -230,7 +265,12 @@ class SpinResponse(BaseModel):
     popup: PopupOut | None = None
     wild_events: list[WildEventOut] = []
     coin_multiplier: CoinMultiplierOut | None = None
+    # One entry per WILD on the grid, whatever it rolled — including the ones
+    # that stayed a plain wild (multiplier 1). Empty when the game has no
+    # multiplier_wild feature or no wild landed.
+    multiplier_wilds: list[MultiplierWildOut] = []
     hold_and_win: HoldAndWinOut | None = None
+    wheel_of_fortune: WheelOfFortuneOut | None = None
     avalanche: AvalancheOut | None = None
 
 

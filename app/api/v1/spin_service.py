@@ -24,6 +24,8 @@ from app.api.v1.response_builders import (
     free_spins_feature_out,
     hold_and_win_out,
     line_wins_out,
+    multiplier_wilds_out,
+    wheel_of_fortune_out,
 )
 from app.api.v1.spin_avalanche import run_avalanche_feature_buy, run_avalanche_spin
 from app.api.v1.spin_persistence import commit_spin
@@ -108,8 +110,24 @@ async def run_spin(
         coin_bonus = coin_result.win_amount
         coin_details = coin_result.details
 
+    # multiplier_wild is the same shape as coin_multiplier — it needs the line
+    # wins to already exist and returns the DELTA over them (see the module
+    # docstring), so it runs here rather than with the trigger features below.
+    wild_multiplier_feature = default_registry.get("multiplier_wild")
+    wild_multiplier_config = find_feature_config(game_config, "multiplier_wild")
+    wild_multiplier_bonus = Decimal(0)
+    wild_multiplier_details = None
+    if (
+        wild_multiplier_feature is not None
+        and wild_multiplier_config is not None
+        and wild_multiplier_feature.is_triggered(ctx, wild_multiplier_config.params)
+    ):
+        wild_multiplier_result = wild_multiplier_feature.execute(ctx, wild_multiplier_config.params)
+        wild_multiplier_bonus = wild_multiplier_result.win_amount
+        wild_multiplier_details = wild_multiplier_result.details
+
     multiplier = free_spins_round.win_multiplier(state, was_in_free_spins)
-    spin_win = (evaluation.total_win + coin_bonus) * multiplier
+    spin_win = (evaluation.total_win + coin_bonus + wild_multiplier_bonus) * multiplier
 
     triggered_now = False
     trigger_result = None
@@ -117,6 +135,40 @@ async def run_spin(
         if free_spins_feature.is_triggered(ctx, free_spins_config.params):
             trigger_result = free_spins_feature.execute(ctx, free_spins_config.params)
             state.update(trigger_result.state_patch)
+            triggered_now = True
+            if not was_in_free_spins:
+                free_spins_round.enter_round(state, bet_amount)
+
+    # Wheel of Fortune: N+ wheel symbols open a wheel that pays either a cash
+    # multiplier or entry into the free-spins round (app/features/
+    # wheel_of_fortune.py). Resolved fully server-side here; the client only
+    # animates the drum onto the segment this picked.
+    #
+    # Sits AFTER the scatter trigger above on purpose: a spin can land both,
+    # and awarding the wheel's spins through the same free_spins module means
+    # the two merge into one round (its execute() adds to whatever
+    # free_spins_remaining already holds) instead of racing each other.
+    wheel_feature = default_registry.get("wheel_of_fortune")
+    wheel_config = find_feature_config(game_config, "wheel_of_fortune")
+    wheel_result = None
+    if (
+        wheel_feature is not None
+        and wheel_config is not None
+        and wheel_feature.is_triggered(ctx, wheel_config.params)
+    ):
+        wheel_result = wheel_feature.execute(ctx, wheel_config.params)
+        # Unmultiplied by any free-spins win_multiplier — the wheel prize is
+        # already scaled by the full bet, same convention as Hold & Win below.
+        spin_win += wheel_result.win_amount
+        if wheel_result.details.get("prize_type") == "free_spins" and free_spins_feature is not None and free_spins_config is not None:
+            wheel_spins_result = free_spins_feature.execute(ctx, free_spins_config.params)
+            state.update(wheel_spins_result.state_patch)
+            # Report the wheel's award through the same `feature` field a
+            # scatter trigger uses, so the client's existing bonus-entry path
+            # handles both. Keeps the LATER result: it already folded in any
+            # spins the scatter trigger just granted (execute() sums onto
+            # free_spins_remaining), so it's the accurate total.
+            trigger_result = wheel_spins_result
             triggered_now = True
             if not was_in_free_spins:
                 free_spins_round.enter_round(state, bet_amount)
@@ -170,6 +222,12 @@ async def run_spin(
     if wild_events:
         win_breakdown["wild_events"] = wild_events
         features_triggered.append("expanding_wild")
+    if wild_multiplier_details is not None:
+        win_breakdown["multiplier_wild"] = wild_multiplier_details
+        # "triggered" means it actually paid, not merely that wilds drew their
+        # values this spin (which happens on every spin with a wild present).
+        if wild_multiplier_details["applied"]:
+            features_triggered.append("multiplier_wild")
     if coin_details is not None:
         win_breakdown["coin_multiplier"] = coin_details
         # "triggered" here means it actually paid out, not merely that coin
@@ -180,6 +238,9 @@ async def run_spin(
     if hold_and_win_result is not None:
         win_breakdown["hold_and_win"] = hold_and_win_result.details
         features_triggered.append("hold_and_win")
+    if wheel_result is not None:
+        win_breakdown["wheel_of_fortune"] = wheel_result.details
+        features_triggered.append("wheel_of_fortune")
 
     await commit_spin(
         db,
@@ -209,7 +270,9 @@ async def run_spin(
         feature=feature_out,
         popup=schemas.PopupOut(**popup) if popup else None,
         coin_multiplier=coin_multiplier_out(coin_details),
+        multiplier_wilds=multiplier_wilds_out(wild_multiplier_details),
         hold_and_win=hold_and_win_out(hold_and_win_result),
+        wheel_of_fortune=wheel_of_fortune_out(wheel_result),
     )
 
 
