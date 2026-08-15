@@ -402,6 +402,13 @@ function teardownCellInstances() {
       stage.removeBase(info.instance);
       info.instance = null;
     }
+    // A cell that was mid-animation had its static tile hidden in favour of
+    // the canvas (a win clip, an idle loop). Pulling the instance off the
+    // canvas without putting the tile back leaves the cell EMPTY — and since
+    // this runs at the start of every spin, that empty cell is what visibly
+    // drops out of view when the reels clear. Cells that are meant to be
+    // empty carry no `src` at all, so they stay hidden.
+    if (info.img && info.img.getAttribute('src')) info.img.style.visibility = '';
   }
 }
 

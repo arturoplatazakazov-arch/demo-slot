@@ -1,0 +1,14 @@
+animation.png
+size:320,136
+filter:Linear,Linear
+pma:true
+Lime
+bounds:134,23,111,112
+rotate:90
+Lime_bg
+bounds:248,2,70,22
+bg_light_02
+bounds:2,4,130,130
+tail
+bounds:248,26,108,68
+rotate:90

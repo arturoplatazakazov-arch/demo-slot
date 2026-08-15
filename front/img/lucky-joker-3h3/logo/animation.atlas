@@ -1,0 +1,11 @@
+animation.png
+size:404,251
+filter:Linear,Linear
+pma:true
+die
+bounds:329,38,211,73
+rotate:90
+tape
+bounds:2,2,325,98
+text
+bounds:2,102,282,147

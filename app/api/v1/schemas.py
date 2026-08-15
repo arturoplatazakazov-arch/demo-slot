@@ -148,6 +148,10 @@ class CoinMultiplierPositionOut(BaseModel):
     row: int
     col: int
     value: int
+    # Which value_weights entry the coin was drawn from — a plain number, or a
+    # jackpot tier name ("mini".."grand") for a game with named jackpot_values.
+    # Picks the coin's art client-side; None for games seeded before the field.
+    kind: str | None = None
 
 
 class CoinMultiplierOut(BaseModel):
@@ -163,6 +167,11 @@ class HoldAndWinLandedCoinOut(BaseModel):
     row: int
     col: int
     value: int
+    # Which coin_value_weights entry this was drawn from — a plain number for
+    # a numeric table, a tier name ("mini".."grand") for a game with named
+    # jackpot_values (see hold_and_win.py). The client picks the coin art from
+    # it; None for games seeded before the field existed.
+    kind: str | None = None
 
 
 class HoldAndWinRespinOut(BaseModel):
@@ -177,6 +186,11 @@ class HoldAndWinRespinOut(BaseModel):
 
 class HoldAndWinOut(BaseModel):
     triggered: bool
+    # Coins that locked on the triggering grid itself (start_empty=False
+    # games): they're already visible when the round opens, so the client
+    # needs their values up front. Empty for start_empty=True games, whose
+    # every coin arrives through `respins`.
+    initial: list[HoldAndWinLandedCoinOut] = []
     respins: list[HoldAndWinRespinOut]
     total_win: int
     full_grid: bool

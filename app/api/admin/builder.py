@@ -374,6 +374,57 @@ async def set_grid(slug: str, body: BuilderGridRequest, db: AsyncSession = Depen
     return manifest_to_out(manifest)
 
 
+def _register_symbol_statics(manifest: dict, slug: str) -> list[str]:
+    """Register each reel-symbol Spine folder's static.png as a category=='symbol'
+    image, so generate_config picks it up (positionally) and the generic player
+    resolves it (symbols.js: image_ref -> manifest image file -> img/<slug>/
+    <folder>/static.png). A folder counts as a reel symbol if it ships a
+    static.png and isn't the game logo. Ordered regulars -> wild -> scatter so
+    the positional slots in generate_default_config (…, wild, scatter) line up.
+    Files already registered are skipped (idempotent)."""
+    anims = manifest["assets"]["animations"]
+    symbols = [a for a in anims if "static.png" in a.get("files", []) and a["folder"].lower() != "logo"]
+
+    def _kind(a: dict) -> str:
+        n = a["folder"].lower()
+        return "wild" if "wild" in n else ("scatter" if "scatter" in n else "regular")
+
+    regulars = [a for a in symbols if _kind(a) == "regular"]
+    wilds = [a for a in symbols if _kind(a) == "wild"]
+    scatters = [a for a in symbols if _kind(a) == "scatter"]
+    ordered = regulars[:6] + wilds + scatters + regulars[6:]
+
+    known = {img["file"] for img in manifest["assets"]["images"]}
+    added: list[str] = []
+    for a in ordered:
+        file = f'{a["folder"]}/static.png'
+        if file in known:
+            continue
+        path = FRONT_DIR / "img" / slug / a["folder"] / "static.png"
+        if not path.is_file():
+            continue
+        manifest["assets"]["images"].append({
+            "id": uuid.uuid4().hex, "file": file, "category": "symbol",
+            "screen": None, "device": None, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        })
+        known.add(file)
+        added.append(file)
+    return added
+
+
+@router.post("/games/{slug}/symbols/from-animations")
+async def symbols_from_animations(slug: str, db: AsyncSession = Depends(get_db)) -> dict:
+    """Explicit "detect reel symbols from Spine folders" action (Stage 4 also
+    happens automatically inside generate-config when no symbols are tagged)."""
+    draft, manifest = await require_manifest(db, slug)
+    added = _register_symbol_statics(manifest, slug)
+    await save_manifest(db, draft, manifest)
+    return {
+        "registered": added,
+        "symbol_images": [i["file"] for i in manifest["assets"]["images"] if i.get("category") == "symbol"],
+    }
+
+
 @router.post("/games/{slug}/generate-config")
 async def generate_config(slug: str, db: AsyncSession = Depends(get_db)) -> dict:
     """Materializes a real, simulatable `GameConfig` from this game's Stage 3
@@ -386,11 +437,20 @@ async def generate_config(slug: str, db: AsyncSession = Depends(get_db)) -> dict
     if not manifest.get("grid"):
         raise HTTPException(status_code=400, detail="save the grid size and mechanics (stage 3) before generating a config")
 
-    symbol_assets = [
-        {"id": img["id"], "file": img["file"]}
-        for img in manifest["assets"]["images"]
-        if img.get("category") == "symbol"
-    ]
+    def _symbol_assets():
+        return [
+            {"id": img["id"], "file": img["file"]}
+            for img in manifest["assets"]["images"]
+            if img.get("category") == "symbol"
+        ]
+
+    symbol_assets = _symbol_assets()
+    if not symbol_assets:
+        # No symbol images tagged yet — auto-register reel-symbol Spine folders'
+        # static.png so the published game shows real symbols, not placeholders.
+        _register_symbol_statics(manifest, slug)
+        symbol_assets = _symbol_assets()
+
     config = await service.generate_config_from_builder(
         db, slug, manifest["grid"]["reels"], manifest["grid"]["rows"], manifest.get("mechanics", []),
         symbol_assets,

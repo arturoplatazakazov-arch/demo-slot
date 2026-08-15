@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lucky Joker — demo</title>
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/preloader.css?v=1">
+<link rel="stylesheet" href="css/lucky-joker-3h3.css?v=13">
+<link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
+</head>
+<body>
+
+  <!-- Boot preloader: статичная разметка (видна с первого кадра), прогресс
+       ведёт js/preloader.js, задачи считает preloadAssets в slot.js игры. -->
+  <div class="preloader" id="preloader">
+    <div class="preloader__logo" id="preloaderLogo"><img src="img/preloader-logo.png" alt="" onerror="this.remove()"></div>
+    <div class="preloader__bar"><div class="preloader__fill" id="preloaderFill"></div></div>
+    <div class="preloader__pct" id="preloaderPct">0%</div>
+  </div>
+
+  <a class="to-catalog-btn" href="games.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    В каталог
+  </a>
+
+  <!-- DEV-ONLY панель: переключение режима и ручной запуск анимаций без бэкенда. -->
+  <div class="dev-panel">
+    <button class="dev-btn" id="devToggle" type="button">mode: base</button>
+    <button class="dev-btn" data-popup="bigWin" type="button">Big Win</button>
+    <button class="dev-btn" data-popup="megaWin" type="button">Mega Win</button>
+    <button class="dev-btn" data-popup="epicWin" type="button">Epic Win</button>
+    <button class="dev-btn" data-popup="bonusSpinsWin" type="button">Bonus Spins Win</button>
+    <button class="dev-btn" data-popup="bonusSpinsTotalWin" type="button">Bonus Total Win</button>
+    <!-- Реальный спин по /dev/force-hold-and-win: сетка настоящая, монеты
+         подложены, дальше Hold & Win идёт своим обычным путём. -->
+    <button class="dev-btn" id="devHoldAndWin" type="button">Hold &amp; Win</button>
+    <button class="dev-btn" id="devJackpot" type="button">Jackpot win</button>
+    <span class="dev-hint">клик по символу в сетке — его win-анимация</span>
+  </div>
+
+  <div class="screen" id="screen" data-mode="base">
+
+    <!-- Фон на весь экран (bg_base_desk / bg_bonus_desk, в портрете —
+         bg_mob_*). Анимированного Spine-фона в этой поставке нет: фон
+         пришёл только статикой. -->
+    <img class="layer bg" id="bgLayer" src="img/lucky-joker-3h3/bg_base_desk.png" alt="bg_base">
+
+    <!-- Design-space stage: слой ПОД spine-канвасом (см. css/lucky-joker-3h3.css). -->
+    <div class="stage" id="stage">
+
+      <img class="obj reel-bg" src="img/lucky-joker-3h3/slot_bg.png" alt="">
+      <div class="obj reel__grid" id="reelGrid"></div>
+
+    </div>
+
+    <!-- Затемнение экрана перед попапом / переходом base<->bonus. -->
+    <div class="layer screen-dim" id="screenDim"></div>
+
+    <!-- Полноэкранный WebGL-канвас для всех Spine-анимаций (символы, попапы,
+         логотип, награда джекпота). -->
+    <canvas class="layer spine-canvas" id="spineCanvas"></canvas>
+
+    <!-- Тот же design-space stage, но ПОВЕРХ канваса: корпус автомата (чтобы
+         вылетающие за окно кадры win-анимаций закрывались бортом) и всё, что
+         лежит выше него — лестница джекпотов, логотип, Buy Bonus, счётчик
+         фриспинов, сумма выигрыша. -->
+    <div class="stage stage--front" id="stageFront">
+      <img class="obj frame" src="img/lucky-joker-3h3/frame.png" alt="">
+
+      <!-- Плашки джекпотов — по две с каждой стороны логотипа (расстановка из
+           манифеста конструктора). Суммы (x25/x50/x150/x1000) запечены в арт и
+           совпадают с JACKPOT_VALUES в app/seed/lucky_joker_3h3.py. -->
+      <img class="obj jp jp--major" src="img/lucky-joker-3h3/jackpot_major.png" alt="Major x150">
+      <img class="obj jp jp--grand" src="img/lucky-joker-3h3/jackpot_grand.png" alt="Grand x1000">
+      <img class="obj jp jp--mini" src="img/lucky-joker-3h3/jackpot_mini.png" alt="Mini x25">
+      <img class="obj jp jp--minor" src="img/lucky-joker-3h3/jackpot_minor.png" alt="Minor x50">
+
+      <!-- Выигрыш спина ниже порога big/mega/epic — без спайн-попапа. -->
+      <div class="obj reel-win-amount-viewport">
+        <div class="reel-win-amount" id="reelWinAmount"></div>
+      </div>
+
+      <!-- Buy Bonus — только в базовом режиме; подпись запечена в арт. -->
+      <div class="obj sign-buy-bonus" title="Buy Free Spins">
+        <img class="sign-buy-bonus__img" src="img/lucky-joker-3h3/Buy_Bonus_button.png" alt="Buy Free Spins">
+      </div>
+
+      <!-- Счётчик фриспинов — только в бонусном режиме. Плашки разные для
+           десктопа (вертикальная) и портрета (горизонтальная), поэтому обе
+           лежат в разметке, а показывает нужную CSS. -->
+      <div class="obj fs-counter" id="freeSpinsCounter">
+        <img class="fs-counter__img fs-counter__img--desk" src="img/lucky-joker-3h3/Free_Spins_counter_desk.png" alt="">
+        <img class="fs-counter__img fs-counter__img--mob" src="img/lucky-joker-3h3/Free_Spins_counter_mob.png" alt="">
+        <span class="fs-counter__label">FREE SPINS</span>
+        <span class="fs-counter__value" id="freeSpinsValue">10</span>
+      </div>
+
+      <!-- Логотип — статика на арке корпуса, как и положил его конструктор
+           (decor.image). Про неиспользуемый Spine-экспорт логотипа — см.
+           комментарий в js/lucky-joker-3h3/slot.js. -->
+      <div class="obj logo" id="logoBox">
+        <img class="logo__img" id="logoImg" src="img/lucky-joker-3h3/game_logo.png" alt="Lucky Joker">
+      </div>
+    </div>
+
+    <!-- Суммы, наложенные поверх арта: у попапа — одна, едет за костью
+         (POPUP_AMOUNT_BONE); у монет Hold & Win — пул, по одной на монету,
+         каждая держится за свою ячейку (trackCoinAmounts). -->
+    <div class="popup-amount" id="popupAmount"></div>
+    <!-- Номиналы монет НА БАРАБАНАХ: слой обрезается по окну корпуса (slot.js
+         trackCoinAmounts правит clip-path), иначе число едет вместе с ячейкой
+         поверх всего экрана, пока сама ячейка ещё скрыта за рамкой. -->
+    <div class="coin-amounts coin-amounts--reels" id="coinAmountsReels"></div>
+    <!-- Числа вне барабанов (ставка в диалоге покупки) — без обрезки. -->
+    <div class="coin-amounts" id="coinAmounts"></div>
+
+    <!-- Невидимые хит-зоны кнопок диалога покупки: сам диалог рисуется на
+         spine-канвасе, который не принимает клики — см. showBuyBonusDialog. -->
+    <div class="buy-dialog-hits" id="buyDialogHits" hidden></div>
+
+  </div>
+
+  <!-- Paytable info popup — заполняется из session-start's `symbols`. -->
+  <div class="info-popup" id="infoPopup" hidden>
+    <div class="info-popup__panel">
+      <button class="info-popup__close" id="infoPopupClose" type="button" aria-label="Закрыть">×</button>
+      <h2 class="info-popup__title">Paytable</h2>
+      <p class="info-popup__note">5 линий слева направо, выплата — только за 3 символа в линии. WILD заменяет любой символ. 3 SCATTER — выплата и 10 фриспинов с множителем ×2.<br><br>МОНЕТА несёт свой множитель (×1…×15 или джекпот) и умножает выигрышную линию: если монет несколько, их множители складываются.<br><br>КОЛЛЕКТОР выпадает только на среднем барабане: вместе с МОНЕТОЙ на первом и третьем он запускает Hold &amp; Win. Раунд начинается с одного КОЛЛЕКТОРА на среднем барабане: там дальше падают только коллекторы, по бокам — только монеты. Каждый коллектор собирает на себя сумму всех монет, так что второй коллектор удваивает раунд, третий — утраивает. 3 респина без новых символов заканчивают раунд. Джекпоты: MINI ×25, MINOR ×50, MAJOR ×150, GRAND ×1000 от ставки.</p>
+      <div class="info-popup__list" id="infoPopupList"></div>
+    </div>
+  </div>
+
+  <!-- ================================================================
+       Нижний бар V3 (макет Figma "V3", node 396:1961).
+       Контракт для js/lucky-joker-3h3/app.js менять НЕЛЬЗЯ: data-action
+       spin/bet-minus/bet-plus/sound/info, id betValue/balanceValue,
+       классы ui-icon-btn / ui-spin-btn / ui-balance__currency /
+       ui-bet-field__currency.
+       ================================================================ -->
+  <div class="v3-bar" id="v3Bar">
+
+    <!-- Ряд круглых кнопок: [меню] [авто] (SPIN) [турбо] [ставка] -->
+    <div class="v3-row">
+
+      <div class="v3-group">
+        <!-- Флайаут раскрывается ВВЕРХ из кнопки-гамбургера. -->
+        <div class="v3-menu">
+          <div class="v3-menu__flyout" id="v3Flyout">
+            <button class="ui-icon-btn v3-btn" data-action="home" type="button" aria-label="В каталог">
+              <svg viewBox="0 0 24 24"><path d="M3 11.4 12 4l9 7.4" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.6 10v9.2h4.2v-5.6h4.4v5.6h4.2V10" fill="currentColor" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="ui-icon-btn v3-btn v3-btn--sound" data-action="sound" type="button" aria-label="Звук">
+              <svg viewBox="0 0 24 24"><path class="v3-spk" d="M4 9.2v5.6h3.6L13 19V5L7.6 9.2H4Z" fill="currentColor"/><path class="v3-wave v3-wave--1" d="M16.2 9a4.6 4.6 0 0 1 0 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="v3-wave v3-wave--2" d="M18.9 6.6a8 8 0 0 1 0 10.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="v3-slash" d="M5 19 19 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            </button>
+            <button class="ui-icon-btn v3-btn" data-action="info" type="button" aria-label="Информация">
+              <svg viewBox="0 0 24 24"><rect x="10.6" y="10" width="2.8" height="9" rx="1.4" fill="currentColor"/><circle cx="12" cy="6.4" r="1.7" fill="currentColor"/></svg>
+            </button>
+          </div>
+          <button class="ui-icon-btn v3-btn v3-btn--menu" id="v3MenuBtn" type="button" aria-label="Меню" aria-expanded="false">
+            <svg viewBox="0 0 24 24"><path d="M4 7.5h16M4 12h16M4 16.5h16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            <span class="v3-btn__dot" aria-hidden="true"></span>
+          </button>
+        </div>
+
+        <!-- Автоигра — визуальная заглушка: открывает выбор 10/25/50/100. -->
+        <button class="ui-icon-btn v3-btn v3-btn--auto" id="v3AutoBtn" type="button" aria-label="Автоигра" aria-expanded="false">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.1" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8.6 15.4 12 7.6l3.4 7.8M9.8 13.2h4.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+
+      <button class="ui-spin-btn v3-spin" data-action="spin" type="button" aria-label="Спин">
+        <span class="v3-spin__ring" aria-hidden="true"></span>
+        <svg class="v3-spin__icon" viewBox="0 0 48 48">
+          <path d="M9 20.5A15.2 15.2 0 0 1 34.4 14" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>
+          <path d="M34.6 7.4V14h-6.7" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M39 27.5A15.2 15.2 0 0 1 13.6 34" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>
+          <path d="M13.4 40.6V34h6.7" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="v3-spin__count" id="v3SpinCount" hidden></span>
+      </button>
+
+      <div class="v3-group">
+        <!-- Турбо — визуальная заглушка: только активное (зелёное) состояние. -->
+        <button class="ui-icon-btn v3-btn v3-btn--turbo" id="v3TurboBtn" type="button" aria-label="Турбо" aria-pressed="false">
+          <svg viewBox="0 0 24 24"><path d="M13.4 2.5 5.2 13.4h5.1l-1.1 8.1 8.3-11.1h-5.2l1.1-7.9Z" fill="currentColor"/></svg>
+        </button>
+
+        <!-- Ставка — открывает тултип со степпером (−/+ живые, из app.js). -->
+        <button class="ui-icon-btn v3-btn v3-btn--bet" id="v3BetBtn" type="button" aria-label="Ставка" aria-expanded="false">
+          <svg viewBox="0 0 24 24"><ellipse cx="12" cy="7.4" rx="7.6" ry="2.9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.4 7.4v3.1c0 1.6 3.4 2.9 7.6 2.9s7.6-1.3 7.6-2.9V7.4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.4 11.9V15c0 1.6 3.4 2.9 7.6 2.9s7.6-1.3 7.6-2.9v-3.1" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Тултип ставки. −/+ несут data-action, на них уже висит app.js. -->
+    <div class="v3-tip v3-tip--bet" id="v3BetTip" hidden>
+      <button class="ui-icon-btn v3-tip__step" data-action="bet-minus" type="button" aria-label="Уменьшить ставку">
+        <svg viewBox="0 0 24 24"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
+      <div class="v3-tip__field">
+        <span class="v3-tip__label">BET</span>
+        <span class="v3-tip__amount">
+          <span id="v3BetMirror">0</span>
+          <span class="ui-bet-field__currency">FUN</span>
+        </span>
+      </div>
+      <button class="ui-icon-btn v3-tip__step" data-action="bet-plus" type="button" aria-label="Увеличить ставку">
+        <svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <!-- Выбор числа автоспинов — пока заглушка, только визуальное состояние. -->
+    <div class="v3-chips" id="v3AutoTip" hidden>
+      <button class="v3-chip" data-spins="10" type="button">10</button>
+      <button class="v3-chip" data-spins="25" type="button">25</button>
+      <button class="v3-chip" data-spins="50" type="button">50</button>
+      <button class="v3-chip" data-spins="100" type="button">100</button>
+    </div>
+
+    <div class="v3-readout">
+      <div class="v3-readout__col">
+        <span class="v3-readout__label">BALANCE</span>
+        <span class="v3-readout__value"><span id="balanceValue">1,000,000</span> <span class="ui-balance__currency">FUN</span></span>
+      </div>
+      <div class="v3-readout__col v3-readout__col--right">
+        <span class="v3-readout__label">BET</span>
+        <span class="v3-readout__value"><span id="betValue">100,000</span> <span class="v3-readout__cur">FUN</span></span>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="vendor/spine-webgl.js"></script>
+  <script src="js/spine-engine.js?v=7"></script>
+  <script src="js/slot-calibration.js?v=3"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="js/telegram.js?v=2"></script>
+  <script src="js/preloader.js?v=1"></script>
+  <script src="js/config.js"></script>
+  <script src="js/api.js?v=2"></script>
+  <script src="js/reel-math.js?v=6"></script>
+  <script src="js/lucky-joker-3h3/sound.js?v=1"></script>
+  <script src="js/lucky-joker-3h3/slot.js?v=15"></script>
+  <script src="js/lucky-joker-3h3/app.js?v=13"></script>
+  <!-- Поведение нижнего бара V3: флайаут, тултипы, заглушки авто/турбо. -->
+  <script src="js/ui-bar-v3.js?v=4"></script>
+  <!-- Диагностика рендера по ?diag=1 — для браузеров, куда не дотянуться
+       отладчиком (см. js/lucky-joker-3h3/zz-diag.js). В обычной загрузке не
+       подключается вовсе. -->
+  <script>
+    if (location.search.includes('diag=1')) {
+      const s = document.createElement('script');
+      s.src = 'js/lucky-joker-3h3/zz-diag.js';
+      document.body.appendChild(s);
+    }
+  </script>
+</body>
+</html>

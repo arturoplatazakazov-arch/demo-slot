@@ -117,7 +117,7 @@ async def test_coin_and_collector_with_a_line_win_triggers_coin_multiplier(api_c
     assert body["hold_and_win"] is None  # only 1 collector_tiger, below trigger_count=3
     assert body["coin_multiplier"] is not None
     assert body["coin_multiplier"]["multiplier_sum"] == 10
-    assert body["coin_multiplier"]["positions"] == [{"row": 0, "col": 0, "value": 10}]
+    assert body["coin_multiplier"]["positions"] == [{"row": 0, "col": 0, "value": 10, "kind": "10"}]
     assert body["coin_multiplier"]["applied"] is True
     assert len(body["line_wins"]) >= 1
 
@@ -146,7 +146,7 @@ async def test_coin_without_collector_still_shows_its_value_but_is_not_applied(a
 
     assert body["hold_and_win"] is None
     assert body["coin_multiplier"] is not None
-    assert body["coin_multiplier"]["positions"] == [{"row": 0, "col": 0, "value": 10}]
+    assert body["coin_multiplier"]["positions"] == [{"row": 0, "col": 0, "value": 10, "kind": "10"}]
     assert body["coin_multiplier"]["applied"] is False
     assert len(body["line_wins"]) >= 1
 
@@ -172,9 +172,13 @@ async def test_dev_force_hold_and_win_triggers_via_the_normal_path(api_client, s
     assert response.status_code == 200
     body = response.json()
 
+    # The endpoint now reads the symbol and count out of the game's own
+    # hold_and_win config (it used to hardcode East Discovery's) and lays them
+    # out one per reel from reel 0 — so 3 collector_tigers, top row, first
+    # three reels, still respecting their max_per_reel=1.
     assert body["grid"][0][0] == "collector_tiger"
+    assert body["grid"][0][1] == "collector_tiger"
     assert body["grid"][0][2] == "collector_tiger"
-    assert body["grid"][0][4] == "collector_tiger"
     assert body["hold_and_win"] is not None
     assert body["hold_and_win"]["triggered"] is True
     assert body["balance"] == 1_000_000 - BET_AMOUNT + body["total_win"]

@@ -1,0 +1,15 @@
+animation.png
+size:215,246
+filter:Linear,Linear
+pma:true
+bg_light_02
+bounds:2,114,130,130
+slice
+bounds:134,139,105,79
+rotate:90
+tail
+bounds:134,43,94,72
+rotate:90
+watermelon
+bounds:2,2,110,113
+rotate:90

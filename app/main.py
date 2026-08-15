@@ -13,6 +13,7 @@ from app.seed.amys_fruit_farm import get_or_seed_active_config as get_or_seed_am
 from app.seed.dirty_money_mafia import get_or_seed_active_config as get_or_seed_dirty_money_mafia
 from app.seed.east_discovery import get_or_seed_active_config as get_or_seed_east_discovery
 from app.seed.golden_caravan import get_or_seed_active_config as get_or_seed_golden_caravan
+from app.seed.lucky_joker_3h3 import get_or_seed_active_config as get_or_seed_lucky_joker_3h3
 from app.seed.multi_fruits_story import get_or_seed_active_config as get_or_seed_multi_fruits_story
 from app.seed.neon_reels import get_or_seed_active_config as get_or_seed_neon_reels
 from app.seed.party_of_goods import get_or_seed_active_config as get_or_seed_party_of_goods
@@ -26,14 +27,16 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     # Dev convenience: make sure the demo games the frontend expects
     # ("amys-fruit-farm", "dirty-money-mafia", "east-discovery",
-    # "golden-caravan", "multi-fruits-story", "neon-reels", "party-of-goods",
-    # "sugar-galaxy", "wild-western-story") exist on boot. A real deployment
-    # manages configs through the admin API, not an app-startup side effect.
+    # "golden-caravan", "lucky-joker-3h3", "multi-fruits-story", "neon-reels",
+    # "party-of-goods", "sugar-galaxy", "wild-western-story") exist on boot. A
+    # real deployment manages configs through the admin API, not an
+    # app-startup side effect.
     async with AsyncSessionLocal() as db:
         await get_or_seed_amys_fruit_farm(db)
         await get_or_seed_dirty_money_mafia(db)
         await get_or_seed_east_discovery(db)
         await get_or_seed_golden_caravan(db)
+        await get_or_seed_lucky_joker_3h3(db)
         await get_or_seed_multi_fruits_story(db)
         await get_or_seed_neon_reels(db)
         await get_or_seed_party_of_goods(db)
