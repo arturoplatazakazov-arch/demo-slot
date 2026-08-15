@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Uniqorn Back to Fabulous — demo</title>
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/preloader.css?v=1">
+<link rel="stylesheet" href="css/uniqorn-back-to-fabulous.css?v=1">
+<link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
+</head>
+<body>
+
+  <!-- Boot preloader: статичная разметка (видна с первого кадра), прогресс
+       ведёт js/preloader.js, задачи считает preloadAssets в slot.js игры. -->
+  <div class="preloader" id="preloader">
+    <div class="preloader__logo" id="preloaderLogo"><img src="img/preloader-logo.png" alt="" onerror="this.remove()"></div>
+    <div class="preloader__bar"><div class="preloader__fill" id="preloaderFill"></div></div>
+    <div class="preloader__pct" id="preloaderPct">0%</div>
+  </div>
+
+  <a class="to-catalog-btn" href="games.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    В каталог
+  </a>
+
+  <!-- DEV-ONLY панель: переключение режима и ручной запуск анимаций без бэкенда. -->
+  <div class="dev-panel">
+    <button class="dev-btn" id="devToggle" type="button">mode: base</button>
+    <button class="dev-btn" data-popup="bigWin" type="button">Big Win</button>
+    <button class="dev-btn" data-popup="epicWin" type="button">Epic Win</button>
+    <button class="dev-btn" data-popup="megaWin" type="button">Mega Win</button>
+    <button class="dev-btn" data-popup="bonusSpinsWin" type="button">Bonus Spins Win</button>
+    <button class="dev-btn" data-popup="bonusSpinsTotalWin" type="button">Bonus Total Win</button>
+    <button class="dev-btn" data-popup="buyFreeSpins" type="button">Buy Free Spins</button>
+    <button class="dev-btn" id="devFitToggle" type="button">fit-screen: on</button>
+    <span class="dev-hint">клик по эссенции — превью множителя; по остальным — win-анимация</span>
+  </div>
+
+  <div class="screen" id="screen" data-mode="base">
+
+    <img class="layer bg" id="bgLayer" src="img/uniqorn-back-to-fabulous/img/bg_base.jpg" alt="bg_base">
+
+    <img class="layer logo" src="img/uniqorn-back-to-fabulous/img/logo.png" alt="Uniqorn Back to Fabulous">
+
+    <!-- Единорог-ведьма стоит слева от барабанов: статичный арт + CSS-идл,
+         никакого спайна (эта игра вообще не возит скелеты). -->
+    <img class="layer hero" src="img/uniqorn-back-to-fabulous/img/hero.png" alt="">
+
+    <div class="reel">
+      <div class="reel__bg"></div>
+      <div class="reel__grid" id="reelGrid"></div>
+      <div class="reel__frame"></div>
+    </div>
+
+    <!-- Мелкие выигрыши попапа не получают — это единственное место, где
+         показывается их сумма. Лежит вне .reel из-за stacking-контекста. -->
+    <div class="reel-win-amount-viewport">
+      <div class="reel-win-amount" id="reelWinAmount"></div>
+    </div>
+
+    <!-- Середина сгенерированной таблички намеренно пустая — подпись лежит
+         поверх неё DOM-текстом, поэтому остаётся резкой на любом масштабе. -->
+    <div class="layer sign-buy-bonus" title="Buy Bonus">
+      <img class="sign-buy-bonus__img" src="img/uniqorn-back-to-fabulous/img/buy_bonus.png" alt="Buy Bonus">
+      <span class="sign-buy-bonus__label">BUY<br>BONUS</span>
+    </div>
+
+    <!-- Затемнение экрана перед попапом / переходом base<->bonus. -->
+    <div class="layer screen-dim" id="screenDim"></div>
+
+    <div class="fs-counter layer" id="freeSpinsCounter">
+      <img class="fs-counter__img" src="img/uniqorn-back-to-fabulous/img/fs_counter.png" alt="">
+      <span class="fs-counter__value" id="freeSpinsValue">10</span>
+    </div>
+
+  </div>
+
+  <!-- Paytable info popup — наполняется из `symbols` ответа session-start. -->
+  <div class="info-popup" id="infoPopup" hidden>
+    <div class="info-popup__panel">
+      <button class="info-popup__close" id="infoPopupClose" type="button" aria-label="Закрыть">×</button>
+      <h2 class="info-popup__title">Paytable</h2>
+      <div class="info-popup__list" id="infoPopupList"></div>
+    </div>
+  </div>
+
+  <!-- ================================================================
+       Нижний бар V3 (макет Figma "V3", node 396:1961).
+       Контракт для app.js менять НЕЛЬЗЯ: data-action
+       spin/bet-minus/bet-plus/sound/info, id betValue/balanceValue,
+       классы ui-icon-btn / ui-spin-btn / ui-balance__currency /
+       ui-bet-field__currency. Всё остальное — новая верстка.
+       ================================================================ -->
+  <div class="v3-bar" id="v3Bar">
+
+    <!-- Ряд круглых кнопок: [меню] [авто] (SPIN) [турбо] [ставка] -->
+    <div class="v3-row">
+
+      <div class="v3-group">
+        <!-- Флайаут раскрывается ВВЕРХ из кнопки-гамбургера. -->
+        <div class="v3-menu">
+          <div class="v3-menu__flyout" id="v3Flyout">
+            <button class="ui-icon-btn v3-btn" data-action="home" type="button" aria-label="В каталог">
+              <svg viewBox="0 0 24 24"><path d="M3 11.4 12 4l9 7.4" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.6 10v9.2h4.2v-5.6h4.4v5.6h4.2V10" fill="currentColor" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="ui-icon-btn v3-btn v3-btn--sound" data-action="sound" type="button" aria-label="Звук">
+              <svg viewBox="0 0 24 24"><path class="v3-spk" d="M4 9.2v5.6h3.6L13 19V5L7.6 9.2H4Z" fill="currentColor"/><path class="v3-wave v3-wave--1" d="M16.2 9a4.6 4.6 0 0 1 0 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="v3-wave v3-wave--2" d="M18.9 6.6a8 8 0 0 1 0 10.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="v3-slash" d="M5 19 19 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            </button>
+            <button class="ui-icon-btn v3-btn" data-action="info" type="button" aria-label="Информация">
+              <svg viewBox="0 0 24 24"><rect x="10.6" y="10" width="2.8" height="9" rx="1.4" fill="currentColor"/><circle cx="12" cy="6.4" r="1.7" fill="currentColor"/></svg>
+            </button>
+          </div>
+          <button class="ui-icon-btn v3-btn v3-btn--menu" id="v3MenuBtn" type="button" aria-label="Меню" aria-expanded="false">
+            <svg viewBox="0 0 24 24"><path d="M4 7.5h16M4 12h16M4 16.5h16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            <span class="v3-btn__dot" aria-hidden="true"></span>
+          </button>
+        </div>
+
+        <!-- Автоигра — визуальная заглушка: открывает выбор 10/25/50/100. -->
+        <button class="ui-icon-btn v3-btn v3-btn--auto" id="v3AutoBtn" type="button" aria-label="Автоигра" aria-expanded="false">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.1" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8.6 15.4 12 7.6l3.4 7.8M9.8 13.2h4.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+
+      <button class="ui-spin-btn v3-spin" data-action="spin" type="button" aria-label="Спин">
+        <span class="v3-spin__ring" aria-hidden="true"></span>
+        <svg class="v3-spin__icon" viewBox="0 0 48 48">
+          <path d="M9 20.5A15.2 15.2 0 0 1 34.4 14" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>
+          <path d="M34.6 7.4V14h-6.7" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M39 27.5A15.2 15.2 0 0 1 13.6 34" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>
+          <path d="M13.4 40.6V34h6.7" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="v3-spin__count" id="v3SpinCount" hidden></span>
+      </button>
+
+      <div class="v3-group">
+        <!-- Турбо — визуальная заглушка: только активное (зелёное) состояние. -->
+        <button class="ui-icon-btn v3-btn v3-btn--turbo" id="v3TurboBtn" type="button" aria-label="Турбо" aria-pressed="false">
+          <svg viewBox="0 0 24 24"><path d="M13.4 2.5 5.2 13.4h5.1l-1.1 8.1 8.3-11.1h-5.2l1.1-7.9Z" fill="currentColor"/></svg>
+        </button>
+
+        <!-- Ставка — открывает тултип со степпером (−/+ живые, из app.js). -->
+        <button class="ui-icon-btn v3-btn v3-btn--bet" id="v3BetBtn" type="button" aria-label="Ставка" aria-expanded="false">
+          <svg viewBox="0 0 24 24"><ellipse cx="12" cy="7.4" rx="7.6" ry="2.9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.4 7.4v3.1c0 1.6 3.4 2.9 7.6 2.9s7.6-1.3 7.6-2.9V7.4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.4 11.9V15c0 1.6 3.4 2.9 7.6 2.9s7.6-1.3 7.6-2.9v-3.1" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Тултип ставки. −/+ несут data-action, на них уже висит app.js. -->
+    <div class="v3-tip v3-tip--bet" id="v3BetTip" hidden>
+      <button class="ui-icon-btn v3-tip__step" data-action="bet-minus" type="button" aria-label="Уменьшить ставку">
+        <svg viewBox="0 0 24 24"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
+      <div class="v3-tip__field">
+        <span class="v3-tip__label">BET</span>
+        <span class="v3-tip__amount">
+          <span id="v3BetMirror">0</span>
+          <span class="ui-bet-field__currency">FUN</span>
+        </span>
+      </div>
+      <button class="ui-icon-btn v3-tip__step" data-action="bet-plus" type="button" aria-label="Увеличить ставку">
+        <svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <!-- Выбор числа автоспинов — пока заглушка, только визуальное состояние. -->
+    <div class="v3-chips" id="v3AutoTip" hidden>
+      <button class="v3-chip" data-spins="10" type="button">10</button>
+      <button class="v3-chip" data-spins="25" type="button">25</button>
+      <button class="v3-chip" data-spins="50" type="button">50</button>
+      <button class="v3-chip" data-spins="100" type="button">100</button>
+    </div>
+
+    <div class="v3-readout">
+      <div class="v3-readout__col">
+        <span class="v3-readout__label">BALANCE</span>
+        <span class="v3-readout__value"><span id="balanceValue">1,000,000</span> <span class="ui-balance__currency">FUN</span></span>
+      </div>
+      <div class="v3-readout__col v3-readout__col--right">
+        <span class="v3-readout__label">BET</span>
+        <span class="v3-readout__value"><span id="betValue">1,000</span> <span class="v3-readout__cur">FUN</span></span>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/slot-calibration.js?v=3"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="js/telegram.js?v=2"></script>
+  <script src="js/preloader.js?v=1"></script>
+  <script src="js/config.js"></script>
+  <script src="js/api.js?v=2"></script>
+  <script src="js/uniqorn-back-to-fabulous/sound.js?v=1"></script>
+  <script src="js/reel-math.js?v=6"></script>
+  <script src="js/uniqorn-back-to-fabulous/slot.js?v=1"></script>
+  <script src="js/uniqorn-back-to-fabulous/app.js?v=1"></script>
+  <!-- Поведение нижнего бара V3: флайаут, тултипы, заглушки авто/турбо. -->
+  <script src="js/ui-bar-v3.js?v=4"></script>
+</body>
+</html>

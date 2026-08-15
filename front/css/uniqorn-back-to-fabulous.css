@@ -1,0 +1,1111 @@
+/* Uniqorn Back to Fabulous — стили темы, адаптированные из
+   mr-president-unicorn.css (та же PNG-без-спайна подача), механика при этом
+   клонирована с neon-reels. Этот лист владеет всем, что в neon-reels было
+   скелетом: idle/win/landing символов, линией выигрыша, попапами — плюс
+   меткой множителя на эссенции, которая там висела на кости монеты.
+   Расширяющегося вайлда в этой игре нет, поэтому блока .big-wild здесь тоже
+   нет. Весь декор живёт внутри фонового арта. */
+
+:root {
+  --violet: #6b2fa0;
+  --violet-dark: #2a1040;
+  --violet-light: #a45fd8;
+  --gold: #ffcf5c;
+  --gold-dark: #c9871f;
+  --toxic: #7dff5c;
+  --toxic-dark: #2f9e2a;
+  --magenta: #ff3fb0;
+  --ink: #1a0722;
+  --panel-dark: rgba(14, 4, 24, 0.62);
+  --ui-bg: rgba(24, 8, 38, 0.74);
+  --ui-border: rgba(190, 130, 255, 0.24);
+  --text-cream: #f7ecff;
+
+  /* совпадает с нативным размером bg_base.jpg (хижина ведьмы, ночь) */
+  --screen-w: 1344;
+  --screen-h: 768;
+
+  /* Fixed-pixel reel grid: 200x200 / 10px-gap 5x3 slots (1040x620 content).
+     The frame is drawn in CSS (.reel__frame), not generated art, so there is
+     no hole to measure and no art whose proportions the grid has to obey:
+     --reel-frame-w/h ARE the grid plus a small margin, and the border sits on
+     the opening edge. Thickness is one number, --frame-thickness — the reason
+     this stopped being a PNG (product: "в три раза тоньше и глянцевую"). */
+  --cell-size: 200px;
+  --cell-gap: 10px;
+  --reel-frame-w: 1076px;
+  --reel-frame-h: 656px;
+  --reel-grid-inset: 18px;
+  --frame-thickness: 11px;
+  /* Пустая панель каждой плашки, померенная по её собственному арту (заливка
+     из центра по цвету + максимальный вписанный прямоугольник; у epic панель
+     круглая, поэтому там вписанный в круг квадрат). Перемерить, если плашку
+     перегенерируют — текстовый блок позиционируется прямо отсюда. */
+  --popup-panel-base: 39.20% 27.30% 26.90% 27.30%;
+  --popup-panel-mega: 44.00% 22.00% 15.00% 21.00%;
+  --popup-panel-epic: 45.20% 35.70% 22.50% 35.40%;
+  --popup-panel-inset: var(--popup-panel-base);
+  --reel-frame-scale: 0.9;
+  --reel-scale: 1;
+  --reel-scale-mobile: 1;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #120621;
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  color: var(--text-cream);
+}
+
+/* ---------- Back-to-catalog button ---------- */
+.to-catalog-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 110;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(26, 8, 40, 0.75);
+  border: 1px solid rgba(190, 130, 255, 0.55);
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(4px);
+}
+.to-catalog-btn:hover { background: rgba(26, 8, 40, 0.92); border-color: var(--toxic); }
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+/* ---------- Dev panel (temporary) ---------- */
+.dev-panel {
+  position: fixed;
+  top: 52px;
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 260px;
+  align-items: center;
+}
+.dev-btn {
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #222;
+  color: #ddd;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.dev-btn:hover { opacity: 1; }
+.dev-hint {
+  font-size: 10px;
+  color: #999;
+  width: 100%;
+  text-align: right;
+}
+
+/* ---------- Screen ---------- */
+.screen {
+  position: relative;
+  width: 100%;
+  min-width: calc((var(--reel-frame-w) * var(--reel-frame-scale) + 400px) * var(--reel-scale));
+  height: 940px;
+  margin: 0 auto;
+  overflow: visible;
+  background: #180a2a;
+}
+
+.layer { position: absolute; }
+
+.bg {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.logo {
+  /* Sized and placed to clear the reel frame: the frame is centred and
+     656px * --reel-frame-scale tall, so on the 940px screen its top edge sits
+     at ~175px. 17% of 940 = 160px of logo starting at 1% leaves the two just
+     short of touching. */
+  top: -2%;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 17%;
+  object-fit: contain;
+  z-index: 4;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
+}
+
+/* ---------- Hero ----------
+   Единорог-ведьма стоит слева от барабанов, прижата к левому краю рамки — позиция
+   считается от собственной ширины/масштаба рамки, ровно как счётчик фриспинов
+   прижат к правому краю, поэтому зазор держится на любом вьюпорте, а не
+   уплывает. Лежит ПОЗАДИ рамки (z-index 3 против 6), чтобы её копыто с посохом
+   могла заходить на край рамки и она читалась стоящей в комнате, а не
+   наклеенной поверх. */
+.hero {
+  left: auto;
+  right: calc(50% + (var(--reel-frame-w) * var(--reel-frame-scale) * var(--reel-scale)) / 2 - 40px);
+  bottom: 7%;
+  /* Достаточно крупная, чтобы читаться маскотом игры, и достаточно низкая,
+     чтобы целиком влезать слева от рамки (см. FIT_RESERVE_WIDTH_PX в slot.js —
+     эти два числа подобраны вместе). */
+  height: 46%;
+  width: auto;
+  z-index: 3;
+  pointer-events: none;
+  transform-origin: 50% 100%;
+  animation: hero-idle 4.5s ease-in-out infinite;
+  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.55));
+}
+/* One loop per mood; the src is swapped alongside the class in setHeroMood().
+   Kept separate rather than layered so a mood change restarts cleanly instead
+   of blending two half-finished cycles. */
+
+/* Idle: a slow breathe with a touch of sway — enough to stop him reading as a
+   sticker, small enough not to pull the eye off the reels. */
+@keyframes hero-idle {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  50%      { transform: translateY(-1.2%) rotate(-0.7deg) scale(1.012); }
+}
+/* Tense: short, quick, held breath — a fast tremble on the spot with no sway,
+   reading as "braced" against the idle's lazy drift. */
+@keyframes hero-tense {
+  0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1.02); }
+  25%      { transform: translate(-0.6%, -0.4%) rotate(0.5deg) scale(1.02); }
+  75%      { transform: translate(0.6%, -0.4%) rotate(-0.5deg) scale(1.02); }
+}
+/* Cheer: a real jump, with a squash on landing. */
+@keyframes hero-cheer {
+  0%   { transform: translateY(0) scaleY(0.94) scaleX(1.05); }
+  30%  { transform: translateY(-9%) scaleY(1.06) scaleX(0.97) rotate(-2deg); }
+  55%  { transform: translateY(-4%) scaleY(1) scaleX(1) rotate(2deg); }
+  75%  { transform: translateY(0) scaleY(0.93) scaleX(1.06); }
+  100% { transform: translateY(0) scaleY(1) scaleX(1); }
+}
+.hero.is-tense { animation: hero-tense 260ms ease-in-out infinite; }
+.hero.is-cheer {
+  animation: hero-cheer 700ms cubic-bezier(0.3, 0.9, 0.4, 1) infinite;
+  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 26px rgba(125, 255, 92, 0.6));
+}
+
+/* ---------- Reel area ----------
+   Рамка рисуется в CSS (.reel__frame), а не картинкой; .reel__bg — тёмная
+   панель, заполняющая проём за символами. */
+.reel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(calc(var(--reel-frame-scale) * var(--reel-scale)));
+  width: var(--reel-frame-w);
+  height: var(--reel-frame-h);
+}
+
+.reel__bg {
+  position: absolute;
+  /* Fills the frame opening behind the symbols. */
+  inset: var(--reel-grid-inset);
+  background:
+    linear-gradient(180deg, rgba(38, 14, 62, 0.82), rgba(10, 3, 20, 0.92));
+  border-radius: 6px;
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.7);
+}
+
+/* Reel separators: thin gold rules sitting in the 10px gaps between columns.
+   Painted on .reel__bg rather than on the columns themselves — a column is
+   overflow:hidden with a mask, so anything drawn inside it would be clipped
+   by the same mask that hides the scrolling strip. The gradient period is
+   --cell-size + --cell-gap, so the rules stay in the gaps if either changes. */
+.reel__bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0,
+    transparent var(--cell-size),
+    rgba(125, 255, 92, 0.22) var(--cell-size),
+    rgba(198, 255, 176, 0.85) calc(var(--cell-size) + var(--cell-gap) / 2),
+    rgba(125, 255, 92, 0.22) calc(var(--cell-size) + var(--cell-gap)),
+    transparent calc(var(--cell-size) + var(--cell-gap))
+  );
+  /* Fade the rules out at the top and bottom so they don't butt hard into the
+     frame's inner lip. */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+  pointer-events: none;
+}
+
+/* A slim glossy gold ring. Built with the two-mask ring trick rather than
+   border-image so it can keep rounded corners: the element is a solid gradient
+   rectangle, and the mask subtracts its own content box, leaving only a band
+   --frame-thickness wide. Sits above the grid (z-index 6) so the band also
+   masks any symbol pixels that overflow the opening while landing. */
+.reel__frame {
+  position: absolute;
+  inset: calc(var(--reel-grid-inset) - var(--frame-thickness));
+  border-radius: 12px;
+  padding: var(--frame-thickness);
+  pointer-events: none;
+  z-index: 6;
+  /* Polished-metal ramp: bright top edge, a hard gloss band just above the
+     middle, deep gold below. No texture, no ornament — product's ask. */
+  background: linear-gradient(
+    180deg,
+    #fff6d0 0%,
+    #ffd977 18%,
+    #c9871f 46%,
+    #fff3c4 52%,
+    #d99a2b 60%,
+    #a86a12 100%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  box-shadow:
+    0 0 0 1px rgba(52, 16, 78, 0.9),
+    inset 0 0 0 1px rgba(52, 16, 78, 0.9),
+    0 6px 22px rgba(0, 0, 0, 0.55);
+}
+
+.reel__grid {
+  /* Frame.png's measured hole inset — the 1040x620 grid fits the opening. */
+  position: absolute;
+  inset: var(--reel-grid-inset);
+  display: flex;
+  flex-direction: row;
+  gap: var(--cell-gap);
+  z-index: 1;
+}
+
+/* One reel = a masked viewport (3 cells tall) over a taller vertical strip —
+   mechanics identical to the other themes; pixel constants reused from East
+   Discovery's frame geometry (BG_HOLE_INSET.top * 1107 ≈ 112px bleed). */
+.reel__col {
+  position: relative;
+  width: var(--cell-size);
+  height: calc(100% + 132px);
+  margin-top: -112px;
+  overflow: hidden;
+  /* Fade BOTH ends: the column bleeds ~10px above the frame's top edge (its
+     top border is thinner than the 112px bleed), so without a top fade the
+     scrolling symbols flash above the frame during a spin. Opaque only inside
+     the frame opening (~112px..727px, i.e. the hole); everything above/below
+     is transparent so nothing shows outside the wooden frame. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 100px, #000 112px, #000 727px, transparent 742px);
+  mask-image: linear-gradient(to bottom, transparent 100px, #000 112px, #000 727px, transparent 742px);
+  transition: transform 200ms ease, filter 200ms ease;
+}
+.reel__col.is-anticipating {
+  /* The waiting column doesn't scale up — it just gets the z-index/glow to
+     read as "the one in suspense" without visibly growing (no screen zoom
+     either; that was removed per product). */
+  z-index: 2;
+  filter: drop-shadow(0 0 14px rgba(125, 255, 92, 0.95));
+}
+.reel__strip {
+  position: absolute;
+  top: 112px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cell-gap);
+}
+.reel__cell {
+  position: relative;
+  width: var(--cell-size);
+  height: var(--cell-size);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+.reel__cell img {
+  /* Every symbol was normalised to the same 360px box with a common optical
+     centre when it was cut, so a plain fit-to-cell is correct here and keeps
+     all nine at identical scale — unlike the western original, whose symbols
+     shipped at mixed native sizes and had to render uncapped. Drawn at 2x the
+     cell so they stay sharp on retina and when the reel scales up. */
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+.reel__cell.is-dimmed img {
+  opacity: 0.3;
+}
+.reel__cell-anchor {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.reel__strip.is-looping {
+  animation: reel-loop var(--reel-loop-duration, 420ms) linear infinite;
+}
+@keyframes reel-loop {
+  from { transform: translateY(0); }
+  to { transform: translateY(var(--reel-loop-distance, 0)); }
+}
+
+/* ---------- Screen dim (before popups / base<->bonus transitions) ---------- */
+.screen-dim {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  /* Same z-index as .logo (4, the highest other layer/z:auto element here) —
+     ties break by DOM order, and this sits later in markup, so it still
+     paints above the logo. .game-popup sits well above it (30), so a popup
+     always reads bright against its own dim. */
+  z-index: 4;
+}
+.screen-dim.is-active { opacity: 1; }
+.screen-dim.is-opaque { background: #000; }
+
+/* ---------- Popup win-amount overlay ---------- */
+
+/* ---------- Inline win-amount (base wins that never get a popup) ---------- */
+.reel-win-amount-viewport {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(calc(var(--reel-frame-scale) * var(--reel-scale)));
+  width: var(--reel-frame-w);
+  height: var(--reel-frame-h);
+  z-index: 16;
+  pointer-events: none;
+}
+.reel-win-amount {
+  position: absolute;
+  inset: var(--reel-grid-inset);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.reel-win-amount.is-visible { opacity: 1; }
+.reel-win-amount::before {
+  content: attr(data-amount);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 64px;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 0 4px 0 var(--ink), 0 0 26px rgba(255, 205, 92, 0.75);
+  white-space: nowrap;
+  padding: 6px 22px;
+  background: rgba(12, 6, 3, 0.55);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(255, 205, 92, 0.25);
+}
+
+/* ---------- Buy Bonus sign (Buy-bonus-button.png — a wooden arrow signpost) ----------
+   Desktop: to the right of the reel frame, vertically centered on it.
+   Mobile: moved to the ground centered below the reels (portrait media query). */
+.sign-buy-bonus {
+  right: 4%;
+  top: 56%;
+  transform: translateY(-50%);
+  width: 12%;
+  aspect-ratio: 244 / 248;
+  height: auto;
+  cursor: pointer;
+  z-index: 7;
+}
+.sign-buy-bonus__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5));
+}
+.screen[data-mode="freespins"] .sign-buy-bonus { display: none; }
+
+/* Missing-asset placeholder (dev-time only) — sized so a not-yet-delivered
+   symbol (e.g. the WILD art) shows as a tidy dashed box with its alt text,
+   not a tiny broken-image glyph. */
+img.is-missing {
+  width: 55%;
+  height: 55%;
+  object-fit: contain;
+  outline: 2px dashed rgba(255, 205, 120, 0.5);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+
+/* ---------- Free Spins counter (fs_counter.png — an eagle-crested plaque) ---------- */
+/* Vertically centred against the reels and pinned to the frame's right edge —
+   computed from the frame's own width and scale rather than an eyeballed
+   percentage, so it keeps the same gap at every viewport instead of drifting
+   into (or away from) the frame. The Buy Bonus sign occupies this spot in base
+   mode, but it's hidden in free spins, so the two never collide. */
+.fs-counter {
+  display: none;
+  top: 50%;
+  right: auto;
+  bottom: auto;
+  left: calc(50% + (var(--reel-frame-w) * var(--reel-frame-scale) * var(--reel-scale)) / 2 + 20px);
+  transform: translateY(-50%);
+  width: 12%;
+  z-index: 6;
+}
+.screen[data-mode="freespins"] .fs-counter { display: block; }
+
+.fs-counter__img {
+  position: relative;
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5));
+}
+.fs-counter__value {
+  position: absolute;
+  left: 50%;
+  /* Центр пустой панели fs_counter.png по замеру арта (346x660: панель
+     y[215,542]) — шляпа сверху смещает центр панели ниже центра самой
+     плашки. */
+  top: 57.3%;
+  transform: translate(-50%, -50%);
+  font-family: 'Luckiest Guy', cursive;
+  font-weight: 400;
+  font-size: 2.4vw;
+  color: var(--gold);
+  -webkit-text-stroke: 1px var(--ink);
+  text-shadow: 0 2px 0 var(--ink);
+  white-space: nowrap;
+}
+
+/* ================================================================
+   Bottom UI bar
+   ================================================================ */
+.ui-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2vw;
+  padding: 1.2vh 2vw;
+  background: var(--ui-bg);
+  border-top: 1px solid var(--ui-border);
+}
+
+.ui-bar__group {
+  display: flex;
+  align-items: center;
+  gap: 0.8vw;
+}
+
+.ui-icon-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.ui-icon-btn svg { width: 55%; height: 55%; }
+.ui-icon-btn:hover { background: rgba(255, 255, 255, 0.14); }
+.ui-icon-btn:active { transform: scale(0.92); }
+
+.ui-icon-btn--step {
+  font-size: 22px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.1);
+}
+.ui-icon-btn--accent {
+  background: linear-gradient(180deg, #8e3fd0, #3d1560);
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.ui-bar__bet {
+  gap: 0;
+}
+
+.ui-bet-field {
+  min-width: 130px;
+  height: 40px;
+  padding: 0 16px;
+  margin: 0 2px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--ui-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 700;
+}
+.ui-bet-field__currency {
+  font-size: 12px;
+  opacity: 0.7;
+  font-weight: 600;
+}
+
+.ui-spin-btn {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid rgba(190, 130, 255, 0.85);
+  background: radial-gradient(circle at 35% 30%, #5a1f8a, #1b0830 75%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.1s ease;
+}
+.ui-spin-btn svg { width: 42%; height: 42%; }
+.ui-spin-btn:active { transform: scale(0.94); }
+.ui-spin-btn.is-spinning svg { animation: spin-rotate 0.7s linear infinite; }
+@keyframes spin-rotate { to { transform: rotate(360deg); } }
+
+.ui-icon-btn--auto svg text { font-family: 'Baloo 2', sans-serif; }
+
+.ui-balance {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.ui-balance__label { opacity: 0.75; font-size: 13px; font-weight: 600; }
+.ui-balance__value { color: var(--gold); font-size: 18px; }
+.ui-balance__currency { font-size: 12px; opacity: 0.7; }
+
+.ui-icon-btn[data-action="sound"].is-muted { opacity: 0.4; }
+.ui-icon-btn[data-action="sound"].is-muted svg path:last-child { display: none; }
+
+/* ---------- Paytable info popup ---------- */
+.info-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 20px;
+}
+.info-popup[hidden] { display: none; }
+
+.info-popup__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(720px, 90vh);
+  overflow-y: auto;
+  background: #2a1040;
+  border: 3px solid var(--violet-light);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.info-popup__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-cream);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.info-popup__close:hover { background: rgba(0, 0, 0, 0.55); }
+
+.info-popup__title {
+  margin: 0 0 16px;
+  color: var(--gold);
+  /* Was 'Rye' too — same leftover western face as the Buy Bonus label had. */
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 24px;
+  text-align: center;
+  -webkit-text-stroke: 1px var(--ink);
+  text-shadow: 0 2px 0 var(--ink);
+}
+
+.info-popup__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.info-popup__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.info-popup__row img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.info-popup__row-name {
+  flex: 1 1 auto;
+  min-width: 90px;
+  font-weight: 700;
+}
+.info-popup__row-pays {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-cream);
+}
+.info-popup__row-pays span { white-space: nowrap; opacity: 0.9; }
+.info-popup__row-pays b { color: var(--gold); }
+
+@media (max-width: 720px) {
+  .ui-bar { gap: 3vw; padding: 1.2vh 2.5vw; }
+  .ui-balance__label { display: none; }
+  .ui-icon-btn { width: 36px; height: 36px; }
+  .ui-spin-btn { width: 58px; height: 58px; }
+}
+
+/* ================================================================
+   EXPERIMENTAL: desktop "fit everything, no scroll" layout
+   ================================================================
+   Same experiment as Amy's Fruit Farm (see style.css) — toggled via the
+   dev-panel "fit-screen" button (slot.js setupDevPanel), not the default.
+   .screen is normally a fixed 940px tall regardless of viewport, so a short
+   viewport can need to scroll; this pins .screen to the viewport box and
+   turns .ui-bar into a translucent overlay instead of a row that competes
+   for height with it — see ReelMath.fitScale (reel-math.js) for the
+   width+height-aware scale this needs. */
+body.layout-fit {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+body.layout-fit .screen {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  min-width: 0;
+  margin: 0;
+}
+body.layout-fit .ui-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  background: rgba(24, 12, 6, 0.42);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* ================================================================
+   Mobile (portrait) layout — mobile bg art is 780x1416
+   (mob_Base_bg.png / mob_Bonus_bg.png). First pass; calibrate live.
+   ================================================================ */
+@media (orientation: portrait) {
+  :root {
+    --ui-bar-h-mobile: 128px;
+
+    /* One source of truth for the reel's on-screen box in portrait, so the
+       frame and everything anchored to its edges can't drift apart.
+       --reel-scale-mobile (from mobileReelScale) makes the frame exactly one
+       viewport wide; the multiplier is the margin left around it. It used to
+       be 1.216 — correct for the western art, whose wide carved border was
+       MEANT to bleed off-screen, and wrong for this game's slim ring, which
+       just got its left and right edges cut off. */
+    --reel-mobile-mult: 0.94;
+    --reel-mobile-top: 15%;
+    --reel-mobile-w: calc(100vw * var(--reel-mobile-mult));
+    /* 1076x656 is --reel-frame-w/h; the transform scales both equally. */
+    --reel-mobile-h: calc(var(--reel-mobile-w) * 656 / 1076);
+    --reel-mobile-side: calc((100vw - var(--reel-mobile-w)) / 2);
+    --reel-mobile-below: calc(var(--reel-mobile-top) + var(--reel-mobile-h) + 10px);
+  }
+
+  html, body { overflow-x: hidden; }
+
+  /* fit-to-screen (body.layout-fit) is a desktop-only experiment made the
+     default in slot.js init — neutralize it in portrait so the dedicated
+     mobile layout below always wins (otherwise body.layout-fit .screen's
+     100dvh height and the translucent ui-bar overlay override it). */
+  body.layout-fit {
+    height: auto;
+    overflow: visible;
+  }
+  body.layout-fit .screen {
+    width: 100vw;
+    height: calc(100vh - var(--ui-bar-h-mobile));
+    height: calc(100dvh - var(--ui-bar-h-mobile));
+    min-width: 0;
+    margin: 0;
+  }
+  body.layout-fit .ui-bar {
+    position: sticky;
+    background: var(--ui-bg);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .screen {
+    width: 100vw;
+    min-width: 0;
+    height: calc(100vh - var(--ui-bar-h-mobile));
+    height: calc(100dvh - var(--ui-bar-h-mobile));
+    min-height: 0;
+    margin: 0;
+  }
+
+  .logo {
+    top: calc(7% + 30px - 80px);
+    height: 18.4%;
+  }
+
+  .reel,
+  .reel-win-amount-viewport {
+    left: 50%;
+    top: var(--reel-mobile-top);
+    transform-origin: 50% 0%;
+    transform: translateX(-50%) scale(calc(var(--reel-scale-mobile) * var(--reel-mobile-mult)));
+  }
+
+  /* Both sit in the same spot — flush with the frame's right edge, 10px below
+     it — and never at the same time: the Buy Bonus sign is hidden in free
+     spins, which is the only mode the counter appears in. */
+  .sign-buy-bonus,
+  .fs-counter {
+    left: auto;
+    bottom: auto;
+    right: var(--reel-mobile-side);
+    top: var(--reel-mobile-below);
+    transform: none;
+  }
+
+  /* No room beside the reels in portrait — the frame spans 94% of the width. */
+  .hero { display: none; }
+
+  .sign-buy-bonus { width: 30%; }
+  .sign-buy-bonus__label { font-size: 3.6vw; }
+  .fs-counter { width: 24%; height: auto; }
+  .fs-counter__value { font-size: 5vw; }
+
+  .ui-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-areas:
+      "icons1 spin icons2"
+      "bet bet balance";
+    gap: 1vh 1vw;
+    justify-items: center;
+    padding: 1vh 3vw;
+  }
+  .ui-bar > *:nth-child(1) { grid-area: icons1; }
+  .ui-bar > *:nth-child(2) { grid-area: bet; }
+  .ui-bar > *:nth-child(3) { grid-area: spin; }
+  .ui-bar > *:nth-child(4) { grid-area: icons2; }
+  .ui-bar > *:nth-child(5) { grid-area: balance; justify-self: end; }
+}
+
+/* ---------- Boot preloader theme (структура в css/preloader.css) ---------- */
+.preloader {
+  --pl-bg: #120621;
+  --pl-accent-a: #b06cff;
+  --pl-accent-b: #7dff5c;
+  --pl-glow-a: rgba(176,108,255,0.35);
+  --pl-glow-b: rgba(125,255,92,0.12);
+  --pl-border: rgba(176,108,255,0.45);
+  --pl-shadow: rgba(176,108,255,0.6);
+}
+
+/* ============================================================================
+   Motion that used to be Spine
+   ============================================================================
+   Everything below replaces a skeleton the western original shipped. Timings
+   are duplicated as constants in slot.js (WIN_PULSE_MS, LAND_BOUNCE_MS,
+   BIG_WILD_GROW_MS, POPUP_ENTER_MS, POPUP_EXIT_MS) — change both together. */
+
+/* ---------- Symbol idle / landing / win ---------- */
+
+/* wild and scatter breathe continuously so the two special symbols read as
+   "alive" on an otherwise static grid, the same job the original's idle loop
+   did. Paused while the cell is winning so the two don't fight. */
+@keyframes symbol-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.045); }
+}
+.reel__cell.is-special img {
+  animation: symbol-breathe 2.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(125, 255, 92, 0.4));
+}
+
+@keyframes symbol-land {
+  0%   { transform: translateY(-6%) scaleY(1.06) scaleX(0.96); }
+  55%  { transform: translateY(0) scaleY(0.94) scaleX(1.05); }
+  100% { transform: translateY(0) scale(1); }
+}
+.reel__cell.is-landing img {
+  animation: symbol-land 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes symbol-win {
+  0%   { transform: scale(1);    filter: drop-shadow(0 0 0 rgba(255, 226, 138, 0)); }
+  35%  { transform: scale(1.18); filter: drop-shadow(0 0 22px rgba(255, 226, 138, 0.95)) brightness(1.18); }
+  70%  { transform: scale(1.06); filter: drop-shadow(0 0 16px rgba(255, 226, 138, 0.7)) brightness(1.08); }
+  100% { transform: scale(1);    filter: drop-shadow(0 0 0 rgba(255, 226, 138, 0)); }
+}
+.reel__cell.is-winning img {
+  animation: symbol-win 620ms ease-in-out;
+  /* Beats .is-special's idle breathe for the duration of the pulse. */
+  animation-fill-mode: both;
+}
+.reel__cell.is-winning {
+  z-index: 3; /* the growing symbol overlaps its neighbours, never under them */
+}
+
+/* ---------- Win line ---------- */
+
+.win-line {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 4; /* above the cells, below the frame */
+}
+.win-line path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.win-line__glow {
+  stroke: rgba(255, 205, 92, 0.55);
+  stroke-width: 18;
+  filter: blur(6px);
+}
+.win-line__core {
+  stroke: #fff3c4;
+  stroke-width: 5;
+}
+/* Draws itself on, left to right, then holds — pathLength normalises the dash
+   maths so one keyframe works for every line shape and every viewport scale. */
+@keyframes win-line-draw {
+  0%   { stroke-dashoffset: 1; opacity: 0.2; }
+  45%  { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+.win-line.is-playing path {
+  pathLength: 1;
+  stroke-dasharray: 1;
+  animation: win-line-draw 620ms ease-out;
+}
+
+/* ---------- Метка множителя на эссенции ----------
+   В neon-reels значение висело на кости монеточного скелета и трекалось
+   каждый кадр; здесь это обычный ребёнок ячейки, поэтому оно масштабируется и
+   ездит вместе с сеткой само. Размер в % от ячейки (не в vw), чтобы число не
+   разъезжалось с символом при смене брейкпоинта. */
+.coin-value {
+  position: absolute;
+  left: 50%;
+  top: 66%;
+  transform: translate(-50%, -50%);
+  font-family: 'Luckiest Guy', 'Baloo 2', cursive;
+  font-weight: 400;
+  /* px, а не %: ячейка не задаёт font-size, зато вся .reel и так
+     масштабируется трансформом, поэтому пиксели едут вместе с сеткой. */
+  font-size: calc(var(--cell-size) * 0.26);
+  line-height: 1;
+  color: #fff6e2;
+  -webkit-text-stroke: 1.5px var(--ink);
+  text-shadow: 0 2px 0 var(--ink), 0 0 14px rgba(255, 63, 176, 0.85);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+  animation: coin-value-in 320ms cubic-bezier(0.34, 1.5, 0.5, 1);
+}
+@keyframes coin-value-in {
+  0%   { opacity: 0; transform: translate(-50%, -20%) scale(0.5); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+/* Множитель реально применился к выигрышу — эссенция горит магентой, пока её
+   не снимет следующий спин. */
+.reel__cell.is-coin-applied img {
+  filter: drop-shadow(0 0 18px rgba(255, 63, 176, 0.9)) brightness(1.12);
+}
+.reel__cell.is-coin-applied .coin-value {
+  color: #ffd9f2;
+  text-shadow: 0 2px 0 var(--ink), 0 0 20px rgba(255, 63, 176, 1);
+}
+
+/* ---------- Popups ---------- */
+
+.game-popup {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%) scale(0.7);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 30;
+  transition: transform 420ms cubic-bezier(0.34, 1.5, 0.5, 1), opacity 420ms ease;
+  text-align: center;
+}
+.game-popup.is-in  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.game-popup.is-out {
+  transform: translate(-50%, -50%) scale(0.86);
+  opacity: 0;
+  transition-duration: 260ms;
+}
+
+/* The plaque is generated art with an empty navy panel; the text sits on top,
+   inset to that panel's measured bounds (--popup-panel-inset). Sizes are in
+   cqw so the whole popup scales as one piece with the art. */
+.game-popup {
+  container-type: inline-size;
+  width: min(760px, 62vw);
+}
+.game-popup.is-mobile { width: min(560px, 88vw); }
+
+.game-popup__art {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 24px 60px rgba(0, 0, 0, 0.7));
+}
+
+.game-popup.is-plate-base { --popup-panel-inset: var(--popup-panel-base); }
+.game-popup.is-plate-mega { --popup-panel-inset: var(--popup-panel-mega); }
+.game-popup.is-plate-epic { --popup-panel-inset: var(--popup-panel-epic); }
+
+/* The grander plates carry more art around a proportionally smaller panel, so
+   they need to be physically bigger on screen to keep the text legible. */
+.game-popup.is-plate-mega { width: min(920px, 74vw); }
+.game-popup.is-plate-epic { width: min(1020px, 82vw); }
+.game-popup.is-mobile.is-plate-mega { width: min(660px, 94vw); }
+.game-popup.is-mobile.is-plate-epic { width: min(700px, 96vw); }
+
+.game-popup__body {
+  position: absolute;
+  inset: var(--popup-panel-inset);
+  /* Its own container so the type below scales against the PANEL, not the
+     whole plaque — the panel is a different fraction of the art on each tier.
+     fitPopupText() then shrinks anything that still overruns. */
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6cqw;
+  text-align: center;
+}
+
+.game-popup__sub {
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  /* Панели у этих плашек шире, чем у mr-president-unicorn, а размеры тут в
+     cqw ОТ ПАНЕЛИ — на его числах (9/26/15) текст перерастал панель по высоте
+     и «FREE SPINS OVER» вылезал на золотую рамку сверху. */
+  font-size: 7cqw;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: rgba(255, 246, 226, 0.8);
+  text-shadow: 0 0.3cqw 1cqw rgba(0, 0, 0, 0.9);
+}
+/* Same treatment as the Buy Bonus label: solid cream on a dark shadow, no
+   stroke and no gradient fill. The stroke was breaking the letterforms —
+   at this size it closed up the counters and chewed the thin joints (product:
+   "из-за обводки он выглядит поломано"). */
+.game-popup__title {
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-size: 20cqw;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: #fff6e2;
+  text-shadow: 0 0.6cqw 1.8cqw rgba(0, 0, 0, 0.9), 0 0 3.5cqw rgba(0, 0, 0, 0.6);
+}
+.game-popup__amount {
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-size: 12cqw;
+  font-weight: 800;
+  color: #fff6e2;
+  text-shadow: 0 0.5cqw 1.5cqw rgba(0, 0, 0, 0.9), 0 0 3cqw rgba(0, 0, 0, 0.55);
+}
+
+/* ---------- Buy Bonus label ---------- */
+
+/* The generated plate has a deliberately blank red medallion; the label is
+   text on top so it stays crisp and translatable. */
+.sign-buy-bonus { position: absolute; }
+/* Plain solid type, no stroke and no gradient fill: at this size the outline
+   was closing up the counters and the gold-on-gold gradient had almost no
+   contrast against the plate. A flat cream face on a dark shadow reads at a
+   glance instead (product: "шрифт без обводки и более читаемый"). */
+.sign-buy-bonus__label {
+  position: absolute;
+  left: 50%;
+  /* Центр пустой доски buy_bonus.png (520x298, панель по замеру ~50/50). */
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 1.25vw;
+  line-height: 1.08;
+  letter-spacing: 0.02em;
+  color: #fff6e2;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9), 0 0 10px rgba(0, 0, 0, 0.6);
+  transition: text-shadow 200ms ease;
+  pointer-events: none;
+  text-align: center;
+  white-space: nowrap;
+}
+.sign-buy-bonus:hover .sign-buy-bonus__label {
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9), 0 0 16px rgba(255, 205, 92, 0.85);
+}
