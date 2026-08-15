@@ -1,0 +1,897 @@
+/* Uniqorn Shaolin Struggles — 3x3 Hold & Win.
+
+   СТРУКТУРА взята у css/lucky-joker-3h3.css (та же игра по механике и та же
+   компоновка, что у референса api.dreamplay.games/hell-coins): всё живёт в
+   фиксированном дизайн-канвасе (десктоп 1932x940, портрет 780x1416), который
+   целиком contain-масштабируется в .screen, а барабаны — прокручиваемые
+   колонки, обрезанные окном корпуса.
+
+   ПОДАЧА — как в css/uniqorn-back-to-fabulous.css: спайна в игре нет вообще,
+   весь арт это PNG (front/img/uniqorn-shaolin-struggles/), а всё, что там
+   анимировал скелет, здесь делают классы и кейфреймы:
+
+     idle / win / landing символа   -> .reel__cell.is-*
+     номинал монеты                 -> .coin-value внутри ячейки (едет с ней сама)
+     попапы                         -> .game-popup, плашка нарисована в CSS
+     лестница джекпотов, Buy Bonus  -> DOM + CSS (суммы приходят из сида, а не
+                                       запечены в картинку, поэтому разъехаться
+                                       с JACKPOT_VALUES они не могут)
+
+   ГЕОМЕТРИЯ. Рамка барабанов рисуется в CSS, а не картинкой, поэтому мерить
+   нечего: --cell-w/--cell-h задают сетку, а корпус — это сетка плюс
+   --reel-inset со всех сторон. Меняешь ячейку — корпус едет за ней сам. */
+
+:root {
+  --gold: #ffcf5a;
+  --gold-bright: #fff3c4;
+  --gold-dark: #a8641b;
+  --red: #b4132b;
+  --red-dark: #5c0a16;
+  --jade: #2fae6a;
+  --ink: #2a0510;
+  --ui-border: rgba(255, 207, 90, 0.24);
+  --text-cream: #fff3dd;
+
+  /* Сетка 3x3. Десктопное окно корпуса = 3 * 224 x 3 * 196 = 672x588. */
+  --cell-w: 224px;
+  --cell-h: 196px;
+  --reel-inset: 18px;      /* поле между сеткой и внутренней кромкой корпуса */
+  --frame-thickness: 14px; /* толщина самой рамки */
+
+  /* Перезаписываются под устройство в slot.js updateStageScale(). */
+  --design-w: 1932px;
+  --design-h: 940px;
+  --stage-scale: 1;
+}
+
+* { box-sizing: border-box; }
+
+html, body { overflow: hidden; }
+
+body {
+  margin: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #1b0a12;
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  color: var(--text-cream);
+}
+
+/* ---------- Back-to-catalog button ---------- */
+.to-catalog-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 110;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(40, 8, 16, 0.75);
+  border: 1px solid rgba(255, 207, 90, 0.5);
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(4px);
+}
+.to-catalog-btn:hover { background: rgba(40, 8, 16, 0.92); border-color: var(--gold); }
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+/* ---------- Dev panel ----------
+   Слева, а не справа как в остальных играх: справа стоит лестница джекпотов, и
+   панель ложилась ровно на неё. */
+.dev-panel {
+  position: fixed;
+  top: 52px;
+  left: 10px;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 260px;
+  align-items: center;
+}
+.dev-btn {
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #222;
+  color: #ddd;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.dev-btn:hover { opacity: 1; }
+.dev-hint { font-size: 10px; color: #999; width: 100%; }
+
+/* ---------- Screen / design-space stage ---------- */
+.screen {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  background: #1b0a12;
+}
+
+.layer { position: absolute; }
+
+/* Фон нарисован в пропорции канваса, поэтому cover ничего заметного не режет. */
+.bg {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--design-w);
+  height: var(--design-h);
+  transform: translate(-50%, -50%) scale(var(--stage-scale));
+  z-index: 1;
+}
+.stage .obj { position: absolute; }
+
+/* ---------- Герой ----------
+   Единорог-монах стоит слева от автомата, ПОЗАДИ корпуса (z ниже .reel), чтобы
+   пятка на замахе могла заходить на золотую стойку и он читался стоящим во
+   дворе, а не наклеенным поверх. */
+.hero {
+  left: 40px;
+  bottom: 30px;
+  height: 640px;
+  width: auto;
+  z-index: 1;
+  pointer-events: none;
+  transform-origin: 50% 100%;
+  animation: hero-idle 4.5s ease-in-out infinite;
+  filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.5));
+}
+@keyframes hero-idle {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  50%      { transform: translateY(-1.4%) rotate(-0.8deg) scale(1.012); }
+}
+/* Пока крутятся барабаны — короткий частый тремор «на изготовку». */
+@keyframes hero-tense {
+  0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1.02); }
+  25%      { transform: translate(-0.6%, -0.4%) rotate(0.6deg) scale(1.02); }
+  75%      { transform: translate(0.6%, -0.4%) rotate(-0.6deg) scale(1.02); }
+}
+/* Выигрыш — прыжок с приседанием на приземлении. */
+@keyframes hero-cheer {
+  0%   { transform: translateY(0) scaleY(0.94) scaleX(1.05); }
+  30%  { transform: translateY(-9%) scaleY(1.06) scaleX(0.97) rotate(-3deg); }
+  55%  { transform: translateY(-4%) scaleY(1) scaleX(1) rotate(3deg); }
+  75%  { transform: translateY(0) scaleY(0.93) scaleX(1.06); }
+  100% { transform: translateY(0) scaleY(1) scaleX(1); }
+}
+.hero.is-tense { animation: hero-tense 260ms ease-in-out infinite; }
+.hero.is-cheer {
+  animation: hero-cheer 700ms cubic-bezier(0.3, 0.9, 0.4, 1) infinite;
+  filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 26px rgba(255, 207, 90, 0.65));
+}
+
+/* ---------- Логотип ---------- */
+.logo {
+  left: 640px;
+  top: 0;
+  width: 600px;
+  height: 190px;
+  z-index: 5;
+  pointer-events: none;
+}
+.logo__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.55));
+}
+
+/* ---------- Барабаны ----------
+   .reel — корпус: сетка + --reel-inset с каждой стороны. .reel__frame рисует
+   рамку поверх (маска «прямоугольник минус content-box»), поэтому символ,
+   вылезающий за окно на приземлении, закрывается ею, а не рисуется сверху. */
+.reel {
+  left: 586px;
+  top: 196px;
+  width: calc(3 * var(--cell-w) + 2 * var(--reel-inset));
+  height: calc(3 * var(--cell-h) + 2 * var(--reel-inset));
+  z-index: 2;
+}
+
+.reel__bg {
+  position: absolute;
+  inset: var(--reel-inset);
+  background:
+    radial-gradient(120% 100% at 50% 0%, rgba(92, 10, 22, 0.55), rgba(12, 3, 8, 0.94)),
+    linear-gradient(180deg, #2a0a14, #0d0308);
+  box-shadow: inset 0 0 70px rgba(0, 0, 0, 0.8);
+}
+/* Разделители колонок: тонкие золотые линии ровно по стыкам ячеек. Рисуются на
+   подложке, а не в колонках — колонка обрезает всё, что в ней лежит. */
+.reel__bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0,
+    transparent calc(var(--cell-w) - 1px),
+    rgba(255, 207, 90, 0.32) calc(var(--cell-w) - 1px),
+    rgba(255, 207, 90, 0.32) calc(var(--cell-w) + 1px),
+    transparent calc(var(--cell-w) + 1px)
+  );
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 7%, #000 93%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 7%, #000 93%, transparent 100%);
+  pointer-events: none;
+}
+
+/* Красный лак с золотой окантовкой — храмовая колонна, а не металл. */
+.reel__frame {
+  position: absolute;
+  inset: calc(var(--reel-inset) - var(--frame-thickness));
+  border-radius: 10px;
+  padding: var(--frame-thickness);
+  pointer-events: none;
+  z-index: 6;
+  background: linear-gradient(
+    180deg,
+    #ffe9a8 0%,
+    #e0a52c 10%,
+    #b4132b 24%,
+    #7d0a1c 50%,
+    #b4132b 76%,
+    #e0a52c 92%,
+    #8a5210 100%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  box-shadow:
+    0 0 0 3px rgba(255, 207, 90, 0.85),
+    inset 0 0 0 3px rgba(255, 207, 90, 0.85),
+    0 10px 30px rgba(0, 0, 0, 0.55);
+}
+/* Уголки-«крыши»: четыре золотых квадрата на стыках рамки, чтобы корпус читался
+   пагодой, а не просто скруглённым прямоугольником. */
+.reel__corner {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  z-index: 7;
+  background: linear-gradient(140deg, #ffe9a8, #e0a52c 45%, #8a5210);
+  border: 2px solid rgba(90, 20, 10, 0.5);
+  border-radius: 8px;
+  pointer-events: none;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+}
+.reel__corner--tl { left: -20px; top: -20px; }
+.reel__corner--tr { right: -20px; top: -20px; }
+.reel__corner--bl { left: -20px; bottom: -20px; }
+.reel__corner--br { right: -20px; bottom: -20px; }
+
+.reel__grid {
+  position: absolute;
+  inset: var(--reel-inset);
+  overflow: hidden;
+  z-index: 2;
+}
+/* Барабан = абсолютно позиционированная колонка; внутри неё ездит полоса. */
+.reel__col {
+  position: absolute;
+  top: 0;
+  width: var(--cell-w);
+  height: 100%;
+}
+.reel__col.is-anticipating {
+  z-index: 2;
+  filter: drop-shadow(0 0 16px rgba(255, 207, 90, 0.9));
+}
+.reel__strip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.reel__cell {
+  position: relative;
+  width: var(--cell-w);
+  height: var(--cell-h);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+.reel__cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+.reel__cell.is-dimmed img { opacity: 0.3; }
+.reel__cell.is-dimmed .coin-value { opacity: 0.35; }
+
+/* Приземление: короткое приседание. */
+@keyframes cell-land {
+  0%   { transform: translateY(-8%) scale(1.04, 0.94); }
+  60%  { transform: translateY(0) scale(0.97, 1.04); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+.reel__cell.is-landing img { animation: cell-land 260ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+
+/* Выигрыш: пульс с золотым ореолом. */
+@keyframes cell-win {
+  0%   { transform: scale(1); filter: drop-shadow(0 0 0 rgba(255, 207, 90, 0)); }
+  35%  { transform: scale(1.16); filter: drop-shadow(0 0 18px rgba(255, 207, 90, 0.95)); }
+  70%  { transform: scale(1.04); filter: drop-shadow(0 0 12px rgba(255, 207, 90, 0.6)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(255, 207, 90, 0)); }
+}
+.reel__cell.is-winning img { animation: cell-win 620ms ease-in-out; }
+.reel__cell.is-win-active { z-index: 3; }
+
+/* Монета и коллектор «дышат» на поле постоянно — они и есть событие. */
+@keyframes cell-money-idle {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50%      { transform: scale(1.05) rotate(1.5deg); }
+}
+.reel__cell.is-money img {
+  animation: cell-money-idle 2.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 14px rgba(255, 207, 90, 0.55));
+}
+/* Коллектор светится сильнее: он и открывает раунд, и собирает в нём. */
+.reel__cell.is-collector img {
+  filter: drop-shadow(0 0 22px rgba(255, 236, 160, 0.9));
+}
+
+/* ---------- Номинал на монете ----------
+   В отличие от донора (lucky-joker гонял метки в fixed-слое за rAF-трекером),
+   метка здесь — ребёнок ячейки: она едет и масштабируется вместе с сеткой сама,
+   и обрезается тем же окном корпуса, что и символ. Монета нарисована с ПУСТЫМ
+   центром именно под неё. */
+.coin-value {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Roboto Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  font-weight: 700;
+  font-size: calc(var(--cell-h) * 0.26);
+  letter-spacing: -0.03em;
+  color: #5c0a16;
+  text-shadow: 0 1px 0 rgba(255, 245, 210, 0.85);
+  pointer-events: none;
+  white-space: nowrap;
+  transition: opacity 200ms ease;
+}
+/* Имя джекпота вместо числа: короче шрифт, чтобы GRAND влезал в тот же кружок. */
+.coin-value.is-tier {
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: calc(var(--cell-h) * 0.17);
+  letter-spacing: 0.02em;
+  color: #6b1004;
+}
+/* Сумма, собранная коллектором, — главное число раунда. В центре монеты его
+   держать нельзя: там морда единорога, число об неё разбивается. Поэтому
+   собственная тёмная плашка под нижней третью монеты. */
+.coin-value.is-collector {
+  top: 76%;
+  padding: 2px 14px;
+  border-radius: 999px;
+  background: rgba(20, 3, 8, 0.82);
+  box-shadow: 0 0 0 2px rgba(255, 207, 90, 0.7), 0 0 18px rgba(255, 207, 90, 0.5);
+  font-size: calc(var(--cell-h) * 0.22);
+  color: var(--gold-bright);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+/* ---------- Прокрутка одной ячейки (респины Hold & Win) ----------
+   В раунде выпавшие монеты ЗАЛИПАЮТ, поэтому крутится не колонка целиком, а
+   каждая пустая ячейка по отдельности — свой мини-строб, обрезанный по ней. */
+.cell-spinner {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 1;
+  pointer-events: none;
+}
+.cell-spinner__strip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.cell-spinner__item {
+  width: 100%;
+  height: var(--cell-h);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cell-spinner__item img { width: 100%; height: 100%; object-fit: contain; }
+
+/* ---------- Лестница джекпотов ----------
+   Четыре плашки справа от автомата (как на референсе). Суммы приходят из
+   JACKPOT_VALUES сида через slot.js, а не запечены в арт. */
+.jp-ladder {
+  left: 1420px;
+  top: 196px;
+  width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  z-index: 5;
+}
+.jp {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 108px;
+  padding: 0 18px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(92, 10, 22, 0.92), rgba(24, 4, 10, 0.94));
+  border: 3px solid var(--tier-color, var(--gold));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5), inset 0 0 24px rgba(0, 0, 0, 0.6);
+  transition: box-shadow 220ms ease, transform 220ms ease;
+}
+.jp--mini  { --tier-color: #b06bd8; }
+.jp--minor { --tier-color: #4f9df0; }
+.jp--major { --tier-color: #35c07a; }
+.jp--grand { --tier-color: #ff5a4d; }
+.jp__coin {
+  width: 74px;
+  height: 74px;
+  object-fit: contain;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.6));
+}
+.jp__text { display: flex; flex-direction: column; line-height: 1; }
+.jp__name {
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 26px;
+  letter-spacing: 0.04em;
+  color: var(--tier-color, var(--gold));
+  -webkit-text-stroke: 1px var(--ink);
+  text-shadow: 0 2px 0 var(--ink);
+}
+.jp__value {
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 40px;
+  color: var(--gold-bright);
+  -webkit-text-stroke: 1px var(--ink);
+  text-shadow: 0 3px 0 var(--ink);
+}
+/* Пока играет награда — плашка выигранного тира горит. */
+.jp.is-won {
+  transform: scale(1.06);
+  box-shadow: 0 0 34px var(--tier-color), inset 0 0 24px rgba(255, 255, 255, 0.25);
+}
+
+/* ---------- Buy Bonus ---------- */
+.sign-buy-bonus {
+  left: 1440px;
+  top: 706px;
+  width: 380px;
+  height: 148px;
+  z-index: 5;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffe9a8, #e0a52c 42%, #b4132b 43%, #7d0a1c);
+  box-shadow: 0 0 0 4px rgba(255, 207, 90, 0.85), 0 10px 26px rgba(0, 0, 0, 0.55);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+.sign-buy-bonus:hover { transform: translateY(-3px); box-shadow: 0 0 0 4px var(--gold), 0 0 30px rgba(255, 207, 90, 0.7), 0 12px 26px rgba(0, 0, 0, 0.55); }
+.sign-buy-bonus:disabled { opacity: 0.45; cursor: default; transform: none; }
+.sign-buy-bonus__label {
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 34px;
+  line-height: 1;
+  color: var(--gold-bright);
+  -webkit-text-stroke: 1.5px var(--ink);
+  text-shadow: 0 3px 0 var(--ink);
+  text-align: center;
+}
+.sign-buy-bonus__price {
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-cream);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6);
+}
+/* В раунде покупать нечего. */
+.screen[data-mode="bonus"] .sign-buy-bonus { display: none; }
+
+/* ---------- Счётчик респинов (только в раунде) ---------- */
+.respin-counter {
+  display: none;
+  left: 1440px;
+  top: 706px;
+  width: 380px;
+  height: 148px;
+  z-index: 5;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(92, 10, 22, 0.95), rgba(24, 4, 10, 0.95));
+  box-shadow: 0 0 0 4px rgba(255, 207, 90, 0.85), 0 10px 26px rgba(0, 0, 0, 0.55);
+}
+.screen[data-mode="bonus"] .respin-counter { display: flex; }
+.respin-counter__label {
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 26px;
+  letter-spacing: 0.05em;
+  color: var(--gold);
+  -webkit-text-stroke: 1px var(--ink);
+  text-shadow: 0 2px 0 var(--ink);
+}
+.respin-counter__value {
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 62px;
+  line-height: 1;
+  color: var(--gold-bright);
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 0 4px 0 var(--ink), 0 0 22px rgba(255, 207, 90, 0.7);
+}
+
+/* ---------- Сумма выигрыша ниже порога попапа ---------- */
+.reel-win-amount-viewport {
+  left: 586px;
+  top: 196px;
+  width: calc(3 * var(--cell-w) + 2 * var(--reel-inset));
+  height: calc(3 * var(--cell-h) + 2 * var(--reel-inset));
+  z-index: 4;
+  pointer-events: none;
+}
+.reel-win-amount {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.reel-win-amount.is-visible { opacity: 1; }
+.reel-win-amount::before {
+  content: attr(data-amount);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 58px;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 0 4px 0 var(--ink), 0 0 26px rgba(255, 207, 90, 0.75);
+  white-space: nowrap;
+  padding: 6px 24px;
+  background: rgba(20, 3, 8, 0.6);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(255, 207, 90, 0.3);
+}
+
+/* ---------- Затемнение ---------- */
+.screen-dim {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.68);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  z-index: 8;
+}
+.screen-dim.is-active { opacity: 1; }
+.screen-dim.is-opaque { background: #000; }
+
+/* ---------- Попапы (плашка нарисована в CSS) ---------- */
+.game-popup {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 30;
+  width: min(620px, 72%);
+  padding: 34px 40px 38px;
+  border-radius: 26px;
+  text-align: center;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 110% at 50% 0%, rgba(255, 207, 90, 0.35), transparent 62%),
+    linear-gradient(180deg, #7d0a1c, #3d0510);
+  box-shadow:
+    0 0 0 5px var(--gold),
+    0 0 0 10px rgba(90, 20, 10, 0.85),
+    0 0 60px rgba(255, 207, 90, 0.45),
+    0 24px 60px rgba(0, 0, 0, 0.6);
+  transform: translate(-50%, -50%) scale(0.7);
+  opacity: 0;
+  transition: transform 420ms cubic-bezier(0.2, 1.4, 0.4, 1), opacity 420ms ease;
+}
+.game-popup.is-in { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.game-popup.is-out {
+  transform: translate(-50%, -50%) scale(0.86);
+  opacity: 0;
+  transition-duration: 260ms;
+  transition-timing-function: ease-in;
+}
+.game-popup__sub {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  opacity: 0.9;
+}
+.game-popup__title {
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 68px;
+  line-height: 1.05;
+  color: var(--gold-bright);
+  -webkit-text-stroke: 3px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 5px 0 var(--ink), 0 0 34px rgba(255, 207, 90, 0.8);
+}
+.game-popup__amount {
+  margin-top: 6px;
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 52px;
+  color: var(--text-cream);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 4px 0 var(--ink);
+}
+.game-popup__coin {
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
+  margin: 0 auto 6px;
+  display: block;
+  animation: popup-coin-spin 2.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 24px rgba(255, 207, 90, 0.9));
+}
+@keyframes popup-coin-spin {
+  0%, 100% { transform: rotate(-6deg) scale(1); }
+  50%      { transform: rotate(6deg) scale(1.06); }
+}
+/* Тир джекпота красит рамку попапа в цвет своей плашки. */
+.game-popup.is-jackpot { box-shadow: 0 0 0 5px var(--tier-color, var(--gold)), 0 0 0 10px rgba(90, 20, 10, 0.85), 0 0 70px var(--tier-color, var(--gold)), 0 24px 60px rgba(0, 0, 0, 0.6); }
+
+/* ---------- Диалог покупки раунда ---------- */
+.buy-dialog {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 32;
+  width: min(640px, 80%);
+  padding: 30px 34px 28px;
+  border-radius: 26px;
+  text-align: center;
+  background:
+    radial-gradient(120% 110% at 50% 0%, rgba(255, 207, 90, 0.3), transparent 62%),
+    linear-gradient(180deg, #7d0a1c, #3d0510);
+  box-shadow: 0 0 0 5px var(--gold), 0 0 0 10px rgba(90, 20, 10, 0.85), 0 24px 60px rgba(0, 0, 0, 0.6);
+  transform: translate(-50%, -50%) scale(0.8);
+  opacity: 0;
+  transition: transform 300ms cubic-bezier(0.2, 1.3, 0.4, 1), opacity 300ms ease;
+}
+.buy-dialog.is-in { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.buy-dialog__title {
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 40px;
+  color: var(--gold-bright);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 4px 0 var(--ink);
+}
+.buy-dialog__note { font-size: 15px; opacity: 0.8; margin-top: 2px; }
+.buy-dialog__price {
+  margin: 14px 0 4px;
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 54px;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 4px 0 var(--ink);
+}
+.buy-dialog__bet {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 8px;
+}
+.buy-dialog__bet-value { min-width: 180px; font-size: 24px; font-weight: 800; }
+.buy-dialog__step,
+.buy-dialog__answer {
+  border: 0;
+  cursor: pointer;
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  color: var(--ink);
+}
+.buy-dialog__step {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  font-size: 26px;
+  background: linear-gradient(180deg, #ffe9a8, #e0a52c);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
+}
+.buy-dialog__actions { display: flex; justify-content: center; gap: 24px; margin-top: 22px; }
+.buy-dialog__answer {
+  width: 108px;
+  height: 62px;
+  border-radius: 16px;
+  font-size: 32px;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.45);
+}
+.buy-dialog__answer--yes { background: linear-gradient(180deg, #8ff0b4, #2fae6a); }
+.buy-dialog__answer--no { background: linear-gradient(180deg, #ffb0a6, #d8442f); }
+.buy-dialog__answer:hover { filter: brightness(1.1); }
+
+/* ---------- Paytable info popup ---------- */
+.info-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 20px;
+}
+.info-popup[hidden] { display: none; }
+.info-popup__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(720px, 90vh);
+  overflow-y: auto;
+  background: var(--red-dark);
+  border: 3px solid var(--gold-dark);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.info-popup__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-cream);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.info-popup__title {
+  margin: 0 0 6px;
+  color: var(--gold);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 24px;
+  text-align: center;
+  -webkit-text-stroke: 1px var(--ink);
+  text-shadow: 0 2px 0 var(--ink);
+}
+.info-popup__note { text-align: center; font-size: 12px; opacity: 0.75; margin: 0 0 16px; }
+.info-popup__list { display: flex; flex-direction: column; gap: 10px; }
+.info-popup__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.info-popup__row img { width: 48px; height: 48px; object-fit: contain; flex-shrink: 0; }
+.info-popup__row-name { flex: 1 1 auto; min-width: 90px; font-weight: 700; }
+.info-popup__row-pays { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; }
+.info-popup__row-pays b { color: var(--gold); }
+
+img.is-missing {
+  width: 55%;
+  height: 55%;
+  object-fit: contain;
+  outline: 2px dashed rgba(255, 207, 90, 0.5);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+/* ================================================================
+   Портрет — канвас 780x1416 (пропорция bg_*_mob.jpg). Автомат крупнее
+   относительно экрана, лестница джекпотов разворачивается в строку над ним,
+   герой уходит в правый нижний угол, а Buy Bonus садится слева от него.
+   ================================================================ */
+@media (orientation: portrait) {
+  :root {
+    --cell-w: 236px;
+    --cell-h: 206px;
+    --reel-inset: 14px;
+    --frame-thickness: 12px;
+  }
+
+  .logo { left: 60px; top: 6px; width: 660px; height: 210px; }
+
+  /* Лестница: одна строка из четырёх узких плашек над автоматом. */
+  .jp-ladder {
+    left: 3px;
+    top: 228px;
+    width: 774px;
+    flex-direction: row;
+    gap: 10px;
+  }
+  .jp {
+    flex: 1 1 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0;
+    height: 96px;
+    padding: 4px 6px;
+    border-width: 2px;
+    border-radius: 10px;
+  }
+  .jp__coin { width: 34px; height: 34px; }
+  .jp__text { align-items: center; }
+  .jp__name { font-size: 17px; }
+  .jp__value { font-size: 24px; }
+
+  /* Автомат: 3 * 236 + 2 * 14 = 736 в ширину, посередине канваса. */
+  .reel { left: 22px; top: 350px; }
+  .reel-win-amount-viewport { left: 22px; top: 350px; }
+  .reel-win-amount::before { font-size: 46px; }
+
+  /* Ниже ~1250 по канвасу лезет нижний бар (у него кнопка спина выступает
+     вверх), поэтому вся нижняя группа живёт в полосе 1000..1240, а не «до
+     самого низа»: герою можно и подрезать копыта баром, кнопке — нет. */
+  .hero { left: auto; right: 0; bottom: 176px; height: 380px; }
+
+  .sign-buy-bonus { left: 20px; top: 1000px; width: 300px; height: 140px; }
+  .respin-counter { left: 20px; top: 1000px; width: 300px; height: 140px; }
+  .sign-buy-bonus__label { font-size: 30px; }
+  .sign-buy-bonus__price { font-size: 17px; }
+  .respin-counter__value { font-size: 54px; }
+
+  .game-popup { width: min(680px, 88%); padding: 26px 24px 30px; }
+  .game-popup__title { font-size: 52px; }
+  .game-popup__amount { font-size: 40px; }
+  .game-popup__coin { width: 120px; height: 120px; }
+  .buy-dialog { width: min(700px, 92%); }
+}
+
+/* ---------- Boot preloader theme (структура в css/preloader.css) ---------- */
+.preloader {
+  --pl-bg: #1b0a12;
+  --pl-accent-a: #ff2f7d;
+  --pl-accent-b: #ffcf5a;
+  --pl-glow-a: rgba(255, 47, 125, 0.35);
+  --pl-glow-b: rgba(255, 207, 90, 0.12);
+  --pl-border: rgba(255, 207, 90, 0.45);
+  --pl-shadow: rgba(255, 47, 125, 0.6);
+}
