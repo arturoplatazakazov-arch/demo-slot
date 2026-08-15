@@ -22,6 +22,7 @@ from app.seed.sugar_galaxy import get_or_seed_active_config as get_or_seed_sugar
 from app.seed.uniqorn_back_to_fabulous import (
     get_or_seed_active_config as get_or_seed_uniqorn_back_to_fabulous,
 )
+from app.seed.uniqorn_scandal import get_or_seed_active_config as get_or_seed_uniqorn_scandal
 from app.seed.wild_western_story import get_or_seed_active_config as get_or_seed_wild_western_story
 
 settings = get_settings()
@@ -34,7 +35,7 @@ async def lifespan(app: FastAPI):
     # "golden-caravan", "lucky-joker-3h3", "mr-president-unicorn",
     # "multi-fruits-story", "neon-reels",
     # "party-of-goods", "sugar-galaxy", "uniqorn-back-to-fabulous",
-    # "wild-western-story") exist on boot. A real deployment manages configs
+    # "uniqorn-scandal", "wild-western-story") exist on boot. A real deployment manages configs
     # through the admin API, not an app-startup side effect.
     async with AsyncSessionLocal() as db:
         await get_or_seed_amys_fruit_farm(db)
@@ -48,6 +49,7 @@ async def lifespan(app: FastAPI):
         await get_or_seed_party_of_goods(db)
         await get_or_seed_sugar_galaxy(db)
         await get_or_seed_uniqorn_back_to_fabulous(db)
+        await get_or_seed_uniqorn_scandal(db)
         await get_or_seed_wild_western_story(db)
     yield
 
