@@ -19,7 +19,17 @@
   padding: 8px 16px; border-radius: 999px; font-weight: 800; font-size: 13px;
   border: 1px solid var(--line-strong); background: var(--bg-card); color: var(--text); cursor: pointer;
 }
+.lay-copybtn {
+  padding: 8px 14px; border-radius: 999px; font-weight: 800; font-size: 12.5px; white-space: nowrap;
+  border: 1px solid var(--accent); background: var(--accent-soft); color: var(--text); cursor: pointer;
+}
+.lay-copybtn:hover { background: rgba(124, 108, 255, 0.22); }
+.lay-copybtn[hidden] { display: none; }
 .lay-editbtn.is-on { background: var(--good); border-color: var(--good); color: #062a1e; }
+
+.lay-headactions { display: flex; align-items: center; gap: 12px; }
+.lay-headactions .btn { padding: 9px 16px; font-size: 13px; }
+.lay-headactions .foot-info { font-size: 12px; color: var(--text-faint); white-space: nowrap; }
 
 .lay-body { flex: 1 1 auto; display: flex; min-height: 0; }
 .lay-stagewrap {
@@ -61,6 +71,44 @@
 .lay-stage.is-edit .el:hover { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(255,207,92,0.18); }
 .lay-stage:not(.is-edit) .el { pointer-events: none; }
 
+/* Default locked UI panel (mirrors css/ui-bar-v3.css: bottom-pinned, full-width,
+   non-deformable, always on top). Purely a visual footprint in the editor. */
+.el--uipanel {
+  border: none !important; background: none !important; pointer-events: none;
+  outline: 1px dashed rgba(32, 208, 30, 0.5); outline-offset: -1px;
+}
+.uibar {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.35) 38%, rgba(0,0,0,0.78) 66%, rgba(0,0,0,0.95) 100%);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.uibar__cluster { display: flex; align-items: center; gap: calc(var(--ubh) * 0.06); padding-bottom: calc(var(--ubh) * 0.09); }
+.uibar__btn {
+  width: calc(var(--ubh) * 0.24); height: calc(var(--ubh) * 0.24); border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.92); background: rgba(8,10,9,0.62); flex: 0 0 auto;
+}
+.uibar__spin {
+  width: calc(var(--ubh) * 0.5); height: calc(var(--ubh) * 0.5); border-radius: 50%; position: relative; flex: 0 0 auto;
+  background: radial-gradient(circle at 50% 42%, #262323 0%, #171515 62%, #0f0d0d 100%);
+  display: grid; place-items: center; color: #fff; font-size: calc(var(--ubh) * 0.16);
+  box-shadow: 0 0 0 6px rgba(255,255,255,0.05);
+}
+.uibar__spin::before {
+  content: ''; position: absolute; inset: -4px; border-radius: 50%;
+  background: conic-gradient(from 210deg, #8d5908, #fbe764 90deg, #8d5908 190deg, #fbe764 300deg, #8d5908);
+  -webkit-mask: radial-gradient(circle, transparent 60%, #000 61%); mask: radial-gradient(circle, transparent 60%, #000 61%);
+}
+.uibar__readout { position: absolute; bottom: 3%; display: flex; flex-direction: column; color: #fff; font-weight: 700; }
+.uibar__readout span { font-size: calc(var(--ubh) * 0.05); font-weight: 500; color: rgba(255,255,255,0.72); letter-spacing: .6px; }
+.uibar__readout b { font-size: calc(var(--ubh) * 0.085); }
+.uibar__readout--l { left: 14px; align-items: flex-start; }
+.uibar__readout--r { right: 14px; align-items: flex-end; }
+.uibar__lock {
+  position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
+  font-size: 12px; font-weight: 800; color: var(--good); background: rgba(0,0,0,0.55);
+  padding: 3px 10px; border-radius: 999px; white-space: nowrap;
+}
+
 /* Palette */
 .lay-palette { flex: 0 0 260px; border-left: 1px solid var(--line); background: var(--bg-elev); padding: 16px; overflow-y: auto; }
 .lay-palette__title { font-weight: 800; font-size: 15px; margin-bottom: 4px; }
@@ -76,6 +124,10 @@
 .pal-item.is-placed:hover { border-color: var(--line-strong); }
 .pal-item__ic { width: 22px; text-align: center; }
 .pal-item__placed { margin-left: auto; font-size: 11px; color: var(--good); font-weight: 800; }
+.pal-section { margin: 16px 4px 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: var(--text-faint); }
+.pal-item--asset { gap: 9px; }
+.pal-item__thumb { width: 32px; height: 32px; object-fit: contain; background: var(--bg); border: 1px solid var(--line-strong); border-radius: 5px; flex: 0 0 auto; }
+.pal-item__name { font-size: 12px; word-break: break-all; line-height: 1.25; }
 
 /* Properties popover */
 .lay-props {

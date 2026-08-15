@@ -142,3 +142,19 @@ body {
 .play-hud__status.is-error { color: var(--red); }
 
 .play-error { padding: 40px; color: var(--text-dim); font-size: 14px; }
+
+/* Floating spin status (replaced the old .play-hud footer; the V3 bar is now
+   the control surface). Sits just above the bar, non-blocking. */
+.play-status-float {
+  position: fixed;
+  left: 50%;
+  bottom: 200px;
+  transform: translateX(-50%);
+  z-index: 30;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+.play-status-float.is-error { color: #ff8a80; }

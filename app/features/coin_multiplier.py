@@ -44,18 +44,28 @@ class CoinMultiplierFeature(BonusFeature):
         coin_code = config.get("coin_symbol_code", "coin")
         collector_code = config.get("collector_symbol_code", "collector_tiger")
         value_weights: dict[str, int] = config.get("value_weights", _DEFAULT_VALUE_WEIGHTS)
+        jackpot_values: dict[str, int] = config.get("jackpot_values") or {}
+        # Lucky Joker (product): there is no collector symbol on the base-game
+        # reels at all — a coin multiplies a winning line on its own. East
+        # Discovery keeps the original "collector must be on the grid" rule.
+        requires_collector = config.get("requires_collector", True)
 
         positions: list[dict] = []
         multiplier_sum = Decimal(0)
         for reel_index, column in enumerate(game_state.grid.reels):
             for row_index, code in enumerate(column):
                 if code == coin_code:
-                    value = self._draw_multiplier(value_weights, game_state.rng)
+                    kind, value = self._draw_multiplier(value_weights, game_state.rng, jackpot_values)
                     multiplier_sum += value
-                    positions.append({"reel": reel_index, "row": row_index, "value": str(value)})
+                    positions.append(
+                        {"reel": reel_index, "row": row_index, "value": str(value), "kind": kind}
+                    )
 
         line_pay_total = game_state.win_evaluation.line_pay_total
-        has_collector = any(collector_code in column for column in game_state.grid.reels)
+        has_collector = (
+            True if not requires_collector
+            else any(collector_code in column for column in game_state.grid.reels)
+        )
         applied = has_collector and line_pay_total > 0
         bonus_win = line_pay_total * (multiplier_sum - 1) if applied and multiplier_sum > 0 else Decimal(0)
 
@@ -68,11 +78,20 @@ class CoinMultiplierFeature(BonusFeature):
         )
 
     @staticmethod
-    def _draw_multiplier(value_weights: dict[str, int], rng) -> Decimal:
+    def _draw_multiplier(
+        value_weights: dict[str, int], rng, jackpot_values: dict[str, int] | None = None
+    ) -> tuple[str, Decimal]:
+        """Returns (drawn key, multiplier). A key listed in `jackpot_values`
+        resolves to that tier's multiplier and is reported as the coin's
+        `kind`, so a MINI/MAJOR/... coin can land in the base game and be drawn
+        with its own art (Lucky Joker, product)."""
         keys = list(value_weights.keys())
         weights = [int(value_weights[k]) for k in keys]
         index, _, _ = weighted_pick(weights, rng)
-        return Decimal(keys[index])
+        key = keys[index]
+        if jackpot_values and key in jackpot_values:
+            return key, Decimal(str(jackpot_values[key]))
+        return key, Decimal(key)
 
     def get_config_schema(self) -> dict:
         return {
@@ -80,10 +99,21 @@ class CoinMultiplierFeature(BonusFeature):
             "properties": {
                 "coin_symbol_code": {"type": "string", "default": "coin"},
                 "collector_symbol_code": {"type": "string", "default": "collector_tiger"},
+                "requires_collector": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "False: a coin multiplies a winning line with no collector on the grid.",
+                },
                 "value_weights": {
                     "type": "object",
                     "additionalProperties": {"type": "integer", "minimum": 0},
                     "default": _DEFAULT_VALUE_WEIGHTS,
+                },
+                "jackpot_values": {
+                    "type": "object",
+                    "additionalProperties": {"type": "integer", "minimum": 1},
+                    "default": None,
+                    "description": "Named tiers a value_weights key can resolve to (mini/minor/major/grand).",
                 },
             },
             "required": ["coin_symbol_code", "collector_symbol_code"],

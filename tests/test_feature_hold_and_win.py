@@ -155,5 +155,7 @@ def test_respins_log_extends_past_respin_count_when_a_late_landing_resets_it():
     assert result.details["locked_count"] == 1
     respins = result.details["respins"]
     assert len(respins) == 2  # exceeds respin_count=1 because respin 1's landing reset the counter
-    assert respins[0]["landed"] == [{"reel": 1, "row": 0, "value": "1"}]
+    # `kind` is the coin_value_weights key the value was drawn from — a plain
+    # number here, a tier name for a game with named jackpot_values.
+    assert respins[0]["landed"] == [{"reel": 1, "row": 0, "value": "1", "kind": "1"}]
     assert respins[1]["landed"] == []

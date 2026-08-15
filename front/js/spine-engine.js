@@ -183,31 +183,73 @@ class SpineStage {
     // state untouched until an instance is added again.
     this._idleCleared = false;
 
+    const update = (canvas, delta) => {
+      if (!this.baseInstances.length && !this.overlayInstances.length) return;
+      for (const inst of this.baseInstances) inst.update(delta, canvasEl);
+      for (const inst of this.overlayInstances) inst.update(delta, canvasEl);
+    };
+    const render = (canvas) => {
+      const empty = !this.baseInstances.length && !this.overlayInstances.length;
+      if (empty && this._idleCleared) return;
+      const renderer = canvas.renderer;
+      renderer.resize(spine.ResizeMode.Expand);
+      canvas.clear(0, 0, 0, 0);
+      this._idleCleared = empty;
+      if (empty) return;
+      renderer.begin();
+      for (const inst of this.baseInstances) renderer.drawSkeleton(inst.skeleton, inst.resource.premultipliedAlpha);
+      for (const inst of this.overlayInstances) renderer.drawSkeleton(inst.skeleton, inst.resource.premultipliedAlpha);
+      renderer.end();
+    };
+
     this.spineCanvas = new spine.SpineCanvas(canvasEl, {
       pathPrefix: '',
       webglConfig: { alpha: true },
-      app: {
-        update: (canvas, delta) => {
-          if (!this.baseInstances.length && !this.overlayInstances.length) return;
-          for (const inst of this.baseInstances) inst.update(delta, canvasEl);
-          for (const inst of this.overlayInstances) inst.update(delta, canvasEl);
-        },
-        render: (canvas) => {
-          const empty = !this.baseInstances.length && !this.overlayInstances.length;
-          if (empty && this._idleCleared) return;
-          const renderer = canvas.renderer;
-          renderer.resize(spine.ResizeMode.Expand);
-          canvas.clear(0, 0, 0, 0);
-          this._idleCleared = empty;
-          if (empty) return;
-          renderer.begin();
-          for (const inst of this.baseInstances) renderer.drawSkeleton(inst.skeleton, inst.resource.premultipliedAlpha);
-          for (const inst of this.overlayInstances) renderer.drawSkeleton(inst.skeleton, inst.resource.premultipliedAlpha);
-          renderer.end();
-        },
-      },
+      app: { update, render },
     });
     this.assetManager = this.spineCanvas.assetManager;
+    this._ensureRenderLoop(update, render);
+  }
+
+  // The vendor's SpineCanvas starts its render loop only once the AssetManager
+  // reports idle, and if ANY asset failed by then it takes an error branch and
+  // never calls loop() at all — silently, forever. One mistyped page name in
+  // one atlas therefore kills every animation on the page: symbols whose
+  // static tile is hidden in favour of the canvas simply vanish. That is a
+  // horrible failure mode to debug (it cost a full session once, and looks
+  // exactly like "the element disappears when the animation starts"), and it
+  // fires on nothing worse than a stale browser cache holding a since-fixed
+  // atlas. So: watch for it, say so loudly, and run the loop ourselves — the
+  // assets that DID load should still animate.
+  _ensureRenderLoop(update, render) {
+    const check = () => {
+      if (this.spineCanvas.disposed || this.spineCanvas.time.frameCount > 0) return;
+      const am = this.assetManager;
+      const failed = Object.keys(am.getErrors ? am.getErrors() : {});
+      // ONLY this exact case — loading finished AND something failed — is
+      // taken over. That's the one state where the vendor is guaranteed never
+      // to start. A loop that merely hasn't started yet (a backgrounded tab
+      // freezes rAF, so waitForAssets can sit pending for minutes) is left
+      // alone: starting a second loop there would double every animation's
+      // speed once the tab came back.
+      if (am.isLoadingComplete() && failed.length > 0) {
+        console.error(
+          '[spine-engine] the vendor render loop refuses to start because these assets failed ' +
+          'to load — running it manually so everything else still animates:', failed,
+        );
+        const loop = () => {
+          if (this.spineCanvas.disposed) return;
+          requestAnimationFrame(loop);
+          this.spineCanvas.time.update();
+          update(this.spineCanvas, this.spineCanvas.time.delta);
+          render(this.spineCanvas);
+        };
+        loop();
+        return;
+      }
+      setTimeout(check, 300);
+    };
+    setTimeout(check, 300);
   }
 
   addBase(instance) {

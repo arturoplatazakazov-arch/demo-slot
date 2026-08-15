@@ -1,0 +1,13 @@
+animation.png
+size:437,134
+filter:Linear,Linear
+pma:true
+bg_light_02
+bounds:139,2,130,130
+cherry_l
+bounds:271,2,122,130
+cherry_r
+bounds:2,4,135,128
+letter
+bounds:395,42,90,40
+rotate:90

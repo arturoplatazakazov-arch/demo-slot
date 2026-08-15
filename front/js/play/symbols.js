@@ -8,12 +8,21 @@
 async function loadSymbolArtMap(gameCode, manifest) {
   const artEntries = await apiGet(`/config/${encodeURIComponent(gameCode)}/symbols`);
   const codeToUrl = {};
+  const codeToFolder = {};
   for (const entry of artEntries) {
     if (!entry.image_ref) continue;
     const asset = manifest.assets.images.find((img) => img.id === entry.image_ref);
-    if (asset) codeToUrl[entry.code] = manifestImgUrl(gameCode, asset.file);
+    if (!asset) continue;
+    codeToUrl[entry.code] = manifestImgUrl(gameCode, asset.file);
+    // Symbols registered from Spine folders use "<folder>/static.png"; the Spine
+    // bundle (animation.json/.atlas/.png) lives in that same folder, so the play
+    // engine can animate the symbol instead of showing the flat static tile.
+    const slash = asset.file.indexOf('/');
+    if (slash > 0 && /\/static\.(png|webp|jpe?g)$/i.test(asset.file)) {
+      codeToFolder[entry.code] = asset.file.slice(0, slash);
+    }
   }
-  return codeToUrl;
+  return { codeToUrl, codeToFolder };
 }
 
 function renderSymbolInCell(cell, code, codeToUrl) {

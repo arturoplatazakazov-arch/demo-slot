@@ -378,6 +378,13 @@ function teardownCellInstances() {
       stage.removeBase(info.instance);
       info.instance = null;
     }
+    // A cell that was mid-animation had its static tile hidden in favour of
+    // the canvas (a win clip, an idle loop). Pulling the instance off the
+    // canvas without putting the tile back leaves the cell EMPTY — and since
+    // this runs at the start of every spin, that empty cell is what visibly
+    // drops out of view when the reels clear. Cells that are meant to be
+    // empty carry no `src` at all, so they stay hidden.
+    if (info.img && info.img.getAttribute('src')) info.img.style.visibility = '';
   }
 }
 
@@ -781,11 +788,15 @@ function landReel(colIndex, finalCodes, delayMs, isAnticipating = false, fillerC
   const prerollCount = isAnticipating ? ANTICIPATION_PREROLL_FILLER_COUNT : 0;
 
   return new Promise((resolve) => {
-    setTimeout(async () => {
-      // Never start landing while the previous symbols are still mid-drop
-      // (clear-out started in startReelLoop) — the rebuild below would
-      // truncate their fall with a visible pop.
+    (async () => {
+      // The clear-out drop must finish first, and the per-column stagger
+      // counts from the END of the clear — not from the spin press. Counting
+      // from the press meant every column whose delay was shorter than the
+      // clear duration woke up at the same instant, so the first few reels
+      // landed simultaneously (reported live — see neon-reels/slot.js, fixed
+      // there first).
       await reelClearDone;
+      await wait(delayMs);
       stripEl.classList.remove('is-looping');
       stripEl.style.transition = 'none';
       stripEl.innerHTML = '';
@@ -846,7 +857,7 @@ function landReel(colIndex, finalCodes, delayMs, isAnticipating = false, fillerC
       stripEl.style.transform = `translateY(${landStartY}px)`;
       void stripEl.offsetHeight;
       beginLanding();
-    }, delayMs);
+    })();
   });
 }
 

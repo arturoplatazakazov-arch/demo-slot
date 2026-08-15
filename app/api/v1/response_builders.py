@@ -75,7 +75,9 @@ def coin_multiplier_out(details: dict | None) -> schemas.CoinMultiplierOut | Non
     return schemas.CoinMultiplierOut(
         multiplier_sum=int(Decimal(details["multiplier_sum"])),
         positions=[
-            schemas.CoinMultiplierPositionOut(row=p["row"], col=p["reel"], value=int(Decimal(p["value"])))
+            schemas.CoinMultiplierPositionOut(
+                row=p["row"], col=p["reel"], value=int(Decimal(p["value"])), kind=p.get("kind")
+            )
             for p in details["coin_positions"]
         ],
         applied=bool(details["applied"]),
@@ -85,15 +87,16 @@ def coin_multiplier_out(details: dict | None) -> schemas.CoinMultiplierOut | Non
 def hold_and_win_out(result) -> schemas.HoldAndWinOut | None:
     if result is None:
         return None
+    def coin_out(c: dict) -> schemas.HoldAndWinLandedCoinOut:
+        return schemas.HoldAndWinLandedCoinOut(
+            row=c["row"], col=c["reel"], value=int(Decimal(c["value"])), kind=c.get("kind")
+        )
+
     return schemas.HoldAndWinOut(
         triggered=True,
+        initial=[coin_out(c) for c in result.details.get("initial", [])],
         respins=[
-            schemas.HoldAndWinRespinOut(
-                landed=[
-                    schemas.HoldAndWinLandedCoinOut(row=c["row"], col=c["reel"], value=int(Decimal(c["value"])))
-                    for c in respin["landed"]
-                ]
-            )
+            schemas.HoldAndWinRespinOut(landed=[coin_out(c) for c in respin["landed"]])
             for respin in result.details["respins"]
         ],
         total_win=int(result.win_amount),

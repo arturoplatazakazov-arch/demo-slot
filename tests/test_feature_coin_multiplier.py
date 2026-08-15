@@ -61,7 +61,9 @@ def test_execute_shows_coin_value_but_does_not_apply_without_a_collector():
     result = CoinMultiplierFeature().execute(ctx, {"value_weights": {"5": 1, "10": 1}})
 
     assert result.details["applied"] is False
-    assert result.details["coin_positions"] == [{"reel": 0, "row": 0, "value": "10"}]
+    # `kind` is the value_weights key the coin was drawn from — a plain number
+    # here, a tier name for a game with named jackpot_values (Lucky Joker).
+    assert result.details["coin_positions"] == [{"reel": 0, "row": 0, "value": "10", "kind": "10"}]
     assert result.win_amount == Decimal(0)
 
 

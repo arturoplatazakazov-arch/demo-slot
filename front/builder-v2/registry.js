@@ -114,6 +114,7 @@ window.MECHANICS = {
 window.BASE_ROLES = [
   { id: 'logo', label: 'Логотип' },
   { id: 'bg_base', label: 'Фон базовой игры' },
+  { id: 'reel_background', label: 'Фон за барабанами' },
   { id: 'reels', label: 'Барабан (сетка)' },
   { id: 'frame', label: 'Рамка барабана' },
   { id: 'spin_btn', label: 'Кнопка Spin' },

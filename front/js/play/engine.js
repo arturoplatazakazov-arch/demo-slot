@@ -12,6 +12,10 @@ let device = pickDevice();
 let screen = 'base';
 let hooks = null;
 let codeToUrl = {};
+let codeToFolder = {};
+let symbolSpineInstances = [];
+let symbolToken = 0;
+const symbolResourceCache = {}; // folder -> Promise<SpineResource>
 let sessionId = null;
 let balance = 0;
 let betConfig = null;
@@ -41,7 +45,7 @@ let renderToken = 0;
 function setStatus(text, kind) {
   const el = document.getElementById('playStatus');
   el.textContent = text || '';
-  el.className = 'play-hud__status' + (kind ? ` is-${kind}` : '');
+  el.className = 'play-status-float' + (kind ? ` is-${kind}` : '');
 }
 
 function updateBalanceUI() {
@@ -57,9 +61,13 @@ function updateBetUI() {
 }
 
 function updateSpinButtonUI() {
-  document.getElementById('spinBtn').disabled = spinInFlight;
-  document.getElementById('betDownBtn').disabled = spinInFlight || betIndex === 0;
-  document.getElementById('betUpBtn').disabled = spinInFlight || betIndex === betConfig.steps.length - 1;
+  // V3 bar: rotation is driven by the .is-spinning class (ui-bar-v3.js watches it).
+  const spin = document.querySelector('[data-action="spin"]');
+  if (spin) spin.classList.toggle('is-spinning', spinInFlight);
+  const down = document.querySelector('[data-action="bet-minus"]');
+  const up = document.querySelector('[data-action="bet-plus"]');
+  if (down) down.disabled = spinInFlight || betIndex === 0;
+  if (up) up.disabled = spinInFlight || betIndex === betConfig.steps.length - 1;
 }
 
 function updateFreeSpinsCounterUI(remaining) {
@@ -80,6 +88,7 @@ function renderCurrentScreen() {
   updateMultiplierUI(null);
   reconcileBgSpine();
   reconcileOverlaySpine();
+  clearSymbolSpine(); // drop symbol instances anchored to the now-removed cells
 }
 
 function reconcileBgSpine() {
@@ -133,6 +142,63 @@ function renderGrid(grid) {
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < reels; c++) {
       renderSymbolInCell(hooks.reelCells[r][c], grid[r][c], codeToUrl);
+    }
+  }
+  renderSymbolSpine(grid);
+}
+
+// Symbols uploaded as Spine bundles get animated in-cell (idle loop) instead of
+// the flat static.png tile. Instances live on overlaySpineStage (in front of the
+// reel background), anchored to each cell; the static <img> underneath stays as
+// an instant/fallback render and is hidden once its Spine covers it. A folder
+// with no Spine (or a load failure) just keeps the static tile.
+function pickSymbolAnim(resource) {
+  const names = (resource.skeletonData.animations || []).map((a) => a.name);
+  return names.find((n) => /idle|loop|static|anim/i.test(n)) || names[0] || 'idle';
+}
+
+function clearSymbolSpine() {
+  symbolToken++;
+  for (const inst of symbolSpineInstances) overlaySpineStage.removeBase(inst);
+  symbolSpineInstances = [];
+  // The static tile was hidden the moment its Spine took over, so dropping the
+  // instances without putting it back leaves empty cells — the same trap the
+  // hand-built games have in teardownCellInstances. A cell that is meant to be
+  // empty carries no `src`, so it stays hidden.
+  if (hooks && hooks.reelCells) {
+    for (const row of hooks.reelCells) {
+      for (const cell of row) {
+        const img = cell && cell.querySelector('.play-symbol-img');
+        if (img && img.getAttribute('src')) img.style.visibility = '';
+      }
+    }
+  }
+}
+
+function renderSymbolSpine(grid) {
+  if (!overlaySpineStage || !hooks || !hooks.reelCells) return;
+  clearSymbolSpine();
+  const myToken = symbolToken;
+  const rows = hooks.reelCells.length;
+  const reels = hooks.reelCells[0].length;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < reels; c++) {
+      const folder = codeToFolder[grid[r][c]];
+      if (!folder) continue;
+      const cell = hooks.reelCells[r][c];
+      const p = symbolResourceCache[folder]
+        || (symbolResourceCache[folder] = SpineEngine.SpineResource.load(overlaySpineStage.assetManager, `img/${SLUG}/${folder}`));
+      p.then((resource) => {
+        if (myToken !== symbolToken) return; // grid re-rendered since this load started
+        const inst = resource.createInstance();
+        inst.anchorEl = cell;
+        inst.fit = 0.92;
+        inst.play(pickSymbolAnim(resource), true);
+        overlaySpineStage.addBase(inst);
+        symbolSpineInstances.push(inst);
+        const img = cell.querySelector('.play-symbol-img');
+        if (img) img.style.visibility = 'hidden';
+      }).catch(() => { /* keep the static tile on any load error */ });
     }
   }
 }
@@ -252,7 +318,9 @@ async function init() {
     document.getElementById('gameName').textContent = manifest.meta.display_name;
     document.title = manifest.meta.display_name;
 
-    codeToUrl = await loadSymbolArtMap(SLUG, manifest);
+    const art = await loadSymbolArtMap(SLUG, manifest);
+    codeToUrl = art.codeToUrl;
+    codeToFolder = art.codeToFolder;
 
     const startResponse = await apiPost('/session/start', { game_id: SLUG });
     sessionId = startResponse.session_id;
@@ -270,13 +338,15 @@ async function init() {
     return;
   }
 
-  document.getElementById('spinBtn').addEventListener('click', onSpinClick);
-  document.getElementById('betDownBtn').addEventListener('click', () => {
+  document.querySelector('[data-action="spin"]').addEventListener('click', onSpinClick);
+  document.querySelector('[data-action="bet-minus"]').addEventListener('click', () => {
     if (betIndex > 0) { betIndex -= 1; updateBetUI(); updateSpinButtonUI(); }
   });
-  document.getElementById('betUpBtn').addEventListener('click', () => {
+  document.querySelector('[data-action="bet-plus"]').addEventListener('click', () => {
     if (betIndex < betConfig.steps.length - 1) { betIndex += 1; updateBetUI(); updateSpinButtonUI(); }
   });
+  const homeBtn = document.querySelector('[data-action="home"]');
+  if (homeBtn) homeBtn.addEventListener('click', () => { window.location.href = 'games.html'; });
   window.addEventListener('resize', () => {
     const nextDevice = pickDevice();
     if (nextDevice !== device) { device = nextDevice; renderCurrentScreen(); }

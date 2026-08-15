@@ -1,0 +1,698 @@
+/* Lucky Joker (3x3) — классический фруктовый слот с Hold & Win и лестницей
+   джекпотов. Структурно это css/multi-fruits-story.css (другая 3x3-игра:
+   design-space #stage, масштабируемый как целое, и прокручиваемые колонки
+   барабанов, обрезанные окном корпуса), но БЕЗ анимированного Spine-фона —
+   в этой поставке фон пришёл только статикой.
+
+   КОМПОЗИЦИЯ взята из манифеста конструктора (BuilderDraft "lucky-joker-3h3":
+   дизайн-канвас десктоп 1932x940 / портрет 780x1416, корпус, логотип сверху
+   по центру, по две плашки джекпота слева и справа от него, Buy Bonus и
+   счётчик фриспинов справа по центру). Координаты объектов в манифесте —
+   ЦЕНТРЫ, поэтому left/top = x - w/2, y - h/2; каждое правило ниже несёт
+   исходные числа.
+
+   ГЕОМЕТРИЯ БАРАБАНОВ — своя, не из манифеста (конструктор положил reel_block
+   800x700 и растянул корпус в квадрат), и считается по АЛЬФА-КАРТЕ frame.png
+   (1212x928), у которого внутри три зоны, а не две:
+     * непрозрачные золотые стойки/балки: по горизонтали 248..291 и 985..1029,
+       по вертикали 2..135 и 748..927;
+     * ПОЛУПРОЗРАЧНАЯ фаска (alpha ~52, т.е. 20%): 292..347 / 929..984 и
+       136..197 / 688..747;
+     * полностью прозрачная «дыра»: 348..928, 198..687.
+   Рабочее окно барабанов — это ВСЁ внутреннее пространство между
+   непрозрачными частями, x 292..984 (692) и y 136..747 (611), а не одна лишь
+   дыра (581x491): под фаской символы просто получают мягкое затемнение в 20%,
+   как и задумано артом. Что это правильный ориентир, подтверждает сама
+   подложка: в slot_bg.png (896x803) нарисованные барабаны занимают
+   x 95.5..785.5 — ровно 3 x 230 = 690 при окне 692, то есть 1:1.
+   Отсюда всё остальное:
+     * .reel-bg растянута так, чтобы её нарисованная панель легла в это окно
+       (898.6x781.3 со сдвигом 95.8/71.0) — тогда линии-разделители совпадают
+       с колонками символов, а розовый ореол приходится ровно на стойки и
+       светит из-за них;
+     * --cell-* = окно / 3.
+   Пересчитывать эти числа, если приедет новый арт. */
+
+:root {
+  --gold: #ffcf5a;
+  --gold-dark: #a8641b;
+  --ink: #2a0510;
+  --red: #b4132b;
+  --red-dark: #4a0512;
+  --ui-border: rgba(255, 207, 90, 0.24);
+  --text-cream: #fff3dd;
+
+  /* Внутреннее окно корпуса 692x611 на 3 колонки x 3 ряда, без зазоров.
+     Дробные — чтобы сетка занимала окно ровно, без ухода на пиксель-другой:
+     колонки обязаны совпадать с линиями, нарисованными на slot_bg.png. */
+  --cell-w: 230.667px;
+  --cell-h: 203.667px;
+  --cell-gap-x: 0px;
+  --cell-gap-y: 0px;
+  /* Символы нарисованы на канвасе 220x220, ячейка чуть ниже — ужимаем статику
+     и Spine-клипы одинаково (220 * 0.9 = 198 при ряде 203.7), чтобы символ не
+     залезал на соседний ряд. */
+  --symbol-scale: 0.9;
+
+  /* Насколько бокс обрезки уходит за окно корпуса: борт непрозрачный, так что
+     улетающая полоса прячется за ним, а не за краем картинки. */
+  --grid-bleed-x: 8px;
+  --grid-bleed-y: 8px;
+
+  /* Перезаписываются под устройство в slot.js updateStageScale(). */
+  --design-w: 1932px;
+  --design-h: 940px;
+  --stage-scale: 1;
+}
+
+* { box-sizing: border-box; }
+
+html, body { overflow-x: hidden; }
+
+body {
+  margin: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #14030d;
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  color: var(--text-cream);
+}
+
+/* ---------- Back-to-catalog button ---------- */
+.to-catalog-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 110;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(30, 4, 16, 0.75);
+  border: 1px solid rgba(255, 207, 90, 0.5);
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(4px);
+}
+.to-catalog-btn:hover { background: rgba(30, 4, 16, 0.92); border-color: var(--gold); }
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+/* ---------- Dev panel ---------- */
+.dev-panel {
+  position: fixed;
+  top: 52px;
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 260px;
+  align-items: center;
+  justify-content: flex-end;
+}
+.dev-btn {
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #222;
+  color: #ddd;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.dev-btn:hover { opacity: 1; }
+.dev-hint {
+  font-size: 10px;
+  color: #999;
+  width: 100%;
+  text-align: right;
+}
+
+/* ---------- Screen (viewport box; #stage is contain-scaled inside it) ---- */
+.screen {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  background: #14030d;
+}
+
+.layer { position: absolute; }
+
+/* Фон нарисован ровно в размер дизайн-канваса, поэтому object-fit:fill —
+   ничего не обрезается. */
+.bg {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  z-index: 0;
+}
+
+/* ---------- Design-space stage ----------
+   Два stage делят один transform: #stage лежит ПОД spine-канвасом (символы,
+   win-клипы, попапы рисуются на нём), #stageFront — НАД ним, и держит корпус
+   автомата, лестницу джекпотов, логотип и кнопки: win-клип, вылезший за окно
+   барабанов, закрывается бортом, а не рисуется поверх него. */
+.stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--design-w);
+  height: var(--design-h);
+  transform: translate(-50%, -50%) scale(var(--stage-scale));
+  z-index: 1;
+}
+.stage--front {
+  z-index: 6; /* above .spine-canvas (5) */
+  pointer-events: none;
+}
+.stage .obj { position: absolute; }
+/* #stageFront инертен целиком (он лежит над барабанами), так что
+   единственное, что игрок нажимает, включает события обратно. */
+.stage--front .sign-buy-bonus { pointer-events: auto; }
+
+/* ---------- Объекты десктопа (канвас 1932x940) ---------- */
+
+/* slot_frame (frame.png): center (936,470), 1212x928 — нативный размер, как в
+   манифесте. Окно корпуса при этом приходится на 678..1258 x, 203..693 y. */
+.frame {
+  left: 330px;
+  top: 6px;
+  width: 1212px;
+  height: 928px;
+  object-fit: fill;
+  pointer-events: none;
+}
+
+/* slot_bg.png: нарисованная панель совмещена с внутренним окном корпуса
+   (622,142 692x611) — см. шапку файла. Розовый ореол картинки приходится при
+   этом ровно на золотые стойки и светит из-за них. */
+.reel-bg {
+  left: 526.2px;
+  top: 71px;
+  width: 898.6px;
+  height: 781.3px;
+  object-fit: fill;
+  z-index: 0;
+}
+
+/* Внутреннее окно корпуса: 622,142 692x611, расширенное на --grid-bleed-*. */
+.reel__grid {
+  left: calc(622px - var(--grid-bleed-x));
+  top: calc(142px - var(--grid-bleed-y));
+  width: calc(692px + 2 * var(--grid-bleed-x));
+  height: calc(611px + 2 * var(--grid-bleed-y));
+  z-index: 2;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.reel__grid-inner {
+  position: relative;
+  width: calc(3 * var(--cell-w) + 2 * var(--cell-gap-x));
+  height: calc(3 * var(--cell-h) + 2 * var(--cell-gap-y));
+}
+
+/* Барабан = абсолютно позиционированная колонка; прокручивается полоса
+   внутри неё. Своей маски колонке не нужно — .reel__grid уже режет по окну. */
+.reel__col {
+  position: absolute;
+  top: 0;
+  width: var(--cell-w);
+  height: 100%;
+}
+.reel__col.is-anticipating {
+  z-index: 2;
+  filter: drop-shadow(0 0 16px rgba(255, 207, 90, 0.9));
+}
+.reel__strip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cell-gap-y);
+}
+
+.reel__cell {
+  position: relative;
+  width: var(--cell-w);
+  height: var(--cell-h);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+.reel__cell img {
+  pointer-events: none;
+  transform: scale(var(--symbol-scale, 1));
+  transition: opacity 200ms ease;
+}
+.reel__cell.is-dimmed img { opacity: 0.3; }
+.reel__cell-anchor {
+  /* Размер под инстанс ставит slot.js:setCellSymbol; центр — центр ячейки. */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* Плашки джекпотов, центры из манифеста: major (666,43) и grand (1268,43)
+   201x81, mini (647,125) и minor (1288,125) 160x65 — верхний ряд слева и
+   справа от логотипа. */
+.jp { z-index: 6; pointer-events: none; }
+.jp--major { left: 565.5px; top: 2.5px; width: 201px; height: 81px; }
+.jp--grand { left: 1167.5px; top: 2.5px; width: 201px; height: 81px; }
+.jp--mini  { left: 567px; top: 92.5px; width: 160px; height: 65px; }
+.jp--minor { left: 1208px; top: 92.5px; width: 160px; height: 65px; }
+/* Плашка выигранного джекпота подсвечивается на время награды. */
+.jp.is-won { filter: drop-shadow(0 0 24px rgba(255, 207, 90, 0.95)) brightness(1.15); }
+
+/* slot_logo (game_logo.png): center (966,85), 324x170 — на арке корпуса. */
+.logo {
+  left: 804px;
+  top: 0;
+  width: 324px;
+  height: 170px;
+  z-index: 7;
+  pointer-events: none;
+}
+.logo__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* buy_bonus (Buy_Bonus_button.png): center (1566,470), 338x230 — справа от
+   корпуса. Только в базовом режиме. */
+.sign-buy-bonus {
+  left: 1397px;
+  top: 355px;
+  width: 338px;
+  height: 230px;
+  cursor: pointer;
+  z-index: 6;
+}
+.sign-buy-bonus__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  transition: filter 200ms ease;
+}
+.sign-buy-bonus:hover .sign-buy-bonus__img {
+  filter: drop-shadow(0 0 18px rgba(255, 207, 90, 0.8));
+}
+.screen[data-mode="freespins"] .sign-buy-bonus { display: none; }
+
+/* free_spins_counter: center (1518,470), 228x310 — на месте Buy Bonus, только
+   в бонусном режиме. Десктопная плашка вертикальная: подпись сверху, число
+   снизу (плашка разделена линией примерно на 62% высоты). */
+.fs-counter {
+  display: none;
+  left: 1404px;
+  top: 315px;
+  width: 228px;
+  height: 310px;
+  z-index: 6;
+}
+.screen[data-mode="freespins"] .fs-counter { display: block; }
+/* Hold & Win занимает тот же бонусный экран, но считать там нечего. */
+.screen[data-round="holdwin"] .fs-counter { display: none; }
+.fs-counter__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.fs-counter__img--mob { display: none; }
+.fs-counter__label,
+.fs-counter__value {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  font-family: 'Luckiest Guy', cursive;
+  font-weight: 400;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 0 3px 0 var(--ink);
+}
+.fs-counter__label { top: 32%; font-size: 26px; }
+.fs-counter__value { top: 80%; font-size: 54px; }
+
+/* ---------- Screen dim (перед попапами / переходами base<->bonus) ---------- */
+/* 0.45, а не 0.7 как в других играх: попапы этой поставки несут собственный
+   полупрозрачный dark-bg внутри скелета, и два затемнения подряд давали почти
+   чёрный экран. */
+.screen-dim {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  z-index: 4; /* above #stage (1), below the symbol/popup canvas (5) */
+}
+.screen-dim.is-active { opacity: 1; }
+.screen-dim.is-opaque { background: #000; }
+/* #stageFront обязан лежать НАД spine-канвасом (иначе корпус не маскирует
+   win-клипы), а значит и над затемнением, и над попапом. Для любого dim это
+   неверно — гасим весь передний stage вместе с ним. */
+.screen-dim.is-active ~ .stage--front { opacity: 0; }
+.stage--front { transition: opacity 320ms ease; }
+
+/* ---------- Суммы поверх спайн-арта ---------- */
+.popup-amount {
+  position: fixed;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: clamp(16px, 2.2vw, 34px);
+  color: var(--text-cream);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85), 0 0 14px rgba(255, 207, 90, 0.65);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.popup-amount.is-visible { opacity: 1; }
+
+/* Номиналы монет Hold & Win: по одному элементу на монету, каждый едет за
+   своей ячейкой (slot.js trackCoinAmounts — размер шрифта тоже оттуда,
+   пропорционально ячейке). */
+.coin-amounts {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 19;
+}
+/* Номиналы на барабанах гаснут вместе с передним stage: слой лежит выше
+   попапов, иначе "x3" с барабана висит поверх карточки Big Win или диалога
+   покупки. Числа вне барабанов (ставка в диалоге) — в соседнем слое и не
+   гаснут. */
+.coin-amounts--reels { transition: opacity 320ms ease; }
+.screen-dim.is-active ~ .coin-amounts--reels { opacity: 0; }
+/* Множители на монетах — Roboto Mono, а не мультяшный Luckiest Guy (продукт:
+   «более ровный, не мультяшный»). Моноширинные цифры дают и практический
+   плюс: сумма на коллекторе растёт по ходу раунда, и цифры не пляшут. */
+.coin-amount {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-family: 'Roboto Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 2px 0 var(--ink);
+  white-space: nowrap;
+}
+/* Сумма, собранная коллектором: то же золото, но крупнее и со свечением —
+   это главное число раунда. */
+.coin-amount.is-collector {
+  -webkit-text-stroke: 3px var(--ink);
+  text-shadow: 0 3px 0 var(--ink), 0 0 18px rgba(255, 207, 90, 0.85);
+}
+
+/* ---------- Прокрутка одной ячейки (респины Hold & Win) ----------
+   В раунде уже выпавшие монеты ЗАЛИПАЮТ и не перевыпадают, поэтому крутится
+   не колонка целиком, а каждая пустая ячейка по отдельности: свой мини-строб
+   поверх ячейки, обрезанный по ней. */
+.cell-spinner {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 1;
+  pointer-events: none;
+}
+.cell-spinner__strip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.cell-spinner__item {
+  width: 100%;
+  height: var(--cell-h);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cell-spinner__item img {
+  transform: scale(var(--symbol-scale, 1));
+}
+
+/* ---------- Хит-зоны диалога покупки ----------
+   Прозрачные кнопки над ✓/✗, нарисованными на spine-канвасе; позицию и размер
+   считает slot.js trackBuyDialogHits по костям. Невидимы намеренно — кнопка и
+   есть арт. */
+.buy-dialog-hits {
+  position: fixed;
+  inset: 0;
+  z-index: 21; /* выше .popup-amount (20), которым диалог тоже пользуется */
+  pointer-events: none;
+}
+.buy-dialog-hits[hidden] { display: none; }
+.buy-dialog-hit {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* ---------- Сумма выигрыша ниже порога попапа ---------- */
+.reel-win-amount-viewport {
+  left: 622px;
+  top: 142px;
+  width: 692px;
+  height: 611px;
+  z-index: 3;
+  pointer-events: none;
+}
+.reel-win-amount {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.reel-win-amount.is-visible { opacity: 1; }
+.reel-win-amount::before {
+  content: attr(data-amount);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 56px;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 0 4px 0 var(--ink), 0 0 26px rgba(255, 207, 90, 0.75);
+  white-space: nowrap;
+  padding: 6px 22px;
+  background: rgba(20, 3, 13, 0.55);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(255, 207, 90, 0.25);
+}
+
+/* Заглушка отсутствующего ассета (только для разработки). */
+img.is-missing {
+  width: 55%;
+  height: 55%;
+  object-fit: contain;
+  outline: 2px dashed rgba(255, 207, 90, 0.5);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+.spine-canvas {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ---------- Paytable info popup ---------- */
+.info-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 20px;
+}
+.info-popup[hidden] { display: none; }
+.info-popup__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(720px, 90vh);
+  overflow-y: auto;
+  background: var(--red-dark);
+  border: 3px solid var(--gold-dark);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.info-popup__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-cream);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.info-popup__close:hover { background: rgba(0, 0, 0, 0.55); }
+.info-popup__title {
+  margin: 0 0 6px;
+  color: var(--gold);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 24px;
+  text-align: center;
+  -webkit-text-stroke: 1px var(--ink);
+  text-shadow: 0 2px 0 var(--ink);
+}
+.info-popup__note {
+  text-align: center;
+  font-size: 12px;
+  opacity: 0.75;
+  margin: 0 0 16px;
+}
+.info-popup__list { display: flex; flex-direction: column; gap: 10px; }
+.info-popup__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.info-popup__row img { width: 48px; height: 48px; object-fit: contain; flex-shrink: 0; }
+.info-popup__row-name { flex: 1 1 auto; min-width: 90px; font-weight: 700; }
+.info-popup__row-pays { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; color: var(--text-cream); }
+.info-popup__row-pays span { white-space: nowrap; opacity: 0.9; }
+.info-popup__row-pays b { color: var(--gold); }
+
+/* ================================================================
+   Портрет — канвас 780x1416 (bg_mob_base.png). Автомат тут на 15% крупнее,
+   чем помещался бы целиком (продукт): корпус 1081x827.7 вместо 940x720, а
+   значит его непрозрачная часть (214..1107 нативных) занимает -8.2..788.2 —
+   по 8 px с каждой стороны уходит за край экрана. Это осознанный размен:
+   символы на телефоне важнее, чем кромка золотой стойки.
+   Все числа ниже пересчитаны от НОВОГО размера рамки по той же схеме, что и
+   на десктопе (внутреннее окно между непрозрачными частями), поэтому окно,
+   подложка и сетка совпадают без всяких трансформов.
+   Лестница джекпотов разворачивается в строку над автоматом.
+   ================================================================ */
+@media (orientation: portrait) {
+  :root {
+    /* Внутреннее окно корпуса в портрете 617.2x545 => 3 колонки. */
+    --cell-w: 205.73px;
+    --cell-h: 181.65px;
+    --cell-gap-x: 0px;
+    --cell-gap-y: 0px;
+    --symbol-scale: 0.74;
+    --grid-bleed-x: 6px;
+    --grid-bleed-y: 6px;
+  }
+
+  /* Конструктор расставил все объекты в верхних ~1000px канваса 780x1416
+     (снизу у него шла собственная панель управления), а у нас бар живёт
+     отдельным рядом ПОД экраном — иначе внизу остаётся треть пустого пола.
+     Сдвигаем обе сцены целиком: содержимое занимает y 8..1030, его центр
+     519 против центра канваса 708, отсюда +189. Сдвиг идёт после scale, то
+     есть в дизайн-пикселях; на позиции объектов внутри сцены он не влияет,
+     а координаты ячеек JS берёт из getBoundingClientRect. */
+  .stage {
+    transform: translate(-50%, -50%) scale(var(--stage-scale)) translateY(189px);
+  }
+
+  /* Корпус: 1081x827.7 (нативные 1212x928 в масштабе 0.892), отцентрован по
+     непрозрачной части. Нижняя красная панель приходится на y 793..953 —
+     на неё и садится кнопка Buy Bonus. */
+  .frame { left: -199.1px; top: 126.2px; width: 1081px; height: 827.7px; }
+
+  .reel-bg { left: -24.1px; top: 184.2px; width: 801.5px; height: 696.8px; }
+
+  /* Внутреннее окно корпуса в портрете: 61.3,247.5 617.2x545. */
+  .reel__grid {
+    left: calc(61.3px - var(--grid-bleed-x));
+    top: calc(247.5px - var(--grid-bleed-y));
+    width: calc(617.2px + 2 * var(--grid-bleed-x));
+    height: calc(545px + 2 * var(--grid-bleed-y));
+  }
+  .reel-win-amount-viewport { left: 61.3px; top: 247.5px; width: 617.2px; height: 545px; }
+  .reel-win-amount::before { font-size: 46px; }
+
+  /* slot_logo: center (390,109), 324x170 */
+  .logo { left: 228px; top: 24px; width: 324px; height: 170px; }
+
+  /* Плашки джекпотов: major (110,48) / grand (670,48) 199x80,
+     mini (90,138) / minor (690,138) 160x65 — по краям над автоматом. */
+  .jp--major { left: 10.5px; top: 8px; width: 199px; height: 80px; }
+  .jp--grand { left: 570.5px; top: 8px; width: 199px; height: 80px; }
+  .jp--mini  { left: 10px; top: 105.5px; width: 160px; height: 65px; }
+  .jp--minor { left: 610px; top: 105.5px; width: 160px; height: 65px; }
+
+  /* buy_bonus, нативные 338x230 — опущена под выросшие барабаны (их низ
+     теперь 792.5) и села на нижнюю панель корпуса (793..953). */
+  .sign-buy-bonus { left: 221px; top: 800px; width: 338px; height: 230px; }
+
+  /* free_spins_counter: портретная плашка горизонтальная (нативные 311x228):
+     подпись слева, число справа. Опущена вместе с кнопкой. */
+  .fs-counter { left: 224.5px; top: 810px; width: 311px; height: 228px; }
+  .fs-counter__img--desk { display: none; }
+  .fs-counter__img--mob { display: block; }
+  .fs-counter__label { left: 27%; top: 50%; font-size: 26px; }
+  .fs-counter__value { left: 73%; top: 50%; font-size: 58px; }
+}
+
+/* ---------- Boot preloader theme (структура в css/preloader.css) ---------- */
+.preloader {
+  --pl-bg: #14030d;
+  --pl-accent-a: #ff2fa0;
+  --pl-accent-b: #ffcf5a;
+  --pl-glow-a: rgba(255, 47, 160, 0.35);
+  --pl-glow-b: rgba(255, 207, 90, 0.12);
+  --pl-border: rgba(255, 207, 90, 0.45);
+  --pl-shadow: rgba(255, 47, 160, 0.6);
+}

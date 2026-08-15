@@ -6,7 +6,7 @@
 <title>Конструктор · Вёрстка</title>
 <link rel="stylesheet" href="../css/fonts.css">
 <link rel="stylesheet" href="builder.css?v=1">
-<link rel="stylesheet" href="layout.css?v=1">
+<link rel="stylesheet" href="layout.css?v=10">
 </head>
 <body>
 
@@ -18,8 +18,15 @@
       <a class="step is-done" href="assets.html"><span class="step__num">2</span>Ассеты</a>
       <span class="step__sep"></span>
       <a class="step is-active" href="layout.html"><span class="step__num">3</span>Вёрстка</a>
+      <span class="step__sep"></span>
+      <a class="step" id="stepPublish" href="publish.html"><span class="step__num">4</span>Публикация</a>
     </nav>
-    <div style="width:110px"></div>
+    <div class="lay-headactions">
+      <span class="foot-info" id="footInfo"></span>
+      <a class="btn btn--ghost" id="backBtn" href="assets.html">← Назад</a>
+      <button class="btn btn--ghost" id="doneBtn" type="button">Сохранить черновик</button>
+      <a class="btn btn--primary" id="publishBtn" href="publish.html">Публикация →</a>
+    </div>
   </header>
 
   <div class="lay-toolbar">
@@ -30,6 +37,7 @@
       <button class="lay-seg is-on" data-bound="max" type="button">max</button>
     </div>
     <div class="lay-dims" id="dimsLabel"></div>
+    <button class="lay-copybtn" id="copyFromBaseBtn" type="button" title="Скопировать размер и позицию фона, барабана, рамки и логотипа с базового экрана этого устройства" hidden>⬇ Перенести с базы</button>
     <button class="lay-editbtn" id="editToggle" type="button">✎ Редактировать</button>
   </div>
 
@@ -77,21 +85,24 @@
       </label>
     </div>
 
+    <div class="lay-props__row lay-reelsonly" hidden>
+      <label>Ширина ячейки<input type="number" id="propCellW" min="1"></label>
+      <label>Высота ячейки<input type="number" id="propCellH" min="1"></label>
+    </div>
+    <div class="lay-props__row lay-reelsonly" hidden>
+      <label>Отступ гориз., px<input type="number" id="propGapX" min="0"></label>
+      <label>Отступ верт., px<input type="number" id="propGapY" min="0"></label>
+    </div>
+
     <div class="lay-props__foot">
       <button class="slot__btn slot__btn--remove" id="propDelete" type="button">Удалить</button>
       <button class="btn btn--primary" id="propSave" type="button" style="padding:8px 18px">Сохранить</button>
     </div>
   </div>
 
-  <footer class="builder-foot">
-    <div class="foot-info" id="footInfo"></div>
-    <div class="foot-spacer"></div>
-    <a class="btn btn--ghost" href="assets.html">← Назад</a>
-    <button class="btn btn--primary" id="doneBtn" type="button">Готово (сохранить черновик)</button>
-  </footer>
-
-  <script src="registry.js?v=1"></script>
+  <script src="registry.js?v=3"></script>
   <script src="draft.js?v=1"></script>
-  <script src="layout.js?v=1"></script>
+  <script src="api.js?v=1"></script>
+  <script src="layout.js?v=12"></script>
 </body>
 </html>

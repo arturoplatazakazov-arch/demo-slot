@@ -1,0 +1,13 @@
+animation.png
+size:205,138
+filter:Linear,Linear
+pma:true
+blik.png
+bounds:125,2,50,50
+frame
+bounds:2,54,201,82
+numb
+bounds:177,10,42,24
+rotate:90
+text
+bounds:2,21,121,31

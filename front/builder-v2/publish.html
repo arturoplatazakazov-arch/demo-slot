@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Конструктор · Публикация</title>
+<link rel="stylesheet" href="../css/fonts.css">
+<link rel="stylesheet" href="builder.css?v=1">
+<link rel="stylesheet" href="publish.css?v=1">
+</head>
+<body>
+
+  <header class="builder-top">
+    <div class="builder-brand">Slot<span>Builder</span> v2</div>
+    <nav class="stepper">
+      <a class="step is-done" href="setup.html"><span class="step__num">1</span>Настройка</a>
+      <span class="step__sep"></span>
+      <a class="step is-done" href="assets.html"><span class="step__num">2</span>Ассеты</a>
+      <span class="step__sep"></span>
+      <a class="step is-done" id="stepLayout" href="layout.html"><span class="step__num">3</span>Вёрстка</a>
+      <span class="step__sep"></span>
+      <a class="step is-active" href="publish.html"><span class="step__num">4</span>Публикация</a>
+    </nav>
+    <div style="width:110px"></div>
+  </header>
+
+  <main class="builder-main" id="main">
+    <div class="page-head">
+      <h1 class="page-title">Публикация <span class="page-title__slot" id="slotName"></span></h1>
+      <p class="page-sub">Четыре шага: сохранить вёрстку на сервер → собрать конфиг (символы + математика) → проверить спином → опубликовать в каталог. После публикации игра доступна в общем движке <code>play.html</code>.</p>
+    </div>
+
+    <div class="pub-summary" id="summary"></div>
+
+    <ol class="pub-steps">
+      <li class="pub-step" id="pubStep1">
+        <div class="pub-step__head"><span class="pub-step__n">1</span><h3>Сохранить вёрстку на сервер</h3></div>
+        <p class="pub-step__desc">Раскладка 4 экранов сейчас в браузере. Конвертирую её в формат манифеста, который читает общий рендер, и отправляю на сервер.</p>
+        <button class="btn btn--primary" id="btnSaveLayout" type="button">Сохранить вёрстку</button>
+        <div class="pub-status" id="statusLayout"></div>
+      </li>
+
+      <li class="pub-step" id="pubStep2">
+        <div class="pub-step__head"><span class="pub-step__n">2</span><h3>Собрать конфиг игры</h3></div>
+        <p class="pub-step__desc">Генерирую играбельный конфиг (барабаны/линии/фичи) и автоматически подцепляю символы из spine-папок (их <code>static.png</code>).</p>
+        <button class="btn btn--primary" id="btnGenConfig" type="button">Сгенерировать конфиг</button>
+        <div class="pub-status" id="statusConfig"></div>
+      </li>
+
+      <li class="pub-step" id="pubStep3">
+        <div class="pub-step__head"><span class="pub-step__n">3</span><h3>Тест-спин</h3></div>
+        <p class="pub-step__desc">Один настоящий спин по черновому конфигу — проверить, что математика крутится.</p>
+        <button class="btn btn--ghost" id="btnTestSpin" type="button">Крутить тест-спин</button>
+        <div class="pub-status" id="statusSpin"></div>
+      </li>
+
+      <li class="pub-step" id="pubStep4">
+        <div class="pub-step__head"><span class="pub-step__n">4</span><h3>Опубликовать</h3></div>
+        <p class="pub-step__desc">Бейдж (короткий жанр-чип) и описание для карточки каталога. Публикация делает конфиг активным и добавляет игру на <code>games.html</code>.</p>
+        <div class="pub-form">
+          <label>Бейдж<input type="text" id="pubBadge" maxlength="64" placeholder="напр. Classic 3×3"></label>
+          <label>Описание<input type="text" id="pubDescription" maxlength="512" placeholder="Короткое описание игры"></label>
+        </div>
+        <button class="btn btn--primary" id="btnPublish" type="button">🚀 Опубликовать в каталог</button>
+        <div class="pub-status" id="statusPublish"></div>
+        <div class="pub-links" id="pubLinks" hidden></div>
+      </li>
+    </ol>
+  </main>
+
+  <footer class="builder-foot">
+    <div class="foot-info" id="footInfo"></div>
+    <div class="foot-spacer"></div>
+    <a class="btn btn--ghost" id="backBtn" href="layout.html">← Назад к вёрстке</a>
+  </footer>
+
+  <script src="registry.js?v=3"></script>
+  <script src="draft.js?v=1"></script>
+  <script src="api.js?v=1"></script>
+  <script src="publish.js?v=1"></script>
+</body>
+</html>

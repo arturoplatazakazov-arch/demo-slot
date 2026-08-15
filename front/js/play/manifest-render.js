@@ -56,7 +56,12 @@ function renderManifestScreen(manifest, slug, device, screen) {
   screenEl.innerHTML = '';
 
   const maxW = Math.min(frame.parentElement.clientWidth, native.w);
-  const maxH = window.innerHeight - document.getElementById('playHud').offsetHeight - 140;
+  // The bottom control surface is the fixed V3 bar (js/ui-bar-v3.js); reserve
+  // its height so the stage isn't hidden behind it. Falls back to 190 if the bar
+  // isn't in the DOM yet.
+  const bar = document.getElementById('v3Bar');
+  const barH = bar ? bar.offsetHeight : 190;
+  const maxH = window.innerHeight - barH - 140;
   const scale = Math.min(maxW / native.w, maxH / native.h, 1);
 
   frame.style.width = `${native.w * scale}px`;
