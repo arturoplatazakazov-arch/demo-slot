@@ -1198,6 +1198,9 @@ function preloadAssets() {
   // All three hero poses up front: a mood swap mid-spin must not wait on a
   // network round trip, or he'd blink out at the exact moment he should react.
   for (const src of Object.values(HERO_SRC)) tasks.push(track(preloadImage(src)));
+  // The bed couple only appears once the bonus starts, but it swaps in at the
+  // exact moment the blackout lifts — a late fetch would show an empty bed.
+  tasks.push(track(preloadImage(`${ASSET_ROOT}/img/bonus_couple.png`)));
   tasks.push(track(preloadImage(bgSrcFor('base'))));
   tasks.push(track(preloadImage(bgSrcFor('bonus'))));
   for (const p of Sound.preloadPromises || []) tasks.push(track(p));

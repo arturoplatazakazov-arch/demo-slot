@@ -160,7 +160,9 @@ body {
    а не наклеенным поверх. */
 .hero {
   left: auto;
-  right: calc(50% + (var(--reel-frame-w) * var(--reel-frame-scale) * var(--reel-scale)) / 2 - 40px);
+  /* Было -40px; продукт попросил сдвинуть скуфа ещё на 50px влево — чем
+     больше right, тем левее он стоит. */
+  right: calc(50% + (var(--reel-frame-w) * var(--reel-frame-scale) * var(--reel-scale)) / 2 + 10px);
   bottom: 7%;
   /* Он заметно шире президентского (671x929 против 600x929), поэтому ниже:
      подобрано вместе с FIT_RESERVE_WIDTH_PX в slot.js, чтобы коробка в руках
@@ -202,6 +204,39 @@ body {
 .hero.is-cheer {
   animation: hero-cheer 700ms cubic-bezier(0.3, 0.9, 0.4, 1) infinite;
   filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 26px rgba(255, 63, 176, 0.6));
+}
+
+/* ---------- Парочка в кровати (только фриспины) ----------
+   Единственный кусок бонусного фона, который не закрыт рамкой на десктопе, —
+   узкая полоса слева от неё (рамка 968px из ~1536px фона, остальное
+   обрезает object-fit: cover), поэтому в бонусе парочка занимает место
+   стоящего героя, а сам он прячется: скуф с коробкой на улице и он же в
+   кровати одновременно всё равно читались бы как ошибка. */
+.bonus-couple {
+  display: none;
+  left: auto;
+  /* Полоса слева от рамки — всего ~155px на 1280px экране, а картинка шире,
+     поэтому парочка сознательно уходит краем ЗА рамку: так она визуально
+     центрирована в видимой полосе, а не прижата к обрезу экрана. */
+  right: calc(50% + (var(--reel-frame-w) * var(--reel-frame-scale) * var(--reel-scale)) / 2 - 40px);
+  bottom: 6%;
+  height: 36%;
+  width: auto;
+  z-index: 3;
+  pointer-events: none;
+  transform-origin: 50% 100%;
+  animation: couple-shiver 3.2s ease-in-out infinite;
+  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.55));
+}
+.screen[data-mode="freespins"] .bonus-couple { display: block; }
+.screen[data-mode="freespins"] .hero { display: none; }
+
+/* Мелкая нервная дрожь — они пойманы, а не позируют. */
+@keyframes couple-shiver {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25%      { transform: translate(-0.4%, -0.5%) rotate(-0.4deg); }
+  50%      { transform: translate(0, -0.9%) rotate(0deg); }
+  75%      { transform: translate(0.4%, -0.5%) rotate(0.4deg); }
 }
 
 /* ---------- Reel area ----------
@@ -829,8 +864,33 @@ body.layout-fit .ui-bar {
     transform: none;
   }
 
-  /* No room beside the reels in portrait — the frame spans 94% of the width. */
-  .hero { display: none; }
+  /* Места сбоку от барабанов в портрете нет (рамка занимает 98% ширины), но
+     под ними пустует нижняя треть экрана — герой встаёт туда, в левый угол,
+     поверх нарисованного на фоне тротуара. */
+  .hero {
+    display: block;
+    left: -2%;
+    right: auto;
+    bottom: 0;
+    height: 30%;
+  }
+
+  /* В бонусе на том же месте — кровать с парочкой, по центру и крупнее:
+     на мобильном фоне кровать нарисована ровно под барабанами. */
+  .bonus-couple {
+    left: 50%;
+    right: auto;
+    bottom: 2%;
+    height: 34%;
+    transform: translateX(-50%);
+    transform-origin: 50% 100%;
+  }
+  @keyframes couple-shiver {
+    0%, 100% { transform: translateX(-50%) translateY(0) rotate(0deg); }
+    25%      { transform: translateX(-50%) translateY(-0.5%) rotate(-0.4deg); }
+    50%      { transform: translateX(-50%) translateY(-0.9%) rotate(0deg); }
+    75%      { transform: translateX(-50%) translateY(-0.5%) rotate(0.4deg); }
+  }
 
   .sign-buy-bonus { width: 30%; }
   /* Крупнее президентских 3.6/5vw: пустые панели у этих двух плашек занимают
