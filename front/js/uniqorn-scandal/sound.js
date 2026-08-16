@@ -32,13 +32,9 @@ const SOUND_FILES = {
   popupClose: COMMON + 'Popup-close.mp3',
 };
 
-// Each background key plays two looped layers together: `music` is the main
-// background track, `env` is the environment/atmosphere bed sitting under it.
-// Drop `env` (or set it to null) to fall back to a single-track background.
-const MUSIC_FILES = {
-  base: { music: GAME + 'BG_Base.mp3', env: GAME + 'BG_Base_environment.mp3' },
-  bonus: { music: GAME + 'BG_Bonus.mp3', env: GAME + 'BG_Bonus_environment.mp3' },
-};
+// Product, this session: no music at all is better than wild-western-story's
+// reused track — silent until this theme's own BG_Base/BG_Bonus are delivered.
+const MUSIC_FILES = {};
 
 const SFX_VOLUME = 0.7;
 const MUSIC_VOLUME = 0.35; // main background track
