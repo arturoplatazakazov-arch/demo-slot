@@ -29,10 +29,9 @@ const SOUND_FILES = {
   popupClose: COMMON + 'Popup-close.mp3',
 };
 
-const MUSIC_FILES = {
-  base: NEON + 'BG_Base.mp3',
-  bonus: NEON + 'BG_Bonus.mp3',
-};
+// Product, this session: no music at all is better than neon-reels' reused
+// track — silent until this theme's own BG_Base/BG_Bonus are delivered.
+const MUSIC_FILES = {};
 
 const SFX_VOLUME = 0.7;
 const MUSIC_VOLUME = 0.35;

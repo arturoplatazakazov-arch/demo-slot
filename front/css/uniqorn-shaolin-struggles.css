@@ -38,6 +38,22 @@
   --reel-inset: 18px;      /* поле между сеткой и внутренней кромкой корпуса */
   --frame-thickness: 14px; /* толщина самой рамки */
 
+  /* ЛАКОВАЯ ПЛАШКА — один визуальный язык для всего, что не барабаны: кнопки
+     покупки, плашек джекпотов и счётчика респинов. Красный лак + золотой кант,
+     как у корпуса. Собрано из трёх переменных, потому что раньше каждый блок
+     красился сам и кнопка успела разъехаться в двухцветный флаг (жёсткий стоп
+     градиента 42%/43% вместо плавного лака). */
+  --plaque-bg:
+    radial-gradient(120% 90% at 50% 0%, rgba(255, 233, 168, 0.42), rgba(255, 233, 168, 0) 62%),
+    linear-gradient(180deg, #c8172f 0%, #9c0f24 52%, #66091a 100%);
+  --plaque-inner:
+    inset 0 2px 0 rgba(255, 240, 200, 0.55),
+    inset 0 -8px 16px rgba(0, 0, 0, 0.45);
+  --plaque-ring:
+    0 0 0 4px #e0a52c,
+    0 0 0 7px rgba(70, 14, 8, 0.9),
+    0 10px 26px rgba(0, 0, 0, 0.55);
+
   /* Перезаписываются под устройство в slot.js updateStageScale(). */
   --design-w: 1932px;
   --design-h: 940px;
@@ -184,10 +200,10 @@ body {
 
 /* ---------- Логотип ---------- */
 .logo {
-  left: 640px;
+  left: 676px;
   top: 0;
-  width: 600px;
-  height: 190px;
+  width: 528px;
+  height: 166px;
   z-index: 5;
   pointer-events: none;
 }
@@ -204,7 +220,7 @@ body {
    вылезающий за окно на приземлении, закрывается ею, а не рисуется сверху. */
 .reel {
   left: 586px;
-  top: 196px;
+  top: 170px;
   width: calc(3 * var(--cell-w) + 2 * var(--reel-inset));
   height: calc(3 * var(--cell-h) + 2 * var(--reel-inset));
   z-index: 2;
@@ -430,119 +446,158 @@ body {
 
 /* ---------- Лестница джекпотов ----------
    Четыре плашки справа от автомата (как на референсе). Суммы приходят из
-   JACKPOT_VALUES сида через slot.js, а не запечены в арт. */
+   JACKPOT_VALUES сида через slot.js, а не запечены в арт.
+
+   Имя тира печатается ПОВЕРХ монеты — ровно так же, как номинал печатается
+   поверх монеты на барабане (у всего монетного арта центр намеренно пустой),
+   поэтому плашка читается как «вот эта монета стоит столько», а не как
+   отдельная иконка рядом с текстом. Цвет тира при этом несут и ободок монеты,
+   и кант плашки. */
 .jp-ladder {
-  left: 1420px;
-  top: 196px;
-  width: 420px;
+  left: 1400px;
+  top: 150px;
+  width: 500px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
   z-index: 5;
 }
 .jp {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 14px;
-  height: 108px;
-  padding: 0 18px;
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(92, 10, 22, 0.92), rgba(24, 4, 10, 0.94));
-  border: 3px solid var(--tier-color, var(--gold));
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5), inset 0 0 24px rgba(0, 0, 0, 0.6);
+  gap: 20px;
+  height: 128px;
+  padding: 0 24px;
+  border-radius: 20px;
+  background: var(--plaque-bg);
+  /* Золотой кант у всех плашек один (как у корпуса), а тир различает тонкая
+     внутренняя линия и, главное, ободок самой монеты. */
+  box-shadow: var(--plaque-inner), inset 0 0 0 2px var(--tier-color), var(--plaque-ring);
   transition: box-shadow 220ms ease, transform 220ms ease;
 }
 .jp--mini  { --tier-color: #b06bd8; }
 .jp--minor { --tier-color: #4f9df0; }
 .jp--major { --tier-color: #35c07a; }
 .jp--grand { --tier-color: #ff5a4d; }
+
 .jp__coin {
-  width: 74px;
-  height: 74px;
-  object-fit: contain;
+  position: relative;
+  width: 112px;
+  height: 112px;
   flex: 0 0 auto;
-  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
 }
-.jp__text { display: flex; flex-direction: column; line-height: 1; }
+.jp__coin img { width: 100%; height: 100%; object-fit: contain; display: block; }
+/* Имя тира в пустом центре монеты: тёмная краска по золоту, как «MINI» на
+   монете в сетке (.coin-value.is-tier). */
 .jp__name {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
-  font-size: 26px;
-  letter-spacing: 0.04em;
-  color: var(--tier-color, var(--gold));
-  -webkit-text-stroke: 1px var(--ink);
-  text-shadow: 0 2px 0 var(--ink);
+  font-size: 22px;
+  letter-spacing: 0.01em;
+  color: #6b1004;
+  text-shadow: 0 1px 0 rgba(255, 245, 210, 0.8);
 }
 .jp__value {
   font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
-  font-size: 40px;
+  font-size: 56px;
+  line-height: 1;
   color: var(--gold-bright);
-  -webkit-text-stroke: 1px var(--ink);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
   text-shadow: 0 3px 0 var(--ink);
 }
 /* Пока играет награда — плашка выигранного тира горит. */
 .jp.is-won {
   transform: scale(1.06);
-  box-shadow: 0 0 34px var(--tier-color), inset 0 0 24px rgba(255, 255, 255, 0.25);
+  box-shadow: var(--plaque-inner), 0 0 0 4px var(--tier-color), 0 0 40px var(--tier-color);
+}
+.jp.is-won .jp__coin { animation: jp-coin-pop 700ms ease-in-out infinite; }
+@keyframes jp-coin-pop {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50%      { transform: scale(1.12) rotate(4deg); }
 }
 
-/* ---------- Buy Bonus ---------- */
+/* ---------- Buy Bonus ----------
+   Та же лаковая плашка, что у джекпотов: раньше здесь стоял градиент с жёстким
+   стопом на 42/43%, и кнопка читалась двухцветным флагом, а не объёмом. */
 .sign-buy-bonus {
-  left: 1440px;
-  top: 706px;
-  width: 380px;
-  height: 148px;
+  left: 1420px;
+  top: 748px;
+  width: 460px;
+  height: 150px;
   z-index: 5;
   cursor: pointer;
   border: 0;
-  padding: 0;
+  padding: 0 24px;
   color: inherit;
   font: inherit;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, #ffe9a8, #e0a52c 42%, #b4132b 43%, #7d0a1c);
-  box-shadow: 0 0 0 4px rgba(255, 207, 90, 0.85), 0 10px 26px rgba(0, 0, 0, 0.55);
-  transition: transform 160ms ease, box-shadow 160ms ease;
+  gap: 4px;
+  border-radius: 20px;
+  background: var(--plaque-bg);
+  box-shadow: var(--plaque-inner), var(--plaque-ring);
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
 }
-.sign-buy-bonus:hover { transform: translateY(-3px); box-shadow: 0 0 0 4px var(--gold), 0 0 30px rgba(255, 207, 90, 0.7), 0 12px 26px rgba(0, 0, 0, 0.55); }
+.sign-buy-bonus:hover {
+  transform: translateY(-3px);
+  filter: brightness(1.08);
+  box-shadow: var(--plaque-inner), 0 0 0 4px var(--gold), 0 0 34px rgba(255, 207, 90, 0.75), 0 12px 28px rgba(0, 0, 0, 0.55);
+}
+.sign-buy-bonus:active { transform: translateY(1px); }
 .sign-buy-bonus:disabled { opacity: 0.45; cursor: default; transform: none; }
 .sign-buy-bonus__label {
   font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
-  font-size: 34px;
-  line-height: 1;
+  font-size: 42px;
+  line-height: 0.95;
   color: var(--gold-bright);
-  -webkit-text-stroke: 1.5px var(--ink);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
   text-shadow: 0 3px 0 var(--ink);
   text-align: center;
 }
+/* Цена — на утопленной полоске, чтобы читалась как подпись, а не как вторая
+   строка заголовка. */
 .sign-buy-bonus__price {
+  padding: 2px 16px;
+  border-radius: 999px;
+  background: rgba(30, 4, 10, 0.55);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
   font-family: 'Baloo 2', system-ui, sans-serif;
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 800;
-  color: var(--text-cream);
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6);
+  color: var(--gold);
+  white-space: nowrap;
 }
 /* В раунде покупать нечего. */
 .screen[data-mode="bonus"] .sign-buy-bonus { display: none; }
 
-/* ---------- Счётчик респинов (только в раунде) ---------- */
+/* ---------- Счётчик респинов (только в раунде) ----------
+   Висит под СРЕДНИМ барабаном, в 5px под рамкой корпуса: считает он респины
+   этого барабана, и там же на него смотрят. Плашка вдвое меньше кнопки
+   покупки, но цифры прежнего размера — поэтому строка, а не колонка. */
 .respin-counter {
   display: none;
-  left: 1440px;
-  top: 706px;
-  width: 380px;
-  height: 148px;
+  left: 820px;
+  top: 795px;   /* .reel 170 + высота 624 - 4 (кант рамки) + 5 */
+  width: 240px;
+  height: 78px;
   z-index: 5;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(92, 10, 22, 0.95), rgba(24, 4, 10, 0.95));
-  box-shadow: 0 0 0 4px rgba(255, 207, 90, 0.85), 0 10px 26px rgba(0, 0, 0, 0.55);
+  gap: 14px;
+  border-radius: 14px;
+  background: var(--plaque-bg);
+  box-shadow: var(--plaque-inner), var(--plaque-ring);
 }
 .screen[data-mode="bonus"] .respin-counter { display: flex; }
 .respin-counter__label {
@@ -551,21 +606,23 @@ body {
   letter-spacing: 0.05em;
   color: var(--gold);
   -webkit-text-stroke: 1px var(--ink);
+  paint-order: stroke fill;
   text-shadow: 0 2px 0 var(--ink);
 }
 .respin-counter__value {
   font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
   font-size: 62px;
-  line-height: 1;
+  line-height: 0.9;
   color: var(--gold-bright);
   -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
   text-shadow: 0 4px 0 var(--ink), 0 0 22px rgba(255, 207, 90, 0.7);
 }
 
 /* ---------- Сумма выигрыша ниже порога попапа ---------- */
 .reel-win-amount-viewport {
   left: 586px;
-  top: 196px;
+  top: 170px;
   width: calc(3 * var(--cell-w) + 2 * var(--reel-inset));
   height: calc(3 * var(--cell-h) + 2 * var(--reel-inset));
   z-index: 4;
@@ -837,13 +894,16 @@ img.is-missing {
     --frame-thickness: 12px;
   }
 
-  .logo { left: 60px; top: 6px; width: 660px; height: 210px; }
+  /* Логотип меньше и прижат к верху, автомат поднят — всё ради полосы под
+     барабанами: на телефоне туда должен целиком влезть герой (продукт). */
+  .logo { left: 130px; top: 0; width: 520px; height: 162px; }
 
-  /* Лестница: одна строка из четырёх узких плашек над автоматом. */
+  /* Лестница: одна строка из четырёх плашек над автоматом. Монета крупная, имя
+     тира — поверх неё, номинал под ней (на десктопе они стоят в строку). */
   .jp-ladder {
-    left: 3px;
-    top: 228px;
-    width: 774px;
+    left: 6px;
+    top: 170px;
+    width: 768px;
     flex-direction: row;
     gap: 10px;
   }
@@ -851,32 +911,33 @@ img.is-missing {
     flex: 1 1 0;
     flex-direction: column;
     justify-content: center;
-    gap: 0;
-    height: 96px;
-    padding: 4px 6px;
-    border-width: 2px;
-    border-radius: 10px;
+    gap: 2px;
+    height: 118px;
+    padding: 6px;
+    border-radius: 14px;
   }
-  .jp__coin { width: 34px; height: 34px; }
-  .jp__text { align-items: center; }
-  .jp__name { font-size: 17px; }
-  .jp__value { font-size: 24px; }
+  .jp__coin { width: 62px; height: 62px; }
+  .jp__name { font-size: 14px; }
+  .jp__value { font-size: 28px; -webkit-text-stroke-width: 1.5px; }
 
-  /* Автомат: 3 * 236 + 2 * 14 = 736 в ширину, посередине канваса. */
-  .reel { left: 22px; top: 350px; }
-  .reel-win-amount-viewport { left: 22px; top: 350px; }
+  /* Автомат: 3 * 236 + 2 * 14 = 736 в ширину, посередине канваса; низ на 912. */
+  .reel { left: 22px; top: 266px; }
+  .reel-win-amount-viewport { left: 22px; top: 266px; }
   .reel-win-amount::before { font-size: 46px; }
 
-  /* Ниже ~1250 по канвасу лезет нижний бар (у него кнопка спина выступает
-     вверх), поэтому вся нижняя группа живёт в полосе 1000..1240, а не «до
-     самого низа»: герою можно и подрезать копыта баром, кнопке — нет. */
-  .hero { left: auto; right: 0; bottom: 176px; height: 380px; }
+  /* Счётчик под средним барабаном: .reel 266 + 646 - 2 (кант) + 5. */
+  .respin-counter { left: 275px; top: 915px; width: 230px; height: 76px; }
 
-  .sign-buy-bonus { left: 20px; top: 1000px; width: 300px; height: 140px; }
-  .respin-counter { left: 20px; top: 1000px; width: 300px; height: 140px; }
-  .sign-buy-bonus__label { font-size: 30px; }
+  /* Ниже ~1145 по канвасу начинается нижний бар (кнопка спина выступает вверх
+     над ним), поэтому герой заканчивается ровно над этой границей и больше не
+     обрезается: 1416 - 276 = 1140. По высоте он подобран под саму полосу между
+     низом корпуса (912) и баром: если сделать его крупнее, за корпус уезжает
+     голова и снизу остаётся безголовое туловище. */
+  .hero { left: auto; right: 8px; bottom: 276px; height: 270px; }
+
+  .sign-buy-bonus { left: 16px; top: 950px; width: 300px; height: 132px; }
+  .sign-buy-bonus__label { font-size: 32px; }
   .sign-buy-bonus__price { font-size: 17px; }
-  .respin-counter__value { font-size: 54px; }
 
   .game-popup { width: min(680px, 88%); padding: 26px 24px 30px; }
   .game-popup__title { font-size: 52px; }
