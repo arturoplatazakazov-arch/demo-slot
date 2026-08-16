@@ -1079,9 +1079,14 @@ body.layout-fit .ui-bar {
        1.0 now that each side is one slim log — the wide double posts were the
        only reason to let the border bleed off-screen. */
     --reel-mobile-mult: 1.0;
-    /* Рамка 1.76:1 занимает в портрете от силы треть высоты. 26% ставит блок
-       барабанов по центру свободного места между логотипом и нижним баром. */
-    --reel-mobile-top: 26%;
+    /* Рамка 1.76:1 занимает в портрете от силы треть высоты. 26% ставило блок
+       барабанов по центру свободного места между логотипом и нижним баром;
+       минус 40px — правка продукта («слот на моби поднять на 40 пикселей»).
+       Вычитаем здесь, а не в `top` у .reel, чтобы вместе с барабанами уехало
+       и всё, что от них считается: --reel-mobile-below держит плашку Buy
+       Bonus и счётчик фриспинов ПОД рамкой, и при сдвиге только .reel зазор
+       под ней вырос бы на те же 40px. */
+    --reel-mobile-top: calc(26% - 40px);
     --reel-mobile-w: calc(100vw * var(--reel-mobile-mult));
     /* 1254x841 is --reel-frame-w/h; the transform scales both equally. */
     --reel-mobile-h: calc(var(--reel-mobile-w) * 841 / 1254);
@@ -1175,7 +1180,11 @@ body.layout-fit .ui-bar {
      прежних 32%; он шире человека, поэтому стоит чуть правее от угла, чтобы
      не свисать за левый край. */
   .bonus-hero {
-    left: 38%;
+    /* 38% минус 40px — правка продукта («подвинуть влево на 40 пикселей»).
+       Смещение внутри left, а не в transform: transform здесь занят
+       центрирующим translateX(-50%), который кейфреймы настроений и так
+       обязаны повторять (см. bison-tense/bison-cheer ниже). */
+    left: calc(38% - 40px);
     right: auto;
     bottom: 0;
     height: 40%;
