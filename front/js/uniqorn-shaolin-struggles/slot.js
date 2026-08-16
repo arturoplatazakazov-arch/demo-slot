@@ -149,12 +149,14 @@ function buildJackpotLadder() {
     const plate = document.createElement('div');
     plate.className = `jp jp--${tier}`;
     plate.dataset.tier = tier;
+    // Имя тира печатается в пустом центре монеты — тем же приёмом, что номинал
+    // на монете в сетке (весь монетный арт нарисован с пустой серединой).
     plate.innerHTML = `
-      <img class="jp__coin" src="${symbolSrc(`coin_${tier}`)}" alt="">
-      <span class="jp__text">
+      <span class="jp__coin">
+        <img src="${symbolSrc(`coin_${tier}`)}" alt="">
         <span class="jp__name">${name}</span>
-        <span class="jp__value">×${value}</span>
       </span>
+      <span class="jp__value">×${value}</span>
     `;
     ladder.appendChild(plate);
   }
