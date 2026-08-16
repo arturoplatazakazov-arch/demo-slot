@@ -846,7 +846,11 @@ body.layout-fit .ui-bar {
   }
 
   .sign-buy-bonus { width: 30%; }
-  .sign-buy-bonus__label { font-size: 5.6vw; }
+  /* Специфичность повышена намеренно: базовое правило .sign-buy-bonus__label
+     лежит НИЖЕ этого медиазапроса (в блоке «Buy Bonus label» в конце файла),
+     поэтому при равной специфичности выигрывало оно и в портрете подпись
+     оставалась десктопной (1.8vw = ~7px на телефоне). */
+  .sign-buy-bonus .sign-buy-bonus__label { font-size: 5.6vw; }
   .fs-counter { width: 24%; height: auto; }
   .fs-counter__value { font-size: 5vw; }
 
