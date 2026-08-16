@@ -1,0 +1,1487 @@
+/* Western Treasure — стили темы, адаптированные из gangsta-city.css: та же
+   подача PNG-без-спайна, поэтому этот лист владеет всем, что раньше было
+   скелетом: idle/win/landing символов, линией выигрыша, расширяющимся вайлдом
+   и попапами. Плюс блок колеса фортуны, перенесённый из
+   dirty-money-mafia.css. Весь декор живёт внутри фонового арта.
+
+   Палитра снята с самого арта (закат в каньоне): золото/янтарь как основа,
+   тёмное дерево и верёвка вместо неона, ночная индиго-синь под бонусный
+   экран. Ни одного магентового акцента родителя не осталось — они били по
+   тёплому закату. */
+
+:root {
+  --ember: #ff9e36;        /* горячий янтарь — акцент выигрышей */
+  --ember-dark: #b4530c;
+  --ember-light: #ffbe60;
+  --gold: #f0b93f;
+  --gold-dark: #a97a17;
+  --ink: #2a1206;          /* тёмное дерево — обводка текста */
+  --wood: #4a2a15;
+  --night: #101a30;        /* ночной каньон — фон страницы */
+  --panel-dark: rgba(28, 16, 8, 0.66);
+  --ui-bg: rgba(32, 19, 10, 0.76);
+  --ui-border: rgba(240, 185, 63, 0.28);
+  --text-cream: #f8efdc;
+
+  /* совпадает с нативным размером bg_base.jpg (закатный каньон) */
+  --screen-w: 1536;
+  --screen-h: 672;
+
+  /* Fixed-pixel reel grid: 200x200 / 10px-gap 5x3 slots (1040x620 content).
+     Рамка здесь — сгенерированный PNG (img/reel_frame.png, 1254x841), а не
+     CSS-бордер, как в родительской игре: проём вырезан в альфу хромакеем и
+     9-slice'ом собран ровно под сетку, поэтому --reel-frame-w/h — это
+     НАТИВНЫЙ размер картинки, а сетка позиционируется по толщинам бортов
+     плюс 12px поля, чтобы отскок приземляющегося символа не заезжал на
+     дерево. Борта теперь по одному бревну с каждой стороны и все одной
+     толщины (95px; низ 102 — у нижнего бревна своя тень), см. сборку рамки
+     в скрипте: боковины строятся поворотом верхнего бревна, потому что
+     генератор упорно рисовал сбоку две доски. */
+  --cell-size: 200px;
+  --cell-gap: 10px;
+  --reel-frame-w: 1254px;
+  --reel-frame-h: 841px;
+  --frame-border-l: 95px;
+  --frame-border-t: 95px;
+  --frame-border-r: 95px;
+  --frame-border-b: 102px;
+  --reel-grid-pad: 12px;
+  /* Each plaque's empty panel, measured off its own art (хромакей по магенте
+     + максимальный вписанный прямоугольник, см. build_plate в скрипте
+     сборки). Re-measure if a plate is regenerated — the text box is
+     positioned straight from these. */
+  --popup-panel-base: 24.1% 12.62% 23.31% 12.74%;
+  --popup-panel-mega: 38.67% 28.16% 26.35% 27.89%;
+  --popup-panel-epic: 39.82% 17.42% 26.61% 17.17%;
+  --popup-panel-inset: var(--popup-panel-base);
+  /* 1.10 = the 0.92 this was designed at, +20% (product). The fit in
+     slot.js still caps it on short viewports — see FIT_RESERVE_HEIGHT_PX. */
+  --reel-frame-scale: 1.10;
+  --reel-scale: 1;
+  --reel-scale-mobile: 1;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--night);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  color: var(--text-cream);
+}
+
+/* ---------- Back-to-catalog button ---------- */
+.to-catalog-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 110;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(12, 20, 55, 0.78);
+  border: 1px solid rgba(232, 178, 60, 0.55);
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(4px);
+}
+.to-catalog-btn:hover { background: rgba(12, 20, 55, 0.94); border-color: var(--gold); }
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+/* ---------- Dev panel (temporary) ---------- */
+.dev-panel {
+  position: fixed;
+  top: 52px;
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 260px;
+  align-items: center;
+}
+.dev-btn {
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #222;
+  color: #ddd;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.dev-btn:hover { opacity: 1; }
+.dev-hint {
+  font-size: 10px;
+  color: #999;
+  width: 100%;
+  text-align: right;
+}
+
+/* ---------- Screen ---------- */
+.screen {
+  position: relative;
+  width: 100%;
+  min-width: calc((var(--reel-frame-w) * var(--reel-frame-scale) + 400px) * var(--reel-scale));
+  height: 940px;
+  margin: 0 auto;
+  overflow: visible;
+  background: var(--night);
+}
+
+.layer { position: absolute; }
+
+.bg {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.logo {
+  /* Pure lettering now (no crest, no halo padding — product: "логотип
+     поменять, сделать чисто текст и увеличить его"), so it is sized by WIDTH
+     against the reel frame rather than by a percentage of the screen height:
+     the block reads as wide as the reels, which is the "bigger" that was
+     asked for, and it stays locked to the frame at every viewport instead of
+     drifting with the screen box. */
+  /* Sized off the SCREEN, not the frame: the reels grew 20% and the logo was
+     to stay the size it already was, so tying its width to the frame would
+     have grown it too. 34% of the screen reproduces the width it had.
+     Positioned off the frame, though — `bottom` is the frame's own height plus
+     the bottom anchor, minus a deliberate 45px so the lettering sits ON the
+     frame's top log rather than floating above it. That overlap is what buys
+     the reels their extra height on a short viewport; the log is ~64px on
+     screen and the first row of symbols starts below it, so nothing is
+     covered. */
+  top: auto;
+  bottom: calc(7% + (var(--reel-frame-h) * var(--reel-frame-scale) * var(--reel-scale)) - 60px);
+  left: 50%;
+  transform: translateX(-50%);
+  /* 28.9% = 34% минус 15% (продукт). */
+  width: 28.9%;
+  height: auto;
+  object-fit: contain;
+  z-index: 4;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
+}
+
+/* ---------- Ковбой (экран фриспинов) ----------
+   Охотник за сокровищами стоит слева от барабанов, прижат к левому краю рамки —
+   позиция считается от собственной ширины/масштаба рамки, ровно как счётчик
+   фриспинов прижат к правому краю, поэтому зазор держится на любом вьюпорте,
+   а не уплывает. Лежит ПОЗАДИ рамки (z-index 3 против 6), чтобы поднятая рука
+   могла заходить на её край и он читался стоящим на улице, а не наклеенным
+   поверх. */
+.hero {
+  left: auto;
+  /* Чем больше right, тем левее он стоит. Отрицательные 70px = он заходит
+     правым плечом ЗА левое бревно рамки: вдвое выросший герой шире полосы
+     слева от барабанов, и без этого сдвига половина фигуры уезжала за левый
+     край экрана. Заходит ровно по бревно — до первой колонки символов он не
+     достаёт. */
+  right: calc(50% + (var(--reel-frame-w) * var(--reel-frame-scale) * var(--reel-scale)) / 2 - 70px);
+  bottom: 0;
+  /* Вдвое выше прежних 47% (продукт: «героя увеличить в два раза»). Кадр
+     700x1000, так что на 90% высоты экрана он занимает ~63% её по ширине —
+     под это поднят и FIT_RESERVE_WIDTH_PX в slot.js, иначе рамка съедала бы
+     его полосу слева. */
+  height: 94%;
+  width: auto;
+  z-index: 3;
+  pointer-events: none;
+  transform-origin: 50% 100%;
+  animation: hero-idle 4.5s ease-in-out infinite;
+  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.55));
+}
+/* One loop per mood; the src is swapped alongside the class in setHeroMood().
+   Kept separate rather than layered so a mood change restarts cleanly instead
+   of blending two half-finished cycles. */
+
+/* Idle: a slow breathe with a touch of sway — enough to stop him reading as a
+   sticker, small enough not to pull the eye off the reels. */
+@keyframes hero-idle {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  50%      { transform: translateY(-1.2%) rotate(-0.7deg) scale(1.012); }
+}
+/* Tense: short, quick, held breath — a fast tremble on the spot with no sway,
+   reading as "braced" against the idle's lazy drift. */
+@keyframes hero-tense {
+  0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1.02); }
+  25%      { transform: translate(-0.6%, -0.4%) rotate(0.5deg) scale(1.02); }
+  75%      { transform: translate(0.6%, -0.4%) rotate(-0.5deg) scale(1.02); }
+}
+/* Cheer: a real jump, with a squash on landing. */
+@keyframes hero-cheer {
+  0%   { transform: translateY(0) scaleY(0.94) scaleX(1.05); }
+  30%  { transform: translateY(-9%) scaleY(1.06) scaleX(0.97) rotate(-2deg); }
+  55%  { transform: translateY(-4%) scaleY(1) scaleX(1) rotate(2deg); }
+  75%  { transform: translateY(0) scaleY(0.93) scaleX(1.06); }
+  100% { transform: translateY(0) scaleY(1) scaleX(1); }
+}
+.hero.is-tense { animation: hero-tense 260ms ease-in-out infinite; }
+.hero.is-cheer {
+  animation: hero-cheer 700ms cubic-bezier(0.3, 0.9, 0.4, 1) infinite;
+  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 26px rgba(255, 158, 54, 0.6));
+}
+
+/* ---------- Золотой бизон (базовый экран) ----------
+   Персонажи поменялись экранами (продукт): на базовом теперь стоит золотой
+   бизон, а охотник-ковбой ушёл во фриспины. Классы в разметке остались
+   прежними — .hero это ковбой, .bonus-hero это бизон, — поменялись только
+   правила показа ниже; переименовывать их значило бы трогать и HTML, и
+   setHeroMood в slot.js без всякой пользы.
+
+   Вдвое крупнее прежних 36% (продукт: «бизона больше в два раза»). Заходит
+   правым боком ЗА левое бревно рамки — фигура шире полосы слева от
+   барабанов, ровно как ковбой до него. */
+.bonus-hero {
+  display: none;
+  left: auto;
+  right: calc(50% + (var(--reel-frame-w) * var(--reel-frame-scale) * var(--reel-scale)) / 2 - 20px);
+  bottom: 0;
+  height: 72%;
+  width: auto;
+  z-index: 3;
+  pointer-events: none;
+  transform-origin: 50% 100%;
+  animation: hero-shiver 3.2s ease-in-out infinite;
+  /* Тёплое свечение под расплавленное золото шерсти — на ночном фоне бизон
+     без него читается просто бурым. */
+  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 40px rgba(255, 158, 54, 0.45));
+}
+/* Базовый экран — бизон, фриспины — ковбой (обратно тому, как было). */
+.bonus-hero { display: block; }
+.hero { display: none; }
+.screen[data-mode="freespins"] .bonus-hero { display: none; }
+.screen[data-mode="freespins"] .hero { display: block; }
+
+/* Бизон отыгрывает настроение классами, без подмены арта: рисунок один, а
+   реакции базовому экрану нужны те же, что были у ковбоя. */
+.bonus-hero.is-tense {
+  animation: bison-tense 300ms ease-in-out infinite;
+}
+.bonus-hero.is-cheer {
+  animation: bison-cheer 780ms cubic-bezier(0.3, 0.9, 0.4, 1) infinite;
+  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 56px rgba(255, 158, 54, 0.8));
+}
+/* Напряжение — короткая дрожь на месте, как копыто роет землю. */
+@keyframes bison-tense {
+  0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1.015); }
+  25%      { transform: translate(-0.5%, 0) rotate(0.4deg) scale(1.015); }
+  75%      { transform: translate(0.5%, 0) rotate(-0.4deg) scale(1.015); }
+}
+/* Победа — вскидывается на передних, будто бодает воздух. */
+@keyframes bison-cheer {
+  0%   { transform: translateY(0) rotate(0deg) scale(1); }
+  35%  { transform: translateY(-6%) rotate(-3deg) scale(1.04); }
+  60%  { transform: translateY(-2%) rotate(1.5deg) scale(1.02); }
+  100% { transform: translateY(0) rotate(0deg) scale(1); }
+}
+
+/* Мелкое покачивание — он дышит, а не стоит чучелом. */
+@keyframes hero-shiver {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25%      { transform: translate(-0.4%, -0.5%) rotate(-0.4deg); }
+  50%      { transform: translate(0, -0.9%) rotate(0deg); }
+  75%      { transform: translate(0.4%, -0.5%) rotate(0.4deg); }
+}
+
+/* ---------- Reel area ----------
+   Рамка — картинка (.reel__frame, брёвна с верёвкой), .reel__bg — тёмная
+   панель, заполняющая её проём за символами. Обе позиционируются от
+   измеренных толщин бортов, а не от одного общего инсета: у сгенерированной
+   рамки борта разной толщины (боковые столбы вдвое толще перекладин). */
+/* Anchored to the BOTTOM of the screen, not centred: the logo hangs off the
+   frame's top edge (see .logo) and needs more headroom than the leftover space
+   a centred frame happens to leave above it — centring split the slack evenly
+   and clipped "WESTERN" off the top. transform-origin at the bottom edge keeps
+   `bottom` honest while the block is scaled. */
+.reel {
+  position: absolute;
+  left: 50%;
+  top: auto;
+  /* In fit-to-screen mode the bottom bar is a translucent overlay ON the screen
+     box, so this is a compromise: low enough that the reels get the height the
+     20% bump asked for, high enough that only the frame's bottom log — never a
+     symbol — passes behind the spin button. */
+  bottom: 7%;
+  transform-origin: 50% 100%;
+  transform: translateX(-50%) scale(calc(var(--reel-frame-scale) * var(--reel-scale)));
+  width: var(--reel-frame-w);
+  height: var(--reel-frame-h);
+}
+
+.reel__bg {
+  position: absolute;
+  /* Fills the frame opening behind the symbols, and deliberately runs 12px
+     FURTHER under the wood on every side: the chroma key that cut the opening
+     was dilated a few pixels, so a panel sized to the keyed hole exactly left
+     a hairline of page background glowing along the frame's inner lip (very
+     visible against the blue bonus sky). The overlap is hidden under the
+     frame image, which sits above this. */
+  inset: calc(var(--frame-border-t) - 12px) calc(var(--frame-border-r) - 12px)
+         calc(var(--frame-border-b) - 12px) calc(var(--frame-border-l) - 12px);
+  background:
+    radial-gradient(120% 100% at 50% 0%, rgba(74, 42, 21, 0.72), rgba(16, 10, 6, 0.95) 70%),
+    linear-gradient(180deg, rgba(30, 18, 10, 0.92), rgba(10, 6, 4, 0.96));
+  box-shadow: inset 0 0 70px rgba(0, 0, 0, 0.75);
+}
+
+/* Reel separators: thin gold rules sitting in the 10px gaps between columns.
+   Painted on .reel__grid, NOT on .reel__bg — the panel is 24px wider than the
+   grid on each side (it runs under the wood, see above), so a gradient with
+   the same period started from the panel's edge drifted ~15px out of the real
+   gaps and every column looked mis-seated inside its own reel. Anchoring the
+   rules to the grid box makes them exact by construction: the period is
+   --cell-size + --cell-gap, the bright band is the gap itself, and the run
+   past the last column is clipped by the grid's own bounds.
+
+   Not on the columns themselves: a column is overflow:hidden with a mask, so
+   anything drawn inside it would be clipped by the same mask that hides the
+   scrolling strip. z-index -1 keeps the rules behind the (positioned) columns
+   but still inside .reel__grid's stacking context, i.e. above .reel__bg. */
+.reel__grid::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0,
+    transparent var(--cell-size),
+    rgba(255, 190, 96, 0.28) var(--cell-size),
+    rgba(255, 236, 190, 0.92) calc(var(--cell-size) + var(--cell-gap) / 2),
+    rgba(255, 190, 96, 0.28) calc(var(--cell-size) + var(--cell-gap)),
+    transparent calc(var(--cell-size) + var(--cell-gap))
+  );
+  /* Fade the rules out at the top and bottom so they don't butt hard into the
+     frame's inner lip. */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+  pointer-events: none;
+}
+
+/* Сгенерированная рамка из брёвен и верёвок. Лежит НАД сеткой (z-index 6),
+   поэтому дерево заодно перекрывает пиксели символа, вылезающие из проёма на
+   приземлении, — та же роль, что у CSS-кольца в родительской игре. */
+.reel__frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 6;
+  filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.6));
+}
+
+.reel__grid {
+  /* Проём рамки минус поле: ровно 1040x620 сетки. */
+  position: absolute;
+  left: calc(var(--frame-border-l) + var(--reel-grid-pad));
+  top: calc(var(--frame-border-t) + var(--reel-grid-pad));
+  width: calc(var(--cell-size) * 5 + var(--cell-gap) * 4);
+  height: calc(var(--cell-size) * 3 + var(--cell-gap) * 2);
+  display: flex;
+  flex-direction: row;
+  gap: var(--cell-gap);
+  z-index: 1;
+}
+
+/* One reel = a masked viewport (3 cells tall) over a taller vertical strip —
+   mechanics identical to the other themes; pixel constants reused from East
+   Discovery's frame geometry (BG_HOLE_INSET.top * 1107 ≈ 112px bleed). */
+.reel__col {
+  position: relative;
+  width: var(--cell-size);
+  height: calc(100% + 132px);
+  margin-top: -112px;
+  overflow: hidden;
+  /* Fade BOTH ends: the column bleeds 112px above the grid, so without a top
+     fade the scrolling symbols would flash over the frame's top log during a
+     spin. Opaque only across the 620px the three rows occupy (112..732);
+     everything above/below is transparent. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 96px, #000 112px, #000 732px, transparent 748px);
+  mask-image: linear-gradient(to bottom, transparent 96px, #000 112px, #000 732px, transparent 748px);
+  transition: transform 200ms ease, filter 200ms ease;
+}
+.reel__col.is-anticipating {
+  /* The waiting column doesn't scale up — it just gets the z-index/glow to
+     read as "the one in suspense" without visibly growing (no screen zoom
+     either; that was removed per product). */
+  z-index: 2;
+  filter: drop-shadow(0 0 14px rgba(255, 158, 54, 0.95));
+}
+.reel__strip {
+  position: absolute;
+  top: 112px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cell-gap);
+}
+.reel__cell {
+  position: relative;
+  width: var(--cell-size);
+  height: var(--cell-size);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+.reel__cell img {
+  /* Every symbol was normalised to the same 360px box with a common optical
+     centre when it was cut, so a plain fit-to-cell is correct here and keeps
+     all nine at identical scale — unlike the western original, whose symbols
+     shipped at mixed native sizes and had to render uncapped. Drawn at 2x the
+     cell so they stay sharp on retina and when the reel scales up. */
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+.reel__cell.is-dimmed img {
+  opacity: 0.3;
+}
+.reel__cell-anchor {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.reel__strip.is-looping {
+  animation: reel-loop var(--reel-loop-duration, 420ms) linear infinite;
+}
+@keyframes reel-loop {
+  from { transform: translateY(0); }
+  to { transform: translateY(var(--reel-loop-distance, 0)); }
+}
+
+/* ---------- Screen dim (before popups / base<->bonus transitions) ---------- */
+.screen-dim {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  /* Same z-index as .logo (4, the highest other layer/z:auto element here) —
+     ties break by DOM order, and this sits later in markup, so it still
+     paints above the logo. .game-popup sits well above it (30), so a popup
+     always reads bright against its own dim. */
+  z-index: 4;
+}
+.screen-dim.is-active { opacity: 1; }
+.screen-dim.is-opaque { background: #000; }
+
+/* ---------- Popup win-amount overlay ---------- */
+
+/* ---------- Inline win-amount (base wins that never get a popup) ---------- */
+.reel-win-amount-viewport {
+  position: absolute;
+  left: 50%;
+  top: auto;
+  bottom: 7%;
+  transform-origin: 50% 100%;
+  transform: translateX(-50%) scale(calc(var(--reel-frame-scale) * var(--reel-scale)));
+  width: var(--reel-frame-w);
+  height: var(--reel-frame-h);
+  z-index: 16;
+  pointer-events: none;
+}
+.reel-win-amount {
+  position: absolute;
+  inset: var(--frame-border-t) var(--frame-border-r) var(--frame-border-b) var(--frame-border-l);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.reel-win-amount.is-visible { opacity: 1; }
+.reel-win-amount::before {
+  content: attr(data-amount);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 64px;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 0 4px 0 var(--ink), 0 0 26px rgba(255, 158, 54, 0.8);
+  white-space: nowrap;
+  padding: 6px 22px;
+  background: rgba(18, 4, 26, 0.55);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(255, 190, 96, 0.3);
+}
+
+/* ---------- Buy Bonus sign (buy_bonus.png — вывеска-доска на верёвке) ----------
+   Desktop: to the right of the reel frame, vertically centered on it.
+   Mobile: moved to the ground centered below the reels (portrait media query). */
+.sign-buy-bonus {
+  right: 4%;
+  top: 56%;
+  transform: translateY(-50%);
+  width: 12%;
+  /* Ровно пропорции buy_bonus.png (700x675 — доска висит на верёвке, поэтому
+     плашка почти квадратная). Держать в синхроне с артом: если бокс не
+     повторяет пропорции картинки, надпись, спозиционированная в процентах ОТ
+     БОКСА, уезжает мимо панели. Перегенерили плашку — обновить и это. */
+  aspect-ratio: 700 / 675;
+  height: auto;
+  cursor: pointer;
+  z-index: 7;
+}
+.sign-buy-bonus__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5));
+}
+.screen[data-mode="freespins"] .sign-buy-bonus { display: none; }
+
+/* Missing-asset placeholder (dev-time only) — sized so a not-yet-delivered
+   symbol (e.g. the WILD art) shows as a tidy dashed box with its alt text,
+   not a tiny broken-image glyph. */
+img.is-missing {
+  width: 55%;
+  height: 55%;
+  object-fit: contain;
+  outline: 2px dashed rgba(255, 190, 96, 0.5);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+
+/* ---------- Free Spins counter (fs_counter.png — деревянная плашка в золоте) ---------- */
+/* Vertically centred against the reels and pinned to the frame's right edge —
+   computed from the frame's own width and scale rather than an eyeballed
+   percentage, so it keeps the same gap at every viewport instead of drifting
+   into (or away from) the frame. The Buy Bonus sign occupies this spot in base
+   mode, but it's hidden in free spins, so the two never collide. */
+.fs-counter {
+  display: none;
+  top: 50%;
+  right: auto;
+  bottom: auto;
+  left: calc(50% + (var(--reel-frame-w) * var(--reel-frame-scale) * var(--reel-scale)) / 2 + 20px);
+  transform: translateY(-50%);
+  width: 12%;
+  z-index: 6;
+}
+.screen[data-mode="freespins"] .fs-counter { display: block; }
+
+.fs-counter__img {
+  position: relative;
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5));
+}
+/* Панель этой плашки по замеру арта (520x706) — сверху 15.17%, снизу 15.91%,
+   слева 6.87%, справа 7.3%, то есть её центр по высоте на 49.6%. Подпись и
+   число делят её пополам: подпись в верхней трети, число под ней. */
+.fs-counter__caption {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  transform: translate(-50%, -50%);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 1.15vw;
+  line-height: 1.05;
+  letter-spacing: 0.16em;
+  text-align: center;
+  color: rgba(255, 232, 190, 0.85);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+.fs-counter__value {
+  position: absolute;
+  left: 50%;
+  top: 61%;
+  transform: translate(-50%, -50%);
+  font-family: 'Luckiest Guy', cursive;
+  font-weight: 400;
+  font-size: 3.2vw;
+  color: var(--gold);
+  -webkit-text-stroke: 1px var(--ink);
+  text-shadow: 0 2px 0 var(--ink), 0 0 22px rgba(240, 185, 63, 0.5);
+  white-space: nowrap;
+}
+
+/* ================================================================
+   Bottom UI bar
+   ================================================================ */
+.ui-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2vw;
+  padding: 1.2vh 2vw;
+  background: var(--ui-bg);
+  border-top: 1px solid var(--ui-border);
+}
+
+.ui-bar__group {
+  display: flex;
+  align-items: center;
+  gap: 0.8vw;
+}
+
+.ui-icon-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.ui-icon-btn svg { width: 55%; height: 55%; }
+.ui-icon-btn:hover { background: rgba(255, 255, 255, 0.14); }
+.ui-icon-btn:active { transform: scale(0.92); }
+
+.ui-icon-btn--step {
+  font-size: 22px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.1);
+}
+.ui-icon-btn--accent {
+  background: linear-gradient(180deg, #f0b93f, #7a3f0d);
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.ui-bar__bet {
+  gap: 0;
+}
+
+.ui-bet-field {
+  min-width: 130px;
+  height: 40px;
+  padding: 0 16px;
+  margin: 0 2px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--ui-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 700;
+}
+.ui-bet-field__currency {
+  font-size: 12px;
+  opacity: 0.7;
+  font-weight: 600;
+}
+
+.ui-spin-btn {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 190, 96, 0.85);
+  background: radial-gradient(circle at 35% 30%, #5c1246, #220a2e 75%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.1s ease;
+}
+.ui-spin-btn svg { width: 42%; height: 42%; }
+.ui-spin-btn:active { transform: scale(0.94); }
+.ui-spin-btn.is-spinning svg { animation: spin-rotate 0.7s linear infinite; }
+@keyframes spin-rotate { to { transform: rotate(360deg); } }
+
+.ui-icon-btn--auto svg text { font-family: 'Baloo 2', sans-serif; }
+
+.ui-balance {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.ui-balance__label { opacity: 0.75; font-size: 13px; font-weight: 600; }
+.ui-balance__value { color: var(--gold); font-size: 18px; }
+.ui-balance__currency { font-size: 12px; opacity: 0.7; }
+
+.ui-icon-btn[data-action="sound"].is-muted { opacity: 0.4; }
+.ui-icon-btn[data-action="sound"].is-muted svg path:last-child { display: none; }
+
+/* ================================================================
+   Wheel of Fortune (3x WHEEL -> колесо)
+   ================================================================
+   Портировано из dirty-money-mafia.css. Собрано из плоских нарезок
+   img/western-treasure/img/wof_*, не Spine: неподвижны рамка, стрелка и
+   кнопка; крутится .wof__rotor — барабан вместе с подписями.
+
+   Геометрия снята с самих картинок. Барабан (wof_drum.png) — ровно 12
+   клиньев, разделённых золотыми спицами, первая спица на 12 часах, значит
+   ЦЕНТР клина i стоит на (15 + i*30) градусов. Стрелка — сверху, поэтому
+   slot.js доворачивает ротор на -(15 + i*30) (см. WOF_SEGMENT_OFFSET).
+
+   Рамка (wof_frame.png, 760x856) не симметрична: её круглый проём Ø461px с
+   центром в (49.74%, 54.85%) — сверху череп бизона, снизу монеты. Поэтому
+   размеры бокса задаёт БАРАБАН, а рамка вешается вокруг него со сдвигом,
+   посчитанным из этих трёх чисел:
+     ширина рамки = Ø / 0.6066 = 164.9% барабана
+     высота рамки = 164.9% * 856/760 = 185.7%
+     смещение     = 50% - 49.74%*164.9%  и  50% - 54.85%*185.7%
+   Перегенерили рамку — пересчитать здесь же. */
+.wof {
+  position: fixed;
+  inset: 0;
+  z-index: 40; /* выше рамки барабанов (6) и попапов (20) */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5vh;
+  background: rgba(0, 0, 0, 0.84);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+}
+.wof[hidden] { display: none; }
+.wof.is-open { opacity: 1; pointer-events: auto; }
+
+.wof__title {
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: clamp(20px, 3.6vh, 46px);
+  letter-spacing: 0.04em;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 0 4px 0 var(--ink), 0 0 30px rgba(240, 185, 63, 0.75);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.wof__wheel {
+  position: relative;
+  /* Это бокс БАРАБАНА, а не рамки. Рамка шире и выше его: она вылезает вверх
+     на 51.85% его высоты (череп) и вниз на 33.85% (монеты), поэтому эти же
+     доли заложены в margin — иначе череп налезал бы на заголовок, а монеты
+     на строку приза. */
+  width: min(28vh, 44vw, 290px);
+  aspect-ratio: 1;
+  margin: calc(0.52 * min(28vh, 44vw, 290px)) 0 calc(0.34 * min(28vh, 44vw, 290px));
+}
+
+.wof__rotor {
+  position: absolute;
+  inset: 0;
+  transform: rotate(var(--wof-angle, 0deg));
+  transform-origin: 50% 50%;
+  z-index: 1;
+}
+.wof__drum {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.wof__labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+/* Подпись едет вместе с барабаном и развёрнута по своему радиусу. Спица от
+   центра барабана до верхнего края (длина = 50% барабана) плюс поворот на
+   свою камору; надпись сидит на спице ровно там, где центр каморы. Замер по
+   арту цилиндра (600x600): центры восьми камор на радиусе 192px = 64% радиуса
+   от центра, значит от ВНЕШНЕГО конца спицы это 36%. Всё в процентах — при
+   любом размере колеса подписи остаются в каморах. */
+.wof__label {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 0;
+  height: 50%;
+  transform-origin: 50% 100%;
+  transform: rotate(var(--a, 0deg));
+}
+.wof__label > span {
+  position: absolute;
+  top: 36%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  /* Камора — круглая дырка диаметром ~20% барабана, а не широкий клин:
+     надпись должна помещаться в неё, отсюда потолок ниже прежнего. */
+  font-size: clamp(11px, 1.7vh, 20px);
+  line-height: 1;
+  color: #ffe9a8;
+  text-shadow: 0 2px 0 #4a1c06, 0 0 10px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+  text-align: center;
+}
+/* "FREE SPINS" длиннее множителей — в камору влезает только в две строки и
+   заметно мельче. */
+.wof__label--fs > span {
+  font-size: clamp(7px, 1.0vh, 12px);
+  white-space: normal;
+  width: 6.5ch;
+  color: #ffd76a;
+}
+
+.wof__frame,
+.wof__pointer,
+.wof__spin {
+  position: absolute;
+  pointer-events: none;
+}
+.wof__frame {
+  width: 164.9%;
+  height: 185.7%;
+  left: -31.99%;
+  top: -51.85%;
+  z-index: 2;
+  filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.7));
+}
+/* Стрелка на 3 часах — она и указывает на выигравший клин. НЕ сверху: там у
+   рамки сидит череп бизона, и стрелка в него утыкалась; справа обод чистый.
+   Арт нарисован остриём вниз, поэтому доворачиваем на 90° — смотрит внутрь
+   колеса. Отсюда же WOF_POINTER_ANGLE = 90 в slot.js. */
+.wof__pointer {
+  left: auto;
+  right: -9%;
+  top: 50%;
+  width: 22%;
+  height: auto;
+  transform: translateY(-50%) rotate(90deg);
+  z-index: 3;
+  filter: drop-shadow(0 0 12px rgba(255, 190, 60, 0.8));
+}
+
+.wof__spin {
+  left: 50%;
+  top: 50%;
+  /* Крупнее, чем у родителя (22%): у этого барабана в центре нарисована своя
+     золотая втулка-звезда, и кнопка должна её перекрывать, а не двоиться с
+     ней. */
+  width: 34%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 4;
+  transition: transform 120ms ease, filter 200ms ease;
+}
+.wof__spin img { width: 100%; height: 100%; display: block; }
+.wof__spin:hover { filter: brightness(1.12); }
+.wof__spin:active { transform: translate(-50%, -50%) scale(0.94); }
+.wof__spin:disabled { cursor: default; pointer-events: none; }
+/* Пока не нажали — кнопка пульсирует, подсказывая действие. */
+.wof__spin:not(:disabled) { animation: wof-pulse 1.3s ease-in-out infinite; }
+@keyframes wof-pulse {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(255, 190, 60, 0.5)); }
+  50% { filter: drop-shadow(0 0 22px rgba(255, 214, 130, 0.95)); }
+}
+
+.wof__prize {
+  min-height: 1.2em;
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: clamp(22px, 4.4vh, 56px);
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 0 4px 0 var(--ink), 0 0 30px rgba(240, 185, 63, 0.85);
+  white-space: nowrap;
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 260ms ease, transform 260ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.wof__prize[hidden] { display: none; }
+.wof__prize.is-visible { opacity: 1; transform: scale(1); }
+
+@media (orientation: portrait) {
+  /* Портрет узкий: колесо упирается в ширину, поэтому и барабан, и заголовок
+     мельче, иначе они наезжают друг на друга и на нижний бар. */
+  .wof__wheel { width: min(34vh, 64vw, 340px); margin: 8vh 0 5vh; }
+  .wof__title { font-size: clamp(16px, 2.6vh, 30px); }
+  .wof__prize { font-size: clamp(18px, 3.2vh, 38px); }
+}
+
+/* ---------- Paytable info popup ---------- */
+.info-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 20px;
+}
+.info-popup[hidden] { display: none; }
+
+.info-popup__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(720px, 90vh);
+  overflow-y: auto;
+  background: #2a180c;
+  border: 3px solid var(--ember-dark);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.info-popup__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-cream);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.info-popup__close:hover { background: rgba(0, 0, 0, 0.55); }
+
+.info-popup__title {
+  margin: 0 0 16px;
+  color: var(--gold);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 24px;
+  text-align: center;
+  -webkit-text-stroke: 1px var(--ink);
+  text-shadow: 0 2px 0 var(--ink);
+}
+
+.info-popup__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.info-popup__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.info-popup__row img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.info-popup__row-name {
+  flex: 1 1 auto;
+  min-width: 90px;
+  font-weight: 700;
+}
+.info-popup__row-pays {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-cream);
+}
+.info-popup__row-pays span { white-space: nowrap; opacity: 0.9; }
+.info-popup__row-pays b { color: var(--gold); }
+
+@media (max-width: 720px) {
+  .ui-bar { gap: 3vw; padding: 1.2vh 2.5vw; }
+  .ui-balance__label { display: none; }
+  .ui-icon-btn { width: 36px; height: 36px; }
+  .ui-spin-btn { width: 58px; height: 58px; }
+}
+
+/* ================================================================
+   EXPERIMENTAL: desktop "fit everything, no scroll" layout
+   ================================================================
+   Same experiment as Amy's Fruit Farm (see style.css) — toggled via the
+   dev-panel "fit-screen" button (slot.js setupDevPanel), not the default.
+   .screen is normally a fixed 940px tall regardless of viewport, so a short
+   viewport can need to scroll; this pins .screen to the viewport box and
+   turns .ui-bar into a translucent overlay instead of a row that competes
+   for height with it — see ReelMath.fitScale (reel-math.js) for the
+   width+height-aware scale this needs. */
+body.layout-fit {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+body.layout-fit .screen {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  min-width: 0;
+  margin: 0;
+}
+body.layout-fit .ui-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  background: rgba(26, 8, 38, 0.42);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* ================================================================
+   Mobile (portrait) layout — mobile bg art is 780x1416
+   (mob_Base_bg.png / mob_Bonus_bg.png). First pass; calibrate live.
+   ================================================================ */
+@media (orientation: portrait) {
+  :root {
+    --ui-bar-h-mobile: 128px;
+
+    /* One source of truth for the reel's on-screen box in portrait, so the
+       frame and everything anchored to its edges can't drift apart.
+       --reel-scale-mobile (from mobileReelScale) makes the frame exactly one
+       viewport wide; the multiplier is the margin left around it. Back to
+       1.0 now that each side is one slim log — the wide double posts were the
+       only reason to let the border bleed off-screen. */
+    --reel-mobile-mult: 1.0;
+    /* Рамка 1.76:1 занимает в портрете от силы треть высоты. 26% ставит блок
+       барабанов по центру свободного места между логотипом и нижним баром. */
+    --reel-mobile-top: 26%;
+    --reel-mobile-w: calc(100vw * var(--reel-mobile-mult));
+    /* 1254x841 is --reel-frame-w/h; the transform scales both equally. */
+    --reel-mobile-h: calc(var(--reel-mobile-w) * 841 / 1254);
+    --reel-mobile-side: calc((100vw - var(--reel-mobile-w)) / 2);
+    --reel-mobile-below: calc(var(--reel-mobile-top) + var(--reel-mobile-h) + 10px);
+  }
+
+  html, body { overflow-x: hidden; }
+
+  /* fit-to-screen (body.layout-fit) is a desktop-only experiment made the
+     default in slot.js init — neutralize it in portrait so the dedicated
+     mobile layout below always wins (otherwise body.layout-fit .screen's
+     100dvh height and the translucent ui-bar overlay override it). */
+  body.layout-fit {
+    height: auto;
+    overflow: visible;
+  }
+  body.layout-fit .screen {
+    width: 100vw;
+    height: calc(100vh - var(--ui-bar-h-mobile));
+    height: calc(100dvh - var(--ui-bar-h-mobile));
+    min-width: 0;
+    margin: 0;
+  }
+  body.layout-fit .ui-bar {
+    position: sticky;
+    background: var(--ui-bg);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .screen {
+    width: 100vw;
+    min-width: 0;
+    height: calc(100vh - var(--ui-bar-h-mobile));
+    height: calc(100dvh - var(--ui-bar-h-mobile));
+    min-height: 0;
+    margin: 0;
+    /* --reel-mobile-mult is deliberately >1 here (the frame's thick side posts
+       are meant to bleed off-screen), and the buy-bonus sign hangs past the
+       right edge with it. Without this clip that overflow makes the document
+       wider than the viewport, the browser reserves a horizontal scrollbar,
+       and the ~25px it takes off the visual height pushes the bottom bar's
+       BALANCE/BET row off the bottom of the screen. */
+    overflow: hidden;
+  }
+
+  .logo {
+    /* В портрете логотип-строку берём по ширине экрана, а не от рамки. */
+    top: 6%;
+    /* 59.5vw = 70vw минус 15% (продукт). */
+    width: 59.5vw;
+    height: auto;
+  }
+
+  .reel,
+  .reel-win-amount-viewport {
+    left: 50%;
+    top: var(--reel-mobile-top);
+    transform-origin: 50% 0%;
+    transform: translateX(-50%) scale(calc(var(--reel-scale-mobile) * var(--reel-mobile-mult)));
+  }
+
+  /* Both sit in the same spot — flush with the frame's right edge, 10px below
+     it — and never at the same time: the Buy Bonus sign is hidden in free
+     spins, which is the only mode the counter appears in. */
+  .sign-buy-bonus,
+  .fs-counter {
+    left: auto;
+    bottom: auto;
+    right: var(--reel-mobile-side);
+    top: var(--reel-mobile-below);
+    transform: none;
+  }
+
+  /* Места сбоку от барабанов в портрете нет (рамка занимает 98% ширины), но
+     под ними пустует нижняя треть экрана — герой встаёт туда, в левый угол,
+     на нарисованную на фоне тропу. */
+  /* Ковбой (фриспины). Крупнее прежних 30% — та же правка, что и на десктопе,
+     но не ровно вдвое: в портрете под барабанами всего ~40% высоты, и на 50%
+     шляпа заезжала на нижний ряд символов. Левее на 8%, потому что более
+     широкая фигура иначе наезжала бы на плашку Buy Bonus в правом углу. */
+  .hero {
+    left: -8%;
+    right: auto;
+    bottom: 0;
+    height: 42%;
+  }
+
+  /* Бизон (базовый экран) — на том же месте под барабанами. Вдвое крупнее
+     прежних 32%; он шире человека, поэтому стоит чуть правее от угла, чтобы
+     не свисать за левый край. */
+  .bonus-hero {
+    left: 38%;
+    right: auto;
+    bottom: 0;
+    height: 40%;
+    transform: translateX(-50%);
+    transform-origin: 50% 100%;
+  }
+  @keyframes hero-shiver {
+    0%, 100% { transform: translateX(-50%) translateY(0) rotate(0deg); }
+    25%      { transform: translateX(-50%) translateY(-0.5%) rotate(-0.4deg); }
+    50%      { transform: translateX(-50%) translateY(-0.9%) rotate(0deg); }
+    75%      { transform: translateX(-50%) translateY(-0.5%) rotate(0.4deg); }
+  }
+  /* Настроения бизона — та же поправка, что и у hero-shiver выше, и по той же
+     причине: в портрете .bonus-hero центрируется собственным
+     translateX(-50%), а `transform` в кейфрейме ПЕРЕЗАПИСЫВАЕТ его целиком.
+     Без переопределения бизон прыгал вбок на полширины каждый раз, когда
+     менялось состояние (продукт: «бизон смещается на мобиле при изменении
+     состояния»). */
+  @keyframes bison-tense {
+    0%, 100% { transform: translateX(-50%) rotate(0deg) scale(1.015); }
+    25%      { transform: translateX(-50%) translateX(-0.5%) rotate(0.4deg) scale(1.015); }
+    75%      { transform: translateX(-50%) translateX(0.5%) rotate(-0.4deg) scale(1.015); }
+  }
+  @keyframes bison-cheer {
+    0%   { transform: translateX(-50%) translateY(0) rotate(0deg) scale(1); }
+    35%  { transform: translateX(-50%) translateY(-6%) rotate(-3deg) scale(1.04); }
+    60%  { transform: translateX(-50%) translateY(-2%) rotate(1.5deg) scale(1.02); }
+    100% { transform: translateX(-50%) translateY(0) rotate(0deg) scale(1); }
+  }
+
+  .sign-buy-bonus { width: 30%; }
+  /* Крупнее десктопных: пустые панели у этих двух плашек занимают заметно
+     большую долю арта, и мелкий размер в них теряется. Селектор с .screen —
+     это НЕ украшение: правило `.sign-buy-bonus__label` для десктопа лежит
+     ниже по файлу, медиазапрос специфичности не добавляет, и без лишнего
+     класса портретный размер проигрывал бы ему по порядку. */
+  .screen .sign-buy-bonus__label { font-size: 5.4vw; }
+  .fs-counter { width: 24%; height: auto; }
+  .fs-counter__caption { font-size: 2.6vw; }
+  .fs-counter__value { font-size: 7vw; }
+
+  .ui-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-areas:
+      "icons1 spin icons2"
+      "bet bet balance";
+    gap: 1vh 1vw;
+    justify-items: center;
+    padding: 1vh 3vw;
+  }
+  .ui-bar > *:nth-child(1) { grid-area: icons1; }
+  .ui-bar > *:nth-child(2) { grid-area: bet; }
+  .ui-bar > *:nth-child(3) { grid-area: spin; }
+  .ui-bar > *:nth-child(4) { grid-area: icons2; }
+  .ui-bar > *:nth-child(5) { grid-area: balance; justify-self: end; }
+}
+
+/* ---------- Boot preloader theme (структура в css/preloader.css) ---------- */
+.preloader {
+  --pl-bg: #1a0f07;
+  --pl-accent-a: #ff9e36;
+  --pl-accent-b: #ffd97a;
+  --pl-glow-a: rgba(255,158,54,0.35);
+  --pl-glow-b: rgba(255,217,122,0.12);
+  --pl-border: rgba(255,158,54,0.45);
+  --pl-shadow: rgba(255,158,54,0.6);
+}
+
+/* ============================================================================
+   Motion that used to be Spine
+   ============================================================================
+   Everything below replaces a skeleton the western original shipped. Timings
+   are duplicated as constants in slot.js (WIN_PULSE_MS, LAND_BOUNCE_MS,
+   BIG_WILD_GROW_MS, POPUP_ENTER_MS, POPUP_EXIT_MS) — change both together. */
+
+/* ---------- Symbol idle / landing / win ---------- */
+
+/* wild and scatter breathe continuously so the two special symbols read as
+   "alive" on an otherwise static grid, the same job the original's idle loop
+   did. Paused while the cell is winning so the two don't fight. */
+@keyframes symbol-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.045); }
+}
+.reel__cell.is-special img {
+  animation: symbol-breathe 2.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(255, 190, 96, 0.4));
+}
+
+@keyframes symbol-land {
+  0%   { transform: translateY(-6%) scaleY(1.06) scaleX(0.96); }
+  55%  { transform: translateY(0) scaleY(0.94) scaleX(1.05); }
+  100% { transform: translateY(0) scale(1); }
+}
+.reel__cell.is-landing img {
+  animation: symbol-land 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes symbol-win {
+  0%   { transform: scale(1);    filter: drop-shadow(0 0 0 rgba(255, 138, 212, 0)); }
+  35%  { transform: scale(1.18); filter: drop-shadow(0 0 22px rgba(255, 138, 212, 0.95)) brightness(1.18); }
+  70%  { transform: scale(1.06); filter: drop-shadow(0 0 16px rgba(255, 138, 212, 0.7)) brightness(1.08); }
+  100% { transform: scale(1);    filter: drop-shadow(0 0 0 rgba(255, 138, 212, 0)); }
+}
+.reel__cell.is-winning img {
+  animation: symbol-win 620ms ease-in-out;
+  /* Beats .is-special's idle breathe for the duration of the pulse. */
+  animation-fill-mode: both;
+}
+.reel__cell.is-winning {
+  z-index: 3; /* the growing symbol overlaps its neighbours, never under them */
+}
+
+/* ---------- Win line ---------- */
+
+.win-line {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 4; /* above the cells, below the frame */
+}
+.win-line path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.win-line__glow {
+  stroke: rgba(255, 158, 54, 0.6);
+  stroke-width: 18;
+  filter: blur(6px);
+}
+.win-line__core {
+  stroke: #ffe6f6;
+  stroke-width: 5;
+}
+/* Draws itself on, left to right, then holds — pathLength normalises the dash
+   maths so one keyframe works for every line shape and every viewport scale. */
+@keyframes win-line-draw {
+  0%   { stroke-dashoffset: 1; opacity: 0.2; }
+  45%  { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+.win-line.is-playing path {
+  pathLength: 1;
+  stroke-dasharray: 1;
+  animation: win-line-draw 620ms ease-out;
+}
+
+/* ---------- Expanding wild ---------- */
+
+.big-wild {
+  position: absolute;
+  left: 50%;
+  top: 112px;   /* .reel__strip's own offset — the top of the frame opening */
+  height: calc(100% - 132px);
+  width: auto;
+  transform: translateX(-50%) scaleY(0.34);
+  transform-origin: center center;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+  transition: transform 420ms cubic-bezier(0.34, 1.4, 0.5, 1), opacity 240ms ease;
+  filter: drop-shadow(0 0 18px rgba(255, 158, 54, 0.55));
+}
+.big-wild.is-grown {
+  transform: translateX(-50%) scaleY(1);
+  opacity: 1;
+}
+@keyframes big-wild-win {
+  0%, 100% { filter: drop-shadow(0 0 18px rgba(255, 158, 54, 0.6)) brightness(1); }
+  50%      { filter: drop-shadow(0 0 34px rgba(255, 138, 212, 1)) brightness(1.15); }
+}
+.big-wild.is-winning {
+  animation: big-wild-win 900ms ease-in-out infinite;
+}
+
+/* ---------- Popups ---------- */
+
+.game-popup {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%) scale(0.7);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 30;
+  transition: transform 420ms cubic-bezier(0.34, 1.5, 0.5, 1), opacity 420ms ease;
+  text-align: center;
+}
+.game-popup.is-in  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.game-popup.is-out {
+  transform: translate(-50%, -50%) scale(0.86);
+  opacity: 0;
+  transition-duration: 260ms;
+}
+
+/* The plaque is generated art with an empty navy panel; the text sits on top,
+   inset to that panel's measured bounds (--popup-panel-inset). Sizes are in
+   cqw so the whole popup scales as one piece with the art. */
+.game-popup {
+  container-type: inline-size;
+  width: min(760px, 62vw);
+}
+.game-popup.is-mobile { width: min(560px, 88vw); }
+
+.game-popup__art {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 24px 60px rgba(0, 0, 0, 0.7));
+}
+
+.game-popup.is-plate-base { --popup-panel-inset: var(--popup-panel-base); }
+.game-popup.is-plate-mega { --popup-panel-inset: var(--popup-panel-mega); }
+.game-popup.is-plate-epic { --popup-panel-inset: var(--popup-panel-epic); }
+
+/* The grander plates carry more art around a proportionally smaller panel, so
+   they need to be physically bigger on screen to keep the text legible. */
+.game-popup.is-plate-mega { width: min(920px, 74vw); }
+/* 900, а не 1020 как у родителя: медальон этой игры выше (корона + стволы
+   сверху), и на 1020 корона упиралась в верхний край экрана. */
+.game-popup.is-plate-epic { width: min(900px, 76vw); }
+.game-popup.is-mobile.is-plate-mega { width: min(660px, 94vw); }
+.game-popup.is-mobile.is-plate-epic { width: min(700px, 96vw); }
+
+.game-popup__body {
+  position: absolute;
+  inset: var(--popup-panel-inset);
+  /* Its own container so the type below scales against the PANEL, not the
+     whole plaque — the panel is a different fraction of the art on each tier.
+     fitPopupText() then shrinks anything that still overruns. */
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6cqw;
+  text-align: center;
+}
+
+.game-popup__sub {
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-size: 9cqw;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: rgba(255, 246, 226, 0.8);
+  text-shadow: 0 0.3cqw 1cqw rgba(0, 0, 0, 0.9);
+}
+/* Same treatment as the Buy Bonus label: solid cream on a dark shadow, no
+   stroke and no gradient fill. The stroke was breaking the letterforms —
+   at this size it closed up the counters and chewed the thin joints (product:
+   "из-за обводки он выглядит поломано"). */
+.game-popup__title {
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-size: 26cqw;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: #fff6e2;
+  text-shadow: 0 0.6cqw 1.8cqw rgba(0, 0, 0, 0.9), 0 0 3.5cqw rgba(0, 0, 0, 0.6);
+}
+.game-popup__amount {
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-size: 15cqw;
+  font-weight: 800;
+  color: #fff6e2;
+  text-shadow: 0 0.5cqw 1.5cqw rgba(0, 0, 0, 0.9), 0 0 3cqw rgba(0, 0, 0, 0.55);
+}
+
+/* ---------- Buy Bonus label ---------- */
+
+/* The generated plate has a deliberately blank red medallion; the label is
+   text on top so it stays crisp and translatable. */
+.sign-buy-bonus { position: absolute; }
+/* Plain solid type, no stroke and no gradient fill: at this size the outline
+   was closing up the counters and the gold-on-gold gradient had almost no
+   contrast against the plate. A flat cream face on a dark shadow reads at a
+   glance instead (product: "шрифт без обводки и более читаемый"). */
+.sign-buy-bonus__label {
+  position: absolute;
+  /* Ровно центр пустой панели buy_bonus.png по замеру арта (700x675):
+     сверху 48.05%, снизу 17.69% -> центр по вертикали 65.2%; слева 15.1%,
+     справа 15.25% -> центр по горизонтали 49.9%. Доска висит на верёвке, и
+     верхняя половина плашки — это верёвка с кольцами, поэтому середина
+     ПАНЕЛИ сильно ниже середины КАРТИНКИ: надпись, поставленная на 57%,
+     стояла над доской, а не в ней. */
+  left: 49.9%;
+  top: 65.2%;
+  transform: translate(-50%, -50%);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 1.45vw;
+  line-height: 1.08;
+  letter-spacing: 0.02em;
+  color: #fff6e2;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9), 0 0 10px rgba(0, 0, 0, 0.6);
+  transition: text-shadow 200ms ease;
+  pointer-events: none;
+  text-align: center;
+  white-space: nowrap;
+}
+.sign-buy-bonus:hover .sign-buy-bonus__label {
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9), 0 0 16px rgba(255, 190, 96, 0.9);
+}
