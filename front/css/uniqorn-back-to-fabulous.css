@@ -827,11 +827,26 @@ body.layout-fit .ui-bar {
     transform: none;
   }
 
-  /* No room beside the reels in portrait — the frame spans 94% of the width. */
-  .hero { display: none; }
+  /* Сбоку от барабанов в портрете места нет (рамка занимает 94% ширины),
+     поэтому героиня переезжает ПОД барабаны, в левый нижний угол — напротив
+     таблички Buy Bonus, которая в портрете стоит справа под рамкой. Привязана
+     к низу экрана (а не к --reel-mobile-below), чтобы на коротком экране она
+     ужималась вниз, а не наползала на сетку; max-height страхует от того же на
+     совсем низких вьюпортах. */
+  .hero {
+    display: block;
+    left: var(--reel-mobile-side);
+    right: auto;
+    top: auto;
+    /* 5%, а не вплотную к низу: круглая кнопка спина из бара V3 накрывает
+       нижнюю четверть экрана, и на 1% героиня уезжала под неё копытами. */
+    bottom: 5%;
+    height: 33%;
+    max-height: calc(100dvh - var(--ui-bar-h-mobile) - var(--reel-mobile-below) - 12px);
+  }
 
   .sign-buy-bonus { width: 30%; }
-  .sign-buy-bonus__label { font-size: 3.6vw; }
+  .sign-buy-bonus__label { font-size: 5.6vw; }
   .fs-counter { width: 24%; height: auto; }
   .fs-counter__value { font-size: 5vw; }
 
@@ -1096,7 +1111,10 @@ body.layout-fit .ui-bar {
   transform: translate(-50%, -50%);
   font-family: 'Baloo 2', system-ui, sans-serif;
   font-weight: 800;
-  font-size: 1.25vw;
+  /* Панель доски широкая и низкая (280x65 в арте), подпись в две строки — при
+     1.25vw она терялась на плашке; 1.8vw читается с телефона и всё ещё влезает
+     в вырез. */
+  font-size: 1.8vw;
   line-height: 1.08;
   letter-spacing: 0.02em;
   color: #fff6e2;
