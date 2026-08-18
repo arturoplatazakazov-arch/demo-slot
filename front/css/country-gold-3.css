@@ -1,0 +1,537 @@
+/* Country Gold 3 — 3x3 classic, five lines, no bonus round.
+
+   СТРУКТУРА как у css/lucky-miami-3.css: всё живёт в фиксированном
+   дизайн-канвасе (десктоп 1932x940, портрет 780x1416), который целиком
+   contain-масштабируется в .screen, а барабаны — прокручиваемые ленты,
+   обрезанные окном.
+
+   ОТЛИЧИЕ от lucky-miami-3: корпус не собран из градиентов, а НАРИСОВАН —
+   img/country-gold-3/img/cabinet.png, резное дерево с золотом по референсу.
+   Проём в этом PNG прозрачный, корпус лежит ПОВЕРХ барабанов, а окно обрезки
+   выставлено в проём по долям картинки (--win-l/--win-t/--win-w/--win-h — их
+   напечатал скрипт, который нашёл хромакейную заливку проёма в самой
+   картинке, поэтому это не подгон на глаз). Из этих же долей считается размер
+   ячейки, так что правка одной --cab-w двигает корпус, окно, сетку и символы
+   разом.
+
+   Весь арт — PNG/JPG (front/img/country-gold-3/): фон, логотип, корпус и
+   восемь символов. Свечения, попапы и все анимации — CSS. */
+
+:root {
+  /* Палитра с арта: тёмный орех + полированное золото + закатная охра. */
+  --gold: #f7c04a;
+  --gold-bright: #ffe9a8;
+  --gold-deep: #a5721c;
+  --wood: #4a2a18;
+  --wood-deep: #2a160c;
+  --ink: #1b0f07;
+  --ember: #ff8a2b;
+  --text-cream: #fff1d6;
+  --ui-border: rgba(247, 192, 74, 0.26);
+
+  /* Корпус. Доли проёма — из cabinet.png (1400x1028). */
+  --cab-w: 1228px;
+  --cab-h: 903px;
+  --cab-l: 352px;
+  --cab-t: 26px;
+  --win-l: 0.1515;
+  --win-t: 0.2815;
+  --win-w: 0.6960;
+  --win-h: 0.5580;
+
+  /* Сетка 3x3 целиком выводится из проёма корпуса: ячейка шире, чем выше. */
+  --cell-w: calc(var(--cab-w) * var(--win-w) / 3);
+  --cell-h: calc(var(--cab-h) * var(--win-h) / 3);
+
+  /* Оптический вес символа в ячейке: символы нарезаны по своим пропорциям, и
+     широкий BAR оптически перевешивал бы круглые фрукты при одинаковой доле. */
+  --sym: 0.94;
+
+  /* Перезаписываются под устройство в slot.js updateStageScale(). */
+  --design-w: 1932px;
+  --design-h: 940px;
+  --stage-scale: 1;
+}
+
+* { box-sizing: border-box; }
+
+html, body { overflow: hidden; }
+
+body {
+  margin: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--ink);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  color: var(--text-cream);
+}
+
+/* ---------- Back-to-catalog button ---------- */
+.to-catalog-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 110;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(27, 15, 7, 0.75);
+  border: 1px solid rgba(247, 192, 74, 0.5);
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(4px);
+}
+.to-catalog-btn:hover { background: rgba(27, 15, 7, 0.92); border-color: var(--gold); }
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+/* ---------- Dev panel ---------- */
+.dev-panel {
+  position: fixed;
+  top: 52px;
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 240px;
+  justify-content: flex-end;
+}
+.dev-btn {
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #222;
+  color: #ddd;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.dev-btn:hover { opacity: 1; }
+.dev-hint { font-size: 10px; color: #999; width: 100%; text-align: right; }
+
+/* ---------- Screen / design-space stage ---------- */
+.screen {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  background: var(--ink);
+}
+
+.layer { position: absolute; }
+
+.bg {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--design-w);
+  height: var(--design-h);
+  transform: translate(-50%, -50%) scale(var(--stage-scale));
+  z-index: 1;
+}
+.stage .obj { position: absolute; }
+
+/* ---------- Корпус ----------
+   Картинка ставится как есть, без растяжки по содержимому: доли проёма верны
+   только для её собственных пропорций. */
+.cabinet {
+  left: var(--cab-l);
+  top: var(--cab-t);
+  width: var(--cab-w);
+  height: var(--cab-h);
+  z-index: 4;
+  pointer-events: none;
+}
+.cabinet__img {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 18px 38px rgba(0, 0, 0, 0.6));
+}
+
+/* ---------- Логотип ----------
+   Лежит на арке корпуса (как на референсе), поэтому z выше него. */
+.logo {
+  left: calc(var(--cab-l) + var(--cab-w) / 2 - 260px);
+  top: -34px;
+  width: 520px;
+  height: 284px;
+  z-index: 6;
+  pointer-events: none;
+}
+.logo__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  animation: logo-glow 4.5s ease-in-out infinite;
+}
+@keyframes logo-glow {
+  0%, 100% { filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 24px rgba(247, 192, 74, 0.35)); }
+  50%      { filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 44px rgba(255, 200, 90, 0.75)); }
+}
+
+/* ---------- Барабаны ----------
+   Одно окно обрезки на все три ленты: проём в корпусе тоже один. */
+.reel {
+  left: calc(var(--cab-l) + var(--win-l) * var(--cab-w));
+  top: calc(var(--cab-t) + var(--win-t) * var(--cab-h));
+  width: calc(var(--win-w) * var(--cab-w));
+  height: calc(var(--win-h) * var(--cab-h));
+  z-index: 2;
+  overflow: hidden;
+  border-radius: 10px;
+  display: flex;
+  /* Сукно барабана: тёмный орех с тёплым отсветом сверху, чтобы золото
+     символов читалось, а проём не выглядел дырой в фон. */
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(120, 66, 26, 0.55), rgba(20, 10, 5, 0) 72%),
+    linear-gradient(180deg, #33190d, #180c06);
+  box-shadow: inset 0 0 70px rgba(0, 0, 0, 0.75);
+}
+
+.reel__col {
+  position: relative;
+  flex: 1 1 0;
+  height: 100%;
+}
+/* Тонкая золотая нить между колонками — на референсе барабаны разделены. */
+.reel__col + .reel__col::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 4%;
+  width: 2px;
+  height: 92%;
+  background: linear-gradient(180deg, transparent, rgba(247, 192, 74, 0.5), transparent);
+  z-index: 3;
+  pointer-events: none;
+}
+/* Колонка «на подходе» — тёплое золотое зарево внутри колонки. */
+.reel__col.is-anticipating::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(70% 55% at 50% 50%, rgba(255, 190, 80, 0.42), transparent 72%);
+  box-shadow: inset 0 0 44px rgba(255, 196, 92, 0.6);
+  animation: anticipate 620ms ease-in-out infinite alternate;
+}
+@keyframes anticipate {
+  from { opacity: 0.45; }
+  to   { opacity: 1; }
+}
+
+.reel__strip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.reel__cell {
+  position: relative;
+  width: 100%;
+  height: var(--cell-h);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Символы нарезаны ВПЛОТНУЮ по содержимому (у каждого свои пропорции), поэтому
+   вписываются в ячейку contain'ом, а оптический вес тира задаёт --sym. */
+.reel__cell img {
+  width: calc(100% * var(--sym));
+  height: calc(100% * var(--sym));
+  object-fit: contain;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.6));
+}
+/* Широкий BAR вписывается в ячейку по ширине и оптически проваливается по
+   высоте — ему нужно больше поля, чем круглым фруктам. */
+/* BAR и семёрка — широкие: BAR это табличка, а seven.png собран из ТРЁХ
+   семёрок в ряд (777, средняя поверх соседних), и обе картинки шире ячейки по
+   пропорции, поэтому contain вписывает их ПО ШИРИНЕ и доля здесь = доля
+   ширины ячейки. */
+.reel__cell[data-symbol="bar"] { --sym: 1; }
+.reel__cell[data-symbol="seven"] { --sym: 0.98; }
+.reel__cell[data-symbol="star"],
+.reel__cell[data-symbol="bell"] { --sym: 0.98; }
+.reel__cell.is-dimmed img { opacity: 0.3; }
+
+/* Приземление: короткое приседание. */
+@keyframes cell-land {
+  0%   { transform: translateY(-8%) scale(1.04, 0.94); }
+  60%  { transform: translateY(0) scale(0.97, 1.04); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+.reel__cell.is-landing img { animation: cell-land 260ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+
+/* Выигрыш: пульс с золотым ореолом. */
+@keyframes cell-win {
+  0%   { transform: scale(1); filter: drop-shadow(0 0 0 rgba(255, 214, 120, 0)); }
+  35%  { transform: scale(1.16); filter: drop-shadow(0 0 24px rgba(255, 214, 120, 0.95)); }
+  70%  { transform: scale(1.05); filter: drop-shadow(0 0 16px rgba(255, 138, 43, 0.75)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(255, 214, 120, 0)); }
+}
+.reel__cell.is-winning img { animation: cell-win 620ms ease-in-out; }
+.reel__cell.is-win-active { z-index: 3; }
+
+/* ---------- Сумма выигрыша ниже порога попапа ---------- */
+.reel-win-amount-viewport {
+  left: calc(var(--cab-l) + var(--win-l) * var(--cab-w));
+  top: calc(var(--cab-t) + var(--win-t) * var(--cab-h));
+  width: calc(var(--win-w) * var(--cab-w));
+  height: calc(var(--win-h) * var(--cab-h));
+  z-index: 5;
+  pointer-events: none;
+}
+.reel-win-amount {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.reel-win-amount.is-visible { opacity: 1; }
+.reel-win-amount::before {
+  content: attr(data-amount);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 58px;
+  color: var(--gold-bright);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 4px 0 var(--ink), 0 0 26px rgba(255, 160, 50, 0.85);
+  white-space: nowrap;
+  padding: 6px 26px;
+  background: rgba(27, 15, 7, 0.78);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(247, 192, 74, 0.45), 0 0 30px rgba(255, 138, 43, 0.4);
+}
+
+/* Подсказка «сделайте ставку» — на нижнем брусе корпуса, сразу под окном:
+   ниже начинается зона фиксированного бара V3, и текст ушёл бы под кнопку
+   SPIN. */
+.hint-line {
+  left: var(--cab-l);
+  top: calc(var(--cab-t) + (var(--win-t) + var(--win-h)) * var(--cab-h) + 12px);
+  width: var(--cab-w);
+  z-index: 5;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(255, 233, 168, 0.9);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+.hint-line.is-hidden { opacity: 0; }
+
+/* ---------- Затемнение ---------- */
+.screen-dim {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.68);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  z-index: 8;
+}
+.screen-dim.is-active { opacity: 1; }
+
+/* ---------- Попапы (плашка нарисована в CSS) ---------- */
+.game-popup {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 30;
+  width: min(620px, 72%);
+  padding: 34px 40px 38px;
+  border-radius: 26px;
+  text-align: center;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 110% at 50% 0%, rgba(255, 160, 50, 0.5), transparent 62%),
+    linear-gradient(180deg, #5a3115, #26130a);
+  box-shadow:
+    0 0 0 5px var(--gold),
+    0 0 0 10px var(--wood-deep),
+    0 0 70px rgba(255, 150, 50, 0.5),
+    0 24px 60px rgba(0, 0, 0, 0.65);
+  transform: translate(-50%, -50%) scale(0.7);
+  opacity: 0;
+  transition: transform 420ms cubic-bezier(0.2, 1.4, 0.4, 1), opacity 420ms ease;
+}
+.game-popup.is-in { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.game-popup.is-out {
+  transform: translate(-50%, -50%) scale(0.86);
+  opacity: 0;
+  transition-duration: 260ms;
+  transition-timing-function: ease-in;
+}
+.game-popup__sub {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  opacity: 0.9;
+}
+.game-popup__title {
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 68px;
+  line-height: 1.05;
+  color: var(--gold-bright);
+  -webkit-text-stroke: 3px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 5px 0 var(--ink), 0 0 34px rgba(255, 190, 80, 0.85);
+}
+.game-popup__amount {
+  margin-top: 6px;
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 52px;
+  color: var(--text-cream);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 4px 0 var(--ink);
+}
+
+/* ---------- Paytable info popup ---------- */
+.info-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 20px;
+}
+.info-popup[hidden] { display: none; }
+.info-popup__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(720px, 90vh);
+  overflow-y: auto;
+  background: var(--wood-deep);
+  border: 3px solid var(--gold-deep);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+.info-popup__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-cream);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.info-popup__title {
+  margin: 0 0 6px;
+  color: var(--gold);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 24px;
+  text-align: center;
+  -webkit-text-stroke: 1px var(--ink);
+  text-shadow: 0 2px 0 var(--ink);
+}
+.info-popup__note { text-align: center; font-size: 12px; opacity: 0.75; margin: 0 0 16px; }
+.info-popup__list { display: flex; flex-direction: column; gap: 10px; }
+.info-popup__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.info-popup__row img { width: 48px; height: 48px; object-fit: contain; flex-shrink: 0; }
+.info-popup__row-name { flex: 1 1 auto; min-width: 90px; font-weight: 700; }
+.info-popup__row-pays { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; }
+.info-popup__row-pays b { color: var(--gold); }
+
+img.is-missing {
+  width: 55%;
+  height: 55%;
+  object-fit: contain;
+  outline: 2px dashed rgba(247, 192, 74, 0.5);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+/* ================================================================
+   Портрет — канвас 780x1416 (пропорция bg_base_mob.jpg). Корпус почти во всю
+   ширину, логотип над ним; ниже ~1200 по канвасу начинается нижний бар,
+   поэтому низ корпуса держим выше этой границы.
+
+   Корпус тут ТОТ ЖЕ, что на десктопе (cabinet.png), и в тех же пропорциях:
+   у портрета была своя картинка со своим проёмом, из-за чего слот выглядел
+   другой игрой — рама 0.90 против 1.36, ячейка 0.97 против 1.70 (символы
+   стояли в почти квадратных ячейках, а BAR и 777 читались мельче фруктов).
+   Поэтому доли проёма НЕ переопределяются, а --cab-h считается от --cab-w по
+   родному отношению картинки 1400x1028 — растяжки нет ни по одной оси.
+   ================================================================ */
+@media (orientation: portrait) {
+  :root {
+    --cab-w: 780px;
+    --cab-h: 573px;   /* 780 * 1028 / 1400 — родная пропорция cabinet.png */
+    --cab-l: 0px;
+    /* Композиция поднята на 200 канвас-пикселей против «геометрического
+       центра»: под барабанами живёт фиксированный бар V3, и слот должен стоять
+       выше него, а не упираться в кнопки. Логотип едет ровно на столько же —
+       он привязан к арке корпуса. */
+    --cab-t: 320px;
+  }
+
+  .logo { left: 60px; top: -32px; width: 660px; height: 362px; }
+
+  .reel-win-amount::before { font-size: 46px; }
+  .hint-line { top: calc(var(--cab-t) + var(--cab-h) - 58px); font-size: 24px; }
+
+  .game-popup { width: min(680px, 88%); padding: 26px 24px 30px; }
+  .game-popup__title { font-size: 52px; }
+  .game-popup__amount { font-size: 40px; }
+}
+
+/* ---------- Boot preloader theme (структура в css/preloader.css) ---------- */
+.preloader {
+  --pl-bg: #1b0f07;
+  --pl-accent-a: #f7c04a;
+  --pl-accent-b: #ff8a2b;
+  --pl-glow-a: rgba(247, 192, 74, 0.4);
+  --pl-glow-b: rgba(255, 138, 43, 0.16);
+  --pl-border: rgba(247, 192, 74, 0.45);
+  --pl-shadow: rgba(255, 150, 50, 0.55);
+}

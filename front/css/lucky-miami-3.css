@@ -1,0 +1,522 @@
+/* Lucky Miami 3 — 3x3 classic, five lines, no bonus round.
+
+   СТРУКТУРА как у css/uniqorn-shaolin-struggles.css: всё живёт в фиксированном
+   дизайн-канвасе (десктоп 1932x940, портрет 780x1416), который целиком
+   contain-масштабируется в .screen, а барабаны — прокручиваемые колонки,
+   обрезанные своим окном.
+
+   ОТЛИЧИЕ от всех остальных игр проекта — КОРПУСА КАК ТАКОВОГО НЕТ. На
+   референсе три колонки стоят порознь: у каждой своя золотая рамка со своим
+   неоновым свечением, между ними просвет с ромбовидным огоньком. Поэтому
+   .reel — это flex-строка из трёх .reel__box, и каждый box сам себе и рамка, и
+   окно обрезки; общей подложки, поверх которой рисуются разделители (как в
+   донорe), здесь нет вовсе.
+
+   Весь арт — PNG (front/img/lucky-miami-3/): фон, логотип и восемь символов.
+   Рамки, огоньки, попапы и все анимации — CSS. */
+
+:root {
+  /* Палитра снята с референса: фиолетовый закат + золото + маджента-неон. */
+  --gold: #ffcf5a;
+  --gold-bright: #fff3c4;
+  --gold-dark: #a8641b;
+  --violet: #6b2fb5;
+  --violet-deep: #2a0f4a;
+  --ink: #1a0630;
+  --neon: #ff3ecb;
+  --neon-cyan: #35e5ff;
+  --text-cream: #fff3dd;
+  --ui-border: rgba(255, 207, 90, 0.24);
+
+  /* Сетка 3x3. Ячейка ШИРЕ, чем выше (как на референсе): символ квадратный и
+     занимает высоту, а по бокам остаётся воздух. */
+  --cell-w: 330px;
+  --cell-h: 200px;
+  --box-pad: 10px;   /* поле между сеткой и внутренней кромкой своей рамки */
+  --box-gap: 12px;   /* просвет между колонками */
+  --frame: 5px;      /* толщина золотого канта */
+
+  /* Перезаписываются под устройство в slot.js updateStageScale(). */
+  --design-w: 1932px;
+  --design-h: 940px;
+  --stage-scale: 1;
+}
+
+* { box-sizing: border-box; }
+
+html, body { overflow: hidden; }
+
+body {
+  margin: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--ink);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  color: var(--text-cream);
+}
+
+/* ---------- Back-to-catalog button ---------- */
+.to-catalog-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 110;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(26, 6, 48, 0.75);
+  border: 1px solid rgba(255, 207, 90, 0.5);
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(4px);
+}
+.to-catalog-btn:hover { background: rgba(26, 6, 48, 0.92); border-color: var(--gold); }
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+/* ---------- Dev panel ---------- */
+.dev-panel {
+  position: fixed;
+  top: 52px;
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 240px;
+  justify-content: flex-end;
+}
+.dev-btn {
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #222;
+  color: #ddd;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.dev-btn:hover { opacity: 1; }
+.dev-hint { font-size: 10px; color: #999; width: 100%; text-align: right; }
+
+/* ---------- Screen / design-space stage ---------- */
+.screen {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  background: var(--ink);
+}
+
+.layer { position: absolute; }
+
+.bg {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--design-w);
+  height: var(--design-h);
+  transform: translate(-50%, -50%) scale(var(--stage-scale));
+  z-index: 1;
+}
+.stage .obj { position: absolute; }
+
+/* ---------- Логотип ----------
+   Лежит НА верхней кромке барабанов (как на референсе), поэтому z выше их. */
+.logo {
+  left: 731px;
+  top: -8px;
+  width: 470px;
+  height: 202px;
+  z-index: 6;
+  pointer-events: none;
+}
+.logo__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 30px rgba(255, 62, 203, 0.35));
+  animation: logo-glow 4s ease-in-out infinite;
+}
+@keyframes logo-glow {
+  0%, 100% { filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 26px rgba(255, 62, 203, 0.3)); }
+  50%      { filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 40px rgba(255, 62, 203, 0.6)); }
+}
+
+/* ---------- Барабаны ----------
+   Три независимые колонки в строку. Ширина/высота .reel считаются из тех же
+   переменных, что и сама сетка, поэтому правка --cell-* двигает всё разом. */
+.reel {
+  left: 429px;
+  top: 158px;
+  width: calc(3 * (var(--cell-w) + 2 * var(--box-pad)) + 2 * var(--box-gap));
+  height: calc(3 * var(--cell-h) + 2 * var(--box-pad));
+  z-index: 2;
+  display: flex;
+  gap: var(--box-gap);
+}
+
+.reel__box {
+  position: relative;
+  flex: 0 0 auto;
+  width: calc(var(--cell-w) + 2 * var(--box-pad));
+  height: 100%;
+  padding: var(--box-pad);
+  border-radius: 14px;
+  /* Стекло барабана: фиолетовый лак, чуть светлее фона, чтобы символы
+     читались, но пейзаж за ним всё ещё угадывался. */
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(120, 50, 190, 0.42), rgba(20, 6, 40, 0) 70%),
+    linear-gradient(180deg, rgba(44, 14, 82, 0.86), rgba(22, 6, 44, 0.9));
+  box-shadow:
+    inset 0 0 60px rgba(0, 0, 0, 0.6),
+    0 0 0 var(--frame) var(--gold),
+    0 0 0 calc(var(--frame) + 2px) rgba(90, 20, 110, 0.9),
+    0 0 26px rgba(255, 62, 203, 0.45),
+    0 14px 34px rgba(0, 0, 0, 0.55);
+}
+/* Внутренний блик по верхней кромке — иначе рамка читается наклейкой. */
+.reel__box::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 11px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 220, 255, 0.16), transparent 22%);
+}
+/* Колонка «на подходе» — золотое свечение по всей рамке. */
+.reel__box.is-anticipating {
+  box-shadow:
+    inset 0 0 60px rgba(0, 0, 0, 0.6),
+    0 0 0 var(--frame) var(--gold-bright),
+    0 0 0 calc(var(--frame) + 2px) rgba(90, 20, 110, 0.9),
+    0 0 46px rgba(255, 207, 90, 0.9),
+    0 14px 34px rgba(0, 0, 0, 0.55);
+}
+
+/* Ромбик-огонёк в просвете между колонками — ровно как на референсе. */
+.reel__dot {
+  position: absolute;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  z-index: 4;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border-radius: 3px;
+  /* Аметист в золотой оправе — так он нарисован на референсе. */
+  background: linear-gradient(140deg, #e4a3ff, #a03ce0 50%, #5c1a8c);
+  box-shadow: 0 0 0 2px var(--gold), 0 0 14px rgba(255, 62, 203, 0.85);
+  pointer-events: none;
+}
+
+/* Окно обрезки колонки: ровно сетка, без паддинга рамки. */
+.reel__window {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 6px;
+}
+.reel__strip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.reel__cell {
+  position: relative;
+  width: 100%;
+  height: var(--cell-h);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Символы (кроме BAR) квадратные, а ячейка шире, чем выше: высота и задаёт им
+   масштаб, по бокам остаётся воздух (референс). 88% высоты — символ не касается
+   верхней и нижней кромок.
+   Ширина 92%, а не 100%, ради BAR: он один нарезан в канвас с пропорцией самой
+   ячейки, поэтому упирается в ширину, и на портрете (где ячейка почти
+   квадратная) при 100% плашка ложилась прямо на золотую рамку колонки. */
+.reel__cell img {
+  width: 92%;
+  height: 88%;
+  object-fit: contain;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.55));
+}
+.reel__cell.is-dimmed img { opacity: 0.28; }
+
+/* Приземление: короткое приседание. */
+@keyframes cell-land {
+  0%   { transform: translateY(-8%) scale(1.04, 0.94); }
+  60%  { transform: translateY(0) scale(0.97, 1.04); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+.reel__cell.is-landing img { animation: cell-land 260ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+
+/* Выигрыш: пульс с золотым ореолом. */
+@keyframes cell-win {
+  0%   { transform: scale(1); filter: drop-shadow(0 0 0 rgba(255, 207, 90, 0)); }
+  35%  { transform: scale(1.16); filter: drop-shadow(0 0 22px rgba(255, 207, 90, 0.95)); }
+  70%  { transform: scale(1.05); filter: drop-shadow(0 0 14px rgba(255, 62, 203, 0.7)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(255, 207, 90, 0)); }
+}
+.reel__cell.is-winning img { animation: cell-win 620ms ease-in-out; }
+.reel__cell.is-win-active { z-index: 3; }
+
+/* ---------- Сумма выигрыша ниже порога попапа ---------- */
+.reel-win-amount-viewport {
+  left: 429px;
+  top: 158px;
+  width: calc(3 * (var(--cell-w) + 2 * var(--box-pad)) + 2 * var(--box-gap));
+  height: calc(3 * var(--cell-h) + 2 * var(--box-pad));
+  z-index: 5;
+  pointer-events: none;
+}
+.reel-win-amount {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.reel-win-amount.is-visible { opacity: 1; }
+.reel-win-amount::before {
+  content: attr(data-amount);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 58px;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 4px 0 var(--ink), 0 0 26px rgba(255, 62, 203, 0.8);
+  white-space: nowrap;
+  padding: 6px 26px;
+  background: rgba(26, 6, 48, 0.72);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(255, 207, 90, 0.4), 0 0 30px rgba(255, 62, 203, 0.4);
+}
+
+/* Подсказка «сделайте ставку» под барабанами (референс печатает её там же). */
+.hint-line {
+  left: 429px;
+  top: calc(158px + 3 * var(--cell-h) + 2 * var(--box-pad) + 14px);
+  width: calc(3 * (var(--cell-w) + 2 * var(--box-pad)) + 2 * var(--box-gap));
+  z-index: 5;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(255, 243, 221, 0.82);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+.hint-line.is-hidden { opacity: 0; }
+
+/* ---------- Затемнение ---------- */
+.screen-dim {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.68);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  z-index: 8;
+}
+.screen-dim.is-active { opacity: 1; }
+
+/* ---------- Попапы (плашка нарисована в CSS) ---------- */
+.game-popup {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 30;
+  width: min(620px, 72%);
+  padding: 34px 40px 38px;
+  border-radius: 26px;
+  text-align: center;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 110% at 50% 0%, rgba(255, 62, 203, 0.4), transparent 62%),
+    linear-gradient(180deg, #4b1382, #200a3d);
+  box-shadow:
+    0 0 0 5px var(--gold),
+    0 0 0 10px rgba(90, 20, 110, 0.9),
+    0 0 70px rgba(255, 62, 203, 0.55),
+    0 24px 60px rgba(0, 0, 0, 0.6);
+  transform: translate(-50%, -50%) scale(0.7);
+  opacity: 0;
+  transition: transform 420ms cubic-bezier(0.2, 1.4, 0.4, 1), opacity 420ms ease;
+}
+.game-popup.is-in { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.game-popup.is-out {
+  transform: translate(-50%, -50%) scale(0.86);
+  opacity: 0;
+  transition-duration: 260ms;
+  transition-timing-function: ease-in;
+}
+.game-popup__sub {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  opacity: 0.9;
+}
+.game-popup__title {
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 68px;
+  line-height: 1.05;
+  color: var(--gold-bright);
+  -webkit-text-stroke: 3px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 5px 0 var(--ink), 0 0 34px rgba(255, 207, 90, 0.8);
+}
+.game-popup__amount {
+  margin-top: 6px;
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 52px;
+  color: var(--text-cream);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 4px 0 var(--ink);
+}
+
+/* ---------- Paytable info popup ---------- */
+.info-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 20px;
+}
+.info-popup[hidden] { display: none; }
+.info-popup__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(720px, 90vh);
+  overflow-y: auto;
+  background: var(--violet-deep);
+  border: 3px solid var(--gold-dark);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.info-popup__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-cream);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.info-popup__title {
+  margin: 0 0 6px;
+  color: var(--gold);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 24px;
+  text-align: center;
+  -webkit-text-stroke: 1px var(--ink);
+  text-shadow: 0 2px 0 var(--ink);
+}
+.info-popup__note { text-align: center; font-size: 12px; opacity: 0.75; margin: 0 0 16px; }
+.info-popup__list { display: flex; flex-direction: column; gap: 10px; }
+.info-popup__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.info-popup__row img { width: 48px; height: 48px; object-fit: contain; flex-shrink: 0; }
+.info-popup__row-name { flex: 1 1 auto; min-width: 90px; font-weight: 700; }
+.info-popup__row-pays { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; }
+.info-popup__row-pays b { color: var(--gold); }
+
+img.is-missing {
+  width: 55%;
+  height: 55%;
+  object-fit: contain;
+  outline: 2px dashed rgba(255, 207, 90, 0.5);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+/* ================================================================
+   Портрет — канвас 780x1416 (пропорция bg_base_mob.jpg). Автомат почти во всю
+   ширину, логотип над ним; ниже 1172 по канвасу начинается нижний бар, поэтому
+   низ барабанов держим выше этой границы.
+   ================================================================ */
+@media (orientation: portrait) {
+  :root {
+    --cell-w: 228px;
+    --cell-h: 208px;
+    --box-pad: 8px;
+    --box-gap: 10px;
+    --frame: 4px;
+  }
+
+  /* Логотип на 10% меньше исходного (640x275) и по центру канваса.
+     Весь блок «логотип + барабаны» поднят на 200px относительно первой
+     раскладки, поэтому логотип уходит выше верхней кромки канваса — это
+     нормально: .stage ничего не обрезает, а фон (.bg) лежит на весь .screen,
+     не на канвас, так что логотип рисуется на пейзаже, а не на пустоте. */
+  .logo { left: 102px; top: -80px; width: 576px; height: 248px; }
+
+  /* 3 * (228 + 16) + 2 * 10 = 752 в ширину; низ 230 + 640 = 870. */
+  .reel { left: 14px; top: 230px; }
+  .reel-win-amount-viewport { left: 14px; top: 230px; }
+  .reel-win-amount::before { font-size: 46px; }
+  .hint-line { left: 14px; top: calc(230px + 3 * var(--cell-h) + 2 * var(--box-pad) + 14px); font-size: 26px; }
+
+  .game-popup { width: min(680px, 88%); padding: 26px 24px 30px; }
+  .game-popup__title { font-size: 52px; }
+  .game-popup__amount { font-size: 40px; }
+}
+
+/* ---------- Boot preloader theme (структура в css/preloader.css) ---------- */
+.preloader {
+  --pl-bg: #1a0630;
+  --pl-accent-a: #ff3ecb;
+  --pl-accent-b: #35e5ff;
+  --pl-glow-a: rgba(255, 62, 203, 0.4);
+  --pl-glow-b: rgba(53, 229, 255, 0.14);
+  --pl-border: rgba(255, 207, 90, 0.45);
+  --pl-shadow: rgba(255, 62, 203, 0.6);
+}

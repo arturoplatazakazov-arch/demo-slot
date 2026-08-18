@@ -10,10 +10,13 @@ from app.api.v1 import api_v1_router
 from app.core.config import get_settings
 from app.core.db import AsyncSessionLocal
 from app.seed.amys_fruit_farm import get_or_seed_active_config as get_or_seed_amys_fruit_farm
+from app.seed.country_gold_3 import get_or_seed_active_config as get_or_seed_country_gold_3
 from app.seed.dirty_money_mafia import get_or_seed_active_config as get_or_seed_dirty_money_mafia
 from app.seed.east_discovery import get_or_seed_active_config as get_or_seed_east_discovery
 from app.seed.golden_caravan import get_or_seed_active_config as get_or_seed_golden_caravan
 from app.seed.lucky_joker_3h3 import get_or_seed_active_config as get_or_seed_lucky_joker_3h3
+from app.seed.lucky_miami_3 import get_or_seed_active_config as get_or_seed_lucky_miami_3
+from app.seed.miami_fruits_3 import get_or_seed_active_config as get_or_seed_miami_fruits_3
 from app.seed.mr_president_unicorn import get_or_seed_active_config as get_or_seed_mr_president_unicorn
 from app.seed.multi_fruits_story import get_or_seed_active_config as get_or_seed_multi_fruits_story
 from app.seed.neon_reels import get_or_seed_active_config as get_or_seed_neon_reels
@@ -45,10 +48,13 @@ async def lifespan(app: FastAPI):
     # through the admin API, not an app-startup side effect.
     async with AsyncSessionLocal() as db:
         await get_or_seed_amys_fruit_farm(db)
+        await get_or_seed_country_gold_3(db)
         await get_or_seed_dirty_money_mafia(db)
         await get_or_seed_east_discovery(db)
         await get_or_seed_golden_caravan(db)
         await get_or_seed_lucky_joker_3h3(db)
+        await get_or_seed_lucky_miami_3(db)
+        await get_or_seed_miami_fruits_3(db)
         await get_or_seed_mr_president_unicorn(db)
         await get_or_seed_multi_fruits_story(db)
         await get_or_seed_neon_reels(db)

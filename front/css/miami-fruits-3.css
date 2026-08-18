@@ -1,0 +1,493 @@
+/* Miami Fruits 3 — 3x3, 5 линий, чистый line pay.
+
+   СТРУКТУРА взята у css/uniqorn-shaolin-struggles.css (та же 3x3-сетка): всё
+   живёт в фиксированном дизайн-канвасе (десктоп 1932x940, портрет 780x1416),
+   который целиком contain-масштабируется в .screen, а барабаны — прокручиваемые
+   колонки, обрезанные окном корпуса.
+
+   ОТЛИЧИЕ ОТ ДОНОРА — компоновка корпуса с макета игры: он не один на всю
+   сетку, а ТРИ отдельных, по колонке. Из-за этого:
+     * подложка колонки рисуется на .reel__col::before — она стоит на месте,
+       пока внутри ездит .reel__strip;
+     * неоновые рамки — отдельный слой .reel__panes ПОВЕРХ сетки, поэтому окно
+       обрезает символы ровно по внутренней кромке рамки.
+
+   БАР — общий ui-bar-v3 (css/ui-bar-v3.css), как у остальных игр проекта: он
+   лежит отдельным блоком ПОД .screen и в дизайн-канвас не входит, поэтому вся
+   высота канваса достаётся логотипу и барабанам.
+
+   ПОДАЧА — PNG + CSS, спайна нет: idle/win/landing символа это классы
+   .reel__cell.is-*, попапы — .game-popup, рамки нарисованы стилями.
+
+   ГЕОМЕТРИЯ. --cell-w/--cell-h задают сетку, корпуса и рамки считаются от них,
+   поэтому менять размер ячейки можно одной строкой. */
+
+:root {
+  --neon-pink: #ff2fa0;
+  --neon-pink-soft: #ff7ac6;
+  --neon-cyan: #35e8f5;
+  --neon-cyan-soft: #a6f6ff;
+  --chrome-hi: #f2f5ff;
+  --chrome-lo: #7e8ac4;
+  --panel-top: #1a2350;
+  --panel-bottom: #080c26;
+  --ink: #05081c;
+  --text: #eef2ff;
+
+  /* Сетка 3x3. Десктопное окно = 3 * 340 x 3 * 196 = 1020x588. Ячейка заметно
+     шире символа: на макете квадратные символы стоят в широких колонках.
+     Размер подобран так, чтобы под барабанами оставалась полоса канваса под
+     плавающий бар V3 — он оверлей на 190px поверх экрана, а НЕ строка в потоке,
+     и сцену собой не сжимает (см. .v3-bar в css/ui-bar-v3.css). Без этого
+     запаса кнопка спина ложится прямо на нижний ряд символов. */
+  --cell-w: 340px;
+  --cell-h: 196px;
+  --pane-gap: 7px;   /* половина зазора между соседними корпусами */
+  --pane-edge: 8px;  /* толщина хромированной кромки */
+
+  /* Перезаписываются под устройство в slot.js updateStageScale(). */
+  --design-w: 1932px;
+  --design-h: 940px;
+  --stage-scale: 1;
+}
+
+* { box-sizing: border-box; }
+
+html, body { overflow: hidden; }
+
+body {
+  margin: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #0a0620;
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  color: var(--text);
+}
+
+/* ---------- Back-to-catalog button ---------- */
+.to-catalog-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 110;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(8, 12, 38, 0.75);
+  border: 1px solid rgba(53, 232, 245, 0.5);
+  color: var(--neon-cyan-soft);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(4px);
+}
+.to-catalog-btn:hover { background: rgba(8, 12, 38, 0.92); border-color: var(--neon-cyan); }
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+/* ---------- Dev panel ---------- */
+.dev-panel {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 240px;
+  align-items: center;
+}
+.dev-btn {
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #3a4480;
+  background: #141a3c;
+  color: #cfd6ff;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.dev-btn:hover { opacity: 1; }
+.dev-hint { font-size: 10px; color: #8a92c8; width: 100%; }
+
+/* ---------- Screen / design-space stage ---------- */
+.screen {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  background: #0a0620;
+}
+
+.layer { position: absolute; }
+
+/* Фон нарисован в пропорции канваса, поэтому cover ничего заметного не режет. */
+.bg {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--design-w);
+  height: var(--design-h);
+  transform: translate(-50%, -50%) scale(var(--stage-scale));
+  z-index: 1;
+}
+.stage .obj { position: absolute; }
+
+/* ---------- Логотип ----------
+   Стоит на верхней кромке корпусов и слегка на неё заезжает — как на макете. */
+.logo {
+  left: 50%;
+  top: 10px;
+  transform: translateX(-50%);
+  z-index: 5;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.6));
+}
+.logo__img { display: block; height: 158px; width: auto; }
+
+/* ---------- Барабаны ---------- */
+.reel {
+  left: 456px;                                  /* (1932 - 3*340) / 2 */
+  top: 150px;                                   /* низ = 150 + 588 = 738 из 940 */
+  width: calc(3 * var(--cell-w));
+  height: calc(3 * var(--cell-h));
+  z-index: 2;
+}
+
+.reel__grid {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 2;
+}
+
+/* Барабан = абсолютно позиционированная колонка; внутри неё ездит полоса. */
+.reel__col {
+  position: absolute;
+  top: 0;
+  width: var(--cell-w);
+  height: 100%;
+}
+/* Подложка колонки: тёмно-синяя панель в тонкую вертикальную полоску. Рисуется
+   на самой колонке (она неподвижна), а НЕ на полосе, которая уезжает вниз. */
+.reel__col::before {
+  content: '';
+  position: absolute;
+  inset: 0 var(--pane-gap);
+  border-radius: 16px;
+  background:
+    repeating-linear-gradient(90deg, rgba(150, 190, 255, 0.05) 0 1px, transparent 1px 7px),
+    radial-gradient(120% 80% at 50% 0%, rgba(70, 100, 200, 0.35), transparent 70%),
+    linear-gradient(180deg, var(--panel-top), var(--panel-bottom));
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.75);
+  z-index: 0;
+}
+.reel__col.is-anticipating { z-index: 3; }
+.reel__col.is-anticipating::before {
+  box-shadow:
+    inset 0 0 60px rgba(0, 0, 0, 0.6),
+    0 0 34px rgba(255, 47, 160, 0.85);
+  animation: pane-pulse 620ms ease-in-out infinite;
+}
+@keyframes pane-pulse {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.35); }
+}
+
+.reel__strip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  z-index: 1;
+}
+
+.reel__cell {
+  position: relative;
+  width: var(--cell-w);
+  height: var(--cell-h);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+/* Внутренний отступ, чтобы арт не подлезал под хромированную кромку рамки. */
+.reel__cell img {
+  width: 100%;
+  height: 100%;
+  padding: 10px 12px;
+  object-fit: contain;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+.reel__cell.is-dimmed img { opacity: 0.28; }
+
+/* ---------- Неоновые рамки корпусов ----------
+   Отдельный слой ПОВЕРХ сетки: три рамки по колонкам, хром + розово-голубой
+   ореол. Сама сетка обрезается по .reel__grid, так что символ уезжает под
+   рамку, а не поверх неё. */
+.reel__panes {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: repeat(3, var(--cell-w));
+}
+/* Кромка набирается КОЛЬЦАМИ box-shadow, а не градиентной рамкой под маской:
+   маска обрезает элемент целиком, вместе с внешней тенью, поэтому неоновый
+   ореол при таком способе просто не рисуется, а сам градиент на восьми
+   пикселях кромки успевает взять один цвет и читается плоской белой линией.
+   Кольца же дают «блик — тень — блик» ПОПЕРЁК толщины, то есть настоящий хром,
+   и оставляют внешние тени в покое. */
+.reel__pane {
+  margin: 0 var(--pane-gap);
+  border-radius: 16px;
+  box-shadow:
+    inset 0 0 0 2px #ffffff,
+    inset 0 0 0 5px var(--chrome-lo),
+    inset 0 0 0 8px var(--chrome-hi),
+    inset 0 0 30px rgba(53, 232, 245, 0.3),
+    0 0 0 2px rgba(255, 47, 160, 0.95),
+    0 0 22px rgba(255, 47, 160, 0.8),
+    0 0 50px rgba(255, 47, 160, 0.4);
+}
+
+/* Голубые ромбы на стыках корпусов — деталь макета. */
+.reel__gem {
+  position: absolute;
+  top: 50%;
+  width: 26px;
+  height: 26px;
+  z-index: 6;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border-radius: 4px;
+  background: linear-gradient(140deg, var(--neon-cyan-soft), #1aa9d8);
+  box-shadow: 0 0 14px rgba(53, 232, 245, 0.9), 0 0 0 2px rgba(240, 250, 255, 0.85);
+  pointer-events: none;
+}
+.reel__gem--left { left: var(--cell-w); }
+.reel__gem--right { left: calc(2 * var(--cell-w)); }
+
+/* Приземление: короткое приседание. Все масштабы домножаются на --sym-scale —
+   поштучный масштаб символа, который slot.js кладёт на <img> (см. SYMBOL_SCALE).
+   Без этого анимация, перебивая инлайновый transform, вернула бы увеличенный
+   символ к исходному размеру на время проигрывания. */
+@keyframes cell-land {
+  0%   { transform: translateY(-8%) scale(calc(var(--sym-scale, 1) * 1.04), calc(var(--sym-scale, 1) * 0.94)); }
+  60%  { transform: translateY(0) scale(calc(var(--sym-scale, 1) * 0.97), calc(var(--sym-scale, 1) * 1.04)); }
+  100% { transform: translateY(0) scale(var(--sym-scale, 1), var(--sym-scale, 1)); }
+}
+.reel__cell.is-landing img { animation: cell-land 260ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+
+/* Выигрыш: пульс с розово-голубым ореолом. */
+@keyframes cell-win {
+  0%   { transform: scale(var(--sym-scale, 1)); filter: drop-shadow(0 0 0 rgba(255, 47, 160, 0)); }
+  35%  { transform: scale(calc(var(--sym-scale, 1) * 1.16)); filter: drop-shadow(0 0 20px rgba(255, 47, 160, 0.95)) drop-shadow(0 0 34px rgba(53, 232, 245, 0.6)); }
+  70%  { transform: scale(calc(var(--sym-scale, 1) * 1.04)); filter: drop-shadow(0 0 12px rgba(255, 47, 160, 0.6)); }
+  100% { transform: scale(var(--sym-scale, 1)); filter: drop-shadow(0 0 0 rgba(255, 47, 160, 0)); }
+}
+.reel__cell.is-winning img { animation: cell-win 620ms ease-in-out; }
+.reel__cell.is-win-active { z-index: 3; }
+
+/* ---------- Сумма выигрыша ниже порога попапа ---------- */
+.reel-win-amount-viewport {
+  left: 456px;
+  top: 150px;
+  width: calc(3 * var(--cell-w));
+  height: calc(3 * var(--cell-h));
+  z-index: 7;
+  pointer-events: none;
+}
+.reel-win-amount {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.reel-win-amount.is-visible { opacity: 1; }
+.reel-win-amount.is-notice::before {
+  font-size: 40px;
+  color: var(--neon-pink-soft);
+  text-shadow: 0 3px 0 var(--ink), 0 0 24px rgba(255, 47, 160, 0.8);
+  box-shadow: 0 0 0 2px rgba(255, 47, 160, 0.6);
+}
+.reel-win-amount::before {
+  content: attr(data-amount);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 62px;
+  color: #fff;
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 4px 0 var(--ink), 0 0 30px rgba(255, 47, 160, 0.9);
+  white-space: nowrap;
+  padding: 8px 30px;
+  background: rgba(8, 12, 38, 0.72);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(53, 232, 245, 0.5), 0 0 26px rgba(255, 47, 160, 0.45);
+}
+
+/* ---------- Затемнение ---------- */
+.screen-dim {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(2, 4, 16, 0.72);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  z-index: 8;
+}
+.screen-dim.is-active { opacity: 1; }
+
+/* ---------- Попапы (плашка нарисована в CSS) ---------- */
+.game-popup {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 30;
+  width: min(640px, 72%);
+  padding: 36px 40px 40px;
+  border-radius: 28px;
+  text-align: center;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 110% at 50% 0%, rgba(255, 47, 160, 0.4), transparent 62%),
+    linear-gradient(180deg, #1c2560, #070b24);
+  box-shadow:
+    0 0 0 3px var(--neon-cyan),
+    0 0 0 7px rgba(255, 47, 160, 0.85),
+    0 0 70px rgba(255, 47, 160, 0.5),
+    0 24px 60px rgba(0, 0, 0, 0.6);
+  transform: translate(-50%, -50%) scale(0.7);
+  opacity: 0;
+  transition: transform 420ms cubic-bezier(0.2, 1.4, 0.4, 1), opacity 420ms ease;
+}
+.game-popup.is-in { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.game-popup.is-out {
+  transform: translate(-50%, -50%) scale(0.86);
+  opacity: 0;
+  transition-duration: 260ms;
+  transition-timing-function: ease-in;
+}
+.game-popup__title {
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 72px;
+  line-height: 1.05;
+  color: #fff;
+  -webkit-text-stroke: 3px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 5px 0 var(--ink), 0 0 40px rgba(53, 232, 245, 0.9);
+}
+.game-popup__amount {
+  margin-top: 6px;
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 54px;
+  color: var(--neon-cyan-soft);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 4px 0 var(--ink);
+}
+
+/* ---------- Paytable ---------- */
+.info-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(2, 4, 16, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.info-popup[hidden] { display: none; }
+.info-popup__panel {
+  position: relative;
+  width: min(760px, 100%);
+  max-height: 86vh;
+  overflow-y: auto;
+  padding: 26px 30px 30px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #1a2350, #070b24);
+  box-shadow: 0 0 0 2px var(--neon-cyan), 0 0 0 5px rgba(255, 47, 160, 0.7), 0 24px 60px rgba(0, 0, 0, 0.6);
+}
+.info-popup__close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 2px solid rgba(166, 246, 255, 0.5);
+  background: rgba(6, 10, 32, 0.8);
+  color: var(--neon-cyan-soft);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+.info-popup__title {
+  margin: 0 0 10px;
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 34px;
+  color: #fff;
+  text-shadow: 0 0 22px rgba(53, 232, 245, 0.7);
+}
+.info-popup__note { margin: 0 0 18px; font-size: 15px; line-height: 1.5; color: #b8c3f0; }
+.info-popup__list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.info-popup__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: rgba(6, 10, 32, 0.7);
+  box-shadow: inset 0 0 0 1px rgba(120, 150, 230, 0.3);
+}
+.info-popup__row img { width: 54px; height: 54px; object-fit: contain; }
+.info-popup__row-name { flex: 1 1 auto; font-size: 16px; font-weight: 700; }
+.info-popup__row-pays { font-size: 15px; color: var(--neon-cyan-soft); white-space: nowrap; }
+.info-popup__row-pays b { color: #fff; }
+
+/* ---------- Портрет ----------
+   Канвас 780x1416: сетка расширяется почти во всю ширину, бар складывается в
+   две строки (в одну восемь контролов не влезают). */
+@media (orientation: portrait) {
+  :root {
+    --cell-w: 240px;
+    --cell-h: 190px;
+  }
+
+
+  .logo { top: 60px; }
+  .logo__img { height: 158px; }
+
+  .reel { left: 30px; top: 250px; }          /* (780 - 3*240) / 2, низ = 820 из 1416 */
+  .reel-win-amount-viewport { left: 30px; top: 250px; }
+  .reel-win-amount::before { font-size: 46px; }
+
+  .game-popup { width: min(640px, 86%); }
+  .game-popup__title { font-size: 56px; }
+  .game-popup__amount { font-size: 42px; }
+
+  .info-popup__list { grid-template-columns: 1fr; }
+}
