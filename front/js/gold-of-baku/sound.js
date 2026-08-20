@@ -2,9 +2,14 @@
 // (перекрывающиеся one-shot SFX через WebAudio + зацикленная музыка,
 // разблокируемая первым жестом; отсутствующий файл падает мягко).
 //
-// Своего звукового пака у темы нет, поэтому играем чужие: тиры выигрыша и
-// фоновая музыка — из восточного пака east-discovery (единственная восточная
-// тема в проекте), UI и барабаны — общие.
+// Своего звукового пака у темы нет, поэтому играем чужие: тиры выигрыша — из
+// восточного пака east-discovery (единственная восточная тема в проекте), UI и
+// барабаны — общие.
+//
+// ФОНОВОЙ МУЗЫКИ В ЭТОЙ ИГРЕ НЕТ — по решению заказчика. Поэтому здесь, в
+// отличие от остальных игр проекта, нет ни MUSIC_FILES, ни <audio>-кэша, ни
+// Sound.playMusic: тишина между спинами не гасится, а просто не заводится, и
+// игра не тянет лишние ~2МБ трека. Кнопка звука по-прежнему глушит SFX.
 const COMMON = 'sound/common/';
 const EAST = 'sound/east-discovery/';
 
@@ -22,19 +27,12 @@ const SOUND_FILES = {
   popupClose: COMMON + 'Popup-close.mp3',
 };
 
-const MUSIC_FILES = {
-  base: EAST + 'BG_Base.mp3',
-};
-
-
 const SFX_VOLUME = 0.7;
-const MUSIC_VOLUME = 0.35;
 
 let muted = localStorage.getItem('slot.muted') === '1';
-let currentMusic = null;
-let currentMusicKey = null;
-let musicUnlocked = false;
-let pendingMusicKey = 'base';
+// WebAudio-контекст стартует suspended до первого жеста — этот флаг сторожит
+// единственный resume (музыки, которую тут нечего заводить, он не касается).
+let audioUnlocked = false;
 
 // SFX идут через WebAudio: у <audio> на мобилках собственная задержка
 // 100-300ms, из-за которой даже предзагруженный эффект отставал от остановки
@@ -89,42 +87,10 @@ function playSfx(name) {
   audio.play().catch(() => {});
 }
 
-// Треки по ~2MB, поэтому элементы создаются сразу, а качать начинают только
-// после window 'load' — иначе они конкурируют с артом игры.
-const musicCache = {};
-for (const [key, src] of Object.entries(MUSIC_FILES)) {
-  const audio = new Audio();
-  audio.preload = 'none';
-  audio.src = src;
-  audio.loop = true;
-  musicCache[key] = audio;
-}
-window.addEventListener('load', () => {
-  for (const audio of Object.values(musicCache)) {
-    audio.preload = 'auto';
-    audio.load();
-  }
-});
-
-function playMusic(key) {
-  pendingMusicKey = key;
-  if (!musicUnlocked || currentMusicKey === key) return;
-  if (currentMusic) currentMusic.pause();
-
-  const audio = musicCache[key];
-  if (!audio) return;
-  audio.volume = muted ? 0 : MUSIC_VOLUME;
-  if (audio.readyState > 0) audio.currentTime = 0;
-  audio.play().catch(() => {});
-  currentMusic = audio;
-  currentMusicKey = key;
-}
-
-function unlockMusic() {
-  if (musicUnlocked) return;
-  musicUnlocked = true;
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
   if (sfxCtx && sfxCtx.state === 'suspended') sfxCtx.resume();
-  playMusic(pendingMusicKey);
 }
 
 function updateSoundIcon() {
@@ -135,7 +101,6 @@ function updateSoundIcon() {
 function setMuted(next) {
   muted = next;
   localStorage.setItem('slot.muted', muted ? '1' : '0');
-  if (currentMusic) currentMusic.volume = muted ? 0 : MUSIC_VOLUME;
   updateSoundIcon();
 }
 
@@ -143,12 +108,11 @@ function toggleMuted() {
   setMuted(!muted);
 }
 
-window.addEventListener('pointerdown', unlockMusic, { once: true });
-window.addEventListener('keydown', unlockMusic, { once: true });
+window.addEventListener('pointerdown', unlockAudio, { once: true });
+window.addEventListener('keydown', unlockAudio, { once: true });
 
 const Sound = {
   playSfx,
-  playMusic,
   setMuted,
   toggleMuted,
   preloadPromises: sfxLoadPromises,

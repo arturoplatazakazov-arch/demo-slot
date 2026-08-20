@@ -725,7 +725,8 @@ function preloadAssets() {
 
 async function init() {
   await SlotCalibration.load(); // обязан отработать до applyStaticContentOffset
-  Sound.playMusic('base');
+  // Sound.playMusic здесь нет намеренно: у игры нет фоновой музыки, только SFX
+  // (см. шапку sound.js).
   lastMobile = isMobileLayout();
   updateStageScale();
   window.addEventListener('resize', handleResize);
