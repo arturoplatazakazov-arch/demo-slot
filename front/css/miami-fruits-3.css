@@ -286,16 +286,11 @@ body {
 .reel__gem--left { left: var(--cell-w); }
 .reel__gem--right { left: calc(2 * var(--cell-w)); }
 
-/* Приземление: короткое приседание. Все масштабы домножаются на --sym-scale —
-   поштучный масштаб символа, который slot.js кладёт на <img> (см. SYMBOL_SCALE).
-   Без этого анимация, перебивая инлайновый transform, вернула бы увеличенный
-   символ к исходному размеру на время проигрывания. */
-@keyframes cell-land {
-  0%   { transform: translateY(-8%) scale(calc(var(--sym-scale, 1) * 1.04), calc(var(--sym-scale, 1) * 0.94)); }
-  60%  { transform: translateY(0) scale(calc(var(--sym-scale, 1) * 0.97), calc(var(--sym-scale, 1) * 1.04)); }
-  100% { transform: translateY(0) scale(var(--sym-scale, 1), var(--sym-scale, 1)); }
-}
-.reel__cell.is-landing img { animation: cell-land 260ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+/* Product, this session: the post-land squash bounce read as a
+   jitter/shake — dropped. .is-landing is still toggled in JS but no
+   longer animates anything; the per-symbol --sym-scale resting size still
+   comes from slot.js's own inline img.style.transform (SYMBOL_SCALE),
+   untouched by removing this. */
 
 /* Выигрыш: пульс с розово-голубым ореолом. */
 @keyframes cell-win {

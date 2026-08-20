@@ -283,13 +283,9 @@ body {
 .reel__cell[data-symbol="pomegranate"] { --sym: 0.9; }
 .reel__cell.is-dimmed img { opacity: 0.3; }
 
-/* Приземление: короткое приседание. */
-@keyframes cell-land {
-  0%   { transform: translateY(-8%) scale(1.04, 0.94); }
-  60%  { transform: translateY(0) scale(0.97, 1.04); }
-  100% { transform: translateY(0) scale(1, 1); }
-}
-.reel__cell.is-landing img { animation: cell-land 260ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+/* Product, this session: the post-land squash bounce read as a
+   jitter/shake — dropped. .is-landing is still toggled in JS but no
+   longer animates anything. */
 
 /* Выигрыш: пульс с золотым ореолом. */
 @keyframes cell-win {

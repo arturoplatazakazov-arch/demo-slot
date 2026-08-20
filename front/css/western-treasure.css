@@ -1275,14 +1275,9 @@ body.layout-fit .ui-bar {
   filter: drop-shadow(0 0 10px rgba(255, 190, 96, 0.4));
 }
 
-@keyframes symbol-land {
-  0%   { transform: translateY(-6%) scaleY(1.06) scaleX(0.96); }
-  55%  { transform: translateY(0) scaleY(0.94) scaleX(1.05); }
-  100% { transform: translateY(0) scale(1); }
-}
-.reel__cell.is-landing img {
-  animation: symbol-land 260ms cubic-bezier(0.22, 1, 0.36, 1);
-}
+/* Product, this session: the post-land squash/settle bounce read as a
+   jitter/shake — dropped. .reel__cell.is-landing is still toggled in JS
+   (see slot.js) but no longer animates anything. */
 
 @keyframes symbol-win {
   0%   { transform: scale(1);    filter: drop-shadow(0 0 0 rgba(255, 138, 212, 0)); }
