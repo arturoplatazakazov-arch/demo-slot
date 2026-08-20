@@ -1,0 +1,545 @@
+/* Ice Spin Deluxe — 3x3 classic, five lines, no bonus round.
+
+   СТРУКТУРА как у css/country-gold-3.css: всё живёт в фиксированном
+   дизайн-канвасе (десктоп 1600x900, портрет 780x1080), который целиком
+   contain-масштабируется в .screen, а барабаны — прокручиваемые ленты,
+   обрезанные окном.
+
+   ОТЛИЧИЕ от country-gold-3: в ледяной раме (img/cabinet.png) не один проём, а
+   ТРИ — по одному на колонку, с перемычками между ними. Поэтому окно обрезки
+   тоже не одно: #reel растянут на весь блок проёмов, а режет каждая .reel__col
+   по себе, и между ними стоит flex-gap ровно в ширину перемычки. Доли проёмов
+   (--win-*) и доля перемычки (--win-gap) сняты с альфы самой картинки — это не
+   подгон на глаз: скрипт нашёл прозрачные прямоугольники и напечатал их в
+   долях, из них считается и позиция окна, и размер ячейки, так что правка
+   одной --cab-w двигает раму, окна, сетку и символы разом.
+
+   Весь арт — PNG/JPG (front/img/ice-spin-deluxe/): фон, логотип, рама и девять
+   символов. Свечения, попапы и все анимации — CSS. */
+
+:root {
+  /* Палитра с арта: лёд, неон-синий и фиолетовый зал вокруг. */
+  --ice: #7fe0ff;
+  --ice-bright: #e6f7ff;
+  --ice-deep: #1c4fd6;
+  --violet: #8a4bff;
+  --ink: #050820;
+  --ink-soft: #0d1440;
+  --text-frost: #eaf6ff;
+  --ui-border: rgba(127, 224, 255, 0.28);
+
+  /* Рама. Доли проёмов — из cabinet.png (1672x941): три окна
+     269..608, 665..1003, 1060..1398 по X и 180..877 по Y. */
+  /* Рама занимает 96% ширины канваса; по вертикали она при этом СЪЕДАЕТ его
+     целиком (863 из 900), поэтому --cab-t: 0 — выше уже некуда, а логотип
+     ложится прямо на ледяную корону, как на референсе. */
+  --cab-w: 1534px;
+  --cab-h: 863px;
+  --cab-l: 33px;
+  --cab-t: 0px;
+  --win-l: 0.1609;
+  --win-t: 0.1913;
+  --win-w: 0.6758;
+  --win-h: 0.7418;
+  --win-gap: 4.87%;   /* перемычка между проёмами, в долях ширины блока окон */
+
+  /* Сетка 3x3 целиком выводится из проёмов: ячейка шире, чем выше.
+     0.9026 = 1 - 2 * 4.87% — то, что остаётся колонкам от блока окон. */
+  --cell-w: calc(var(--cab-w) * var(--win-w) * 0.9026 / 3);
+  --cell-h: calc(var(--cab-h) * var(--win-h) / 3);
+
+  /* Оптический вес символа в ячейке: символы нарезаны по своим пропорциям, и
+     широкие 777/BAR оптически проваливались бы при одинаковой доле. */
+  --sym: 0.9;
+
+  /* Перезаписываются под устройство в slot.js updateStageScale(). */
+  --design-w: 1600px;
+  /* 1000, а не 863+хвост: остаток канваса лежит ПОД рамой, и центрирование
+     .stage поднимает композицию к верху экрана. Держать её там же
+     отрицательным --cab-t нельзя — на окне шире 16:9 канвас упирается в высоту
+     экрана, и всё выше нуля обрезается вместе с короной и логотипом. */
+  --design-h: 1000px;
+  --stage-scale: 1;
+}
+
+* { box-sizing: border-box; }
+
+html, body { overflow: hidden; }
+
+body {
+  margin: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--ink);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  color: var(--text-frost);
+}
+
+/* ---------- Back-to-catalog button ---------- */
+.to-catalog-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 110;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(5, 8, 32, 0.75);
+  border: 1px solid rgba(127, 224, 255, 0.5);
+  color: var(--ice);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(4px);
+}
+.to-catalog-btn:hover { background: rgba(5, 8, 32, 0.92); border-color: var(--ice); }
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+/* ---------- Dev panel ---------- */
+.dev-panel {
+  position: fixed;
+  top: 52px;
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 240px;
+  justify-content: flex-end;
+}
+.dev-btn {
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #222;
+  color: #ddd;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.dev-btn:hover { opacity: 1; }
+.dev-hint { font-size: 10px; color: #999; width: 100%; text-align: right; }
+
+/* ---------- Screen / design-space stage ---------- */
+.screen {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  background: var(--ink);
+}
+
+.layer { position: absolute; }
+
+.bg {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--design-w);
+  height: var(--design-h);
+  transform: translate(-50%, -50%) scale(var(--stage-scale));
+  z-index: 1;
+}
+.stage .obj { position: absolute; }
+
+/* ---------- Рама ----------
+   Картинка ставится как есть, без растяжки по содержимому: доли проёмов верны
+   только для её собственных пропорций. */
+.cabinet {
+  left: var(--cab-l);
+  top: var(--cab-t);
+  width: var(--cab-w);
+  height: var(--cab-h);
+  z-index: 4;
+  pointer-events: none;
+}
+.cabinet__img {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 18px 42px rgba(0, 0, 0, 0.65));
+}
+
+/* ---------- Логотип ----------
+   Лежит на ледяной короне рамы (как на референсе), поэтому z выше неё. */
+.logo {
+  left: calc(var(--cab-l) + var(--cab-w) / 2 - 191px);
+  top: 2px;
+  width: 382px;
+  height: 123px;
+  z-index: 6;
+  pointer-events: none;
+}
+.logo__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  animation: logo-glow 4.5s ease-in-out infinite;
+}
+@keyframes logo-glow {
+  0%, 100% { filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 24px rgba(90, 180, 255, 0.35)); }
+  50%      { filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 46px rgba(150, 225, 255, 0.8)); }
+}
+
+/* ---------- Барабаны ----------
+   Блок окон растянут на все три проёма, но обрезает КАЖДАЯ колонка по себе:
+   между проёмами в раме стоят непрозрачные перемычки, и лента, проехавшая
+   через общий контейнер, светилась бы в зазоре. */
+.reel {
+  left: calc(var(--cab-l) + var(--win-l) * var(--cab-w));
+  top: calc(var(--cab-t) + var(--win-t) * var(--cab-h));
+  width: calc(var(--win-w) * var(--cab-w));
+  height: calc(var(--win-h) * var(--cab-h));
+  z-index: 2;
+  display: flex;
+  gap: var(--win-gap);
+}
+
+.reel__col {
+  position: relative;
+  flex: 1 1 0;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 4.5% / 3.2%;
+  /* Стекло барабана: тёмный лёд с холодным отсветом сверху, чтобы фрукты
+     читались, а проём не выглядел дырой в зал. */
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(70, 140, 255, 0.42), rgba(6, 10, 40, 0) 74%),
+    linear-gradient(180deg, #16205c, #070b28);
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.72);
+}
+/* Колонка «на подходе» — холодное зарево внутри колонки. */
+.reel__col.is-anticipating::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(70% 55% at 50% 50%, rgba(120, 215, 255, 0.45), transparent 72%);
+  box-shadow: inset 0 0 46px rgba(140, 225, 255, 0.65);
+  animation: anticipate 620ms ease-in-out infinite alternate;
+}
+@keyframes anticipate {
+  from { opacity: 0.45; }
+  to   { opacity: 1; }
+}
+
+.reel__strip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.reel__cell {
+  position: relative;
+  width: 100%;
+  height: var(--cell-h);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Символы нарезаны ВПЛОТНУЮ по содержимому (у каждого свои пропорции), поэтому
+   вписываются в ячейку contain'ом, а оптический вес тира задаёт --sym. */
+.reel__cell img {
+  width: calc(100% * var(--sym));
+  height: calc(100% * var(--sym));
+  object-fit: contain;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.6));
+}
+/* 777, звёзды, колокольчики и BAR шире ячейки по пропорции, поэтому contain
+   вписывает их ПО ШИРИНЕ — доля здесь читается как доля ширины ячейки, и её
+   надо поднимать, иначе они оптически мельче круглых фруктов. */
+.reel__cell[data-symbol="seven"] { --sym: 1; }
+.reel__cell[data-symbol="star"] { --sym: 1; }
+.reel__cell[data-symbol="bell"] { --sym: 0.98; }
+.reel__cell[data-symbol="bar"] { --sym: 0.96; }
+.reel__cell.is-dimmed img { opacity: 0.3; }
+
+/* Приземление: короткое приседание. */
+@keyframes cell-land {
+  0%   { transform: translateY(-8%) scale(1.04, 0.94); }
+  60%  { transform: translateY(0) scale(0.97, 1.04); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+.reel__cell.is-landing img { animation: cell-land 260ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+
+/* Выигрыш: пульс с ледяным ореолом. */
+@keyframes cell-win {
+  0%   { transform: scale(1); filter: drop-shadow(0 0 0 rgba(150, 225, 255, 0)); }
+  35%  { transform: scale(1.16); filter: drop-shadow(0 0 26px rgba(180, 240, 255, 0.95)); }
+  70%  { transform: scale(1.05); filter: drop-shadow(0 0 18px rgba(120, 130, 255, 0.8)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(150, 225, 255, 0)); }
+}
+.reel__cell.is-winning img { animation: cell-win 620ms ease-in-out; }
+.reel__cell.is-win-active { z-index: 3; }
+
+/* ---------- Сумма выигрыша ниже порога попапа ---------- */
+.reel-win-amount-viewport {
+  left: calc(var(--cab-l) + var(--win-l) * var(--cab-w));
+  top: calc(var(--cab-t) + var(--win-t) * var(--cab-h));
+  width: calc(var(--win-w) * var(--cab-w));
+  height: calc(var(--win-h) * var(--cab-h));
+  z-index: 5;
+  pointer-events: none;
+}
+.reel-win-amount {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.reel-win-amount.is-visible { opacity: 1; }
+.reel-win-amount::before {
+  content: attr(data-amount);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 58px;
+  color: var(--ice-bright);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 4px 0 var(--ink), 0 0 28px rgba(120, 200, 255, 0.9);
+  white-space: nowrap;
+  padding: 6px 26px;
+  background: rgba(5, 8, 32, 0.78);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(127, 224, 255, 0.5), 0 0 34px rgba(70, 140, 255, 0.45);
+}
+
+/* Подсказка «сделайте ставку». На ДЕСКТОПЕ рама выросла до самой кнопки SPIN
+   (низ окон — канвас-805 при верхе кнопки 799), нижней кромки под текст там не
+   осталось, а внутри окна он ложился прямо на нижний ряд символов — поэтому
+   здесь подсказка стоит НАД барабанами, на верхней кромке рамы между логотипом
+   и окнами. В портрете рама ниже кнопки, там она возвращается под окна
+   (см. медиазапрос). */
+.hint-line {
+  left: calc(var(--cab-l) + var(--win-l) * var(--cab-w));
+  top: calc(var(--cab-t) + var(--win-t) * var(--cab-h) - 34px);
+  width: calc(var(--win-w) * var(--cab-w));
+  z-index: 5;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(230, 247, 255, 0.9);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 18px rgba(70, 150, 255, 0.6);
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+.hint-line.is-hidden { opacity: 0; }
+
+/* ---------- Затемнение ---------- */
+.screen-dim {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.68);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  z-index: 8;
+}
+.screen-dim.is-active { opacity: 1; }
+
+/* ---------- Попапы (плашка нарисована в CSS) ---------- */
+.game-popup {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 30;
+  width: min(620px, 72%);
+  padding: 34px 40px 38px;
+  border-radius: 26px;
+  text-align: center;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 110% at 50% 0%, rgba(80, 170, 255, 0.55), transparent 62%),
+    linear-gradient(180deg, #1b3a8f, #0a0e30);
+  box-shadow:
+    0 0 0 5px var(--ice),
+    0 0 0 10px var(--ink-soft),
+    0 0 72px rgba(90, 180, 255, 0.55),
+    0 24px 60px rgba(0, 0, 0, 0.65);
+  transform: translate(-50%, -50%) scale(0.7);
+  opacity: 0;
+  transition: transform 420ms cubic-bezier(0.2, 1.4, 0.4, 1), opacity 420ms ease;
+}
+.game-popup.is-in { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.game-popup.is-out {
+  transform: translate(-50%, -50%) scale(0.86);
+  opacity: 0;
+  transition-duration: 260ms;
+  transition-timing-function: ease-in;
+}
+.game-popup__sub {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--ice);
+  opacity: 0.9;
+}
+.game-popup__title {
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 68px;
+  line-height: 1.05;
+  color: var(--ice-bright);
+  -webkit-text-stroke: 3px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 5px 0 var(--ink), 0 0 36px rgba(140, 220, 255, 0.9);
+}
+.game-popup__amount {
+  margin-top: 6px;
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 52px;
+  color: var(--text-frost);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 4px 0 var(--ink);
+}
+
+/* ---------- Paytable info popup ---------- */
+.info-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 20px;
+}
+.info-popup[hidden] { display: none; }
+.info-popup__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(720px, 90vh);
+  overflow-y: auto;
+  background: var(--ink-soft);
+  border: 3px solid var(--ice-deep);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+.info-popup__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-frost);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.info-popup__title {
+  margin: 0 0 6px;
+  color: var(--ice);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 24px;
+  text-align: center;
+  -webkit-text-stroke: 1px var(--ink);
+  text-shadow: 0 2px 0 var(--ink);
+}
+.info-popup__note { text-align: center; font-size: 12px; opacity: 0.75; margin: 0 0 16px; }
+.info-popup__list { display: flex; flex-direction: column; gap: 10px; }
+.info-popup__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.info-popup__row img { width: 48px; height: 48px; object-fit: contain; flex-shrink: 0; }
+.info-popup__row-name { flex: 1 1 auto; min-width: 90px; font-weight: 700; }
+.info-popup__row-pays { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; }
+.info-popup__row-pays b { color: var(--ice); }
+
+img.is-missing {
+  width: 55%;
+  height: 55%;
+  object-fit: contain;
+  outline: 2px dashed rgba(127, 224, 255, 0.5);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+/* ================================================================
+   Портрет — канвас 780x1080 (высота подрезана под содержимое: по вертикали
+   упирается не экран, а ширина, и лишний канвас дал бы только пустоту).
+
+   Рама тут ТА ЖЕ, что на десктопе (cabinet.png), и в тех же пропорциях: своя
+   портретная картинка со своим проёмом делала бы из слота другую игру (это
+   уже проходили на country-gold-3). Поэтому доли проёмов НЕ переопределяются,
+   а --cab-h считается от --cab-w по родному отношению 1672x941 — растяжки нет
+   ни по одной оси. Цена паритета: рама шириной ровно в экран, значит колонка =
+   треть экрана, а её высота = это / 1.46.
+   ================================================================ */
+@media (orientation: portrait) {
+  :root {
+    /* Рама на 26% шире канваса-780: ледяные протуберанцы по бокам уходят за
+       край экрана, зато колонка = 983 * 0.6758 * 0.9026 / 3 = 200 канвас-px
+       вместо 158, и символы на телефоне читаются. Центр держим руками:
+       --cab-l = (780 - 983) / 2. */
+    --cab-w: 983px;
+    --cab-h: 553px;   /* 983 * 941 / 1672 — родная пропорция cabinet.png */
+    --cab-l: -102px;
+    --cab-t: 200px;
+  }
+
+  /* Логотип держится за корону рамы: перекрытие остаётся теми же 16 канвас-px,
+     поэтому его top считается от низа (200 + 16 - 203), а не двигается на те же
+     100, что и рама, — лого ведь ещё и уменьшилось. */
+  .logo { left: 75px; top: 13px; width: 630px; height: 203px; }
+
+  .reel-win-amount::before { font-size: 44px; }
+  /* В портрете рама ниже кнопки SPIN — подсказка возвращается под окна. */
+  .hint-line {
+    left: var(--cab-l);
+    top: calc(var(--cab-t) + (var(--win-t) + var(--win-h)) * var(--cab-h) + 10px);
+    width: var(--cab-w);
+    font-size: 24px;
+  }
+
+  .game-popup { width: min(680px, 88%); padding: 26px 24px 30px; }
+  .game-popup__title { font-size: 52px; }
+  .game-popup__amount { font-size: 40px; }
+}
+
+/* ---------- Boot preloader theme (структура в css/preloader.css) ---------- */
+.preloader {
+  --pl-bg: #050820;
+  --pl-accent-a: #7fe0ff;
+  --pl-accent-b: #8a4bff;
+  --pl-glow-a: rgba(127, 224, 255, 0.4);
+  --pl-glow-b: rgba(138, 75, 255, 0.18);
+  --pl-border: rgba(127, 224, 255, 0.45);
+  --pl-shadow: rgba(70, 150, 255, 0.55);
+}

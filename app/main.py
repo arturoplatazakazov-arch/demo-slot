@@ -14,6 +14,7 @@ from app.seed.country_gold_3 import get_or_seed_active_config as get_or_seed_cou
 from app.seed.dirty_money_mafia import get_or_seed_active_config as get_or_seed_dirty_money_mafia
 from app.seed.east_discovery import get_or_seed_active_config as get_or_seed_east_discovery
 from app.seed.golden_caravan import get_or_seed_active_config as get_or_seed_golden_caravan
+from app.seed.ice_spin_deluxe import get_or_seed_active_config as get_or_seed_ice_spin_deluxe
 from app.seed.lucky_joker_3h3 import get_or_seed_active_config as get_or_seed_lucky_joker_3h3
 from app.seed.lucky_miami_3 import get_or_seed_active_config as get_or_seed_lucky_miami_3
 from app.seed.miami_fruits_3 import get_or_seed_active_config as get_or_seed_miami_fruits_3
@@ -52,6 +53,7 @@ async def lifespan(app: FastAPI):
         await get_or_seed_dirty_money_mafia(db)
         await get_or_seed_east_discovery(db)
         await get_or_seed_golden_caravan(db)
+        await get_or_seed_ice_spin_deluxe(db)
         await get_or_seed_lucky_joker_3h3(db)
         await get_or_seed_lucky_miami_3(db)
         await get_or_seed_miami_fruits_3(db)
