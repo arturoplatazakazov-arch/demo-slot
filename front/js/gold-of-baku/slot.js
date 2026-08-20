@@ -18,7 +18,7 @@ const ASSET_ROOT = 'img/gold-of-baku';
 // держит символы и корпус по эвристике и после перерисовки показывает старую
 // картинку (777 «не приезжал» на уже открытой странице). Поднимать при ЛЮБОЙ
 // замене файла в img/gold-of-baku/.
-const ASSET_VERSION = 1;
+const ASSET_VERSION = 2;
 
 function assetSrc(path) {
   return `${ASSET_ROOT}/${path}?v=${ASSET_VERSION}`;
