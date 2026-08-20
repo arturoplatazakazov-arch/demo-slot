@@ -374,25 +374,24 @@ body {
 }
 .screen-dim.is-active { opacity: 1; }
 
-/* ---------- Попапы (плашка нарисована в CSS) ---------- */
+/* ---------- Попапы (плашка НАРИСОВАНА, PNG) ----------
+   У каждого тира свой файл в img/popups/ с готовым заголовком и пустым красным
+   картушем внизу. Игра ничего не режет и не перекрашивает: печатает в картуш
+   только сумму.
+
+   Позиция картуша задана в cqw — долях ШИРИНЫ плашки (.game-popup объявлен
+   inline-size контейнером). Проценты по вертикали здесь не годятся: высота
+   попапа приходит от картинки (auto), и % от auto резолвится в auto. cqw же
+   считается от ширины, которая задана всегда, поэтому и сумма, и её кегль
+   масштабируются вместе с плашкой на любом экране. */
 .game-popup {
   position: absolute;
   left: 50%;
   top: 50%;
   z-index: 30;
-  width: min(620px, 72%);
-  padding: 34px 40px 38px;
-  border-radius: 26px;
-  text-align: center;
+  width: min(560px, 74%);
+  container-type: inline-size;
   pointer-events: none;
-  background:
-    radial-gradient(120% 110% at 50% 0%, rgba(255, 160, 50, 0.5), transparent 62%),
-    linear-gradient(180deg, #7a1524, #2a060c);
-  box-shadow:
-    0 0 0 5px var(--gold),
-    0 0 0 10px var(--carpet-deep),
-    0 0 70px rgba(255, 150, 50, 0.5),
-    0 24px 60px rgba(0, 0, 0, 0.65);
   transform: translate(-50%, -50%) scale(0.7);
   opacity: 0;
   transition: transform 420ms cubic-bezier(0.2, 1.4, 0.4, 1), opacity 420ms ease;
@@ -404,30 +403,61 @@ body {
   transition-duration: 260ms;
   transition-timing-function: ease-in;
 }
-.game-popup__sub {
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  color: var(--gold);
-  opacity: 0.9;
+
+.game-popup__plate {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 18px 44px rgba(0, 0, 0, 0.6));
 }
-.game-popup__title {
-  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
-  font-size: 68px;
-  line-height: 1.05;
-  color: var(--gold-bright);
-  -webkit-text-stroke: 3px var(--ink);
-  paint-order: stroke fill;
-  text-shadow: 0 5px 0 var(--ink), 0 0 34px rgba(255, 190, 80, 0.85);
+
+/* Картуш у каждой плашки на своём месте. Доли СНЯТЫ С САМИХ PNG — заливкой по
+   тёмно-красному полю изнутри до золотой рамки, а не подогнаны на глаз (у
+   плашек разный размер и разная высота заголовка). Перерисуют плашку — снимать
+   заново. */
+.game-popup--bigWin {
+  --cart-top: 47.44cqw; --cart-h: 11.19cqw;
+  --cart-left: 23.41cqw; --cart-w: 52.83cqw; --cart-fs: 7.2cqw;
 }
+.game-popup--megaWin {
+  --cart-top: 54.14cqw; --cart-h: 9.67cqw;
+  --cart-left: 19.61cqw; --cart-w: 60.08cqw; --cart-fs: 6.4cqw;
+}
+.game-popup--epicWin {
+  --cart-top: 55.66cqw; --cart-h: 10.15cqw;
+  --cart-left: 20.93cqw; --cart-w: 58.77cqw; --cart-fs: 6.6cqw;
+}
+
 .game-popup__amount {
-  margin-top: 6px;
+  position: absolute;
+  left: var(--cart-left, 21cqw);
+  width: var(--cart-w, 58cqw);
+  top: var(--cart-top, 50cqw);
+  height: var(--cart-h, 10cqw);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
-  font-size: 52px;
-  color: var(--text-cream);
-  -webkit-text-stroke: 2px var(--ink);
+  font-size: 34px;              /* запасной кегль, если cqw не поддержан */
+  font-size: var(--cart-fs, 9cqw);
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--gold-bright);
+  -webkit-text-stroke: 0.5cqw rgba(74, 8, 14, 0.9);
   paint-order: stroke fill;
-  text-shadow: 0 4px 0 var(--ink);
+  text-shadow: 0 0.4cqw 0 rgba(60, 6, 10, 0.85), 0 0 2.5cqw rgba(255, 190, 90, 0.55);
+}
+
+/* Плашка не загрузилась — сумма всё равно должна быть читаемой. */
+.game-popup.is-artless .game-popup__plate { display: none; }
+.game-popup.is-artless .game-popup__amount {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: 18px 26px;
+  border-radius: 18px;
+  background: rgba(24, 5, 8, 0.85);
+  box-shadow: 0 0 0 3px var(--gold);
 }
 
 /* ---------- Paytable info popup ---------- */
@@ -541,9 +571,7 @@ img.is-missing {
   .reel-win-amount::before { font-size: 46px; }
   .hint-line { font-size: 22px; }
 
-  .game-popup { width: min(680px, 88%); padding: 26px 24px 30px; }
-  .game-popup__title { font-size: 52px; }
-  .game-popup__amount { font-size: 40px; }
+  .game-popup { width: min(620px, 88%); }
 }
 
 /* ---------- Boot preloader theme (структура в css/preloader.css) ---------- */

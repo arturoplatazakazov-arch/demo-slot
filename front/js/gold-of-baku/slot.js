@@ -18,7 +18,7 @@ const ASSET_ROOT = 'img/gold-of-baku';
 // держит символы и корпус по эвристике и после перерисовки показывает старую
 // картинку (777 «не приезжал» на уже открытой странице). Поднимать при ЛЮБОЙ
 // замене файла в img/gold-of-baku/.
-const ASSET_VERSION = 3;
+const ASSET_VERSION = 4;
 
 function assetSrc(path) {
   return `${ASSET_ROOT}/${path}?v=${ASSET_VERSION}`;
@@ -560,33 +560,74 @@ function popScreenDim() {
 // Плашка нарисована в CSS (.game-popup), так что попап — это просто набор
 // строк; собирается заново на каждый показ, а не кэшируется: ноды, которой нет
 // в DOM, нечем оставить после себя устаревшую сумму.
+// Плашки попапов НАРИСОВАНЫ (в отличие от остальных игр семьи, где они собраны
+// из градиентов в CSS): у каждого тира свой PNG с готовым заголовком и пустым
+// красным картушем внизу, куда игра печатает сумму. Размер картуша задан в CSS
+// долями ширины плашки (--cart-*), поэтому попап масштабируется как одно целое.
 const POPUP_CONFIG = {
-  bigWin: { title: 'BIG WIN' },
-  megaWin: { title: 'MEGA WIN' },
-  epicWin: { title: 'EPIC WIN' },
+  bigWin: { art: 'popups/big_win.png' },
+  megaWin: { art: 'popups/mega_win.png' },
+  epicWin: { art: 'popups/epic_win.png' },
 };
 
-function buildPopupNode(key, amount) {
-  const cfg = POPUP_CONFIG[key] || { title: key };
-  const root = document.createElement('div');
-  root.className = 'game-popup';
+function popupArtSrc(key) {
+  const cfg = POPUP_CONFIG[key];
+  return cfg && cfg.art ? assetSrc(cfg.art) : null;
+}
 
-  if (cfg.sub) {
-    const sub = document.createElement('div');
-    sub.className = 'game-popup__sub';
-    sub.textContent = cfg.sub;
-    root.appendChild(sub);
-  }
-  const title = document.createElement('div');
-  title.className = 'game-popup__title';
-  title.textContent = cfg.title;
-  root.appendChild(title);
+function buildPopupNode(key, amount) {
+  const root = document.createElement('div');
+  root.className = `game-popup game-popup--${key}`;
+
+  const plate = document.createElement('img');
+  plate.className = 'game-popup__plate';
+  plate.alt = '';
+  plate.decoding = 'async';
+  plate.src = popupArtSrc(key);
+  // Плашка не приехала — это баг сборки, и он должен быть громким, а не пустым
+  // экраном: показываем хотя бы сумму на затемнении.
+  plate.addEventListener('error', () => {
+    root.classList.add('is-artless');
+    console.warn(`[baku] no popup art for "${key}"`);
+  }, { once: true });
+  root.appendChild(plate);
 
   const amountEl = document.createElement('div');
   amountEl.className = 'game-popup__amount';
   amountEl.textContent = Number(amount).toLocaleString('en-US');
   root.appendChild(amountEl);
   return root;
+}
+
+// Попап встаёт по центру ОКНА БАРАБАНОВ, а не экрана. В портрете слот сидит в
+// верхней трети (под ним живёт фиксированный бар V3), и попап, центрированный
+// по экрану, накрывал бы пустой фон под рамой, а не выигрыш, ради которого он
+// вылез. На десктопе центр слота и центр экрана почти совпадают, так что
+// правило одно на обе раскладки.
+function positionPopup(node) {
+  const screenEl = document.getElementById('screen');
+  const reelEl = document.getElementById('reel');
+  if (!screenEl || !reelEl) return;
+  const screenBox = screenEl.getBoundingClientRect();
+  const reelBox = reelEl.getBoundingClientRect();
+  if (!reelBox.height) return;   // барабаны ещё не разложены — оставляем центр
+  node.style.top = `${Math.round(reelBox.top - screenBox.top + reelBox.height / 2)}px`;
+}
+
+// Кегль суммы задан в CSS долей ширины плашки и рассчитан на «человеческие»
+// выигрыши. Но потолок игры — 900x от максимальной ставки, то есть сумма в
+// девять знаков с запятыми, и она вылезла бы за золотую рамку картуша. Поэтому
+// после вставки в DOM ужимаем кегль, пока строка не влезет по ширине.
+function fitPopupAmount(node) {
+  const el = node.querySelector('.game-popup__amount');
+  if (!el) return;
+  const box = el.clientWidth;
+  if (!box) return;                       // попап ещё без ширины — не трогаем
+  let size = parseFloat(getComputedStyle(el).fontSize);
+  for (let i = 0; i < 14 && el.scrollWidth > box; i++) {
+    size *= 0.92;
+    el.style.fontSize = `${size}px`;
+  }
 }
 
 // Жизненный цикл попапа (вход -> держим -> выход). Любой выход идёт через ОДИН
@@ -616,6 +657,8 @@ function playPopup(key, amount = 0, holdMs = 2500) {
       await wait(DIM_TRANSITION_MS);
       node = buildPopupNode(key, amount);
       document.getElementById('screen').appendChild(node);
+      positionPopup(node);
+      fitPopupAmount(node);
       void node.offsetWidth; // зафиксировать пред-входное состояние
       node.classList.add('is-in');
 
@@ -718,6 +761,9 @@ function preloadAssets() {
   const suffix = isMobileLayout() ? '_mob' : '';
   tasks.push(track(preloadImage(assetSrc(`img/bg_base${suffix}.jpg`))));
   tasks.push(track(preloadImage(assetSrc('img/cabinet.png'))));
+  // Плашки попапов — тоже статика: без прелоада BIG WIN появлялся бы пустым
+  // прямоугольником на те 100-300мс, что грузится PNG.
+  for (const key of Object.keys(POPUP_CONFIG)) tasks.push(track(preloadImage(popupArtSrc(key))));
   for (const p of Sound.preloadPromises || []) tasks.push(track(p));
 
   return Promise.race([Promise.all(tasks), wait(PRELOAD_TIMEOUT_MS)]);
