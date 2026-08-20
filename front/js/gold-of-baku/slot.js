@@ -644,7 +644,7 @@ function setupDevPanel() {
 //
 // Игра нарисована в фиксированном дизайн-канвасе (размеры фонов), и #stage
 // contain-масштабируется в .screen.
-const DESIGN = { desktop: { w: 1720, h: 1000 }, mobile: { w: 780, h: 1200 } };
+const DESIGN = { desktop: { w: 1720, h: 1000 }, mobile: { w: 780, h: 1300 } };
 
 function updateStageScale() {
   const screenEl = document.getElementById('screen');
