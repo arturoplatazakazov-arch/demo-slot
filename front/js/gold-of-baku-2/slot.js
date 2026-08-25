@@ -18,7 +18,7 @@ const ASSET_ROOT = 'img/gold-of-baku-2';
 // держит символы и корпус по эвристике и после перерисовки показывает старую
 // картинку (777 «не приезжал» на уже открытой странице). Поднимать при ЛЮБОЙ
 // замене файла в img/gold-of-baku-2/.
-const ASSET_VERSION = 4;
+const ASSET_VERSION = 5;
 
 function assetSrc(path) {
   return `${ASSET_ROOT}/${path}?v=${ASSET_VERSION}`;
@@ -560,33 +560,50 @@ function popScreenDim() {
 // Плашка нарисована в CSS (.game-popup), так что попап — это просто набор
 // строк; собирается заново на каждый показ, а не кэшируется: ноды, которой нет
 // в DOM, нечем оставить после себя устаревшую сумму.
+// Титул нарисован на самой плашке, поэтому от игры тут только сумма: она
+// ложится в пустую рамку внизу PNG (её доли — в .game-popup--* в CSS).
 const POPUP_CONFIG = {
-  bigWin: { title: 'BIG WIN' },
-  megaWin: { title: 'MEGA WIN' },
-  epicWin: { title: 'EPIC WIN' },
+  bigWin: { title: 'BIG WIN', mod: 'big', plate: 'img/popup_big.png' },
+  megaWin: { title: 'MEGA WIN', mod: 'mega', plate: 'img/popup_mega.png' },
+  epicWin: { title: 'EPIC WIN', mod: 'epic', plate: 'img/popup_epic.png' },
 };
 
 function buildPopupNode(key, amount) {
-  const cfg = POPUP_CONFIG[key] || { title: key };
+  const cfg = POPUP_CONFIG[key];
   const root = document.createElement('div');
-  root.className = 'game-popup';
+  root.className = `game-popup game-popup--${cfg.mod}`;
+  root.setAttribute('role', 'img');
+  root.setAttribute('aria-label', `${cfg.title} ${Number(amount).toLocaleString('en-US')}`);
 
-  if (cfg.sub) {
-    const sub = document.createElement('div');
-    sub.className = 'game-popup__sub';
-    sub.textContent = cfg.sub;
-    root.appendChild(sub);
-  }
-  const title = document.createElement('div');
-  title.className = 'game-popup__title';
-  title.textContent = cfg.title;
-  root.appendChild(title);
+  const plate = document.createElement('img');
+  plate.className = 'game-popup__plate';
+  plate.src = assetSrc(cfg.plate);
+  plate.alt = '';
+  root.appendChild(plate);
 
   const amountEl = document.createElement('div');
   amountEl.className = 'game-popup__amount';
-  amountEl.textContent = Number(amount).toLocaleString('en-US');
+  const value = document.createElement('span');
+  value.textContent = Number(amount).toLocaleString('en-US');
+  amountEl.appendChild(value);
   root.appendChild(amountEl);
   return root;
+}
+
+// Рамка под сумму нарисована и не тянется, а сумма растёт от 4 знаков до 9 —
+// поэтому длинную дожимаем шрифтом. Меряем ВНУТРЕННИЙ span против ширины
+// рамки: сам .game-popup__amount — центрирующий флекс, текст в нём вылезает в
+// обе стороны, и его собственные scrollWidth/clientWidth остаются равны.
+function fitPopupAmount(node) {
+  const box = node.querySelector('.game-popup__amount');
+  const value = box && box.firstElementChild;
+  if (!value) return;
+  const limit = box.clientWidth;
+  let size = parseFloat(getComputedStyle(box).fontSize);
+  for (let i = 0; i < 24 && value.offsetWidth > limit && size > 8; i += 1) {
+    size *= 0.92;
+    box.style.fontSize = `${size}px`;
+  }
 }
 
 // Жизненный цикл попапа (вход -> держим -> выход). Любой выход идёт через ОДИН
@@ -616,6 +633,7 @@ function playPopup(key, amount = 0, holdMs = 2500) {
       await wait(DIM_TRANSITION_MS);
       node = buildPopupNode(key, amount);
       document.getElementById('screen').appendChild(node);
+      fitPopupAmount(node); // до .is-in: коробка ещё не под scale(0.7)-трансформом
       void node.offsetWidth; // зафиксировать пред-входное состояние
       node.classList.add('is-in');
 
@@ -718,6 +736,7 @@ function preloadAssets() {
   const suffix = isMobileLayout() ? '_mob' : '';
   tasks.push(track(preloadImage(assetSrc(`img/bg_base${suffix}.jpg`))));
   tasks.push(track(preloadImage(assetSrc('img/cabinet.png'))));
+  for (const cfg of Object.values(POPUP_CONFIG)) tasks.push(track(preloadImage(assetSrc(cfg.plate))));
   for (const p of Sound.preloadPromises || []) tasks.push(track(p));
 
   return Promise.race([Promise.all(tasks), wait(PRELOAD_TIMEOUT_MS)]);
