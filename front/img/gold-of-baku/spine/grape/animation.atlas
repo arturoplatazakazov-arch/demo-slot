@@ -1,0 +1,12 @@
+animation.png
+size:413,278
+filter:Linear,Linear
+pma:true
+glint
+bounds:2,190,86,340
+rotate:90
+grape_glow
+bounds:312,28,160,99
+rotate:90
+grape_item
+bounds:2,2,308,186

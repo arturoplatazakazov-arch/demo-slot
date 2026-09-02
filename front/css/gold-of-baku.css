@@ -149,6 +149,22 @@ body {
   transform: translate(-50%, -50%) scale(var(--stage-scale));
   z-index: 1;
 }
+/* Второй слой сцены — над канвасом Spine. Здесь корпус (он обязан обрезать
+   вылезающий за ячейку клип выигрыша), логотип, сумма и подсказка. */
+.stage--front { z-index: 6; pointer-events: none; }
+
+/* Канвас анимаций: между барабанами (.stage, z-index 1) и корпусом
+   (.stage--front, z-index 6). На весь экран — Spine сам позиционирует
+   скелеты по DOM-якорям (см. SpineInstance.anchorEl), координаты берёт из
+   вёрстки, поэтому канвас не надо ни двигать, ни масштабировать. */
+.spine-canvas {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+  pointer-events: none;
+}
+
 .stage .obj { position: absolute; }
 
 /* ---------- Корпус ----------
@@ -282,6 +298,10 @@ body {
 .reel__cell[data-symbol="orange"] { --sym: 0.86; }
 .reel__cell[data-symbol="pomegranate"] { --sym: 0.9; }
 .reel__cell.is-dimmed img { opacity: 0.3; }
+/* Пока по ячейке играет скелет, статическая плитка прячется: скелет рисует ту
+   же картинку, и два слоя разом дали бы двойную плотность на мягких краях.
+   visibility, а не display — ячейка не должна менять раскладку. */
+.reel__cell.is-animating img { visibility: hidden; }
 
 /* Product, this session: the post-land squash bounce read as a
    jitter/shake — dropped. .is-landing is still toggled in JS but no

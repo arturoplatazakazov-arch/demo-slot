@@ -1,0 +1,17 @@
+animation.png
+size:859,370
+filter:Linear,Linear
+pma:true
+burst
+bounds:334,108,260,260
+glint
+bounds:771,28,86,340
+rays
+bounds:2,38,330,330
+seven_glow
+bounds:334,11,191,95
+seven_item
+bounds:596,2,366,173
+rotate:90
+spark
+bounds:527,42,64,64

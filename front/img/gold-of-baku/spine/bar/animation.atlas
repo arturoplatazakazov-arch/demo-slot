@@ -1,0 +1,13 @@
+animation.png
+size:318,485
+filter:Linear,Linear
+pma:true
+bar_glow
+bounds:68,368,184,115
+bar_item
+bounds:90,2,364,226
+rotate:90
+glint
+bounds:2,26,86,340
+spark
+bounds:2,419,64,64

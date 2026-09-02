@@ -1,0 +1,14 @@
+animation.png
+size:422,344
+filter:Linear,Linear
+pma:true
+glint
+bounds:218,2,86,340
+steam
+bounds:306,14,64,150
+tea_glow
+bounds:306,166,176,114
+rotate:90
+tea_item
+bounds:2,4,338,214
+rotate:90

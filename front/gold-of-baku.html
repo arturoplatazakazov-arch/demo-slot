@@ -6,7 +6,7 @@
 <title>Gold of Baku — demo</title>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/preloader.css?v=1">
-<link rel="stylesheet" href="css/gold-of-baku.css?v=4">
+<link rel="stylesheet" href="css/gold-of-baku.css?v=5">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 </head>
 <body>
@@ -45,6 +45,19 @@
            buildReelGrid. Стоит ровно в проёме резного корпуса — координаты
            окна заданы долями картинки корпуса (см. --win-* в CSS). -->
       <div class="obj reel" id="reel"></div>
+
+    </div>
+
+    <!-- Канвас Spine: анимации символов рисуются здесь, МЕЖДУ барабанами и
+         корпусом. Клип выигрыша вылезает за ячейку, и корпус должен обрезать
+         его так же, как обрезает сами барабаны, — поэтому корпус уехал на
+         второй слой сцены, а не остался в одном с барабанами. -->
+    <canvas class="layer spine-canvas" id="spineCanvas"></canvas>
+
+    <!-- Второй слой того же дизайн-канваса: всё, что обязано лежать ПОВЕРХ
+         анимаций. Трансформ общий с #stage — оба масштабирует один
+         updateStageScale, оба читают те же --design-*/--stage-scale. -->
+    <div class="stage stage--front" id="stageFront">
 
       <!-- Корпус лежит ПОВЕРХ барабанов: проём в PNG прозрачный, поэтому его
            внутренняя фаска перекрывает кромку окна. -->
@@ -184,8 +197,10 @@
   <script src="js/config.js?v=2"></script>
   <script src="js/api.js?v=2"></script>
   <script src="js/reel-math.js?v=6"></script>
+  <script src="vendor/spine-webgl.js"></script>
+  <script src="js/spine-engine.js?v=7"></script>
   <script src="js/gold-of-baku/sound.js?v=2"></script>
-  <script src="js/gold-of-baku/slot.js?v=6"></script>
+  <script src="js/gold-of-baku/slot.js?v=7"></script>
   <script src="js/gold-of-baku/app.js?v=1"></script>
   <!-- Поведение нижнего бара V3: флайаут, тултипы, заглушки авто/турбо. -->
   <script src="js/ui-bar-v3.js?v=4"></script>

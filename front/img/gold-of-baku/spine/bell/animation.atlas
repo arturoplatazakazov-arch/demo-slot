@@ -1,0 +1,14 @@
+animation.png
+size:455,486
+filter:Linear,Linear
+pma:true
+bell_glow
+bounds:264,26,187,116
+bell_item
+bounds:2,264,363,220
+glint
+bounds:367,144,86,340
+spark
+bounds:264,198,64,64
+sring
+bounds:2,2,260,260

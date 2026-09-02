@@ -1,0 +1,14 @@
+animation.png
+size:411,292
+filter:Linear,Linear
+pma:true
+glint
+bounds:2,204,86,340
+rotate:90
+pomegranate_glow
+bounds:304,44,158,105
+rotate:90
+pomegranate_item
+bounds:2,2,300,200
+twinkle
+bounds:344,250,40,40

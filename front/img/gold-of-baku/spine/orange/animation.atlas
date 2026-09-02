@@ -1,0 +1,12 @@
+animation.png
+size:384,287
+filter:Linear,Linear
+pma:true
+glint
+bounds:2,199,86,340
+rotate:90
+orange_glow
+bounds:277,54,143,105
+rotate:90
+orange_item
+bounds:2,2,273,195

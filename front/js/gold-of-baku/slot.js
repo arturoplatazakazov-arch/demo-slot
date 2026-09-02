@@ -123,6 +123,153 @@ function setTurbo(on) {
 }
 window.setTurbo = setTurbo;
 
+// --- Spine-анимации символов -------------------------------------------------
+//
+// У каждого из семи символов свой экспорт в img/gold-of-baku/spine/<код>/ с
+// тремя клипами: land (падение с приседанием), idle (покачивание) и win.
+// Статический PNG остаётся «покоящейся» плиткой — скелет включается только на
+// время клипа и рисуется на общем WebGL-канвасе МЕЖДУ барабанами и корпусом,
+// поэтому вылезающие за ячейку лучи обрезает проём корпуса.
+//
+// Проверено по экспортам: idle и win начинаются и заканчиваются ровно в
+// setup-позе, а она пиксель в пиксель совпадает со статикой (см.
+// front/img/gold-of-baku/README.md) — поэтому подмена <img> на скелет и
+// обратно не даёт скачка. land стартует на 70-80 единиц выше: это и есть его
+// падение, а заканчивается он тоже на статике.
+const SPINE_ROOT = `${ASSET_ROOT}/spine`;
+
+// idle не заводим: девять вечно тикающих скелетов на полноэкранном канвасе
+// ради еле заметного покачивания — дорого на телефоне, и в проекте так не
+// делают (в multi-fruits-story постоянный idle только у спец-символов).
+// Ставится в true одной строкой, если продукт захочет.
+const PLAY_IDLE_CLIP = false;
+// land играем: CSS-приседание из игры убрали (читалось как дрожь), и это
+// ровно его замена от художника. Если на устройстве прочитается как второе
+// падение поверх приезда ленты — гасится здесь.
+const PLAY_LAND_CLIP = true;
+
+let spineStage = null;
+const spineItemBoxes = new Map();
+
+function spineFolder(code) {
+  return `${SPINE_ROOT}/${code}`;
+}
+
+function loadSymbolResource(code) {
+  // Атласы этого пака объявляют pma:true — премультиплицированная альфа.
+  return SpineEngine.SpineResource.load(spineStage.assetManager, spineFolder(code), {
+    premultipliedAlpha: true,
+  });
+}
+
+// Коробка ОДНОГО слота item в координатах скелета. Полные границы скелета
+// включают свечение, блик и лучи, и символ, вписанный по ним, оказался бы
+// заметно мельче статики; по коробке item движок даёт ровно тот же масштаб,
+// что и <img> с object-fit: contain и долей --sym.
+function symbolItemBox(code, resource) {
+  if (spineItemBoxes.has(code)) return spineItemBoxes.get(code);
+  let box = resource.bounds;
+  try {
+    const skeleton = new spine.Skeleton(resource.skeletonData);
+    skeleton.setToSetupPose();
+    for (const slot of skeleton.slots) {
+      if (slot.data.name !== 'item') slot.setAttachment(null);
+    }
+    skeleton.updateWorldTransform();
+    const rect = skeleton.getBoundsRect();
+    if (rect && rect.width > 0 && rect.height > 0) box = rect;
+  } catch (err) {
+    console.warn(`[baku] не смог померить item у "${code}", беру границы скелета:`, err);
+  }
+  spineItemBoxes.set(code, box);
+  return box;
+}
+
+// Доля ячейки, которую занимает символ, живёт в CSS (--sym на .reel__cell) —
+// читаем её оттуда, чтобы скелет и статика масштабировались одним числом.
+function symbolFit(cell) {
+  const raw = parseFloat(getComputedStyle(cell).getPropertyValue('--sym'));
+  return Number.isFinite(raw) ? raw : 0.92;
+}
+
+async function ensureCellInstance(info) {
+  if (!spineStage) return null;
+  if (info.instance && info.instanceCode === info.symbol) return info.instance;
+  releaseCellInstance(info);
+  const code = info.symbol;
+  let resource;
+  try {
+    resource = await loadSymbolResource(code);
+  } catch (err) {
+    console.warn(`[baku] нет spine-анимации для "${code}" — остаётся статика:`, err);
+    return null;
+  }
+  // Пока грузили, ячейку могло перезаписать новым спином.
+  if (info.symbol !== code || !info.cell.isConnected) return null;
+  const instance = resource.createInstance();
+  instance.anchorEl = info.cell;
+  instance.boundsOverride = symbolItemBox(code, resource);
+  instance.fit = symbolFit(info.cell);
+  info.instance = instance;
+  info.instanceCode = code;
+  return instance;
+}
+
+function releaseCellInstance(info) {
+  if (!info.instance) return;
+  spineStage.removeBase(info.instance);
+  info.instance.onSettle = null;
+  info.instance = null;
+  info.instanceCode = null;
+  info.cell.classList.remove('is-animating');
+}
+
+// Проиграть клип на ячейке. Резолвится true, если анимация реально отыграла, и
+// false, если скелета нет — вызывающий тогда откатывается на CSS.
+//
+// Конец клипа ловится ДВУМЯ путями: событием complete от Spine и таймером на
+// длительность клипа. Таймер здесь не перестраховка, а обязательный дублёр:
+// AnimationState двигают кадры rAF, а в скрытой вкладке кадров нет вовсе —
+// выигрыш, начатый перед уходом со вкладки, иначе повис бы навсегда и утащил
+// за собой всю последовательность подсветки линий.
+function playCellClip(info, clip, { loop = false } = {}) {
+  return new Promise((resolve) => {
+    ensureCellInstance(info).then((instance) => {
+      if (!instance) {
+        resolve(false);
+        return;
+      }
+      // Статика прячется только на время клипа: скелет рисует ту же картинку,
+      // и два слоя разом дали бы двойную плотность на полупрозрачных краях.
+      info.cell.classList.add('is-animating');
+      spineStage.addBase(instance);
+      instance.play(clip, loop);
+      if (loop) {
+        resolve(true);
+        return;
+      }
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        instance.onSettle = null;
+        resolve(true);
+      };
+      const animation = instance.resource.skeletonData.findAnimation(clip);
+      const timer = setTimeout(finish, (animation ? animation.duration : 2) * 1000 + 400);
+      instance.onSettle = finish;
+    });
+  });
+}
+
+function stopCellClip(info) {
+  if (!info || !info.instance) return;
+  spineStage.removeBase(info.instance);
+  info.instance.onSettle = null;
+  info.cell.classList.remove('is-animating');
+}
+
 // --- Ячейки ------------------------------------------------------------------
 
 function applyStaticContentOffset(img, code) {
@@ -190,6 +337,9 @@ function clearCellAnimation(info) {
     info.winLoopTimeout = null;
   }
   info.cell.classList.remove('is-winning', 'is-win-active', 'is-landing');
+  // Скелет снимаем с канваса, но сам инстанс держим: он привязан к коду
+  // символа и переживает повторные подсветки без пересоздания.
+  stopCellClip(info);
 }
 
 function teardownCellInstances() {
@@ -207,6 +357,7 @@ function teardownCellInstances() {
 
 function setCellSymbol(info, code) {
   clearCellAnimation(info);
+  if (info.instanceCode && info.instanceCode !== code) releaseCellInstance(info);
   info.symbol = code;
   info.cell.dataset.symbol = code;
   info.img.classList.remove('is-missing');
@@ -217,12 +368,21 @@ function setCellSymbol(info, code) {
 
 // --- Показ выигрыша ----------------------------------------------------------
 
+// Выигрыш играет клипом из Spine; CSS-пульс остаётся запасным путём на случай,
+// когда скелет не загрузился (битый атлас, оффлайн) — тогда ячейка всё равно
+// подсветится, а не замрёт молча.
 function playWinAnimationOnce(info) {
-  info.cell.classList.remove('is-winning');
-  void info.cell.offsetWidth; // рестарт кейфреймов
-  info.cell.classList.add('is-winning');
-  return wait(WIN_PULSE_MS).then(() => {
+  return playCellClip(info, 'win').then((played) => {
+    if (played) {
+      stopCellClip(info);
+      return;
+    }
     info.cell.classList.remove('is-winning');
+    void info.cell.offsetWidth; // рестарт кейфреймов
+    info.cell.classList.add('is-winning');
+    return wait(WIN_PULSE_MS).then(() => {
+      info.cell.classList.remove('is-winning');
+    });
   });
 }
 
@@ -244,8 +404,21 @@ function previewSymbolWin(info) {
   playOnce();
 }
 
+// Приземление. CSS-приседание из игры убрали (читалось как дрожь), поэтому
+// здесь остался только клип из Spine — он и есть его замена.
 function playLandBounce(info) {
   if (!info) return;
+  if (PLAY_LAND_CLIP) {
+    playCellClip(info, 'land').then((played) => {
+      if (!played) return;
+      if (PLAY_IDLE_CLIP) {
+        playCellClip(info, 'idle', { loop: true });
+      } else {
+        stopCellClip(info);
+      }
+    });
+    return;
+  }
   info.cell.classList.remove('is-landing');
   void info.cell.offsetWidth;
   info.cell.classList.add('is-landing');
@@ -764,6 +937,11 @@ function preloadAssets() {
   // Плашки попапов — тоже статика: без прелоада BIG WIN появлялся бы пустым
   // прямоугольником на те 100-300мс, что грузится PNG.
   for (const key of Object.keys(POPUP_CONFIG)) tasks.push(track(preloadImage(popupArtSrc(key))));
+  // Скелеты символов: без прогрева первый выигрыш ждал бы загрузку атласа уже
+  // после приземления и подсветился бы с задержкой.
+  if (spineStage) {
+    for (const code of SYMBOL_CODES) tasks.push(track(loadSymbolResource(code)));
+  }
   for (const p of Sound.preloadPromises || []) tasks.push(track(p));
 
   return Promise.race([Promise.all(tasks), wait(PRELOAD_TIMEOUT_MS)]);
@@ -771,6 +949,17 @@ function preloadAssets() {
 
 async function init() {
   await SlotCalibration.load(); // обязан отработать до applyStaticContentOffset
+  // Канвас анимаций поднимаем до сборки сетки: ячейки при создании уже могут
+  // попросить скелет.
+  const canvasEl = document.getElementById('spineCanvas');
+  if (canvasEl && window.SpineEngine && window.spine) {
+    try {
+      spineStage = new SpineEngine.SpineStage(canvasEl);
+    } catch (err) {
+      console.error('[baku] не поднялся WebGL-канвас Spine — играем на статике:', err);
+      spineStage = null;
+    }
+  }
   // Sound.playMusic здесь нет намеренно: у игры нет фоновой музыки, только SFX
   // (см. шапку sound.js).
   lastMobile = isMobileLayout();
