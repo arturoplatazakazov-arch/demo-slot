@@ -1,0 +1,15 @@
+pomegranate.png
+size:518,624
+filter:Linear,Linear
+pma:true
+fx_glow
+bounds:2,2,256,256
+fx_ring
+bounds:260,2,256,256
+fx_shine
+bounds:2,462,160,420
+rotate:90
+fx_spark
+bounds:2,268,192,192
+pomegranate
+bounds:196,260,300,200

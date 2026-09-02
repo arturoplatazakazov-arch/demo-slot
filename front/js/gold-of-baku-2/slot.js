@@ -190,6 +190,7 @@ function clearCellAnimation(info) {
     info.winLoopTimeout = null;
   }
   info.cell.classList.remove('is-winning', 'is-win-active', 'is-landing');
+  if (info.spineInstance) stopSpineWin(info);
 }
 
 function teardownCellInstances() {
@@ -215,9 +216,133 @@ function setCellSymbol(info, code) {
   return Promise.resolve();
 }
 
+// --- Spine: win-анимации символов --------------------------------------------
+//
+// Сетка остаётся PNG-статикой (три ленты крутятся дёшево, CSS'ом), а на
+// выигрыш ячейка НА ВРЕМЯ анимации отдаётся спайну: художник свёл клип win
+// так, что его первый и последний кадр — ровно статичный symbols/<code>.png
+// (сверено попиксельно: сдвиг bbox 0, alpha Δ0.00 у всех семи), поэтому
+// подмена не даёт скачка ни на входе, ни на выходе.
+//
+// idle и land в экспорте тоже есть, но здесь НЕ играют: idle крутил бы девять
+// скелетов с бликами в вебвью ради «дыхания» и вдобавок стартует на 1-6px
+// мимо статики, а land дублировал бы падение ленты, которое уже делает
+// landReel. Включаются они одной строкой в SPINE_CLIPS, если продукт захочет.
+const SPINE_ROOT = `${ASSET_ROOT}/spine`;
+const SPINE_FALLBACK_PAD_MS = 600; // страховка, если onSettle не придёт
+
+let spineStage = null;
+const spineResources = new Map(); // code -> Promise<resource|null>
+const spineReady = new Map();     // code -> resource (только загруженные)
+
+function initSpine() {
+  const canvasEl = document.getElementById('spineCanvas');
+  if (!canvasEl || !window.spine || !window.SpineEngine) return;
+  try {
+    spineStage = new SpineEngine.SpineStage(canvasEl);
+  } catch (err) {
+    // Нет WebGL — игра просто остаётся на CSS-пульсе, а не падает целиком.
+    console.error('[gold-of-baku-2] spine stage не поднялся, win-анимации на CSS:', err);
+    spineStage = null;
+  }
+}
+
+// Габариты ОДНОГО ТЕЛА символа в setup-позе: skeletonData.width/height — это
+// квадрат сцены (573x573 у апельсина при теле 273x195), и вписывание по нему
+// дало бы символ вдвое мельче статики. Считаем bbox без fx-слоёв — он совпадает
+// с обрезкой PNG, поэтому спайн садится в ячейку ровно туда же, где стоял img.
+function bodyBounds(resource) {
+  const skeleton = new spine.Skeleton(resource.skeletonData);
+  skeleton.setToSetupPose();
+  for (const slot of skeleton.slots) {
+    const name = slot.data.attachmentName || '';
+    if (name.startsWith('fx_')) slot.setAttachment(null);
+  }
+  skeleton.updateWorldTransform();
+  const offset = new spine.Vector2();
+  const size = new spine.Vector2();
+  skeleton.getBounds(offset, size, []);
+  return { x: offset.x, y: offset.y, width: size.x, height: size.y };
+}
+
+function getSymbolResource(code) {
+  if (!spineStage) return Promise.resolve(null);
+  if (spineResources.has(code)) return spineResources.get(code);
+  const promise = SpineEngine.SpineResource.load(spineStage.assetManager, `${SPINE_ROOT}/${code}`)
+    .then((resource) => {
+      resource.bodyBounds = bodyBounds(resource);
+      const win = resource.skeletonData.findAnimation('win');
+      resource.winDurationMs = win ? win.duration * 1000 : 0;
+      spineReady.set(code, resource);
+      return resource;
+    })
+    .catch((err) => {
+      console.error(`[gold-of-baku-2] spine ${code} не загрузился, остаётся CSS-пульс:`, err);
+      return null;
+    });
+  spineResources.set(code, promise);
+  return promise;
+}
+
+// Доля ячейки, которую занимает арт символа: та же --sym, по которой статика
+// вписана contain'ом (у граната/винограда она своя) — иначе спайн-тело было бы
+// крупнее PNG и подмена читалась бы рывком.
+function cellFit(cell) {
+  const raw = parseFloat(getComputedStyle(cell).getPropertyValue('--sym'));
+  return Number.isFinite(raw) ? raw : 0.92;
+}
+
+function stopSpineWin(info) {
+  if (!info.spineInstance) return;
+  spineStage.removeBase(info.spineInstance);
+  info.spineInstance = null;
+  info.img.style.visibility = '';
+}
+
+// Возвращает промис на время клипа, либо null — тогда зовущий играет CSS-пульс.
+function playSpineWin(info) {
+  const resource = spineReady.get(info.symbol);
+  if (!spineStage || !resource) {
+    void getSymbolResource(info.symbol); // подтянуть к следующему выигрышу
+    return null;
+  }
+  stopSpineWin(info);
+  const instance = resource.createInstance();
+  instance.anchorEl = info.cell;
+  instance.boundsOverride = resource.bodyBounds;
+  instance.fit = cellFit(info.cell);
+  info.spineInstance = instance;
+  spineStage.addBase(instance);
+  instance.play('win', false);
+  // Статику прячем не раньше, чем спайн реально отрисовал кадр — то есть из
+  // rAF. В замороженном вебвью (свёрнутая мини-аппа) рендер-луп не тикает, и
+  // скрытие «сразу» оставило бы на месте символа дыру до конца клипа; так же
+  // мы гарантируем, что кадр спайна уже лежит поверх, когда PNG исчезает.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (info.spineInstance === instance) info.img.style.visibility = 'hidden';
+  }));
+
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      stopSpineWin(info);
+      resolve();
+    };
+    instance.onSettle = finish;
+    // onSettle приходит из рендер-лупа, а он не тикает в скрытой вкладке:
+    // без страховки ячейка осталась бы с hidden-статикой навсегда.
+    const timer = setTimeout(finish, resource.winDurationMs + SPINE_FALLBACK_PAD_MS);
+  });
+}
+
 // --- Показ выигрыша ----------------------------------------------------------
 
 function playWinAnimationOnce(info) {
+  const spinePlay = playSpineWin(info);
+  if (spinePlay) return spinePlay;
   info.cell.classList.remove('is-winning');
   void info.cell.offsetWidth; // рестарт кейфреймов
   info.cell.classList.add('is-winning');
@@ -737,6 +862,7 @@ function preloadAssets() {
   tasks.push(track(preloadImage(assetSrc(`img/bg_base${suffix}.jpg`))));
   tasks.push(track(preloadImage(assetSrc('img/cabinet.png'))));
   for (const cfg of Object.values(POPUP_CONFIG)) tasks.push(track(preloadImage(assetSrc(cfg.plate))));
+  for (const code of SYMBOL_CODES) tasks.push(track(getSymbolResource(code)));
   for (const p of Sound.preloadPromises || []) tasks.push(track(p));
 
   return Promise.race([Promise.all(tasks), wait(PRELOAD_TIMEOUT_MS)]);
@@ -754,6 +880,7 @@ async function init() {
   buildReelGrid();
   setDeviceArt();
   setupDevPanel();
+  initSpine(); // до preloadAssets: он же тянет скелеты через stage.assetManager
 
   await preloadAssets();
   // Корпус грузится позже сетки, а высота ячейки меряется по окну — после

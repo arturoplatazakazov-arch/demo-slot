@@ -1,0 +1,16 @@
+bell.png
+size:563,580
+filter:Linear,Linear
+pma:true
+bell_l
+bounds:184,3,183,219
+bell_r
+bounds:2,2,180,220
+fx_flare
+bounds:2,482,512,96
+fx_glow
+bounds:2,224,256,256
+fx_ring
+bounds:260,224,256,256
+fx_spark
+bounds:369,30,192,192

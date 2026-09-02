@@ -1,0 +1,9 @@
+grape.png
+size:448,312
+filter:Linear,Linear
+pma:true
+fx_glow
+bounds:2,54,256,256
+grape
+bounds:260,2,308,186
+rotate:90

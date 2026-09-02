@@ -1,0 +1,11 @@
+orange.png
+size:651,277
+filter:Linear,Linear
+pma:true
+fx_glow
+bounds:2,19,256,256
+fx_spark
+bounds:457,83,192,192
+orange
+bounds:260,2,273,195
+rotate:90
