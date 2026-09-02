@@ -53,6 +53,24 @@ body {
   padding: 0;
 }
 
+/* One heading + one .game-grid per catalog section (Готовые / Illuminator /
+   В разработке — see games-catalog.js renderCatalog). Sections stack with
+   the same rhythm as .game-grid's own card gap; a section with no cards
+   hides itself via [hidden]. */
+.catalog-section + .catalog-section,
+.game-grid + .catalog-section {
+  margin-top: 48px;
+}
+.catalog-section__title {
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: clamp(20px, 2.6vw, 28px);
+  letter-spacing: 0.5px;
+  margin: 0 0 20px;
+  padding-bottom: 10px;
+  color: var(--gold);
+  border-bottom: 1px solid var(--card-border);
+}
+
 .game-card {
   position: relative;
   display: block;

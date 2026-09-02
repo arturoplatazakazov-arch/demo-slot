@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Каталог игр — demo</title>
 <link rel="stylesheet" href="css/fonts.css">
-<link rel="stylesheet" href="css/games.css?v=2">
+<link rel="stylesheet" href="css/games.css?v=3">
 </head>
 <body>
 
@@ -15,7 +15,7 @@
       <p class="lobby__subtitle">Выберите слот, чтобы начать демо-игру</p>
     </div>
 
-    <ul class="game-grid" id="gameGrid">
+    <ul class="game-grid">
       <li class="static-card">
         <a class="game-card" href="builder-v2/setup.html">
           <div class="game-card__media">
@@ -64,10 +64,29 @@
         </a>
       </li>
     </ul>
+
+    <!-- Заполняются games-catalog.js из GET /catalog: готовые игры (первые 10
+         по каталогу), витрина Illuminator (отдельные игры вне порядка) и
+         игры в разработке (всё остальное). Секция скрывается, если в ней
+         нет карточек — см. renderCatalog(). -->
+    <section class="catalog-section" id="readySection">
+      <h2 class="catalog-section__title">Готовые игры</h2>
+      <ul class="game-grid" id="readyGrid"></ul>
+    </section>
+
+    <section class="catalog-section" id="illuminatorSection">
+      <h2 class="catalog-section__title">Illuminator</h2>
+      <ul class="game-grid" id="illuminatorGrid"></ul>
+    </section>
+
+    <section class="catalog-section" id="devSection">
+      <h2 class="catalog-section__title">Игры в разработке</h2>
+      <ul class="game-grid" id="devGrid"></ul>
+    </section>
   </div>
 
   <script src="js/config.js?v=2"></script>
   <script src="js/api.js"></script>
-  <script src="js/games-catalog.js?v=2"></script>
+  <script src="js/games-catalog.js?v=3"></script>
 </body>
 </html>
