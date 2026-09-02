@@ -193,12 +193,121 @@ function clearCellAnimation(info) {
   if (info.spineInstance) stopSpineWin(info);
 }
 
+// --- Win line (same idea as uniqorn-scandal's css/*.css .win-line): one
+// continuous SVG polyline drawn through the centres of the winning cells,
+// not a per-payline art asset — the ONLY backend payline shapes rendered are
+// the ones the SVG can literally draw a straight-segment line over.
+const WIN_LINE_NS = 'http://www.w3.org/2000/svg';
+let winLineSvg = null;
+let winLineLoopTimeout = null;
+// Generation token: cancelling a loop mid-play doesn't stop its in-flight
+// promise from re-arming the timeout afterwards without this.
+let winLineToken = 0;
+
+function ensureWinLineSvg() {
+  const gridEl = document.getElementById('reel');
+  if (!gridEl) return null;
+  if (winLineSvg && winLineSvg.parentNode === gridEl) return winLineSvg;
+  const svg = document.createElementNS(WIN_LINE_NS, 'svg');
+  svg.setAttribute('class', 'win-line');
+  svg.setAttribute('preserveAspectRatio', 'none');
+  gridEl.appendChild(svg);
+  winLineSvg = svg;
+  return svg;
+}
+
+// Cell centres in #reel's own coordinate space, measured live rather than
+// computed from row/col arithmetic: the stage is CSS-scaled.
+function cellCentre(row, col) {
+  const info = cellInfos[row * GRID_COLS + col];
+  const gridEl = document.getElementById('reel');
+  if (!info || !gridEl) return null;
+  const cellRect = info.cell.getBoundingClientRect();
+  const gridRect = gridEl.getBoundingClientRect();
+  const scale = gridRect.width / gridEl.offsetWidth || 1;
+  return {
+    x: (cellRect.left + cellRect.width / 2 - gridRect.left) / scale,
+    y: (cellRect.top + cellRect.height / 2 - gridRect.top) / scale,
+  };
+}
+
+// One flash of the line: draw it, run the dash-in, resolve when it has
+// played once. The caller owns the repeat cadence.
+function showWinLine(win) {
+  const positions = (win && win.positions) || [];
+  const svg = positions.length >= 2 ? ensureWinLineSvg() : null;
+  if (!svg) {
+    hideWinLine();
+    return Promise.resolve();
+  }
+  const gridEl = document.getElementById('reel');
+  svg.setAttribute('viewBox', `0 0 ${gridEl.offsetWidth} ${gridEl.offsetHeight}`);
+
+  const points = positions
+    .slice()
+    .sort((a, b) => a.col - b.col)
+    .map(({ row, col }) => cellCentre(row, col))
+    .filter(Boolean);
+  if (points.length < 2) {
+    hideWinLine();
+    return Promise.resolve();
+  }
+  const d = points.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+
+  svg.innerHTML = '';
+  // Two stacked strokes: a wide soft glow underneath, a bright core on top.
+  for (const cls of ['win-line__glow', 'win-line__core']) {
+    const path = document.createElementNS(WIN_LINE_NS, 'path');
+    path.setAttribute('class', cls);
+    path.setAttribute('d', d);
+    svg.appendChild(path);
+  }
+  svg.classList.remove('is-playing');
+  void svg.getBoundingClientRect(); // restart the CSS animation
+  svg.classList.add('is-playing');
+
+  return wait(WIN_PULSE_MS);
+}
+
+// Lone-line case only (playWinCells' single-group branch): repeats
+// showWinLine on the same play-once/pause/repeat cadence the winning
+// symbols use.
+function previewWinLine(win) {
+  if (winLineLoopTimeout) {
+    clearTimeout(winLineLoopTimeout);
+    winLineLoopTimeout = null;
+  }
+  const token = ++winLineToken;
+  const playOnce = () => {
+    showWinLine(win).then(() => {
+      if (token !== winLineToken) return;
+      winLineLoopTimeout = setTimeout(() => {
+        winLineLoopTimeout = null;
+        playOnce();
+      }, WIN_LOOP_PAUSE_MS);
+    });
+  };
+  playOnce();
+}
+
+function hideWinLine() {
+  winLineToken += 1;
+  if (winLineLoopTimeout) {
+    clearTimeout(winLineLoopTimeout);
+    winLineLoopTimeout = null;
+  }
+  if (!winLineSvg) return;
+  winLineSvg.remove();
+  winLineSvg = null;
+}
+
 function teardownCellInstances() {
   multiLineToken += 1;
   if (multiLineSequenceTimeout) {
     clearTimeout(multiLineSequenceTimeout);
     multiLineSequenceTimeout = null;
   }
+  hideWinLine();
   for (const info of cellInfos) {
     if (!info) continue;
     info.cell.classList.remove('is-dimmed');

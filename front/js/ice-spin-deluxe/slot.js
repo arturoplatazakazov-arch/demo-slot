@@ -198,12 +198,127 @@ function clearCellAnimation(info) {
   info.cell.classList.remove('is-winning', 'is-win-active', 'is-landing');
 }
 
+// --- Win line (same idea as uniqorn-scandal's css/*.css .win-line): one
+// continuous SVG polyline drawn through the centres of the winning cells,
+// not a per-payline art asset — the ONLY backend payline shapes rendered are
+// the ones the SVG can literally draw a straight-segment line over. Overlays
+// #reel (the shared flex container for all three .reel__col — see the
+// module docstring on why each column clips independently but this parent
+// still spans all three), so it draws straight through the frame's
+// perempichki between openings same as it would over an unbroken window.
+const WIN_LINE_NS = 'http://www.w3.org/2000/svg';
+let winLineSvg = null;
+let winLineLoopTimeout = null;
+// Generation token: cancelling a loop mid-play doesn't stop its in-flight
+// promise from re-arming the timeout afterwards without this (see
+// uniqorn-scandal/slot.js for the incident this guards against).
+let winLineToken = 0;
+
+function ensureWinLineSvg() {
+  const gridEl = document.getElementById('reel');
+  if (!gridEl) return null;
+  if (winLineSvg && winLineSvg.parentNode === gridEl) return winLineSvg;
+  const svg = document.createElementNS(WIN_LINE_NS, 'svg');
+  svg.setAttribute('class', 'win-line');
+  svg.setAttribute('preserveAspectRatio', 'none');
+  gridEl.appendChild(svg);
+  winLineSvg = svg;
+  return svg;
+}
+
+// Cell centres in #reel's own coordinate space, measured live (not computed
+// from row/col arithmetic) since the stage is CSS-scaled and the three
+// window openings aren't a plain even split.
+function cellCentre(row, col) {
+  const info = cellInfos[row * GRID_COLS + col];
+  const gridEl = document.getElementById('reel');
+  if (!info || !gridEl) return null;
+  const cellRect = info.cell.getBoundingClientRect();
+  const gridRect = gridEl.getBoundingClientRect();
+  const scale = gridRect.width / gridEl.offsetWidth || 1;
+  return {
+    x: (cellRect.left + cellRect.width / 2 - gridRect.left) / scale,
+    y: (cellRect.top + cellRect.height / 2 - gridRect.top) / scale,
+  };
+}
+
+// One flash of the line: draw it, run the dash-in, resolve when it has
+// played once. The caller owns the repeat cadence.
+function showWinLine(win) {
+  const positions = (win && win.positions) || [];
+  const svg = positions.length >= 2 ? ensureWinLineSvg() : null;
+  if (!svg) {
+    hideWinLine();
+    return Promise.resolve();
+  }
+  const gridEl = document.getElementById('reel');
+  svg.setAttribute('viewBox', `0 0 ${gridEl.offsetWidth} ${gridEl.offsetHeight}`);
+
+  const points = positions
+    .slice()
+    .sort((a, b) => a.col - b.col)
+    .map(({ row, col }) => cellCentre(row, col))
+    .filter(Boolean);
+  if (points.length < 2) {
+    hideWinLine();
+    return Promise.resolve();
+  }
+  const d = points.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+
+  svg.innerHTML = '';
+  // Two stacked strokes: a wide soft glow underneath, a bright core on top.
+  for (const cls of ['win-line__glow', 'win-line__core']) {
+    const path = document.createElementNS(WIN_LINE_NS, 'path');
+    path.setAttribute('class', cls);
+    path.setAttribute('d', d);
+    svg.appendChild(path);
+  }
+  svg.classList.remove('is-playing');
+  void svg.getBoundingClientRect(); // restart the CSS animation
+  svg.classList.add('is-playing');
+
+  return wait(WIN_PULSE_MS);
+}
+
+// Lone-line case only (playWinCells' single-group branch): repeats
+// showWinLine on the same play-once/pause/repeat cadence the winning
+// symbols use, so the line pulses in lockstep with their glow.
+function previewWinLine(win) {
+  if (winLineLoopTimeout) {
+    clearTimeout(winLineLoopTimeout);
+    winLineLoopTimeout = null;
+  }
+  const token = ++winLineToken;
+  const playOnce = () => {
+    showWinLine(win).then(() => {
+      if (token !== winLineToken) return;
+      winLineLoopTimeout = setTimeout(() => {
+        winLineLoopTimeout = null;
+        playOnce();
+      }, WIN_LOOP_PAUSE_MS);
+    });
+  };
+  playOnce();
+}
+
+function hideWinLine() {
+  winLineToken += 1;
+  if (winLineLoopTimeout) {
+    clearTimeout(winLineLoopTimeout);
+    winLineLoopTimeout = null;
+  }
+  if (!winLineSvg) return;
+  winLineSvg.remove();
+  winLineSvg = null;
+}
+
 function teardownCellInstances() {
   multiLineToken += 1;
   if (multiLineSequenceTimeout) {
     clearTimeout(multiLineSequenceTimeout);
     multiLineSequenceTimeout = null;
   }
+  hideWinLine();
   for (const info of cellInfos) {
     if (!info) continue;
     info.cell.classList.remove('is-dimmed');
@@ -270,7 +385,7 @@ function setCellDimmed(info, dimmed) {
 let multiLineSequenceTimeout = null;
 let multiLineToken = 0;
 
-function playMultiLineWinSequence(groups, allWinInfos) {
+function playMultiLineWinSequence(groups, allWinInfos, lineWins) {
   const token = ++multiLineToken;
   const playPhaseOnce = (activeInfos) => {
     const activeSet = new Set(activeInfos);
@@ -286,6 +401,12 @@ function playMultiLineWinSequence(groups, allWinInfos) {
   let groupIndex = -1;
   const step = () => {
     const activeInfos = groupIndex === -1 ? allWinInfos : groups[groupIndex];
+    // groups[i] соответствует lineWins[i] 1:1 (line-выигрыши идут перед
+    // count-выигрышами в ReelMath.collectWinGroups) — фаза -1 мешает линии
+    // друг с другом, поэтому там своей линии не рисуем.
+    const win = groupIndex >= 0 ? lineWins[groupIndex] : null;
+    if (win) showWinLine(win);
+    else hideWinLine();
     playPhaseOnce(activeInfos).then(() => {
       if (token !== multiLineToken) return;
       multiLineSequenceTimeout = setTimeout(() => {
@@ -323,8 +444,15 @@ function playWinCells(winningCells, lineWins, countWins) {
 
   const groups = buildWinGroups(lineWins, countWins);
   if (groups.length > 1) {
-    playMultiLineWinSequence(groups, allWinInfos);
+    playMultiLineWinSequence(groups, allWinInfos, lineWins);
   } else {
+    // Один групп: это line-выигрыш, только если lineWins ровно из одной
+    // записи (у одиночного count-pay/scatter выигрыша формы линии нет).
+    if (lineWins && lineWins.length === 1 && countWins && countWins.length === 0) {
+      previewWinLine(lineWins[0]);
+    } else {
+      hideWinLine();
+    }
     for (const info of allWinInfos) previewSymbolWin(info);
   }
 }
@@ -730,7 +858,6 @@ function preloadAssets() {
 
 async function init() {
   await SlotCalibration.load(); // обязан отработать до applyStaticContentOffset
-  Sound.playMusic('base');
   lastMobile = isMobileLayout();
   updateStageScale();
   window.addEventListener('resize', handleResize);
