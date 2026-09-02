@@ -1,0 +1,1196 @@
+/* Caesar's Fortune — стили темы, снятые с big-catch.css: та же подача
+   «PNG из макета + CSS», поэтому этот лист владеет всем, что в
+   Wild Western Story было спайном, — линией выигрыша, расширяющимся вайлдом и
+   попапами (idle/win символов уедут на Spine, когда приедут экспорты; правила
+   ниже остаются запасным вариантом).
+
+   Механика — Wild Western Story (см. app/seed/caesars_fortune.py): 5x3,
+   11 линий, расширяющийся вайлд, скаттерные фриспины, bonus buy.
+
+   Палитра снята с макета: мрамор и золото колоннады, красный бархат проёма,
+   тёплое небо Колизея под страницу. Геометрия рамки/сетки — из того же
+   макета, размеры ниже. */
+
+:root {
+  --gold: #f2c14a;         /* золото колоннады — акцент выигрышей */
+  --gold-dark: #9a6b12;
+  --gold-light: #ffe08a;
+  --wine: #7c1414;         /* красный бархат проёма */
+  --wine-dark: #3d0a0a;
+  --marble: #f3e3c2;       /* мрамор колонн — светлый текст */
+  --ink: #2a1206;          /* тёмная умбра — обводка текста */
+  --night: #2a1a10;        /* фон страницы за кадром макета */
+  --panel-dark: rgba(40, 12, 12, 0.66);
+  --ui-bg: rgba(44, 14, 14, 0.78);
+  --ui-border: rgba(242, 193, 74, 0.3);
+  --text-cream: #f6ecd6;
+
+  /* совпадает с кадром макета (десктопный экран Figma, 1932x940) */
+  --screen-w: 1932;
+  --screen-h: 940;
+
+  /* Геометрия НЕ на глаз: борта померены по альфе самой reel_frame.png
+     (1330x754, прозрачный проём 958x573 с отступами 185 / 129 / 187 / 52 —
+     нижний борт тонкий, там у рамки только мраморная полка, а «ноги» ей
+     подставляет отдельный постамент reel_plinth.png).
+     Проём делится без остатка: 5 x 191.6 по ширине и 3 x 191 по высоте,
+     зазора между ячейками нет — разделители нарисованы в подложке.
+     Перенарежут рамку — перемерить альфу и поправить только эти строки.
+
+     Ячейка НЕ квадратная (191.6 x 191): так ложится проём. Разница в 0.6px
+     осмысленная — золотые линейки подложки (reel_bg.jpg) стоят с шагом
+     192.6 при её ширине 963, то есть ровно на границах такой сетки. */
+  --cell-w: 191.6px;
+  --cell-h: 191px;
+  --cell-gap: 0px;
+  --reel-frame-w: 1330px;
+  --reel-frame-h: 754px;
+  --frame-border-l: 185px;
+  --frame-border-t: 129px;
+  --frame-border-r: 187px;
+  --frame-border-b: 52px;
+  --reel-grid-pad: 0px;
+  /* У родителя рамка рисовалась на 2% крупнее сетки (её проём был вырезан
+     хромакеем и «дышал»); здесь проём померен по альфе точно, поэтому
+     доборного масштаба нет. */
+  --reel-art-bump: 1;
+  /* Пустая панель каждой плашки, померена по её собственному арту
+     (максимальный вписанный прямоугольник в тёмно-красной заливке). Текст
+     позиционируется прямо отсюда — перережут плашку, мерить заново. */
+  --popup-panel-big:   74.88% 28.60% 13.79% 27.80%;
+  --popup-panel-mega:  84.62% 29.60%  2.14% 29.40%;
+  --popup-panel-epic:  84.41% 30.60%  2.70% 30.50%;
+  --popup-panel-fs:    86.50% 41.90%  3.12% 44.60%;
+  --popup-panel-buy:   68.65% 28.00% 25.08% 30.10%;
+  --popup-panel-inset: var(--popup-panel-big);
+  /* Не 1, а 1.656: продукт растил слот трижды — 25%, потом 15%, потом ещё 15%
+     (сент. 2026), 1.25 x 1.15 x 1.15. В fit-режиме эта переменная — ПОТОЛОК
+     (рамке разрешено вырасти во столько раз относительно натурального
+     размера арта), а сколько она возьмёт на самом деле, решают резервы
+     FIT_RESERVE_* в slot.js: fitScale получает высоту, уже умноженную на этот
+     множитель, и возвращает долю от неё. Растить слот только этой строкой
+     бесполезно — см. комментарий у резервов. */
+  --reel-frame-scale: 1.656;
+  --reel-scale: 1;
+  --reel-scale-mobile: 1;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--night);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  color: var(--text-cream);
+}
+
+/* ---------- Back-to-catalog button ---------- */
+.to-catalog-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 110;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(12, 20, 55, 0.78);
+  border: 1px solid rgba(232, 178, 60, 0.55);
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(4px);
+}
+.to-catalog-btn:hover { background: rgba(12, 20, 55, 0.94); border-color: var(--gold); }
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+/* ---------- Dev panel (temporary) ---------- */
+.dev-panel {
+  position: fixed;
+  top: 52px;
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 260px;
+  align-items: center;
+}
+.dev-btn {
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #222;
+  color: #ddd;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.dev-btn:hover { opacity: 1; }
+.dev-hint {
+  font-size: 10px;
+  color: #999;
+  width: 100%;
+  text-align: right;
+}
+
+/* ---------- Screen ---------- */
+.screen {
+  position: relative;
+  width: 100%;
+  min-width: calc((var(--reel-frame-w) * var(--reel-frame-scale) + 400px) * var(--reel-scale));
+  height: 940px;
+  margin: 0 auto;
+  overflow: visible;
+  background: var(--night);
+}
+
+.layer { position: absolute; }
+
+.bg {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.logo {
+  /* Привязан к РАМКЕ, а не к экрану: на узком вьюпорте рамка ужимается
+     fit'ом, и логотип обязан ужиматься вместе с ней, иначе наедет на первый
+     ряд символов. Полосу над рамкой выкраивает FIT_RESERVE_HEIGHT_RATIO в
+     slot.js — эти два места считаются друг под друга, см. комментарий там. */
+  top: auto;
+  bottom: calc(11% + (var(--reel-frame-h) - 110px) * var(--reel-frame-scale) * var(--reel-scale));
+  left: 50%;
+  transform: translateX(-50%);
+  /* Доля от рамки при каждом росте слота делилась на его коэффициент
+     (0.26 -> 0.21 -> 0.1826 -> 0.1588), чтобы логотип оставался того же
+     размера на экране; последняя правка продукта — «логотип увеличить на
+     15%», отсюда 0.1826 обратно. Нахлёст на верхнюю перекладину — 110 единиц
+     (из её 129): полосы над выросшей рамкой не осталось, логотип стоит на
+     орнаменте. Больше нельзя — заедет на первый ряд символов. */
+  width: calc(var(--reel-frame-w) * 0.1826 * var(--reel-frame-scale) * var(--reel-scale));
+  height: auto;
+  object-fit: contain;
+  z-index: 4;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
+}
+
+/* ---------- Декор базового экрана ----------
+   Мраморные предметы и облака из макета. Ставятся ОТ РАМКИ (как логотип и
+   кнопка покупки), чтобы зазор между ними и колоннадой не плыл по вьюпортам,
+   и живут только в базовом режиме: бонусный фон — интерьер сокровищницы, на
+   нём уличная статуя смотрелась бы лишней. */
+.deco {
+  pointer-events: none;
+  z-index: 2;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.35));
+}
+.screen[data-mode="freespins"] .deco { display: none; }
+
+/* Расстановка (правка продукта, сент. 2026): СПРАВА от слота — статуя на
+   тумбе и цветы правее неё, СЛЕВА — шлем на подставке. Всё привязано к
+   рамке, а не к экрану, поэтому едет и масштабируется вместе с ней.
+
+   ВНИМАНИЕ: боковой полосы как таковой больше нет — слот дважды вырос
+   (+25%, потом +15%) и занял её. Продукт при этом просил оставить декор НА
+   СВОИХ МЕСТАХ. Приём: расстояние от ЦЕНТРА экрана до предмета — это
+   (665 + отступ) единиц, и оно растёт вместе с рамкой, поэтому при каждом
+   росте и отступ, и собственная ширина предмета делятся на коэффициент
+   (1.15 за шаг): (665 + отступ_новый) = (665 + отступ_старый) / 1.15.
+   Вычитать прирост «в единицах» нельзя — сам отступ тоже масштабируется, и
+   предмет всё равно уезжает наружу — на экране они стоят там же и того же размера, а
+   рамка выросла ЗА ними. Декор рисуется ПОВЕРХ рамки (.deco z-index 2 против
+   z-auto у .reel, у которой свой контекст наложения из-за transform), так
+   что предметы читаются как стоящие перед колоннадой, а не спрятанные под
+   неё. */
+.deco--stage {
+  /* Тумба заходит за правую колонну на 110 единиц — иначе не влезает. */
+  left: calc(50% + (var(--reel-frame-w) / 2 - 233px) * var(--reel-frame-scale) * var(--reel-scale));
+  bottom: calc(11% - 55px);
+  width: calc(309px * var(--reel-frame-scale) * var(--reel-scale));
+}
+/* Статуя центрована по тумбе и опущена на 50 единиц макета (продукт: «опусти
+   статую на 50 пикселей») — теперь стоит на плите, а не парит над ней. */
+.deco--statue {
+  left: calc(50% + (var(--reel-frame-w) / 2 - 192px) * var(--reel-frame-scale) * var(--reel-scale));
+  bottom: calc(11% + 187px * var(--reel-frame-scale) * var(--reel-scale));
+  width: calc(234px * var(--reel-frame-scale) * var(--reel-scale));
+}
+/* Цветы — правее тумбы и ПЕРЕД ней (z-index выше), увеличены в 1.5 раза
+   (173 -> 260). */
+.deco--vase {
+  left: calc(50% + (var(--reel-frame-w) / 2 - 185px) * var(--reel-frame-scale) * var(--reel-scale));
+  bottom: calc(11% - 70px);
+  width: calc(217px * var(--reel-frame-scale) * var(--reel-scale));
+  z-index: 3;
+}
+/* Шлем — на земле слева, под кнопкой покупки (та висит на 230 единиц выше
+   низа рамки, так что пересечься они не могут). */
+.deco--helmet {
+  left: calc(50% - (var(--reel-frame-w) / 2 + 76px) * var(--reel-frame-scale) * var(--reel-scale));
+  bottom: calc(11% - 60px);
+  width: calc(231px * var(--reel-frame-scale) * var(--reel-scale));
+}
+/* Облака плывут: единственное движение в статичном небе макета. Разная
+   длительность у двух облаков — иначе они ходят строем. */
+.deco--cloud-l {
+  left: 4%;
+  top: calc(6% - 100px);
+  width: 184px;
+  opacity: 0.9;
+  animation: cloud-drift 26s ease-in-out infinite;
+}
+.deco--cloud-r {
+  right: 5%;
+  left: auto;
+  top: calc(3% - 100px);
+  width: 336px;
+  opacity: 0.85;
+  animation: cloud-drift 34s ease-in-out infinite reverse;
+}
+@keyframes cloud-drift {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(38px); }
+}
+
+/* ---------- Reel area ----------
+   Рамка — картинка (.reel__frame, брёвна с верёвкой), .reel__bg — тёмная
+   панель, заполняющая её проём за символами. Обе позиционируются от
+   измеренных толщин бортов, а не от одного общего инсета: у сгенерированной
+   рамки борта разной толщины (боковые столбы вдвое толще перекладин). */
+/* Anchored to the BOTTOM of the screen, not centred: the logo hangs off the
+   frame's top edge (see .logo) and needs more headroom than the leftover space
+   a centred frame happens to leave above it — centring split the slack evenly
+   and clipped "WESTERN" off the top. transform-origin at the bottom edge keeps
+   `bottom` honest while the block is scaled. */
+.reel {
+  position: absolute;
+  left: 50%;
+  top: auto;
+  /* 11%: под рамкой стоит мраморный постамент (.reel__plinth), и это тот
+     минимум, при котором его плита ещё читается под колоннадой. Опускать
+     ниже нельзя даже ради размера слота — постамент уходит под нижний бар. */
+  bottom: 11%;
+  transform-origin: 50% 100%;
+  transform: translateX(-50%) scale(calc(var(--reel-frame-scale) * var(--reel-scale)));
+  width: var(--reel-frame-w);
+  height: var(--reel-frame-h);
+}
+
+.reel__bg {
+  position: absolute;
+  /* Fills the frame opening behind the symbols, and deliberately runs 12px
+     FURTHER under the wood on every side: the chroma key that cut the opening
+     was dilated a few pixels, so a panel sized to the keyed hole exactly left
+     a hairline of page background glowing along the frame's inner lip (very
+     visible against the blue bonus sky). The overlap is hidden under the
+     frame image, which sits above this. */
+  inset: calc(var(--frame-border-t) - 12px) calc(var(--frame-border-r) - 12px)
+         calc(var(--frame-border-b) - 12px) calc(var(--frame-border-l) - 12px);
+  /* Тёмная доска из макета, а не градиент: в Figma проём рамки залит той же
+     сине-зелёной древесиной, и без неё символы висят на пустоте. */
+  /* Красный бархат из макета. Растягивается РОВНО в проём (100% 100%, не
+     cover): золотые линейки-разделители нарисованы прямо в ней с шагом
+     963/5, и при таком растяжении они встают на границы ячеек с точностью
+     до пары пикселей. cover же кропнул бы картинку и увёл линейки. */
+  background: var(--wine-dark) url('../img/caesars-fortune/img/reel_bg.jpg') center / 100% 100% no-repeat;
+  box-shadow: inset 0 0 70px rgba(0, 0, 0, 0.55);
+}
+
+/* Мраморный постамент из макета. Он ШИРЕ рамки и лежит ПОД ней (z-index 0):
+   у колоннады снизу только тонкая полка, а «ноги» ей подставляет он. По
+   горизонтали центрируется по рамке, по вертикали садится так, чтобы верх его
+   плиты пришёлся на низ полки колоннады. Плита в арте занимает y 443..587 из
+   821, поэтому сдвиг = 821 - 443 - 20 нахлёста = 358px ниже низа рамки. */
+.reel__plinth {
+  position: absolute;
+  left: 50%;
+  bottom: -358px;
+  transform: translateX(-50%);
+  width: calc(var(--reel-frame-w) * 1.007);
+  height: auto;
+  pointer-events: none;
+  z-index: 0;
+  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.45));
+}
+
+/* Колоннада из макета. Лежит НАД сеткой (z-index 6), поэтому мрамор заодно
+   перекрывает пиксели символа, вылезающие из проёма на приземлении, — та же
+   роль, что у CSS-кольца в родительских играх. */
+.reel__frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: scale(var(--reel-art-bump));
+  pointer-events: none;
+  z-index: 6;
+  filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.6));
+}
+
+.reel__grid {
+  /* Ровно проём рамки: 989x593. */
+  position: absolute;
+  left: calc(var(--frame-border-l) + var(--reel-grid-pad));
+  top: calc(var(--frame-border-t) + var(--reel-grid-pad));
+  width: calc(var(--cell-w) * 5 + var(--cell-gap) * 4);
+  height: calc(var(--cell-h) * 3 + var(--cell-gap) * 2);
+  display: flex;
+  flex-direction: row;
+  gap: var(--cell-gap);
+  z-index: 1;
+}
+
+/* One reel = a masked viewport (3 cells tall) over a taller vertical strip —
+   mechanics identical to the other themes; pixel constants reused from East
+   Discovery's frame geometry (BG_HOLE_INSET.top * 1107 ≈ 112px bleed). */
+.reel__col {
+  position: relative;
+  width: var(--cell-w);
+  height: calc(100% + 90px);
+  margin-top: -70px;
+  overflow: hidden;
+  /* Fade BOTH ends: колонка вылезает на 70px выше сетки (столько же, сколько
+     верхнее бревно рамки), поэтому без верхнего фейда прокручивающиеся
+     символы мелькали бы поверх бревна. Непрозрачно только на 592px трёх
+     рядов (70..662); всё выше и ниже — прозрачно. */
+  /* Непрозрачно ровно на 573px трёх рядов (70..643); всё выше и ниже —
+     прозрачно, иначе прокручивающиеся символы мелькали бы поверх мрамора. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 56px, #000 70px, #000 643px, transparent 659px);
+  mask-image: linear-gradient(to bottom, transparent 56px, #000 70px, #000 643px, transparent 659px);
+  transition: transform 200ms ease, filter 200ms ease;
+}
+.reel__col.is-anticipating {
+  /* The waiting column doesn't scale up — it just gets the z-index/glow to
+     read as "the one in suspense" without visibly growing (no screen zoom
+     either; that was removed per product). */
+  z-index: 2;
+  filter: drop-shadow(0 0 14px rgba(255, 158, 54, 0.95));
+}
+.reel__strip {
+  position: absolute;
+  /* Совпадает с margin-top колонки (-70px), иначе первый ряд встаёт не в свою
+     ячейку. */
+  top: 70px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cell-gap);
+}
+.reel__cell {
+  position: relative;
+  width: var(--cell-w);
+  height: var(--cell-h);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+.reel__cell img {
+  /* НЕ подгоняем под ячейку: статики — это рендеры той же Spine-сцены,
+     отцентрованные по началу координат скелета (холст 200x200, у скаттера
+     226x226), поэтому рисуем их в собственный размер. Ячейка (197) здесь
+     только шаг сетки, а не рамка обрезки: скаттер шире неё и честно свисает
+     на канаты, ровно как в макете. Тот же нативный масштаб получает и
+     скелет (см. setCellSymbol в slot.js), поэтому подмена «статика <->
+     анимация» проходит без скачка.
+
+     Внутри .reel всё отмасштабировано трансформом, так что «нативные» px
+     здесь — это px макета, и они едут вместе с барабанами. */
+  width: auto;
+  height: auto;
+  max-width: none;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+.reel__cell.is-dimmed img {
+  opacity: 0.3;
+}
+/* Пустой бокс в центре ячейки, к которому Spine-движок привязывает скелет.
+   Его размер выставляет slot.js по холсту статики символа, а fit=1 тогда
+   разрешается ровно в масштаб барабанов — то есть скелет рисуется в тот же
+   натив, что и картинка под ним. */
+.reel__cell-anchor {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* ---------- Spine canvas ----------
+   Один общий WebGL-канвас на все анимации символов. Лежит НАД .reel (у той
+   нет своего z-index, так что весь блок барабанов — фон, статики, канаты,
+   рамка — стоит ниже) и ПОД затемнением/логотипом/указателем: вспышка
+   выигрыша обязана перекрывать канаты и дерево, но гаснуть под попапом
+   вместе со всем остальным. */
+.spine-canvas {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.reel__strip.is-looping {
+  animation: reel-loop var(--reel-loop-duration, 420ms) linear infinite;
+}
+@keyframes reel-loop {
+  from { transform: translateY(0); }
+  to { transform: translateY(var(--reel-loop-distance, 0)); }
+}
+
+/* ---------- Screen dim (before popups / base<->bonus transitions) ---------- */
+.screen-dim {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  /* Same z-index as .logo (4, the highest other layer/z:auto element here) —
+     ties break by DOM order, and this sits later in markup, so it still
+     paints above the logo. .game-popup sits well above it (30), so a popup
+     always reads bright against its own dim. */
+  z-index: 4;
+}
+.screen-dim.is-active { opacity: 1; }
+.screen-dim.is-opaque { background: #000; }
+
+/* ---------- Popup win-amount overlay ---------- */
+
+/* ---------- Inline win-amount (base wins that never get a popup) ---------- */
+.reel-win-amount-viewport {
+  position: absolute;
+  left: 50%;
+  top: auto;
+  /* Тот же bottom, что у .reel: вьюпорт повторяет её бокс один в один, иначе
+     сумма выигрыша печатается мимо проёма. */
+  bottom: 11%;
+  transform-origin: 50% 100%;
+  transform: translateX(-50%) scale(calc(var(--reel-frame-scale) * var(--reel-scale)));
+  width: var(--reel-frame-w);
+  height: var(--reel-frame-h);
+  z-index: 16;
+  pointer-events: none;
+}
+.reel-win-amount {
+  position: absolute;
+  inset: var(--frame-border-t) var(--frame-border-r) var(--frame-border-b) var(--frame-border-l);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.reel-win-amount.is-visible { opacity: 1; }
+.reel-win-amount::before {
+  content: attr(data-amount);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 64px;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 0 4px 0 var(--ink), 0 0 26px rgba(255, 158, 54, 0.8);
+  white-space: nowrap;
+  padding: 6px 22px;
+  background: rgba(18, 4, 26, 0.55);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(255, 190, 96, 0.3);
+}
+
+/* ---------- Buy Bonus (кнопка из макета) ----------
+   Плашка «BUY BONUS» стоит справа от колоннады и привязана к НЕЙ, а не к
+   экрану, — тогда зазор одинаков на любом вьюпорте. Цены на арте нет вовсе
+   (в отличие от деревянного указателя соседних игр), поэтому её пишет DOM
+   строкой под кнопкой. */
+.sign-buy-bonus {
+  /* Слева, а не справа: правую полосу заняли статуя с тумбой и цветы.
+     Отступ и ширина пересчитаны под выросшую рамку так, чтобы плашка
+     осталась ровно там же и того же размера на экране (см. .deco выше);
+     кнопка рисуется поверх рамки (z-index 7), поэтому нижним краем спокойно
+     заходит на колонну. */
+  left: calc(50% - (var(--reel-frame-w) / 2 + 35px) * var(--reel-frame-scale) * var(--reel-scale));
+  right: auto;
+  top: auto;
+  bottom: calc(11% + 225px * var(--reel-frame-scale) * var(--reel-scale));
+  transform: none;
+  width: calc(159px * var(--reel-frame-scale) * var(--reel-scale));
+  height: auto;
+  cursor: pointer;
+  z-index: 7;
+}
+.sign-buy-bonus__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5));
+}
+/* Плашек две: квадратная десктопная и широкая мобильная. Переключаются
+   медиазапросом, а не сменой src, — обе уже в разметке и в прелоаде. */
+.sign-buy-bonus__img--mob { display: none; }
+
+/* Цена = ставка x100, её ставит app.js (renderBuyBonusPrice). Собственной
+   подложки в арте нет, поэтому строка идёт своей плашкой под кнопкой. */
+.sign-buy-bonus__price {
+  display: block;
+  margin-top: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(40, 10, 10, 0.72);
+  border: 1px solid rgba(242, 193, 74, 0.45);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 0.85vw;
+  line-height: 1.25;
+  text-align: center;
+  white-space: nowrap;
+  color: var(--gold-light);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+.screen[data-mode="freespins"] .sign-buy-bonus { display: none; }
+
+/* ---------- Free Spins counter (fs_counter.png — плашка из макета) ----------
+   Стоит там же, где кнопка Buy Bonus в базовой игре — в ЛЕВОЙ полосе: та в
+   фриспинах скрыта,
+   так что столкнуться они не могут. Плашек, как и у кнопки, две — вертикальная
+   десктопная и горизонтальная мобильная. Число на обеих было ВПЕЧАТАНО («10»)
+   и стёрто при нарезке: в игре оно живое, счётчик идёт вниз. */
+.fs-counter {
+  display: none;
+  top: auto;
+  right: auto;
+  bottom: calc(11% + 155px * var(--reel-frame-scale) * var(--reel-scale));
+  left: calc(50% - (var(--reel-frame-w) / 2 + 35px) * var(--reel-frame-scale) * var(--reel-scale));
+  transform: none;
+  width: calc(159px * var(--reel-frame-scale) * var(--reel-scale));
+  z-index: 6;
+}
+.screen[data-mode="freespins"] .fs-counter { display: block; }
+
+.fs-counter__img {
+  position: relative;
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5));
+}
+.fs-counter__img--mob { display: none; }
+
+/* Позиция числа померена по арту десктопной плашки (210x315): пустое поле
+   под орнаментом занимает y 158..243, его центр — 63.7% высоты. */
+.fs-counter__value {
+  position: absolute;
+  left: 50%;
+  top: 63.7%;
+  transform: translate(-50%, -50%);
+  font-family: 'Luckiest Guy', cursive;
+  font-weight: 400;
+  font-size: 3vw;
+  line-height: 1;
+  color: #ffd75e;
+  text-shadow: 0 2px 0 rgba(70, 8, 8, 0.95), 0 0 22px rgba(255, 190, 70, 0.5);
+  white-space: nowrap;
+}
+
+/* Missing-asset placeholder (dev-time only) — sized so a not-yet-delivered
+   symbol (e.g. the WILD art) shows as a tidy dashed box with its alt text,
+   not a tiny broken-image glyph. */
+img.is-missing {
+  width: 55%;
+  height: 55%;
+  object-fit: contain;
+  outline: 2px dashed rgba(255, 190, 96, 0.5);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+
+/* ---------- Paytable info popup ---------- */
+.info-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 20px;
+}
+.info-popup[hidden] { display: none; }
+
+.info-popup__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(720px, 90vh);
+  overflow-y: auto;
+  background: #2a180c;
+  border: 3px solid var(--gold-dark);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.info-popup__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-cream);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.info-popup__close:hover { background: rgba(0, 0, 0, 0.55); }
+
+.info-popup__title {
+  margin: 0 0 16px;
+  color: var(--gold);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 24px;
+  text-align: center;
+  -webkit-text-stroke: 1px var(--ink);
+  text-shadow: 0 2px 0 var(--ink);
+}
+
+.info-popup__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.info-popup__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.info-popup__row img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.info-popup__row-name {
+  flex: 1 1 auto;
+  min-width: 90px;
+  font-weight: 700;
+}
+.info-popup__row-pays {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-cream);
+}
+.info-popup__row-pays span { white-space: nowrap; opacity: 0.9; }
+.info-popup__row-pays b { color: var(--gold); }
+
+@media (max-width: 720px) {
+  .ui-bar { gap: 3vw; padding: 1.2vh 2.5vw; }
+  .ui-balance__label { display: none; }
+  .ui-icon-btn { width: 36px; height: 36px; }
+  .ui-spin-btn { width: 58px; height: 58px; }
+}
+
+/* ================================================================
+   EXPERIMENTAL: desktop "fit everything, no scroll" layout
+   ================================================================
+   Same experiment as Amy's Fruit Farm (see style.css) — toggled via the
+   dev-panel "fit-screen" button (slot.js setupDevPanel), not the default.
+   .screen is normally a fixed 940px tall regardless of viewport, so a short
+   viewport can need to scroll; this pins .screen to the viewport box and
+   turns .ui-bar into a translucent overlay instead of a row that competes
+   for height with it — see ReelMath.fitScale (reel-math.js) for the
+   width+height-aware scale this needs. */
+body.layout-fit {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+body.layout-fit .screen {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  min-width: 0;
+  margin: 0;
+}
+body.layout-fit .ui-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  background: rgba(26, 8, 38, 0.42);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* ================================================================
+   Mobile (portrait) layout — mobile bg art is 780x1416
+   (mob_Base_bg.png / mob_Bonus_bg.png). First pass; calibrate live.
+   ================================================================ */
+@media (orientation: portrait) {
+  :root {
+
+    /* One source of truth for the reel's on-screen box in portrait, so the
+       frame and everything anchored to its edges can't drift apart.
+       --reel-scale-mobile (from mobileReelScale) makes the frame ровно в один
+       вьюпорт шириной, а этот множитель растягивает её дальше.
+
+       1.36: при 1.388 (=1330/958) во всю ширину экрана встало бы РОВНО окно
+       барабанов, и крайние символы упирались бы в кромку; 1.36 оставляет им
+       по волоску поля, как в макете. Так нарисован мобильный макет —
+       колонны там не видны вовсе, они свисают за края экрана, а видны только
+       верхняя перекладина с драпировкой и нижняя полка. Символы от этого
+       становятся на 39% крупнее и совпадают с макетом. Горизонтальное
+       переполнение режет .screen { overflow: hidden } ниже. */
+    --reel-mobile-mult: 1.36;
+    /* Рамка 1.76:1 занимает в портрете от силы треть высоты; 26% ставит блок
+       барабанов по центру свободного места между логотипом и нижним баром.
+       Считаем ЗДЕСЬ, а не в `top` у .reel: от этой же величины пляшет
+       --reel-mobile-below, который держит кнопку покупки и счётчик под
+       рамкой, и при сдвиге только .reel зазор под ней поехал бы. */
+    /* 16% от .screen ставит ВЕРХ ОКНА барабанов на 22% высоты экрана —
+       ровно как в макете (у него окно занимает 22%..55% кадра). Считать надо
+       от окна, а не от рамки: верхняя перекладина рамки (129 из 754) при
+       такой ширине занимает ещё 13% ширины экрана сверху. */
+    --reel-mobile-top: 16%;
+    --reel-mobile-w: calc(100vw * var(--reel-mobile-mult));
+    /* 1330x754 — это --reel-frame-w/h; трансформ масштабирует обе поровну. */
+    --reel-mobile-h: calc(var(--reel-mobile-w) * 754 / 1330);
+    --reel-mobile-side: calc((100vw - var(--reel-mobile-w)) / 2);
+    /* +60px — постамент рамки: он свисает ниже её бокса, и без запаса кнопка
+       покупки легла бы прямо на мрамор. */
+    --reel-mobile-below: calc(var(--reel-mobile-top) + var(--reel-mobile-h) + 60px);
+  }
+
+  html, body { overflow-x: hidden; }
+
+  /* Экран занимает ВЕСЬ вьюпорт, а нижний бар (.v3-bar, position: fixed)
+     лежит поверх него — так же, как на десктопе и в остальных играх. Раньше
+     здесь из высоты вычиталась высота бара, и под фоном оставалась пустая
+     чёрная полоса, в которой он и сидел (продукт: «ЮИ должен быть прибит к
+     полу и быть поверх бекграунда»). Правило body.layout-fit из десктопной
+     части при этом больше не нейтрализуется — оно как раз и нужно. */
+  body.layout-fit .screen {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .screen {
+    width: 100vw;
+    min-width: 0;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    margin: 0;
+    /* --reel-mobile-mult is deliberately >1 here (the frame's thick side posts
+       are meant to bleed off-screen), and the buy-bonus sign hangs past the
+       right edge with it. Without this clip that overflow makes the document
+       wider than the viewport, the browser reserves a horizontal scrollbar,
+       and the ~25px it takes off the visual height pushes the bottom bar's
+       BALANCE/BET row off the bottom of the screen. */
+    overflow: hidden;
+  }
+
+  .logo {
+    /* В портрете логотип берём по ширине экрана, а не от рамки: рамка тут
+       шире экрана, и доля от неё вышла бы вдвое больше нужного. 48vw и
+       нижний край впритык к верхней перекладине — снято с макета. */
+    bottom: auto;
+    top: 3.8%;
+    transform: translateX(-50%);
+    width: 48vw;
+    height: auto;
+  }
+
+  /* Декор — десктопная композиция: в портрете по бокам рамки места нет. */
+  .deco { display: none; }
+
+  .reel,
+  .reel-win-amount-viewport {
+    left: 50%;
+    top: var(--reel-mobile-top);
+    transform-origin: 50% 0%;
+    transform: translateX(-50%) scale(calc(var(--reel-scale-mobile) * var(--reel-mobile-mult)));
+  }
+
+  /* Обе плашки стоят в одном месте — по центру под рамкой — и никогда
+     одновременно: кнопка покупки в фриспинах скрыта, а счётчик только там и
+     живёт. В портрете у обеих СВОЙ, широкий арт (см. --mob ниже). */
+  .sign-buy-bonus,
+  .fs-counter {
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    top: var(--reel-mobile-below);
+    transform: translateX(-50%);
+  }
+
+  /* Ширины плашек — с макета: кнопка покупки 52% ширины экрана, счётчик
+     фриспинов уже, 38%. Потолок в px — для широкого портрета (планшет,
+     узкое окно браузера): там 52vw давали плашку в 360px, и она налезала на
+     кнопку SPIN, которая в портрете тоже крупная. */
+  .sign-buy-bonus { width: min(52vw, 300px); max-width: none; height: auto; }
+  .sign-buy-bonus__img--desk { display: none; }
+  .sign-buy-bonus__img--mob { display: block; }
+  /* Селектор с .screen — это НЕ украшение: десктопное правило лежит ниже по
+     файлу, медиазапрос специфичности не добавляет, и без лишнего класса
+     портретный размер проигрывал бы ему по порядку. */
+  .screen .sign-buy-bonus__price { font-size: 3.1vw; margin-top: 4px; }
+
+  .fs-counter { width: min(38vw, 230px); max-width: none; height: auto; }
+  .fs-counter__img--desk { display: none; }
+  .fs-counter__img--mob { display: block; }
+  /* На горизонтальной плашке число стоит СПРАВА от надписи «FREE SPINS»:
+     после обрезки прозрачных полей центр стёртого поля — 79.8% ширины и
+     47.4% высоты арта. */
+  .screen .fs-counter__value {
+    left: 79.8%;
+    top: 47.4%;
+    font-size: 7vw;
+  }
+
+  /* Правил для .ui-bar тут больше нет: у этой игры в разметке бар V3
+     (.v3-bar, position: fixed) — он и на десктопе, и в портрете лежит поверх
+     экрана и прибит к низу вьюпорта. */
+
+  /* ---------- Нижний бар: мобильный размер во ВСЁМ портрете ----------
+     Общий css/ui-bar-v3.css включает крупные размеры (кнопка 72, SPIN 150,
+     ряд на 91px от низа, высота 380) только по `max-width: 559px`, а с 560px
+     переходит на десктопные 48/100 с кластером по центру. В портрете на
+     планшете или в узком окне браузера (600-800px) из-за этого получался
+     маленький «десктопный» бар при мобильной сцене — продукт: «ЮИ слишком
+     маленький, сделай как в остальных играх». Здесь те же самые числа общего
+     бара, но по ОРИЕНТАЦИИ, а не по ширине.
+
+     Селектор по id — не украшение: ui-bar-v3.css подключается ПОСЛЕ этого
+     файла, и при равной специфичности выигрывал бы он (тот же приём, что в
+     miami-fruits-3.css). */
+  #v3Bar {
+    height: 380px;
+    --v3-row-bottom: 91px;
+    /* 1.5x от базовых 48/100; на узких телефонах упирается в ширину экрана и
+       дальше едет по vw — иначе пять кнопок не влезают в ряд. */
+    --v3-btn: min(72px, 13.4vw);
+    --v3-spin: min(150px, 28vw);
+  }
+  /* Ряд из пяти кнопок с равными промежутками (на широком экране общий лист
+     собирает их кластером по центру — в портрете это не нужно). */
+  #v3Bar .v3-group { display: contents; }
+  #v3Bar .v3-row { justify-content: space-between; gap: 0; }
+  /* Тултип ставки и чипы автоспинов общий лист на широком экране центрует и
+     сажает на фиксированные 460px — в портрете возвращаем их к ширине бара. */
+  #v3Bar .v3-tip,
+  #v3Bar .v3-chips {
+    left: 10px;
+    right: 10px;
+    width: auto;
+    transform: none;
+  }
+
+  /* Постамент рамки на мобиле поднят на 20 экранных px (продукт). При
+     портретном масштабе рамки (~0.38) это 52 единицы макета. */
+  .reel__plinth { bottom: -306px; }
+}
+
+/* ---------- Boot preloader theme (структура в css/preloader.css) ---------- */
+.preloader {
+  --pl-bg: #2a0b0b;
+  --pl-accent-a: #f2c14a;
+  --pl-accent-b: #ffe08a;
+  --pl-glow-a: rgba(242,193,74,0.35);
+  --pl-glow-b: rgba(255,224,138,0.12);
+  --pl-border: rgba(242,193,74,0.45);
+  --pl-shadow: rgba(242,193,74,0.6);
+}
+
+/* ============================================================================
+   Motion that used to be Spine
+   ============================================================================
+   Everything below replaces a skeleton the western original shipped. Timings
+   are duplicated as constants in slot.js (WIN_PULSE_MS, POPUP_ENTER_MS,
+   POPUP_EXIT_MS) — change both together. */
+
+/* ---------- Symbol idle / win ----------
+   ПОКА ЕДИНСТВЕННЫЙ вариант: спайн-экспорты символов этой темы ещё не
+   приехали (дизайнер обещал их следующим шагом), поэтому SYMBOL_SPINE в
+   slot.js пуст и класса has-spine на <body> нет. Когда экспорты появятся,
+   idle/win уедут на скелеты, а правила ниже станут запасными — ровно как в
+   front/css/big-catch.css. Приземления тут больше нет вовсе — продукт
+   убрал его и из анимаций, и из запасного варианта.
+   Все они анимируют <img>, а не саму ячейку, — если бы двигали ячейку, за
+   ней ехал бы и якорь, к которому привязан скелет. */
+
+/* wild and scatter breathe continuously so the two special symbols read as
+   "alive" on an otherwise static grid, the same job the original's idle loop
+   did. Paused while the cell is winning so the two don't fight. */
+@keyframes symbol-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.045); }
+}
+body:not(.has-spine) .reel__cell.is-special img {
+  animation: symbol-breathe 2.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(255, 190, 96, 0.4));
+}
+
+@keyframes symbol-win {
+  0%   { transform: scale(1);    filter: drop-shadow(0 0 0 rgba(255, 210, 110, 0)); }
+  35%  { transform: scale(1.18); filter: drop-shadow(0 0 22px rgba(255, 210, 110, 0.95)) brightness(1.18); }
+  70%  { transform: scale(1.06); filter: drop-shadow(0 0 16px rgba(255, 210, 110, 0.7)) brightness(1.08); }
+  100% { transform: scale(1);    filter: drop-shadow(0 0 0 rgba(255, 210, 110, 0)); }
+}
+body:not(.has-spine) .reel__cell.is-winning img {
+  animation: symbol-win 620ms ease-in-out;
+  /* Beats .is-special's idle breathe for the duration of the pulse. */
+  animation-fill-mode: both;
+}
+.reel__cell.is-winning {
+  z-index: 3; /* the growing symbol overlaps its neighbours, never under them */
+}
+
+/* ---------- Расширяющийся вайлд ----------
+   Основной вариант — скелет (export/wild, клипы move -> idle_big/win_big).
+   Ему нужен только пустой якорь: движок ставит центр скелета в центр этого
+   бокса и масштабирует его bounds под размер бокса, поэтому бокс = холст
+   экспортной статики (250x600, размер выставляет slot.js), а стоит он в
+   центре ОКНА барабана: окно начинается на 70px ниже верха колонки (столько
+   же у .reel__strip) и занимает три ряда. */
+.big-wild-anchor {
+  position: absolute;
+  left: 50%;
+  top: calc(70px + (var(--cell-h) * 3 + var(--cell-gap) * 2) / 2);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* Ниже — ЗАПАСНОЙ вариант (картинка с CSS-ростом): включается, только если
+   Spine не поднялся. */
+   Механика родителя (Wild Western Story): выпавший вайлд разворачивается на
+   ВЕСЬ барабан. Картинка wild_big.png нарисована ровно в три ячейки
+   (190x570), поэтому overlay кладётся в окно колонки: strip начинается на
+   70px ниже её верха (см. .reel__col), а три ряда — это 573px, то есть
+   height = высота колонки минус 90px запаса маски. */
+.big-wild {
+  position: absolute;
+  left: 50%;
+  top: 70px;
+  height: calc(100% - 90px);
+  width: auto;
+  transform: translateX(-50%) scaleY(0.34);
+  transform-origin: center center;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+  transition: transform 420ms cubic-bezier(0.34, 1.4, 0.5, 1), opacity 240ms ease;
+  filter: drop-shadow(0 0 18px rgba(242, 193, 74, 0.55));
+}
+.big-wild.is-grown {
+  transform: translateX(-50%) scaleY(1);
+  opacity: 1;
+}
+@keyframes big-wild-win {
+  0%, 100% { filter: drop-shadow(0 0 18px rgba(242, 193, 74, 0.6)) brightness(1); }
+  50%      { filter: drop-shadow(0 0 34px rgba(255, 224, 138, 1)) brightness(1.15); }
+}
+.big-wild.is-winning {
+  animation: big-wild-win 900ms ease-in-out infinite;
+}
+
+/* ---------- Win line ---------- */
+
+.win-line {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 4; /* above the cells, below the frame */
+}
+.win-line path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.win-line__glow {
+  stroke: rgba(242, 193, 74, 0.65);
+  stroke-width: 18;
+  filter: blur(6px);
+}
+.win-line__core {
+  stroke: #fff3d0;
+  stroke-width: 5;
+}
+/* Draws itself on, left to right, then holds — pathLength normalises the dash
+   maths so one keyframe works for every line shape and every viewport scale. */
+@keyframes win-line-draw {
+  0%   { stroke-dashoffset: 1; opacity: 0.2; }
+  45%  { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+.win-line.is-playing path {
+  pathLength: 1;
+  stroke-dasharray: 1;
+  /* Длительность синхронизируется с выигрышным клипом символов: его ставит
+     slot.js в --win-line-ms, когда скелеты загрузились (клип win длиннее
+     старой CSS-пульсации, и без этого линия успевала перерисоваться дважды
+     за один проигрыш символа). 620ms — прежнее значение, оно же запасное. */
+  animation: win-line-draw var(--win-line-ms, 620ms) ease-out;
+}
+
+/* ---------- Popups ---------- */
+
+.game-popup {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%) scale(0.7);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 30;
+  transition: transform 420ms cubic-bezier(0.34, 1.5, 0.5, 1), opacity 420ms ease;
+  text-align: center;
+}
+.game-popup.is-in  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.game-popup.is-out {
+  transform: translate(-50%, -50%) scale(0.86);
+  opacity: 0;
+  transition-duration: 260ms;
+}
+
+/* Плашка — арт из макета с УЖЕ впечатанным заголовком; DOM'ом добавляется
+   только значение, вписанное в померенное поле (--popup-panel-inset).
+   Размеры в cqw, поэтому текст масштабируется вместе с артом. */
+.game-popup {
+  container-type: inline-size;
+  width: min(1000px, 64vw);
+}
+.game-popup.is-mobile { width: min(560px, 92vw); }
+
+.game-popup__art {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 24px 60px rgba(0, 0, 0, 0.7));
+}
+
+.game-popup.is-plate-big   { --popup-panel-inset: var(--popup-panel-big); }
+.game-popup.is-plate-mega  { --popup-panel-inset: var(--popup-panel-mega); }
+.game-popup.is-plate-epic  { --popup-panel-inset: var(--popup-panel-epic); }
+/* Своей плашки «BONUS SPINS TOTAL WIN» дизайнер не прислал (в макете их
+   пять), поэтому итог бонуса выходит на плашке BIG WIN — та же панель под
+   сумму. Приедет своя — сюда добавится --popup-panel-total и строка в
+   POPUP_PLATE_SRC. */
+.game-popup.is-plate-total { --popup-panel-inset: var(--popup-panel-big); }
+.game-popup.is-plate-fs    { --popup-panel-inset: var(--popup-panel-fs); }
+.game-popup.is-plate-buy   { --popup-panel-inset: var(--popup-panel-buy); }
+
+/* У эпика вокруг панели заметно больше арта (кристаллы и вихри), поэтому на
+   том же размере надпись в нём мельче — плашка идёт чуть крупнее. */
+.game-popup.is-plate-epic { width: min(1080px, 70vw); }
+.game-popup.is-mobile.is-plate-epic { width: min(620px, 96vw); }
+
+.game-popup__body {
+  position: absolute;
+  inset: var(--popup-panel-inset);
+  /* Свой контейнер: значение масштабируется от ПОЛЯ, а не от всей плашки —
+     доля поля в арте у каждой плашки своя. Именно size, а не inline-size:
+     кегль задан в cqh (панели тут широкие и низкие, привязываться надо к
+     высоте), а cqh в inline-size-контейнере не работает. Бокс позиционирован
+     инсетами, так что высота у него определённая и size-containment ничего
+     не ломает. fitPopupText дожимает то, что всё равно не влезло по ширине. */
+  container-type: size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* Сумма в деревянной панели: сплошной кремовый по тёмной тени, без обводки —
+   обводка на этом размере съедает внутренние просветы цифр. */
+.game-popup__amount {
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-size: 76cqh;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  color: #fff6e2;
+  text-shadow: 0 0.6cqw 1.6cqw rgba(0, 0, 0, 0.85);
+}
+/* Число спинов стоит в узком бейдже — там помещается пара цифр,
+   поэтому кегль задаётся от высоты поля, а не от ширины. */
+.game-popup.is-slot-count .game-popup__amount {
+  font-size: 62cqh;
+  color: #fff3bf;
+  text-shadow: 0 0.4cqh 1.2cqh rgba(60, 0, 70, 0.9);
+}
+
+/* У плашки покупки поле — широкая и низкая полоса (419x41 в арте 1000x654),
+   и общий для «счётных» плашек кегль в 62cqh давал в ней совсем мелкое число.
+   Тут его можно поднять почти во всю высоту полосы: цифр всё равно две. */
+.game-popup.is-plate-buy .game-popup__amount { font-size: 95cqh; }
+
+
+/* Кнопки подтверждения покупки — только у попапа Buy Bonus Spins. Арт тот же,
+   что в макете (✓ и ✗), клик по ним и решает, тратить ли деньги. */
+.game-popup__choice {
+  position: absolute;
+  /* .game-popup целиком pointer-events: none — кнопкам приём кликов надо
+     включить обратно, иначе диалог нечем подтвердить. */
+  pointer-events: auto;
+  left: 50%;
+  bottom: -2%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6cqw;
+}
+.game-popup__choice button {
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  width: 14cqw;
+  transition: transform 140ms ease, filter 140ms ease;
+}
+.game-popup__choice img { display: block; width: 100%; height: auto; }
+.game-popup__choice button:hover { transform: scale(1.06); filter: brightness(1.1); }
+.game-popup__choice button:active { transform: scale(0.95); }
+
+/* ---------- Buy Bonus, доборные правила ---------- */
+
+.sign-buy-bonus { position: absolute; }
+.sign-buy-bonus__img { transition: filter 200ms ease; }
+.sign-buy-bonus:hover .sign-buy-bonus__img {
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 18px rgba(255, 210, 110, 0.85));
+}

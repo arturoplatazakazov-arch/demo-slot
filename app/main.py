@@ -10,6 +10,8 @@ from app.api.v1 import api_v1_router
 from app.core.config import get_settings
 from app.core.db import AsyncSessionLocal
 from app.seed.amys_fruit_farm import get_or_seed_active_config as get_or_seed_amys_fruit_farm
+from app.seed.big_catch import get_or_seed_active_config as get_or_seed_big_catch
+from app.seed.caesars_fortune import get_or_seed_active_config as get_or_seed_caesars_fortune
 from app.seed.country_gold_3 import get_or_seed_active_config as get_or_seed_country_gold_3
 from app.seed.dirty_money_mafia import get_or_seed_active_config as get_or_seed_dirty_money_mafia
 from app.seed.east_discovery import get_or_seed_active_config as get_or_seed_east_discovery
@@ -51,6 +53,8 @@ async def lifespan(app: FastAPI):
     # through the admin API, not an app-startup side effect.
     async with AsyncSessionLocal() as db:
         await get_or_seed_amys_fruit_farm(db)
+        await get_or_seed_big_catch(db)
+        await get_or_seed_caesars_fortune(db)
         await get_or_seed_country_gold_3(db)
         await get_or_seed_dirty_money_mafia(db)
         await get_or_seed_east_discovery(db)
