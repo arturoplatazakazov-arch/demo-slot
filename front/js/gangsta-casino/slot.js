@@ -24,7 +24,9 @@ const SPINE_ROOT = `${ASSET_ROOT}/spine`;
 // origin (the atlas carries that exact tile), and the grid draws tiles at the
 // PSB's 188px — so anchor = 200x200 box, fit = 188/200.
 const TILE_BOX = { x: -100, y: -100, width: 200, height: 200 };
-const TILE_FIT = 188 / 200;
+// Symbols are drawn 1:1 with the PSB (rare frame 187px in a 197px column,
+// bat 193px…) — the sym_* land exports are authored in exactly those pixels.
+const TILE_FIT = 1;
 // Clip names that differ from the default `win`.
 const WIN_CLIP = { wild: 'win_small' };
 
@@ -155,7 +157,9 @@ function clearBigWilds() {
 function dropCellInstance(info) {
   info.gen = (info.gen || 0) + 1; // invalidates a clip still loading for this cell
   if (info.instance && stage) stage.removeBase(info.instance);
+  if (info.landInstance && stage) stage.removeBase(info.landInstance);
   info.instance = null;
+  info.landInstance = null;
   if (info.img) info.img.style.visibility = '';
 }
 
@@ -254,6 +258,10 @@ async function playWinAnimationOnce(info) {
   if (!info.cell.isConnected || !info.anchor || info.gen !== gen) return;
   // A wild may have grown over this cell while its export was loading.
   if (info.cell.classList.contains('is-hidden')) return wait(BIG_WILD_COVERED_HOLD_MS);
+  if (info.landInstance) {
+    stage.removeBase(info.landInstance);
+    info.landInstance = null;
+  }
   if (!info.instance) {
     const instance = resource.createInstance();
     instance.anchorEl = info.anchor;
@@ -350,6 +358,10 @@ function playWinCells(winningCells, lineWins, countWins) {
   for (const info of cellInfos) {
     if (info) setCellDimmed(info, allWinInfos.length > 0 && !winSet.has(info));
   }
+  if (allWinInfos.length) {
+    playSceneClip('frame', 'win');
+    playSceneClip('logo', 'win');
+  }
   // A grown wild column celebrates along with its line.
   for (const el of bigWildEls) {
     const col = Number(el.dataset.col);
@@ -434,7 +446,41 @@ function settleColumnCells(cellEls, col, finalCodes) {
     const info = { symbol: finalCodes[row], cell, img, anchor, instance: null, winLoopTimeout: null };
     cell.addEventListener('click', () => onCellClick(info, col));
     cellInfos[row * GRID_COLS + col] = info;
+    if (LAND_ENABLED) playLandOnce(info);
   }
+}
+
+// `land` bounce from the sym_* pack (img/gangsta-casino/spine/land/<code>/):
+// the PSB icon art 1:1 around the origin, so it swaps with the static tile
+// invisibly. Straight alpha (pma:false). Held in its own slot on the cell so
+// a win that starts while it's still bouncing can take over cleanly.
+function getLandResource(code) {
+  if (!stage) return Promise.reject(new Error('no spine stage'));
+  return SpineEngine.SpineResource.load(stage.assetManager, `${LAND_ROOT}/${code}`, { premultipliedAlpha: false });
+}
+
+async function playLandOnce(info) {
+  if (!stage) return;
+  const gen = info.gen;
+  let resource;
+  try {
+    resource = await getLandResource(info.symbol);
+  } catch (err) {
+    return;
+  }
+  if (!info.cell.isConnected || info.gen !== gen || info.instance || info.cell.classList.contains('is-hidden')) return;
+  const inst = resource.createInstance();
+  inst.anchorEl = info.anchor;
+  inst.boundsOverride = TILE_BOX;
+  inst.fit = TILE_FIT;
+  info.landInstance = inst;
+  info.img.style.visibility = 'hidden';
+  stage.addBase(inst);
+  await playClipOnce(inst, 'land');
+  if (info.landInstance !== inst) return; // a win or a teardown took over
+  stage.removeBase(inst);
+  info.landInstance = null;
+  if (!info.instance) info.img.style.visibility = '';
 }
 
 // --- Expanding wild ---------------------------------------------------------
@@ -634,6 +680,7 @@ function currentMode() {
 function applyModeScreen(next) {
   document.getElementById('screen').dataset.mode = next;
   document.getElementById('bgLayer').src = bgSrcFor(next);
+  syncScene();
 }
 
 const BONUS_INTRO_HOLD_MS = 3000;
@@ -664,6 +711,7 @@ function setFreeSpinsMode(active, amount = 0) {
 // Three odometer windows on the counter art; zero-padded like a real drum.
 function setFreeSpinsCounter(remaining) {
   const digits = String(Math.max(0, Math.min(999, remaining))).padStart(3, '0');
+  playSceneClip('freespins', 'counter_update');
   document.querySelectorAll('.fs-counter__digit').forEach((el, i) => {
     el.textContent = digits[i];
   });
@@ -859,6 +907,10 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = false } = 
     document.getElementById('gpopSub').textContent = content.sub || '';
     root.dataset.tier = content.tier;
     amountEl.textContent = '0';
+    // Big moments: the two heroes in the armchairs celebrate too.
+    playSceneClip('hero_man', 'win');
+    playSceneClip('hero_woman', 'win');
+    if (content.tier === 'spins') playSceneClip('freespins', 'win');
     if (content.tier === 'mega' || content.tier === 'epic' || content.tier === 'total') {
       spawnBills(document.getElementById('gpopBills'));
     } else {
@@ -1007,14 +1059,140 @@ function preloadAssets() {
     bgSrcFor('base'),
     bgSrcFor('bonus'),
     ...['frame.png', 'logo.png', 'buy_bonus.png', 'fs_counter.png', 'fs_shadow.png', 'plate.png', 'chest.png',
-      'buy_title.png', 'wof_wheel.png', 'wof_of_fortune.png'].map((f) => `${ASSET_ROOT}/ui/${f}`),
+      'buy_title.png', 'wof_wheel.png', 'wof_of_fortune.png', 'scene_people.png'].map((f) => `${ASSET_ROOT}/ui/${f}`),
   ].map((src) => track(preloadImage(src)));
   if (stage) {
     // Skeletons up front so the first win doesn't wait on a fetch.
     for (const code of SYMBOL_CODES) tasks.push(track(getSymbolResource(code)));
     tasks.push(track(getSymbolResource(FEATURE_SCREEN_CODE)));
+    if (LAND_ENABLED) for (const code of SYMBOL_CODES) tasks.push(track(getLandResource(code)));
+  }
+  if (backStage) {
+    for (const name of SCENE_NAMES) if (SCENE_ON.has(name)) tasks.push(track(getSceneResource(name)));
   }
   return Promise.all(tasks);
+}
+
+// --- Living scene (spine pack "gangsta_spine_фоны") --------------------------
+//
+// background (terrace, palms, sun, water glints), the two heroes in their
+// armchairs, the reel frame (chrome + glass, shine sweep), the logo and the
+// Free Spins counter. All drawn on #spineBackCanvas, which sits UNDER #stage:
+// the frame art includes the dark glass of the opening, so it has to be below
+// the symbols (it is in the PSB too). The static PNG/CSS versions stay in the
+// DOM as the fallback and are hidden by .screen.has-spine-scene.
+//
+// Placement is the pack's layout.json, in PSB scene px (y down): every
+// skeleton's own box is pinned to an anchor div at the same design coords
+// with fit 1, so 1 skeleton unit = 1 design px. Frame / logo / counter are
+// anchored to the elements they replace instead, so they also follow the
+// portrait layout. Background + heroes are the desktop terrace — off in
+// portrait and in the bonus (the club background is a still).
+
+const SCENE_ROOT = `${SPINE_ROOT}/scene`;
+const LAND_ROOT = `${SPINE_ROOT}/land`;
+const SCENE_NAMES = ['background', 'hero_man', 'hero_woman', 'frame', 'freespins', 'logo'];
+// What actually runs (product, 2026-10-10: background, frame and logo live;
+// the heroes are being redrawn, so the PSB's still people stand in for them —
+// .scene-people in #stage; the counter and the sym_* land bounce stay off
+// until asked for). Add a name back here to switch that part on.
+const SCENE_ON = new Set(['background', 'frame', 'logo']);
+const LAND_ENABLED = false;
+// root_scene_x/y from layout.json (PSB px, y down).
+const SCENE_ROOTS = {
+  background: [966, 470.5],
+  hero_man: [279.5, 955],
+  hero_woman: [1614.5, 954],
+};
+let backStage = null;
+const scene = {}; // name -> SpineInstance
+
+function getSceneResource(name) {
+  if (!backStage) return Promise.reject(new Error('no back stage'));
+  // README: "без premultiplied alpha" — and no pma line in the atlases.
+  return SpineEngine.SpineResource.load(backStage.assetManager, `${SCENE_ROOT}/${name}`, { premultipliedAlpha: false });
+}
+
+function sceneAnchorAt(name, resource) {
+  const { x, y, width, height } = resource.bounds;
+  const [rx, ry] = SCENE_ROOTS[name];
+  const el = document.createElement('div');
+  el.className = 'scene-anchor';
+  el.style.left = `${rx + x}px`;
+  el.style.top = `${ry - (y + height)}px`;
+  el.style.width = `${width}px`;
+  el.style.height = `${height}px`;
+  document.getElementById('stage').appendChild(el);
+  return el;
+}
+
+function sceneAnchorFor(name, resource) {
+  if (SCENE_ROOTS[name]) return sceneAnchorAt(name, resource);
+  if (name === 'frame') return document.getElementById('reelRig');
+  if (name === 'logo') return document.querySelector('.stage--front .logo');
+  // freespins: the counter skeleton's box is the PSB "Free Spins" group, i.e.
+  // the jukebox plus its shadow — 68px left of .fs-counter, 384x311.
+  const el = document.createElement('div');
+  el.className = 'fs-counter__anchor';
+  document.getElementById('freeSpinsCounter').prepend(el);
+  return el;
+}
+
+async function setupScene() {
+  if (!backStage) return;
+  try {
+    for (const name of SCENE_NAMES) {
+      if (!SCENE_ON.has(name)) continue;
+      const resource = await getSceneResource(name);
+      resource.animationStateData.defaultMix = 0.2; // README recommendation
+      const inst = resource.createInstance();
+      inst.anchorEl = sceneAnchorFor(name, resource);
+      inst.boundsOverride = resource.bounds;
+      inst.fit = 1;
+      inst.play('idle', true);
+      // Desync the two heroes' breathing.
+      if (name === 'hero_woman') inst.animationState.getCurrent(0).trackTime = 3.1;
+      scene[name] = inst;
+    }
+  } catch (err) {
+    console.warn('spine scene failed, keeping the static one:', err);
+    for (const k of Object.keys(scene)) delete scene[k];
+    return;
+  }
+  const screenEl = document.getElementById('screen');
+  screenEl.classList.add('has-spine-scene');
+  // Per-part flags: each hides only the static it replaces.
+  for (const name of Object.keys(scene)) screenEl.classList.add(`has-spine-${name}`);
+  syncScene();
+}
+
+// Which scene skeletons are on the canvas for the current mode / orientation.
+// Rebuilt in SCENE_NAMES order every time — that order is the draw order.
+function syncScene() {
+  if (!backStage || !Object.keys(scene).length) return;
+  const portrait = isMobileLayout();
+  const bonus = currentMode() === 'freespins';
+  const want = {
+    background: !portrait && !bonus,
+    hero_man: !portrait && !bonus,
+    hero_woman: !portrait && !bonus,
+    frame: true,
+    freespins: bonus,
+    logo: true,
+  };
+  document.getElementById('screen').classList.toggle('has-spine-terrace', want.background && !!scene.background);
+  // Still people over the live terrace while the hero skeletons are off.
+  document.getElementById('screen').classList.toggle('has-still-people', want.background && !!scene.background && !scene.hero_man);
+  for (const name of SCENE_NAMES) if (scene[name]) backStage.removeBase(scene[name]);
+  for (const name of SCENE_NAMES) if (want[name] && scene[name]) backStage.addBase(scene[name]);
+}
+
+// One-shot reaction, then back to the idle loop.
+function playSceneClip(name, clip) {
+  const inst = scene[name];
+  if (!inst || !inst.resource.skeletonData.findAnimation(clip)) return;
+  inst.play(clip, false);
+  inst.queue('idle', true, 0);
 }
 
 // --- Feature (preview) screen -----------------------------------------------
@@ -1097,17 +1275,26 @@ function init() {
   window.addEventListener('resize', () => {
     updateStageScale();
     updateBgForLayout();
+    syncScene();
   });
   buildReelGrid();
   try {
     stage = new SpineEngine.SpineStage(document.getElementById('spineCanvas'));
+    backStage = new SpineEngine.SpineStage(document.getElementById('spineBackCanvas'));
   } catch (err) {
     console.warn('Spine stage unavailable — symbols fall back to CSS:', err);
     stage = null;
+    backStage = null;
   }
   setupDevPanel();
   preloadAssets().then(() => {
+    setupScene();
     if (window.Preloader) window.Preloader.done();
+    // ?nofs — dev/screenshot convenience: straight into the game.
+    if (new URLSearchParams(location.search).has('nofs')) {
+      document.getElementById('preloader')?.remove();
+      return null;
+    }
     return showFeatureScreen();
   });
   window.__slot = { get cellInfos() { return cellInfos; }, get stage() { return stage; } };

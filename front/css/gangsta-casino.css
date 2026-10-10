@@ -148,6 +148,50 @@ body {
   pointer-events: none;
   z-index: 2; /* above #stage (1), below #stageFront (3) and the dim (4) */
 }
+/* The living scene: above the still background, under #stage (same z,
+   earlier in the DOM). */
+.spine-canvas--back { z-index: 1; }
+
+/* Spine scene anchors (positioned from layout.json by slot.js). */
+.stage .scene-anchor { position: absolute; pointer-events: none; }
+.fs-counter__anchor {
+  position: absolute;
+  left: -68px;   /* 127 - 195 */
+  top: 0;
+  width: 384px;
+  height: 311px;
+  pointer-events: none;
+}
+/* Statics the Spine scene replaces (kept as the fallback), one flag per part.
+   visibility, not display: frame/logo/counter boxes still serve as the
+   skeletons' anchors. */
+.screen.has-spine-frame .reel-bg,
+.screen.has-spine-frame .frame,
+.screen.has-spine-logo .logo,
+.screen.has-spine-freespins .fs-counter__img,
+.screen.has-spine-freespins .fs-counter__shadow { visibility: hidden; }
+
+/* PSB people_normal (both armchairs, table, shadows) at their PSB spot —
+   stands in for the hero skeletons over the live terrace, which has no
+   people of its own. */
+.scene-people {
+  display: none;
+  left: 0;
+  top: 297px;
+  width: 1907px;
+  height: 666px;
+  z-index: 0;
+  pointer-events: none;
+  /* In the PSB the people sit UNDER the slot frame; here the frame is on the
+     Spine canvas below #stage, so cut the frame's footprint out of them
+     instead: chrome outer edge = PSB x 442..1497, y 108..776 -> image coords
+     x 442..1497, y up to 479 (origin 0,297). Under the dark glass they
+     wouldn't read anyway. */
+  clip-path: polygon(evenodd,
+    0 0, 1907px 0, 1907px 666px, 0 666px, 0 0,
+    442px 0, 442px 479px, 1497px 479px, 1497px 0, 442px 0);
+}
+.screen.has-still-people .scene-people { display: block; }
 
 /* ---------- Reel rig (frame coordinates) ---------- */
 .reel-rig {
@@ -229,8 +273,8 @@ body {
 }
 /* 200px tiles drawn at the PSB's ~188px. */
 .reel__cell img {
-  width: 188px;
-  height: 188px;
+  width: 200px;
+  height: 200px;
   object-fit: contain;
   pointer-events: none;
   user-select: none;
@@ -238,10 +282,9 @@ body {
 }
 /* Rare (character) and wild statics come on a 220x220 canvas: the gold frame is the
    same 187px as in the Spine atlas, centred, heads breaking out above it.
-   Same 188/200 scale as everything else -> the frame lands exactly on the
-   Spine one (atlas frame 187u * 0.94). */
+   Drawn 1:1 like everything else (TILE_FIT = 1, PSB pixels). */
 .reel__cell[data-symbol^="rare_"] img,
-.reel__cell[data-symbol="wild"] img { width: calc(220px * 188 / 200); height: calc(220px * 188 / 200); }
+.reel__cell[data-symbol="wild"] img { width: 220px; height: 220px; }
 .reel__cell.is-dimmed img { opacity: 0.35; filter: saturate(0.6); }
 .reel__cell.is-hidden img { visibility: hidden; }
 /* Spine anchor: the 200x200 tile canvas the exports are authored around. */

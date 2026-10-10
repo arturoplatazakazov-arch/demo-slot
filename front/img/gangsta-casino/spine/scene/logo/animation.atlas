@@ -1,0 +1,7 @@
+animation.png
+size:1024,512
+filter:Linear,Linear
+logo
+bounds:130,0,376,128
+shine
+bounds:0,0,128,512

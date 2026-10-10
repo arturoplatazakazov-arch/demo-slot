@@ -6,7 +6,7 @@
 <title>Gangsta Casino — demo</title>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/preloader.css?v=1">
-<link rel="stylesheet" href="css/gangsta-casino.css?v=6">
+<link rel="stylesheet" href="css/gangsta-casino.css?v=9">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 </head>
 <body>
@@ -45,9 +45,16 @@
          впечатаны в фон — так они нарисованы в макете (PSB, группа BG). -->
     <img class="layer bg" id="bgLayer" src="img/gangsta-casino/bg_base_desk.jpg" alt="">
 
+    <!-- Spine-сцена ПОД барабанами: фон-терраса, герои, рамка (хром + стекло
+         проёма), логотип, счётчик фриспинов — см. setupScene в slot.js. -->
+    <canvas class="layer spine-canvas spine-canvas--back" id="spineBackCanvas"></canvas>
+
     <!-- Design-space stage 1932x940 (десктоп) / 780x1416 (портрет):
          координаты = координаты слоёв PSB "Desk_Gangsta_Slot_OUT". -->
     <div class="stage" id="stage">
+
+      <!-- Статичные люди из PSB поверх живого фона, пока героев-скелетов нет. -->
+      <img class="obj scene-people" src="img/gangsta-casino/ui/scene_people.png" alt="">
 
       <!-- Барабаны как единый «риг» в координатах рамки (PSB slot/frame,
            1139x795 от (406,44)); в портрете риг целиком масштабируется. -->
@@ -280,7 +287,7 @@
   <script src="js/slot-core.js?v=1"></script>
   <script src="js/preloader.js?v=1"></script>
   <script src="js/gangsta-casino/sound.js?v=1"></script>
-  <script src="js/gangsta-casino/slot.js?v=8"></script>
+  <script src="js/gangsta-casino/slot.js?v=11"></script>
   <script src="js/gangsta-casino/app.js?v=1"></script>
   <script src="js/ui-bar-v3.js?v=4"></script>
 </body>
