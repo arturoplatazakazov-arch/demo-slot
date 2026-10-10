@@ -1092,11 +1092,11 @@ function preloadAssets() {
 const SCENE_ROOT = `${SPINE_ROOT}/scene`;
 const LAND_ROOT = `${SPINE_ROOT}/land`;
 const SCENE_NAMES = ['background', 'hero_man', 'hero_woman', 'frame', 'freespins', 'logo'];
-// What actually runs (product, 2026-10-10: background, frame and logo live;
-// the heroes are being redrawn, so the PSB's still people stand in for them —
-// .scene-people in #stage; the counter and the sym_* land bounce stay off
-// until asked for). Add a name back here to switch that part on.
-const SCENE_ON = new Set(['background', 'frame', 'logo']);
+// What actually runs (product, 2026-10-10: background, frame, logo and the
+// redrawn heroes live; the counter and the sym_* land bounce stay off until
+// asked for). Drop a hero from here and the PSB's still people
+// (.scene-people) stand in for it automatically.
+const SCENE_ON = new Set(['background', 'hero_man', 'hero_woman', 'frame', 'logo']);
 const LAND_ENABLED = false;
 // root_scene_x/y from layout.json (PSB px, y down).
 const SCENE_ROOTS = {
@@ -1188,9 +1188,22 @@ function syncScene() {
 }
 
 // One-shot reaction, then back to the idle loop.
+// Heroes (README of the hero pack): idle never stops on track 0 and `win` is
+// layered ADDITIVELY on track 1 — it starts and ends in the zero pose, so
+// there is no pop in or out and the breathing carries on underneath.
 function playSceneClip(name, clip) {
   const inst = scene[name];
   if (!inst || !inst.resource.skeletonData.findAnimation(clip)) return;
+  if (name === 'hero_man' || name === 'hero_woman') {
+    const state = inst.animationState;
+    const cur = state.getCurrent(1);
+    if (cur && cur.animation && cur.animation.name === clip && !cur.isComplete()) return; // already celebrating
+    const entry = state.setAnimation(1, clip, false);
+    entry.mixBlend = spine.MixBlend.add;
+    entry.mixDuration = 0;
+    state.addEmptyAnimation(1, 0, 0);
+    return;
+  }
   inst.play(clip, false);
   inst.queue('idle', true, 0);
 }

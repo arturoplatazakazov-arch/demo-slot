@@ -1,0 +1,11 @@
+animation.png
+size:1024,1024
+filter:Linear,Linear
+man_sh1
+bounds:0,786,543,89
+man_sh2
+bounds:0,660,575,124
+body
+bounds:0,0,555,658
+sparkle
+bounds:545,786,64,64

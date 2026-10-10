@@ -1,0 +1,11 @@
+animation.png
+size:1024,1024
+filter:Linear,Linear
+wom_sh1
+bounds:0,636,577,155
+wom_sh2
+bounds:0,793,471,125
+body
+bounds:0,0,517,634
+sparkle
+bounds:473,793,64,64
