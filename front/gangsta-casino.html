@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gangsta Casino — demo</title>
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/preloader.css?v=1">
+<link rel="stylesheet" href="css/gangsta-casino.css?v=6">
+<link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
+</head>
+<body>
+
+  <!-- Boot preloader: статичная разметка (видна с первого кадра), прогресс
+       ведёт js/preloader.js, задачи считает preloadAssets в slot.js. -->
+  <div class="preloader" id="preloader">
+    <div class="preloader__logo" id="preloaderLogo"><img src="img/gangsta-casino/ui/logo.png" alt="" onerror="this.remove()"></div>
+    <div class="preloader__bar"><div class="preloader__fill" id="preloaderFill"></div></div>
+    <div class="preloader__pct" id="preloaderPct">0%</div>
+  </div>
+
+  <a class="to-catalog-btn" href="games.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    В каталог
+  </a>
+
+  <!-- DEV-ONLY панель: режим и ручной запуск попапов/фич без бэкенда. -->
+  <div class="dev-panel">
+    <button class="dev-btn" id="devToggle" type="button">mode: base</button>
+    <button class="dev-btn" data-popup="bigWin" type="button">Big Win</button>
+    <button class="dev-btn" data-popup="megaWin" type="button">Mega Win</button>
+    <button class="dev-btn" data-popup="epicWin" type="button">Epic Win</button>
+    <button class="dev-btn" data-popup="bonusSpinsWin" type="button">Bonus Spins Win</button>
+    <button class="dev-btn" data-popup="bonusSpinsTotalWin" type="button">Bonus Total Win</button>
+    <button class="dev-btn" id="devBuy" type="button">Buy dialog</button>
+    <button class="dev-btn" id="devWheel" type="button">Wheel</button>
+    <button class="dev-btn" id="devBigWild" type="button">Big Wild</button>
+    <button class="dev-btn" id="devFeature" type="button">Feature screen</button>
+    <span class="dev-hint">клик по WILD в сетке — превью расширения; по остальным — win-анимация</span>
+  </div>
+
+  <div class="screen" id="screen" data-mode="base">
+
+    <!-- Фон на весь экран (cover): терраса в базе, клуб в бонусе. Люди
+         впечатаны в фон — так они нарисованы в макете (PSB, группа BG). -->
+    <img class="layer bg" id="bgLayer" src="img/gangsta-casino/bg_base_desk.jpg" alt="">
+
+    <!-- Design-space stage 1932x940 (десктоп) / 780x1416 (портрет):
+         координаты = координаты слоёв PSB "Desk_Gangsta_Slot_OUT". -->
+    <div class="stage" id="stage">
+
+      <!-- Барабаны как единый «риг» в координатах рамки (PSB slot/frame,
+           1139x795 от (406,44)); в портрете риг целиком масштабируется. -->
+      <div class="obj reel-rig" id="reelRig">
+        <div class="reel-bg"></div>
+        <div class="reel__grid" id="reelGrid"></div>
+        <div class="big-wilds" id="bigWilds"></div>
+      </div>
+
+      <!-- Buy Bonus — только в базе; сундук + плашка из группы buy_bonus. -->
+      <button class="obj sign-buy-bonus" id="buyBonusBtn" type="button" aria-label="Купить бонус">
+        <img class="sign-buy-bonus__img" src="img/gangsta-casino/ui/buy_bonus.png" alt="">
+        <span class="sign-buy-bonus__price" id="buyBonusPrice">10,000,000</span>
+      </button>
+
+      <!-- Счётчик фриспинов — только в бонусе. Цифры в трёх окнах живые
+           (впечатанные «319» стёрты из арта). -->
+      <div class="obj fs-counter" id="freeSpinsCounter">
+        <img class="fs-counter__shadow" src="img/gangsta-casino/ui/fs_shadow.png" alt="">
+        <img class="fs-counter__img" src="img/gangsta-casino/ui/fs_counter.png" alt="">
+        <span class="fs-counter__digit" style="--d:0"></span>
+        <span class="fs-counter__digit" style="--d:1"></span>
+        <span class="fs-counter__digit" style="--d:2"></span>
+      </div>
+
+    </div>
+
+    <!-- Полноэкранный WebGL-канвас Spine: win-клипы символов и разворот
+         вайлда. Над барабанами, но ПОД рамкой и логотипом (#stageFront). -->
+    <canvas class="layer spine-canvas" id="spineCanvas"></canvas>
+
+    <!-- Тот же stage поверх канваса: хромовая рамка (маскирует клипы,
+         вылетающие за проём) и логотип, а также сумма мелкого выигрыша. -->
+    <div class="stage stage--front" id="stageFront">
+      <div class="obj reel-rig">
+        <img class="frame" src="img/gangsta-casino/ui/frame.png" alt="">
+        <div class="reel-win-amount" id="reelWinAmount"></div>
+      </div>
+      <img class="obj logo" src="img/gangsta-casino/ui/logo.png" alt="Gangsta Casino">
+    </div>
+
+    <div class="layer screen-dim" id="screenDim"></div>
+
+    <!-- Превью-фича-скрин (Spine pfs): после прелоадера, поверх всего, на
+         своём затемнении. Рисуется на #spineCanvas, который на это время
+         поднимается над баром (body.is-feature-screen). Уходит по клику —
+         растворением в прозрачность. -->
+    <div class="fscreen" id="featureScreen" hidden></div>
+
+    <!-- ================= Попапы выигрыша (CSS, свои) ================= -->
+    <div class="gpop" id="gpop" hidden>
+      <div class="gpop__rays"></div>
+      <div class="gpop__card">
+        <img class="gpop__chest" src="img/gangsta-casino/ui/chest.png" alt="">
+        <div class="gpop__title" id="gpopTitle">BIG WIN</div>
+        <div class="gpop__plate">
+          <img src="img/gangsta-casino/ui/plate.png" alt="">
+          <span class="gpop__amount" id="gpopAmount">0</span>
+        </div>
+        <div class="gpop__sub" id="gpopSub"></div>
+      </div>
+      <div class="gpop__bills" id="gpopBills"></div>
+    </div>
+
+    <!-- ================= Покупка бонуса: диалог ✓/✗ ================= -->
+    <div class="buy-dialog" id="buyDialog" hidden>
+      <div class="buy-dialog__card">
+        <img class="buy-dialog__title" src="img/gangsta-casino/ui/buy_title.png" alt="Buy Free Spins">
+        <img class="buy-dialog__chest" src="img/gangsta-casino/ui/chest.png" alt="">
+        <div class="buy-dialog__plate">
+          <img src="img/gangsta-casino/ui/plate.png" alt="">
+          <span class="buy-dialog__price"><small>10 FREE SPINS</small><b id="buyDialogPrice">0</b></span>
+        </div>
+        <div class="buy-dialog__actions">
+          <button class="buy-dialog__btn buy-dialog__btn--no" id="buyNo" type="button" aria-label="Отмена">
+            <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg>
+          </button>
+          <button class="buy-dialog__btn buy-dialog__btn--yes" id="buyYes" type="button" aria-label="Купить">
+            <svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19.5 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= Wheel of Fortune (3x WOF) =================
+         Барабан на 14 секторов, как на арте колеса из поставки. Сектора и
+         подписи рисуются по ответу бэка; победителя выбирает СЕРВЕР. -->
+    <div class="wof" id="wofPopup" hidden>
+      <div class="wof__title">
+        <img class="wof__title-a" src="img/gangsta-casino/ui/wof_wheel.png" alt="Wheel">
+        <img class="wof__title-b" src="img/gangsta-casino/ui/wof_of_fortune.png" alt="of Fortune">
+      </div>
+      <div class="wof__wheel">
+        <div class="wof__glow"></div>
+        <div class="wof__rotor" id="wofRotor">
+          <div class="wof__disk" id="wofDisk"></div>
+          <div class="wof__labels" id="wofLabels"></div>
+        </div>
+        <div class="wof__rim"></div>
+        <div class="wof__bulbs" id="wofBulbs"></div>
+        <div class="wof__pointer"></div>
+        <button class="wof__spin" id="wofSpin" type="button" aria-label="Крутить колесо">
+          <b class="wof__hub">G</b>
+          <span>SPIN</span>
+        </button>
+      </div>
+      <div class="wof__prize" id="wofPrize" hidden></div>
+    </div>
+
+  </div>
+
+  <!-- Paytable info popup — заполняется из session-start's `symbols`. -->
+  <div class="info-popup" id="infoPopup" hidden>
+    <div class="info-popup__panel">
+      <button class="info-popup__close" id="infoPopupClose" type="button" aria-label="Закрыть">×</button>
+      <h2 class="info-popup__title">Paytable</h2>
+      <p class="info-popup__note">20 линий слева направо. WILD расширяется на весь барабан и может шагнуть вправо; 3+ SCATTER — фриспины; 3 WHEEL OF FORTUNE — колесо с множителем ×2…×10 или фриспинами.</p>
+      <div class="info-popup__list" id="infoPopupList"></div>
+    </div>
+  </div>
+
+  <!-- ================================================================
+       Нижний бар V3 (макет Figma "V3", node 396:1961).
+       Контракт для js/gangsta-casino/app.js менять НЕЛЬЗЯ: data-action
+       spin/bet-minus/bet-plus/sound/info, id betValue/balanceValue,
+       классы ui-icon-btn / ui-spin-btn / ui-balance__currency /
+       ui-bet-field__currency.
+       ================================================================ -->
+  <div class="v3-bar" id="v3Bar">
+
+    <!-- Ряд круглых кнопок: [меню] [авто] (SPIN) [турбо] [ставка] -->
+    <div class="v3-row">
+
+      <div class="v3-group">
+        <!-- Флайаут раскрывается ВВЕРХ из кнопки-гамбургера. -->
+        <div class="v3-menu">
+          <div class="v3-menu__flyout" id="v3Flyout">
+            <button class="ui-icon-btn v3-btn" data-action="home" type="button" aria-label="В каталог">
+              <svg viewBox="0 0 24 24"><path d="M3 11.4 12 4l9 7.4" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.6 10v9.2h4.2v-5.6h4.4v5.6h4.2V10" fill="currentColor" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="ui-icon-btn v3-btn v3-btn--sound" data-action="sound" type="button" aria-label="Звук">
+              <svg viewBox="0 0 24 24"><path class="v3-spk" d="M4 9.2v5.6h3.6L13 19V5L7.6 9.2H4Z" fill="currentColor"/><path class="v3-wave v3-wave--1" d="M16.2 9a4.6 4.6 0 0 1 0 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="v3-wave v3-wave--2" d="M18.9 6.6a8 8 0 0 1 0 10.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="v3-slash" d="M5 19 19 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            </button>
+            <button class="ui-icon-btn v3-btn" data-action="info" type="button" aria-label="Информация">
+              <svg viewBox="0 0 24 24"><rect x="10.6" y="10" width="2.8" height="9" rx="1.4" fill="currentColor"/><circle cx="12" cy="6.4" r="1.7" fill="currentColor"/></svg>
+            </button>
+          </div>
+          <button class="ui-icon-btn v3-btn v3-btn--menu" id="v3MenuBtn" type="button" aria-label="Меню" aria-expanded="false">
+            <svg viewBox="0 0 24 24"><path d="M4 7.5h16M4 12h16M4 16.5h16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            <span class="v3-btn__dot" aria-hidden="true"></span>
+          </button>
+        </div>
+
+        <!-- Автоигра — визуальная заглушка: открывает выбор 10/25/50/100. -->
+        <button class="ui-icon-btn v3-btn v3-btn--auto" id="v3AutoBtn" type="button" aria-label="Автоигра" aria-expanded="false">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.1" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8.6 15.4 12 7.6l3.4 7.8M9.8 13.2h4.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+
+      <button class="ui-spin-btn v3-spin" data-action="spin" type="button" aria-label="Спин">
+        <span class="v3-spin__ring" aria-hidden="true"></span>
+        <svg class="v3-spin__icon" viewBox="0 0 48 48">
+          <path d="M9 20.5A15.2 15.2 0 0 1 34.4 14" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>
+          <path d="M34.6 7.4V14h-6.7" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M39 27.5A15.2 15.2 0 0 1 13.6 34" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>
+          <path d="M13.4 40.6V34h6.7" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="v3-spin__count" id="v3SpinCount" hidden></span>
+      </button>
+
+      <div class="v3-group">
+        <!-- Турбо — визуальная заглушка: только активное (зелёное) состояние. -->
+        <button class="ui-icon-btn v3-btn v3-btn--turbo" id="v3TurboBtn" type="button" aria-label="Турбо" aria-pressed="false">
+          <svg viewBox="0 0 24 24"><path d="M13.4 2.5 5.2 13.4h5.1l-1.1 8.1 8.3-11.1h-5.2l1.1-7.9Z" fill="currentColor"/></svg>
+        </button>
+
+        <!-- Ставка — открывает тултип со степпером (−/+ живые, из app.js). -->
+        <button class="ui-icon-btn v3-btn v3-btn--bet" id="v3BetBtn" type="button" aria-label="Ставка" aria-expanded="false">
+          <svg viewBox="0 0 24 24"><ellipse cx="12" cy="7.4" rx="7.6" ry="2.9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.4 7.4v3.1c0 1.6 3.4 2.9 7.6 2.9s7.6-1.3 7.6-2.9V7.4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.4 11.9V15c0 1.6 3.4 2.9 7.6 2.9s7.6-1.3 7.6-2.9v-3.1" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Тултип ставки. −/+ несут data-action, на них уже висит app.js. -->
+    <div class="v3-tip v3-tip--bet" id="v3BetTip" hidden>
+      <button class="ui-icon-btn v3-tip__step" data-action="bet-minus" type="button" aria-label="Уменьшить ставку">
+        <svg viewBox="0 0 24 24"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
+      <div class="v3-tip__field">
+        <span class="v3-tip__label">BET</span>
+        <span class="v3-tip__amount">
+          <span id="v3BetMirror">0</span>
+          <span class="ui-bet-field__currency">FUN</span>
+        </span>
+      </div>
+      <button class="ui-icon-btn v3-tip__step" data-action="bet-plus" type="button" aria-label="Увеличить ставку">
+        <svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <!-- Выбор числа автоспинов — пока заглушка, только визуальное состояние. -->
+    <div class="v3-chips" id="v3AutoTip" hidden>
+      <button class="v3-chip" data-spins="10" type="button">10</button>
+      <button class="v3-chip" data-spins="25" type="button">25</button>
+      <button class="v3-chip" data-spins="50" type="button">50</button>
+      <button class="v3-chip" data-spins="100" type="button">100</button>
+    </div>
+
+    <div class="v3-readout">
+      <div class="v3-readout__col">
+        <span class="v3-readout__label">BALANCE</span>
+        <span class="v3-readout__value"><span id="balanceValue">1,000,000</span> <span class="ui-balance__currency">FUN</span></span>
+      </div>
+      <div class="v3-readout__col v3-readout__col--right">
+        <span class="v3-readout__label">BET</span>
+        <span class="v3-readout__value"><span id="betValue">100,000</span> <span class="v3-readout__cur">FUN</span></span>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="vendor/spine-webgl.js"></script>
+  <script src="js/spine-engine.js?v=5"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="js/telegram.js?v=2"></script>
+  <script src="js/config.js?v=2"></script>
+  <script src="js/api.js?v=2"></script>
+  <script src="js/reel-math.js?v=6"></script>
+  <script src="js/slot-core.js?v=1"></script>
+  <script src="js/preloader.js?v=1"></script>
+  <script src="js/gangsta-casino/sound.js?v=1"></script>
+  <script src="js/gangsta-casino/slot.js?v=8"></script>
+  <script src="js/gangsta-casino/app.js?v=1"></script>
+  <script src="js/ui-bar-v3.js?v=4"></script>
+</body>
+</html>

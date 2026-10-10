@@ -1,0 +1,1001 @@
+/* Gangsta Casino — 5x3 line-pay slot (Dirty Money mechanics) laid out from the
+   designer's PSB "Desk_Gangsta_Slot_OUT" (canvas 1932x940).
+
+   Everything inside #stage sits at its PSB layer coordinate; #stage is
+   contain-scaled to the viewport by slot.js (updateStageScale). The reels are
+   one "rig" in the frame's own coordinates — origin = PSB slot/frame top-left
+   (406,44), 1139x795 — so portrait just moves and scales the rig as a whole
+   and the grid never changes its 197x200 pitch.
+
+   PSB numbers used (desktop):
+     frame (chrome)      (406,44)  1139x795  -> rig origin
+     base (opening)      (449,115) 1041x656  -> rig (43,71)
+     symbol grid         (474,141)  985x600  -> rig (68,97), 197x200 cells
+     logo                (778,7)    376x128
+     buy_bonus chest     (154,592)  306x233
+     Free Spins counter  (195,498)  214x288, shadow (127,755) 384x54
+
+   Portrait (780x1416) is not in the PSB — composed here: logo, reels at 0.68,
+   buy chest / counter centred under the reels. */
+
+:root {
+  --gold: #ffc847;
+  --gold-dark: #9a6a14;
+  --ink: #120a1c;
+  --neon-pink: #ff3fa4;
+  --neon-cyan: #39d5ff;
+  --navy: #0b1030;
+  --text-cream: #fff4dc;
+
+  --cell-w: 197px;
+  --cell-h: 200px;
+
+  --design-w: 1932px;
+  --design-h: 940px;
+  --stage-scale: 1;
+
+  /* Rig placement — overridden in portrait. */
+  --rig-x: 406px;
+  --rig-y: 44px;
+  --rig-scale: 1;
+}
+
+* { box-sizing: border-box; }
+
+html, body { overflow-x: hidden; }
+
+body {
+  margin: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #05040c;
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  color: var(--text-cream);
+}
+
+/* ---------- Back-to-catalog button ---------- */
+.to-catalog-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 110;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(8, 10, 30, 0.75);
+  border: 1px solid rgba(57, 213, 255, 0.5);
+  color: var(--neon-cyan);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(4px);
+}
+.to-catalog-btn:hover { background: rgba(8, 10, 30, 0.92); border-color: var(--neon-cyan); }
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+/* ---------- Dev panel ---------- */
+.dev-panel {
+  position: fixed;
+  top: 52px;
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 260px;
+  align-items: center;
+  justify-content: flex-end;
+}
+.dev-btn {
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #222;
+  color: #ddd;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.dev-btn:hover { opacity: 1; }
+.dev-hint { font-size: 10px; color: #999; width: 100%; text-align: right; }
+
+/* ---------- Screen ---------- */
+.screen {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  background: #05040c;
+}
+.layer { position: absolute; }
+
+/* Background is its own cover layer: the PSB art is wider than the stage's
+   fitted (safe) width, so the outer strips simply crop on narrower screens. */
+.bg {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 50%;
+  z-index: 0;
+}
+
+.stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--design-w);
+  height: var(--design-h);
+  transform: translate(-50%, -50%) scale(var(--stage-scale));
+  z-index: 1;
+}
+.stage .obj { position: absolute; }
+/* Front stage: frame + logo above the Spine canvas, clicks fall through. */
+.stage--front { z-index: 3; pointer-events: none; }
+
+.spine-canvas {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2; /* above #stage (1), below #stageFront (3) and the dim (4) */
+}
+
+/* ---------- Reel rig (frame coordinates) ---------- */
+.reel-rig {
+  left: var(--rig-x);
+  top: var(--rig-y);
+  width: 1139px;
+  height: 795px;
+  transform: scale(var(--rig-scale));
+  transform-origin: 0 0;
+  z-index: 2;
+}
+.reel-rig > * { position: absolute; }
+
+/* PSB slot/frame/base: flat navy glass, 77% opaque. */
+.reel-bg {
+  left: 43px;
+  top: 71px;
+  width: 1041px;
+  height: 656px;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(40, 60, 140, 0.25), transparent 60%),
+    rgba(0, 5, 20, 0.77);
+  pointer-events: none;
+}
+
+/* Scroll clip = the frame's opening, so spinning strips vanish under the
+   chrome instead of past it. */
+.reel__grid {
+  left: 43px;
+  top: 71px;
+  width: 1041px;
+  height: 656px;
+  overflow: hidden;
+}
+.reel__grid-inner {
+  position: absolute;
+  left: 25px;   /* 474 - 449 */
+  top: 26px;    /* 141 - 115 */
+  width: calc(5 * var(--cell-w));
+  height: calc(3 * var(--cell-h));
+}
+
+.reel__col {
+  position: absolute;
+  top: 0;
+  width: var(--cell-w);
+  height: 100%;
+}
+.reel__col.is-anticipating {
+  z-index: 2;
+  filter: drop-shadow(0 0 14px rgba(255, 63, 164, 0.95)) drop-shadow(0 0 30px rgba(57, 213, 255, 0.6));
+}
+.reel__strip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.reel__strip.is-looping {
+  animation: reel-loop var(--reel-loop-duration, 420ms) linear infinite;
+}
+.reel__strip.is-looping .reel__cell img { filter: blur(1.2px); }
+@keyframes reel-loop {
+  from { transform: translateY(0); }
+  to { transform: translateY(var(--reel-loop-distance, 0)); }
+}
+
+.reel__cell {
+  position: relative;
+  width: var(--cell-w);
+  height: var(--cell-h);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+/* 200px tiles drawn at the PSB's ~188px. */
+.reel__cell img {
+  width: 188px;
+  height: 188px;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 200ms ease, filter 200ms ease;
+}
+/* Rare (character) and wild statics come on a 220x220 canvas: the gold frame is the
+   same 187px as in the Spine atlas, centred, heads breaking out above it.
+   Same 188/200 scale as everything else -> the frame lands exactly on the
+   Spine one (atlas frame 187u * 0.94). */
+.reel__cell[data-symbol^="rare_"] img,
+.reel__cell[data-symbol="wild"] img { width: calc(220px * 188 / 200); height: calc(220px * 188 / 200); }
+.reel__cell.is-dimmed img { opacity: 0.35; filter: saturate(0.6); }
+.reel__cell.is-hidden img { visibility: hidden; }
+/* Spine anchor: the 200x200 tile canvas the exports are authored around. */
+.reel__cell-anchor {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 200px;
+  height: 200px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.reel__cell.is-winning { z-index: 3; }
+.reel__cell.is-winning img {
+  opacity: 1;
+  animation: cell-win 1.1s ease-in-out;
+}
+@keyframes cell-win {
+  0% { transform: scale(1); filter: none; }
+  30% { transform: scale(1.13); filter: brightness(1.3) drop-shadow(0 0 14px rgba(255, 200, 71, 0.95)); }
+  55% { transform: scale(1.04) rotate(-2deg); filter: brightness(1.15) drop-shadow(0 0 22px rgba(255, 63, 164, 0.9)); }
+  75% { transform: scale(1.09) rotate(1.5deg); filter: brightness(1.2) drop-shadow(0 0 16px rgba(57, 213, 255, 0.9)); }
+  100% { transform: scale(1); filter: none; }
+}
+
+/* Expanding wild: wild_big.png (210x600) over a column of the grid. Grows out
+   of the middle row; slot.js hides the three tiles under it afterwards. */
+.big-wilds {
+  left: 68px;
+  top: 97px;
+  width: calc(5 * var(--cell-w));
+  height: calc(3 * var(--cell-h));
+  pointer-events: none;
+  z-index: 1;
+}
+/* wild_big.png is 220x620 cut around the skeleton origin at Spine scale 1 —
+   the same size the grown Spine wild renders at (fit to the 600px column). */
+.big-wild {
+  position: absolute;
+  top: -10px;
+  left: calc(var(--col) * var(--cell-w) - 11.5px);
+  width: 220px;
+  height: 620px;
+  clip-path: inset(33% 4% 33% 4%);
+  opacity: 0.4;
+  transition: clip-path 650ms cubic-bezier(0.2, 0.9, 0.25, 1.05), opacity 250ms ease;
+}
+.big-wild.is-grown { clip-path: inset(0 0 0 0); opacity: 1; }
+/* Spine path: just the column box the grown wild is fitted to. */
+.big-wild-anchor {
+  position: absolute;
+  top: 0;
+  left: calc(var(--col) * var(--cell-w));
+  width: var(--cell-w);
+  height: 100%;
+}
+.big-wild img { width: 100%; height: 100%; display: block; }
+.big-wild.is-winning img { animation: big-wild-win 1.4s ease-in-out infinite; }
+@keyframes big-wild-win {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 0 rgba(255, 63, 164, 0)); }
+  50% { filter: brightness(1.22) drop-shadow(0 0 22px rgba(255, 63, 164, 0.95)); }
+}
+
+.frame {
+  left: 0;
+  top: 0;
+  width: 1139px;
+  height: 795px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Inline amount for wins under the popup threshold, centred on the grid. */
+.reel-win-amount {
+  left: 68px;
+  top: 97px;
+  width: 985px;
+  height: 600px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 220ms ease, transform 260ms cubic-bezier(0.2, 1.4, 0.4, 1);
+  z-index: 4;
+}
+.reel-win-amount.is-visible { opacity: 1; transform: scale(1); }
+.reel-win-amount::before {
+  content: attr(data-amount);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 72px;
+  line-height: 1;
+  color: var(--gold);
+  -webkit-text-stroke: 2px #3a1a00;
+  text-shadow: 0 4px 0 #3a1a00, 0 0 28px rgba(255, 63, 164, 0.8);
+  padding: 14px 34px 8px;
+  background: linear-gradient(180deg, rgba(20, 8, 40, 0.85), rgba(8, 4, 20, 0.85));
+  border-radius: 999px;
+  box-shadow: 0 0 0 3px rgba(255, 200, 71, 0.55), 0 0 26px rgba(255, 63, 164, 0.55);
+}
+
+/* ---------- Logo ---------- */
+.logo {
+  left: 778px;
+  top: 7px;
+  width: 376px;
+  height: 128px;
+  z-index: 4;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
+}
+
+/* ---------- Buy bonus (base only) ---------- */
+.sign-buy-bonus {
+  left: 154px;
+  top: 592px;
+  width: 306px;
+  height: 233px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  z-index: 3;
+  transition: transform 150ms ease;
+}
+.sign-buy-bonus__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.5));
+  transition: filter 200ms ease;
+  animation: buy-breathe 2.6s ease-in-out infinite;
+}
+@keyframes buy-breathe {
+  0%, 100% { filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.5)); }
+  50% { filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 18px rgba(176, 90, 255, 0.75)); }
+}
+.sign-buy-bonus:hover { transform: scale(1.04); }
+.sign-buy-bonus:active { transform: scale(0.97); }
+.sign-buy-bonus__price {
+  position: absolute;
+  left: 50%;
+  top: -14px;
+  transform: translateX(-50%);
+  padding: 5px 18px 2px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #2a1046, #12061f);
+  box-shadow: 0 0 0 2px rgba(255, 200, 71, 0.75), 0 0 16px rgba(176, 90, 255, 0.6);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 26px;
+  line-height: 1.1;
+  color: var(--gold);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.screen[data-mode="freespins"] .sign-buy-bonus { display: none; }
+
+/* ---------- Free spins counter (bonus only) ---------- */
+.fs-counter {
+  display: none;
+  left: 195px;
+  top: 498px;
+  width: 214px;
+  height: 288px;
+  z-index: 3;
+  pointer-events: none;
+}
+.screen[data-mode="freespins"] .fs-counter { display: block; }
+.fs-counter__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.fs-counter__shadow {
+  position: absolute;
+  left: -68px;   /* 127 - 195 */
+  top: 257px;    /* 755 - 498 */
+  width: 384px;
+  height: 54px;
+}
+/* Odometer windows measured off the art: centres at 28.5 / 50.6 / 72.0 % of
+   the width, 65.6 % down; each ~18 % wide. */
+.fs-counter__digit {
+  position: absolute;
+  top: 65.6%;
+  left: calc(28.5% + var(--d) * 21.75%);
+  transform: translate(-50%, -50%);
+  font-family: 'Cinzel', Georgia, serif;
+  font-weight: 700;
+  font-size: 46px;
+  line-height: 1;
+  color: #fff3d6;
+  text-shadow: 0 0 6px rgba(255, 170, 60, 0.95), 0 0 16px rgba(255, 120, 20, 0.8);
+}
+
+/* ---------- Preloader theme (css/preloader.css) ---------- */
+.preloader {
+  --pl-bg: #090716;
+  --pl-accent-a: #ffc847;
+  --pl-accent-b: #ff3fa4;
+  --pl-glow-a: rgba(57, 213, 255, 0.35);
+  --pl-glow-b: rgba(255, 63, 164, 0.12);
+  --pl-border: rgba(255, 200, 71, 0.45);
+  --pl-shadow: rgba(255, 63, 164, 0.6);
+}
+.preloader__logo { width: min(60vw, 340px); }
+
+/* ---------- Feature (preview) screen ----------
+   Dim layer only; the art is the pfs skeleton on #spineCanvas, lifted above
+   the V3 bar (20) and popups (40-50) while the screen is up. */
+.fscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 58;
+  background: rgba(3, 2, 10, 0.82);
+  opacity: 0;
+  transition: opacity 420ms ease;
+  cursor: pointer;
+}
+.fscreen[hidden] { display: none; }
+.fscreen.is-open { opacity: 1; }
+body.is-feature-screen .spine-canvas { position: fixed; z-index: 59; }
+body.is-feature-screen .dev-panel,
+body.is-feature-screen .to-catalog-btn { visibility: hidden; }
+
+/* ---------- Screen dim ---------- */
+.screen-dim {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(4, 2, 12, 0.72);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  z-index: 4;
+}
+.screen-dim.is-active { opacity: 1; }
+.screen-dim.is-opaque { background: #000; }
+
+/* ================================================================
+   Win / bonus popups (.gpop) — DOM cards until the Spine pack lands.
+   Copper plate from the PSB (hidden Layer 40) carries the amount; the title
+   is lettered in CSS per tier.
+   ================================================================ */
+.gpop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 280ms ease;
+  overflow: hidden;
+}
+.gpop[hidden] { display: none; }
+.gpop.is-open { opacity: 1; }
+
+.gpop__rays {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 180vmax;
+  height: 180vmax;
+  transform: translate(-50%, -50%);
+  background: repeating-conic-gradient(from 0deg, rgba(255, 200, 71, 0.13) 0 7deg, transparent 7deg 18deg);
+  -webkit-mask: radial-gradient(circle, #000 0, transparent 45%);
+  mask: radial-gradient(circle, #000 0, transparent 45%);
+  animation: rays-spin 18s linear infinite;
+}
+.gpop[data-tier="mega"] .gpop__rays { background: repeating-conic-gradient(rgba(255, 63, 164, 0.16) 0 7deg, transparent 7deg 18deg); }
+.gpop[data-tier="epic"] .gpop__rays { background: repeating-conic-gradient(rgba(57, 213, 255, 0.16) 0 7deg, transparent 7deg 18deg); }
+@keyframes rays-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+.gpop__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(620px, 88vw);
+  transform: scale(0.6);
+  transition: transform 420ms cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+.gpop.is-open .gpop__card { transform: scale(1); }
+
+.gpop__chest {
+  display: none;
+  width: 58%;
+  margin-bottom: -6%;
+  filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 22px rgba(176, 90, 255, 0.6));
+}
+.gpop[data-tier="spins"] .gpop__chest { display: block; }
+
+.gpop__title {
+  position: relative;
+  z-index: 1;
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: clamp(46px, 11vw, 108px);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  background: linear-gradient(180deg, #fff7c2 0%, #ffd24a 45%, #e48a0c 70%, #ffe27a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-stroke: 3px #3b1700;
+  filter: drop-shadow(0 6px 0 #3b1700) drop-shadow(0 0 24px rgba(255, 170, 40, 0.75));
+  animation: title-pulse 1.2s ease-in-out infinite;
+}
+.gpop[data-tier="mega"] .gpop__title {
+  background-image: linear-gradient(180deg, #ffe1f3 0%, #ff6ec4 45%, #c0137a 72%, #ffb3e2 100%);
+  -webkit-text-stroke-color: #3a0024;
+  filter: drop-shadow(0 6px 0 #3a0024) drop-shadow(0 0 26px rgba(255, 63, 164, 0.9));
+}
+.gpop[data-tier="epic"] .gpop__title {
+  background-image: linear-gradient(180deg, #e8fbff 0%, #6fe3ff 45%, #1675d1 72%, #b6f1ff 100%);
+  -webkit-text-stroke-color: #04193a;
+  filter: drop-shadow(0 6px 0 #04193a) drop-shadow(0 0 26px rgba(57, 213, 255, 0.9));
+}
+@keyframes title-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.gpop__plate {
+  position: relative;
+  width: 86%;
+  margin-top: -2%;
+}
+.gpop__plate img { display: block; width: 100%; height: auto; }
+.gpop__amount {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: clamp(30px, 7vw, 70px);
+  line-height: 1;
+  color: #fff3c9;
+  text-shadow: 0 3px 0 #4a1c00, 0 0 18px rgba(255, 170, 40, 0.9);
+  white-space: nowrap;
+}
+.gpop__sub {
+  margin-top: 6px;
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: clamp(22px, 4.4vw, 40px);
+  color: var(--neon-pink);
+  text-shadow: 0 0 8px rgba(255, 63, 164, 0.9), 0 0 22px rgba(255, 63, 164, 0.7), 0 3px 0 #2a0018;
+  letter-spacing: 0.06em;
+}
+.gpop__sub:empty { display: none; }
+
+.gpop__bills { position: absolute; inset: 0; pointer-events: none; }
+.gpop__bill {
+  position: absolute;
+  top: -8%;
+  left: var(--x);
+  width: calc(54px * var(--s));
+  height: calc(26px * var(--s));
+  border-radius: 3px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.35) 0 22%, transparent 24%),
+    linear-gradient(90deg, #1f6b3a, #6fc28b 50%, #1f6b3a);
+  box-shadow: inset 0 0 0 2px rgba(10, 40, 20, 0.6), 0 2px 4px rgba(0, 0, 0, 0.4);
+  animation: bill-fall var(--dur) linear var(--delay) infinite;
+}
+@keyframes bill-fall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+  8% { opacity: 1; }
+  100% { transform: translateY(118vh) rotate(var(--rot)); opacity: 0.9; }
+}
+
+/* ================================================================
+   Buy dialog ✓/✗
+   ================================================================ */
+.buy-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 45%, rgba(60, 20, 90, 0.75), rgba(0, 0, 0, 0.88) 70%);
+  opacity: 0;
+  transition: opacity 280ms ease;
+}
+.buy-dialog[hidden] { display: none; }
+.buy-dialog.is-open { opacity: 1; }
+.buy-dialog__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(560px, 90vw);
+  transform: scale(0.7);
+  transition: transform 380ms cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+.buy-dialog.is-open .buy-dialog__card { transform: scale(1); }
+.buy-dialog__title {
+  width: 74%;
+  z-index: 1;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.6));
+}
+.buy-dialog__chest {
+  width: 62%;
+  margin: -6% 0 -8%;
+  filter: drop-shadow(0 0 26px rgba(176, 90, 255, 0.7));
+}
+.buy-dialog__plate { position: relative; width: 84%; }
+.buy-dialog__plate img { display: block; width: 100%; height: auto; }
+.buy-dialog__price {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  color: #fff3c9;
+  text-shadow: 0 3px 0 #4a1c00, 0 0 16px rgba(255, 170, 40, 0.85);
+}
+.buy-dialog__price small { font-size: clamp(14px, 2.6vw, 22px); letter-spacing: 0.06em; color: #ffd98a; }
+.buy-dialog__price b { font-weight: 400; font-size: clamp(30px, 6.4vw, 56px); line-height: 1; }
+.buy-dialog__actions { display: flex; gap: 48px; margin-top: 18px; }
+.buy-dialog__btn {
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  border: 0;
+  cursor: pointer;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.35), inset 0 -6px 0 rgba(0, 0, 0, 0.3), 0 0 0 4px #e6b23e, 0 0 0 7px #4a2a00, 0 10px 18px rgba(0, 0, 0, 0.5);
+  transition: transform 120ms ease, filter 150ms ease;
+}
+.buy-dialog__btn svg { width: 46%; height: 46%; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.4)); }
+.buy-dialog__btn--yes { background: radial-gradient(circle at 40% 30%, #6ff08f, #17a24a 60%, #0b5f2a); }
+.buy-dialog__btn--no { background: radial-gradient(circle at 40% 30%, #ff7a8e, #d4213f 60%, #7a0a1f); }
+.buy-dialog__btn:hover { filter: brightness(1.12); transform: scale(1.06); }
+.buy-dialog__btn:active { transform: scale(0.94); }
+
+/* ================================================================
+   Wheel of Fortune — 14 sectors (the delivered drum art's count).
+   Disk/labels rotate (--wof-angle); rim, bulbs, pointer and hub stay put.
+   Pointer at 12 o'clock; slot.js turns the rotor -i*step to land sector i.
+   ================================================================ */
+.wof {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2vh;
+  background: radial-gradient(circle at 50% 55%, rgba(70, 20, 110, 0.82), rgba(0, 0, 0, 0.92) 70%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+}
+.wof[hidden] { display: none; }
+.wof.is-open { opacity: 1; pointer-events: auto; }
+
+.wof__title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 0.5vh;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.8));
+}
+.wof__title-a { width: min(16vh, 30vw, 180px); }
+.wof__title-b { width: min(30vh, 56vw, 330px); margin-top: -0.6vh; }
+
+.wof__wheel {
+  position: relative;
+  width: min(58vh, 84vw, 540px);
+  aspect-ratio: 1;
+}
+.wof__glow {
+  position: absolute;
+  inset: -16%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 63, 164, 0.45), rgba(120, 40, 220, 0.2) 45%, transparent 68%);
+  animation: wof-glow 2.4s ease-in-out infinite;
+}
+@keyframes wof-glow { 50% { opacity: 0.55; transform: scale(1.05); } }
+
+.wof__rotor {
+  position: absolute;
+  inset: 7%;
+  border-radius: 50%;
+  transform: rotate(var(--wof-angle, 0deg));
+}
+.wof__disk {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.55);
+}
+.wof__labels { position: absolute; inset: 0; pointer-events: none; }
+.wof__label {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 0;
+  height: 50%;
+  transform-origin: 50% 100%;
+  transform: rotate(var(--a));
+}
+.wof__label > span {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: clamp(14px, 3.3vh, 30px);
+  line-height: 0.95;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(30, 0, 40, 0.9), 0 0 8px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+  text-align: center;
+}
+.wof__label--fs > span {
+  font-size: clamp(9px, 1.6vh, 15px);
+  white-space: normal;
+  width: 5.2ch;
+  color: #2a1200;
+  text-shadow: 0 1px 0 rgba(255, 240, 190, 0.8);
+}
+
+/* Chrome rim: a ring masked out of a conic metal gradient. */
+.wof__rim {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(#e9edf3, #7d828c, #f6f7fa, #5f646e, #d7dbe2, #868b95, #f2f3f6, #6a6f79, #e9edf3);
+  /* Disk radius = 86% of the wheel's (rotor inset 7%). */
+  -webkit-mask: radial-gradient(circle closest-side, transparent 0 calc(86% - 1px), #000 86%);
+  mask: radial-gradient(circle closest-side, transparent 0 calc(86% - 1px), #000 86%);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+.wof__bulbs { position: absolute; inset: 0; pointer-events: none; }
+.wof__bulbs i {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 0;
+  height: 50%;
+  transform-origin: 50% 100%;
+  transform: rotate(var(--a));
+}
+.wof__bulbs i::before {
+  content: '';
+  position: absolute;
+  top: calc(7% - 6px); /* mid-rim */
+  left: -6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff, #ffd76a 45%, #b26b00);
+  box-shadow: 0 0 10px rgba(255, 210, 90, 0.95);
+  animation: bulb 0.9s steps(1) infinite;
+}
+.wof__bulbs i:nth-child(odd)::before { animation-delay: 0.45s; }
+.wof.is-landed .wof__bulbs i::before { animation-duration: 0.25s; }
+@keyframes bulb { 50% { background: radial-gradient(circle at 35% 35%, #fff, #ff7ac6 45%, #8a0a54); box-shadow: 0 0 10px rgba(255, 63, 164, 0.95); } }
+
+.wof__pointer {
+  position: absolute;
+  left: 50%;
+  top: -2.5%;
+  width: 9%;
+  height: 12%;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, #8c9099, #f7f8fb 45%, #6b7079);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.6));
+  z-index: 2;
+}
+.wof__pointer::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 14%;
+  width: 34%;
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff, #ff4fa8 50%, #8a0a54);
+}
+
+.wof__spin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 22%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  z-index: 3;
+  transition: transform 120ms ease, filter 200ms ease;
+}
+.wof__hub {
+  /* Chrome hub with the brand "G" (the delivered hub PNG is only ~70px). */
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, #1b1f4a 0 52%, transparent 53%),
+    conic-gradient(#f4f6fa, #7b808b, #fbfcfe, #5d626c, #e1e4ea, #8a8f99, #f4f6fa);
+  box-shadow: 0 0 0 3px #3b3f4a, 0 6px 16px rgba(0, 0, 0, 0.6), inset 0 0 0 calc(var(--hub-ring, 6px)) rgba(255, 255, 255, 0.08);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 300%;
+  line-height: 1;
+  color: #e9edf3;
+  text-shadow: 0 2px 0 #4a4f5a, 0 0 10px rgba(57, 213, 255, 0.55);
+  pointer-events: none;
+}
+.wof__spin { font-size: clamp(14px, 2.6vh, 24px); }
+.wof__spin span {
+  position: absolute;
+  left: 50%;
+  bottom: -6%;
+  transform: translateX(-50%);
+  padding: 2px 12px 0;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ff4fa8, #a3105c);
+  box-shadow: 0 0 0 2px #f2d27a, 0 0 14px rgba(255, 63, 164, 0.8);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: clamp(13px, 2.2vh, 22px);
+  color: #fff;
+  letter-spacing: 0.06em;
+}
+.wof__spin:hover { filter: brightness(1.12); }
+.wof__spin:active { transform: translate(-50%, -50%) scale(0.94); }
+.wof__spin:disabled { cursor: default; }
+.wof__spin:disabled span { opacity: 0; transition: opacity 200ms ease; }
+.wof__spin:not(:disabled) { animation: wof-pulse 1.3s ease-in-out infinite; }
+@keyframes wof-pulse {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(255, 63, 164, 0.5)); }
+  50% { filter: drop-shadow(0 0 22px rgba(255, 63, 164, 0.95)); }
+}
+
+.wof__prize {
+  min-height: 1.2em;
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: clamp(24px, 5vh, 58px);
+  color: var(--gold);
+  -webkit-text-stroke: 2px #3b1700;
+  text-shadow: 0 4px 0 #3b1700, 0 0 30px rgba(255, 63, 164, 0.8);
+  white-space: nowrap;
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 260ms ease, transform 260ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.wof__prize[hidden] { display: none; }
+.wof__prize.is-visible { opacity: 1; transform: scale(1); }
+
+/* ---------- Paytable info popup ---------- */
+.info-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 20px;
+}
+.info-popup[hidden] { display: none; }
+.info-popup__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(720px, 90vh);
+  overflow-y: auto;
+  background: linear-gradient(180deg, #1a0f33, #0b0820);
+  border: 2px solid rgba(255, 200, 71, 0.7);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(255, 63, 164, 0.25);
+}
+.info-popup__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 200, 71, 0.4);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-cream);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.info-popup__title {
+  margin: 0 0 6px;
+  color: var(--gold);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 26px;
+  text-align: center;
+  text-shadow: 0 2px 0 #3b1700, 0 0 14px rgba(255, 63, 164, 0.6);
+}
+.info-popup__note { text-align: center; font-size: 12px; opacity: 0.75; margin: 0 0 16px; }
+.info-popup__list { display: flex; flex-direction: column; gap: 10px; }
+.info-popup__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 200, 71, 0.2);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.info-popup__row img { width: 52px; height: 52px; object-fit: contain; flex-shrink: 0; }
+.info-popup__row-name { flex: 1 1 auto; min-width: 90px; font-weight: 700; }
+.info-popup__row-pays { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; }
+.info-popup__row-pays span { white-space: nowrap; opacity: 0.9; }
+.info-popup__row-pays b { color: var(--gold); }
+
+/* ================================================================
+   Portrait — design canvas 780x1416 (slot.js swaps --design-w/h).
+   Logo on top, reels at 0.68 (775px wide — the chrome reaches the screen
+   edges), buy chest / counter centred under them, clear of the V3 bar.
+   ================================================================ */
+@media (orientation: portrait) {
+  :root {
+    --rig-scale: 0.68;
+    --rig-x: 2.7px;    /* (780 - 1139*0.68) / 2 */
+    --rig-y: 188px;
+  }
+  /* Logo keeps the desktop overlap with the frame top (91px * 0.68 ≈ 62). */
+  .logo { left: 110px; top: 60px; width: 560px; height: 190.6px; }
+
+  .sign-buy-bonus { left: 214px; top: 750px; width: 352px; height: 268px; }
+  .sign-buy-bonus__price { font-size: 30px; top: -10px; }
+
+  .fs-counter { left: 283px; top: 742px; width: 214px; height: 288px; }
+
+  .gpop__card { width: min(560px, 92vw); }
+}

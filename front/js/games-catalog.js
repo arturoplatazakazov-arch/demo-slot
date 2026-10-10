@@ -9,7 +9,8 @@
 // order on the page:
 //   - Готовые игры: the first READY_COUNT entries left after pulling
 //     Illuminator out (below), in catalog order (== Game.created_at, oldest
-//     first).
+//     first), plus READY_PINNED_CODES — games the product moved here by hand
+//     (they don't take one of the READY_COUNT slots, so nobody else drops out).
 //   - Illuminator: a fixed hand-picked showcase, pulled out of the ordering
 //     regardless of where those games would otherwise land.
 //   - Игры в разработке: everything after that. A game not yet live on a
@@ -19,6 +20,7 @@
 // A section with zero cards hides itself (including its heading) rather
 // than showing an empty title.
 const ILLUMINATOR_CODES = new Set(['gold-of-baku', 'gold-of-baku-2', 'big-catch', 'caesars-fortune']);
+const READY_PINNED_CODES = new Set(['gangsta-casino']);
 const READY_COUNT = 10;
 
 const PLAY_ICON = '<svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4Z" fill="currentColor"/></svg>';
@@ -71,8 +73,9 @@ async function renderCatalog() {
   try {
     const entries = await apiGet('/catalog');
     const illuminator = entries.filter((e) => ILLUMINATOR_CODES.has(e.code));
-    const rest = entries.filter((e) => !ILLUMINATOR_CODES.has(e.code));
-    const ready = rest.slice(0, READY_COUNT);
+    const pinned = entries.filter((e) => READY_PINNED_CODES.has(e.code));
+    const rest = entries.filter((e) => !ILLUMINATOR_CODES.has(e.code) && !READY_PINNED_CODES.has(e.code));
+    const ready = [...rest.slice(0, READY_COUNT), ...pinned];
     const dev = rest.slice(READY_COUNT);
 
     for (const entry of ready) appendCard(readyGrid, entry);
