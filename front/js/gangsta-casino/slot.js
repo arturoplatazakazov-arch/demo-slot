@@ -685,11 +685,15 @@ function applyModeScreen(next) {
 
 const BONUS_INTRO_HOLD_MS = 3000;
 
+// Entering the bonus: blackout, then the Spine bonus screen (bfs) with the
+// real spin count — it waits for the player's tap ("TAP TO START") and the
+// club is switched in behind it. Without Spine, the CSS "YOU WON" card.
 async function enterBonusTransition(amount = 0) {
   pushScreenDim(true);
   await wait(DIM_TRANSITION_MS);
-  await playPopupSequence('bonusSpinsWin', amount, BONUS_INTRO_HOLD_MS);
   applyModeScreen('freespins');
+  const ran = await showBonusScreen(amount);
+  if (!ran) await playPopupSequence('bonusSpinsWin', amount, BONUS_INTRO_HOLD_MS);
   await wait(DIM_TRANSITION_MS);
   popScreenDim(true);
 }
@@ -1065,6 +1069,7 @@ function preloadAssets() {
     // Skeletons up front so the first win doesn't wait on a fetch.
     for (const code of SYMBOL_CODES) tasks.push(track(getSymbolResource(code)));
     tasks.push(track(getSymbolResource(FEATURE_SCREEN_CODE)));
+    tasks.push(track(getSymbolResource(BONUS_SCREEN_CODE)));
     if (LAND_ENABLED) for (const code of SYMBOL_CODES) tasks.push(track(getLandResource(code)));
   }
   if (backStage) {
@@ -1218,13 +1223,39 @@ function playSceneClip(name, clip) {
 // screen. Closed by a click: the whole screen fades out to transparent.
 
 const FEATURE_SCREEN_CODE = 'feature_screen';
+const BONUS_SCREEN_CODE = 'bonus_screen';
+// Both full-screen exports (pfs / bfs) are authored on the PSB canvas around
+// the skeleton origin, 1 unit = 1 design px.
 const FEATURE_BOX = { x: -966, y: -470, width: 1932, height: 940 };
 const FEATURE_FADE_MS = 500;
 
-function showFeatureScreen() {
+// Bonus screen (bfs): the "Free spins" jukebox rolls three digit strips in
+// clipped windows (bones strip1..3, windows 60 units tall in machine space)
+// and hides each strip once it lands — leaving the machine art, which had
+// "010" painted in. That paint is erased from the atlas; the REAL spin count
+// is drawn in the DOM over each window from the moment its strip hides, glued
+// to the strip bone every frame so it rides the machine's bounce/breathing.
+const BFS_STRIP_BONES = ['strip1', 'strip2', 'strip3'];
+const BFS_STRIP_HIDE_AT = [1.8, 1.9333, 2.0667]; // intro times the strips fade
+const BFS_WINDOW_UNITS = 60;
+
+function boneScreenBox(inst, bone) {
+  const canvasEl = document.getElementById('spineCanvas');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvasEl.getBoundingClientRect();
+  const left = rect.left + (bone.worldX + canvasEl.width / 2) / dpr;
+  const top = rect.top + (canvasEl.height / 2 - bone.worldY) / dpr;
+  const scaleY = Math.sqrt(bone.b * bone.b + bone.d * bone.d);
+  return { left, top, height: (BFS_WINDOW_UNITS * scaleY) / dpr };
+}
+
+// Shared lifecycle of the two full-screen Spine screens: 90% dim, intro ->
+// idle loop, click anywhere -> fade out. `onFrame(inst)` runs every frame
+// while the screen is up (the bonus screen's live digits).
+function showSpineScreen(code, { onFrame = null, onClose = null } = {}) {
   const root = document.getElementById('featureScreen');
-  if (!stage || !root) return Promise.resolve();
-  return getSymbolResource(FEATURE_SCREEN_CODE).then((resource) => new Promise((resolve) => {
+  if (!stage || !root) return Promise.resolve(false);
+  return getSymbolResource(code).then((resource) => new Promise((resolve) => {
     const inst = resource.createInstance();
     const place = () => {
       const portrait = isMobileLayout();
@@ -1243,6 +1274,15 @@ function showFeatureScreen() {
     inst.play('intro', false);
     inst.queue('idle', true);
 
+    let done = false;
+    let alpha = 1;
+    const frame = () => {
+      if (done) return;
+      if (onFrame) onFrame(inst, alpha);
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+
     let closing = false;
     const close = () => {
       if (closing) return;
@@ -1253,8 +1293,8 @@ function showFeatureScreen() {
       // clip keeps playing underneath so nothing freezes mid-fade.
       root.style.transition = `opacity ${FEATURE_FADE_MS}ms ease-out`;
       root.classList.remove('is-open');
+      if (onClose) onClose();
       const start = performance.now();
-      let done = false;
       const finish = () => {
         if (done) return;
         done = true;
@@ -1263,12 +1303,13 @@ function showFeatureScreen() {
         root.hidden = true;
         root.style.transition = '';
         document.body.classList.remove('is-feature-screen');
-        resolve();
+        resolve(true);
       };
       const tick = (now) => {
         if (done) return;
         const t = Math.min(1, (now - start) / FEATURE_FADE_MS);
-        inst.skeleton.color.a = 1 - t;
+        alpha = 1 - t;
+        inst.skeleton.color.a = alpha;
         if (t < 1) requestAnimationFrame(tick);
         else finish();
       };
@@ -1277,7 +1318,46 @@ function showFeatureScreen() {
     };
     root.addEventListener('click', close);
   })).catch((err) => {
-    console.warn('feature screen failed:', err);
+    console.warn(`${code} screen failed:`, err);
+    return false;
+  });
+}
+
+function showFeatureScreen() {
+  return showSpineScreen(FEATURE_SCREEN_CODE);
+}
+
+// Resolves true if the Spine bonus screen ran, false if it couldn't (no
+// WebGL / export missing) so the caller falls back to the CSS popup.
+function showBonusScreen(spins) {
+  const box = document.getElementById('bfsDigits');
+  const spans = box ? [...box.children] : [];
+  const digits = String(Math.max(0, Math.min(999, spins))).padStart(3, '0');
+  spans.forEach((el, i) => {
+    el.textContent = digits[i];
+    el.classList.remove('is-on');
+  });
+  if (box) box.hidden = false;
+  return showSpineScreen(BONUS_SCREEN_CODE, {
+    onFrame: (inst, alpha) => {
+      const entry = inst.animationState.getCurrent(0);
+      const inIntro = entry && entry.animation && entry.animation.name === 'intro';
+      const t = inIntro ? entry.trackTime : Infinity;
+      BFS_STRIP_BONES.forEach((name, i) => {
+        const bone = inst.skeleton.findBone(name);
+        const el = spans[i];
+        if (!bone || !el) return;
+        const { left, top, height } = boneScreenBox(inst, bone);
+        el.style.left = `${left}px`;
+        el.style.top = `${top}px`;
+        el.style.fontSize = `${height * 0.8}px`;
+        el.style.opacity = String(alpha);
+        el.classList.toggle('is-on', t >= BFS_STRIP_HIDE_AT[i]);
+      });
+    },
+  }).then((ran) => {
+    if (box) box.hidden = true;
+    return ran;
   });
 }
 

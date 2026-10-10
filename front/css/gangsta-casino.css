@@ -504,14 +504,34 @@ body {
   position: fixed;
   inset: 0;
   z-index: 58;
-  background: rgba(3, 2, 10, 0.82);
+  background: rgba(3, 2, 10, 0.9); /* product: 90% dim under both screens */
   opacity: 0;
   transition: opacity 420ms ease;
   cursor: pointer;
 }
+/* Live spin count over the bonus screen's jukebox windows (centred on each
+   strip bone; slot.js sets left/top/font-size every frame). Above the lifted
+   Spine canvas (59). */
+.bfs-digits { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
+.bfs-digits[hidden] { display: none; }
+.bfs-digits span {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  font-family: 'Cinzel', Georgia, serif;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff3d6;
+  text-shadow: 0 0 6px rgba(255, 170, 60, 0.95), 0 0 16px rgba(255, 120, 20, 0.8);
+  visibility: hidden;
+}
+.bfs-digits span.is-on { visibility: visible; animation: bfs-digit-in 220ms ease-out; }
+@keyframes bfs-digit-in { from { filter: brightness(2.2); } to { filter: none; } }
 .fscreen[hidden] { display: none; }
 .fscreen.is-open { opacity: 1; }
-body.is-feature-screen .spine-canvas { position: fixed; z-index: 59; }
+/* Only the TOP canvas (the screens draw there) — not #spineBackCanvas, which
+   shares the .spine-canvas class and would drag the live frame/logo over the
+   dim. */
+body.is-feature-screen #spineCanvas { position: fixed; z-index: 59; }
 body.is-feature-screen .dev-panel,
 body.is-feature-screen .to-catalog-btn { visibility: hidden; }
 
