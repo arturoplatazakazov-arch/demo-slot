@@ -420,6 +420,63 @@ img.is-missing {
   border-radius: 8px;
 }
 
+/* ---------- Feature preview / bonus screens ----------
+   The art is a Spine skeleton on #spineCanvas (lifted above the V3 bar and
+   popups while a screen is up); this layer is just the game's own background
+   (cover, so any aspect is covered) under a warm dusk vignette. */
+.fscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 58;
+  background: #140803;
+  opacity: 0;
+  transition: opacity 420ms ease;
+  cursor: pointer;
+  overflow: hidden;
+}
+.fscreen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--fs-bg) center / cover no-repeat;
+}
+.fscreen.is-open::before { animation: fscreen-zoom 1.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes fscreen-zoom { from { transform: scale(1.12); } }
+.fscreen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(20, 8, 3, 0.2) 0%, rgba(20, 8, 3, 0.6) 62%, rgba(12, 4, 1, 0.92) 100%),
+    linear-gradient(rgba(60, 24, 6, 0.3), rgba(60, 24, 6, 0.3));
+}
+.fscreen[hidden] { display: none; }
+.fscreen.is-open { opacity: 1; }
+body.is-feature-screen #spineCanvas { position: fixed; z-index: 59; }
+body.is-feature-screen .dev-panel,
+body.is-feature-screen .to-catalog-btn { visibility: hidden; }
+
+/* Live free-spins count over the bonus screen's log plaque (glued to the
+   skeleton's "count" bone every frame by slot.js). */
+.fscreen-count {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 60;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  font-family: 'Luckiest Guy', cursive;
+  line-height: 1;
+  padding-top: 0.08em; /* Luckiest Guy sits high in its line box */
+  background: linear-gradient(#fff6c8 12%, #ffd04a 50%, #e8931a 78%, #9c4a0c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 3px 0 #2a1204) drop-shadow(0 0 12px rgba(255, 138, 42, 0.85));
+  opacity: 0;
+}
+.fscreen-count[hidden] { display: none; }
+
 .spine-canvas {
   inset: 0;
   width: 100%;

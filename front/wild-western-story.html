@@ -6,7 +6,7 @@
 <title>Wild Western Story — demo</title>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/preloader.css?v=1">
-<link rel="stylesheet" href="css/wild-western-story.css?v=24">
+<link rel="stylesheet" href="css/wild-western-story.css?v=25">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 </head>
 <body>
@@ -36,6 +36,8 @@
     <button class="dev-btn" data-popup="buyFreeSpins" type="button">Buy Free Spins</button>
     <button class="dev-btn" id="devFitToggle" type="button">fit-screen: on</button>
     <button class="dev-btn" id="devBigWild" type="button">Big Wild</button>
+    <button class="dev-btn" id="devFeatureScreen" type="button">Feature Screen</button>
+    <button class="dev-btn" id="devBonusScreen" type="button">Bonus Screen</button>
     <span class="dev-hint">клик по WILD в сетке — превью расширения; по остальным — win-анимация</span>
   </div>
 
@@ -86,6 +88,13 @@
     </div>
 
   </div>
+
+  <!-- Превью-экраны (feature после прелоадера, bonus на входе во фриспины):
+       арт — Spine-скелеты screens/{feature,bonus}_{desk,mob} на #spineCanvas
+       (scripts/wild_western_story_screens.py); этот слой — фон игры под ними,
+       fscreen-count — живое число фриспинов на табличке (кость "count"). -->
+  <div class="fscreen" id="featureScreen" hidden></div>
+  <div class="fscreen-count" id="fscreenCount" hidden></div>
 
   <!-- Paytable info popup — filled from session-start's `symbols` field once a
        real backend game exists for this theme; empty list until then. -->
@@ -208,7 +217,7 @@
   <script src="js/api.js?v=2"></script>
   <script src="js/wild-western-story/sound.js?v=6"></script>
   <script src="js/reel-math.js?v=6"></script>
-  <script src="js/wild-western-story/slot.js?v=32"></script>
+  <script src="js/wild-western-story/slot.js?v=35"></script>
   <script src="js/wild-western-story/app.js?v=4"></script>
   <!-- Поведение нижнего бара V3: флайаут, тултипы, заглушки авто/турбо. -->
   <script src="js/ui-bar-v3.js?v=4"></script>
