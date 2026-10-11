@@ -734,6 +734,10 @@ body.is-feature-screen .to-catalog-btn { visibility: hidden; }
 }
 .buy-dialog__price small { font-size: clamp(14px, 2.6vw, 22px); letter-spacing: 0.06em; color: #ffd98a; }
 .buy-dialog__price b { font-weight: 400; font-size: clamp(30px, 6.4vw, 56px); line-height: 1; }
+.buy-dialog__price b.is-notice { font-size: clamp(18px, 3.6vw, 32px); }
+.buy-dialog__note { font-style: normal; font-size: clamp(11px, 1.8vw, 16px); color: #ffd98a; }
+.buy-dialog__note:empty { display: none; }
+.buy-dialog__btn[hidden] { display: none; }
 .buy-dialog__actions { display: flex; gap: 48px; margin-top: 18px; }
 .buy-dialog__btn {
   width: 86px;

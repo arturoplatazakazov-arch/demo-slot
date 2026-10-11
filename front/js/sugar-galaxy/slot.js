@@ -1132,6 +1132,323 @@ function playPopup(key, amount = 0, holdMs = 2500) {
   return playPopupSequence(key, amount, holdMs, { ownDim: true });
 }
 
+// --- Buy Bonus confirmation dialog ------------------------------------------
+//
+// The buy popup export is a DIALOG card: it carries its own ✓ / ✗ buttons
+// (BUY_DIALOG.yesSlot / noSlot). The Buy Bonus sign opens it, holds it on its
+// idle loop, and only a ✓ spends money (app.js then runs the purchase and skips
+// the server's own "buyFreeSpins" popup on the response — already shown here).
+//
+// The buttons are drawn on the Spine canvas, which takes no pointer events, so
+// each gets an invisible DOM hit-area that follows its attachment's live world
+// quad every frame (worldToScreen). The price (and the spin count / bet note)
+// are DOM labels in the game's popup-amount style, tracked to bones and sized
+// in skeleton units so they scale with the popup at any viewport.
+const BUY_DIALOG = {
+  yesSlot: 'popup_button_buy_desktop',
+  noSlot: 'popup_button_canel_desktop',
+  cardSlots: ['popup_bigwin', 'popup_counter_bg2', 'popup_frame_counter'],
+  hiddenSlots: [],
+  priceBone: 'counter3', // the long popup_back_counter bar
+  priceUnits: 84,
+  priceMaxUnits: 780,
+  spinsBone: 'counter', // the square counter frame above the title
+  spinsUnits: 130,
+  spinsMaxUnits: 230,
+  noteUnits: 40,
+};
+const BUY_DIALOG_CLIP = (kind) => kind;
+function createBuyDialogInstance(resource) {
+  const instance = resource.createInstance();
+  instance.anchorEl = document.getElementById('screen');
+  instance.fit = isMobileLayout() ? 2 : 1;
+  return instance;
+}
+
+let buyDialogOpen = false;
+
+// True while anything modal owns the screen: this dialog, any dimmed popup /
+// bonus transition, or a feature/bonus preview screen.
+function buyDialogBusy() {
+  const fs = document.getElementById('featureScreen');
+  return buyDialogOpen || dimActiveCount > 0 || Boolean(fs && !fs.hidden);
+}
+
+function buyDialogSlotQuad(skeleton, slotName, attachment) {
+  const slot = skeleton.findSlot(slotName);
+  if (!slot || !attachment || typeof attachment.computeWorldVertices !== 'function') return null;
+  const v = new Float32Array(8);
+  attachment.computeWorldVertices(slot, v, 0, 2);
+  return v;
+}
+
+// Screen-space bbox (CSS px) of a slot's attachment in the live pose.
+function buyDialogSlotRect(skeleton, slotName, attachment, canvasEl) {
+  const v = buyDialogSlotQuad(skeleton, slotName, attachment);
+  if (!v) return null;
+  let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
+  for (let i = 0; i < 8; i += 2) {
+    const p = worldToScreen(v[i], v[i + 1], canvasEl);
+    l = Math.min(l, p.left); r = Math.max(r, p.left);
+    t = Math.min(t, p.top); b = Math.max(b, p.top);
+  }
+  return { left: l, top: t, right: r, bottom: b, width: r - l, height: b - t };
+}
+
+// Keep the whole card + buttons + note on screen: the popups' own fit is
+// tuned for the win cards (portrait even doubles them), which can push the
+// dialog's buttons past the viewport edge. Measured on the setup pose in
+// skeleton units, relative to the bounds centre the engine centres on.
+function clampBuyDialogFit(instance, resource, attachments) {
+  const sk = instance.skeleton;
+  sk.setToSetupPose();
+  sk.x = 0; sk.y = 0; sk.scaleX = 1; sk.scaleY = 1;
+  // Measure the pose the dialog holds on (its idle clip), not the setup pose —
+  // some exports scale the card inside the clip (Golden Caravan's mob_*).
+  const idle = sk.data.findAnimation(BUY_DIALOG_CLIP('idle'));
+  if (idle) idle.apply(sk, 0, 0, false, null, 1, spine.MixBlend.setup, spine.MixDirection.mixIn);
+  sk.updateWorldTransform();
+  const b = resource.bounds;
+  const cx = b.x + b.width / 2;
+  const cy = b.y + b.height / 2;
+  let halfW = 0, up = 0, down = 0;
+  for (const [slotName, att] of attachments) {
+    const v = buyDialogSlotQuad(sk, slotName, att);
+    if (!v) continue;
+    for (let i = 0; i < 8; i += 2) {
+      halfW = Math.max(halfW, Math.abs(v[i] - cx));
+      up = Math.max(up, v[i + 1] - cy);
+      down = Math.max(down, cy - v[i + 1]);
+    }
+  }
+  down += BUY_DIALOG.noteUnits * 2.2; // the note line under the buttons
+  if (!halfW || up <= 0 || down <= 0) return;
+  const rect = instance.anchorEl.getBoundingClientRect();
+  const fitScale = Math.min(rect.width / b.width, rect.height / b.height); // CSS px per unit at fit 1
+  // The fixed UI bar's button row (#v3Bar .v3-row) sits over the bottom of
+  // the screen — keep the buttons + note above it.
+  const row = document.querySelector('#v3Bar .v3-row');
+  const rowTop = row ? row.getBoundingClientRect().top : 0;
+  const bottom = rowTop > rect.top + rect.height / 2 ? Math.min(rect.bottom, rowTop) : rect.bottom;
+  const centerY = rect.top + rect.height / 2;
+  const maxFit = Math.min(
+    (0.96 * rect.width) / (2 * halfW * fitScale),
+    (0.97 * (centerY - rect.top)) / (up * fitScale),
+    (0.97 * (bottom - centerY)) / (down * fitScale),
+  );
+  if (instance.fit > maxFit) instance.fit = maxFit;
+}
+
+function buyDialogLabel(layer, extraClass, text) {
+  const el = document.createElement('div');
+  el.className = `popup-amount is-visible buy-dialog__label ${extraClass}`;
+  el.textContent = text;
+  layer.appendChild(el);
+  return el;
+}
+
+// Places a label at a world point, font sized in skeleton units and shrunk to
+// fit `maxUnits` wide.
+function placeBuyDialogLabel(el, pos, units, maxUnits, unitPx) {
+  el.style.left = `${pos.left}px`;
+  el.style.top = `${pos.top}px`;
+  let size = units * unitPx;
+  el.style.fontSize = `${size}px`;
+  if (maxUnits) {
+    const maxPx = maxUnits * unitPx;
+    const w = el.offsetWidth;
+    if (w > maxPx && w > 0) el.style.fontSize = `${(size * maxPx) / w}px`;
+  }
+}
+
+// Opens the dialog. Resolves true when the player confirmed (✓), false on ✗,
+// backdrop tap, Escape or any failure — the caller only spends money on true.
+//   cost       — price at the bet the purchase will use
+//   spins      — free spins the purchase awards (label)
+//   betNote    — optional extra line (e.g. "BET 100,000 → 10,000")
+//   affordable — false: shows NOT ENOUGH BALANCE, hides ✓, only ✗ closes
+function showBuyBonusDialog({ cost, spins, betNote = '', affordable = true }) {
+  if (buyDialogOpen) return Promise.resolve(false);
+  buyDialogOpen = true;
+  const key = 'buyFreeSpins';
+
+  return new Promise((resolve) => {
+    let instance = null;
+    let layer = null;
+    let raf = null;
+    let dimmed = false;
+    let answered = false;
+    let closed = false;
+
+    const onKey = (event) => {
+      if (event.key === 'Escape') answer(false);
+    };
+    const cleanup = (confirmed) => {
+      if (closed) return;
+      closed = true;
+      if (raf) cancelAnimationFrame(raf);
+      document.removeEventListener('keydown', onKey);
+      if (layer) layer.remove();
+      if (instance) stage.removeOverlay(instance);
+      if (dimmed) popScreenDim(false);
+      document.body.classList.remove('is-buy-dialog');
+      buyDialogOpen = false;
+      resolve(confirmed);
+    };
+    function answer(confirmed) {
+      if (answered) return;
+      answered = true;
+      Sound.playSfx(confirmed ? 'click' : 'popupClose');
+      if (raf) cancelAnimationFrame(raf);
+      raf = null;
+      if (layer) { layer.remove(); layer = null; }
+      if (!instance) return cleanup(false);
+      // Safety net: never wait on the end clip forever.
+      const safety = setTimeout(() => cleanup(confirmed), 2000);
+      instance.play(BUY_DIALOG_CLIP('end'), false);
+      instance.onSettle = () => {
+        instance.onSettle = null;
+        clearTimeout(safety);
+        cleanup(confirmed);
+      };
+    }
+    document.addEventListener('keydown', onKey);
+
+    (async () => {
+      Sound.playSfx('popupOpen');
+      document.body.classList.add('is-buy-dialog'); // CSS: lifts DOM art that sits over the canvas
+      pushScreenDim(false);
+      dimmed = true;
+      await wait(DIM_TRANSITION_MS);
+
+      if (!popupResourceCache[key]) popupResourceCache[key] = loadSpineResource(POPUP_FOLDERS[key]);
+      const resource = await popupResourceCache[key];
+      if (answered) return cleanup(false); // Escape while loading
+
+      instance = createBuyDialogInstance(resource);
+      const sk = instance.skeleton;
+      const grab = (slotName) => {
+        const slot = sk.findSlot(slotName);
+        return slot ? slot.getAttachment() : null;
+      };
+      const yesAtt = grab(BUY_DIALOG.yesSlot);
+      const noAtt = grab(BUY_DIALOG.noSlot);
+      const cardAtts = BUY_DIALOG.cardSlots.map((name) => [name, grab(name)]).filter(([, a]) => a);
+      clampBuyDialogFit(instance, resource, [...cardAtts, [BUY_DIALOG.yesSlot, yesAtt], [BUY_DIALOG.noSlot, noAtt]]);
+
+      // Baked-in digits on the card art are replaced by the DOM labels; the ✓
+      // goes when the purchase can't be afforded at any bet.
+      const hide = [...BUY_DIALOG.hiddenSlots, ...(affordable ? [] : [BUY_DIALOG.yesSlot])];
+      for (const slotName of hide) {
+        const slot = sk.findSlot(slotName);
+        if (slot) slot.setAttachment(null);
+      }
+      stage.addOverlay(instance);
+
+      layer = document.createElement('div');
+      layer.className = 'buy-dialog';
+      layer.setAttribute('role', 'dialog');
+      layer.setAttribute('aria-label', 'Buy free spins');
+      const anchor = document.getElementById('popupAmount');
+      anchor.parentNode.insertBefore(layer, anchor.nextSibling);
+
+      const spinsText = `${spins} FREE SPINS`;
+      const priceEl = buyDialogLabel(layer, 'buy-dialog__price', affordable ? formatNumber(cost) : 'NOT ENOUGH BALANCE');
+      const spinsEl = BUY_DIALOG.spinsBone ? buyDialogLabel(layer, 'buy-dialog__spins', String(spins)) : null;
+      const noteLines = [];
+      if (!spinsEl) noteLines.push(spinsText);
+      if (affordable && betNote) noteLines.push(betNote);
+      const noteEl = noteLines.length ? buyDialogLabel(layer, 'buy-dialog__note', noteLines.join('  ·  ')) : null;
+
+      const hit = (label, confirmed) => {
+        const el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'buy-dialog__hit';
+        el.setAttribute('aria-label', label);
+        el.addEventListener('click', (event) => {
+          event.stopPropagation();
+          answer(confirmed);
+        });
+        layer.appendChild(el);
+        return el;
+      };
+      const yesEl = affordable ? hit('Buy free spins', true) : null;
+      const noEl = hit(affordable ? 'Cancel' : 'Close', false);
+
+      // Backdrop: a tap outside the card cancels.
+      let cardRect = null;
+      layer.addEventListener('click', (event) => {
+        if (event.target !== layer) return;
+        const r = cardRect;
+        const inside = r && event.clientX >= r.left && event.clientX <= r.right
+          && event.clientY >= r.top && event.clientY <= r.bottom;
+        if (!inside) answer(false);
+      });
+
+      const canvasEl = document.getElementById('spineCanvas');
+      const dpr = window.devicePixelRatio || 1;
+      const tick = () => {
+        if (closed || answered) return;
+        const unitPx = Math.abs(sk.scaleX) / dpr;
+        const yesR = buyDialogSlotRect(sk, BUY_DIALOG.yesSlot, yesAtt, canvasEl);
+        const noR = buyDialogSlotRect(sk, BUY_DIALOG.noSlot, noAtt, canvasEl);
+        const place = (el, r) => {
+          if (!el || !r) return;
+          el.style.left = `${r.left}px`;
+          el.style.top = `${r.top}px`;
+          el.style.width = `${r.width}px`;
+          el.style.height = `${r.height}px`;
+        };
+        place(yesEl, yesR);
+        place(noEl, noR);
+
+        let union = null;
+        for (const [name, att] of cardAtts) {
+          const r = buyDialogSlotRect(sk, name, att, canvasEl);
+          if (!r) continue;
+          union = union
+            ? { left: Math.min(union.left, r.left), top: Math.min(union.top, r.top), right: Math.max(union.right, r.right), bottom: Math.max(union.bottom, r.bottom) }
+            : { ...r };
+        }
+        cardRect = union;
+
+        const priceBone = sk.findBone(BUY_DIALOG.priceBone);
+        if (priceBone) {
+          const units = affordable ? BUY_DIALOG.priceUnits : BUY_DIALOG.priceUnits * 0.62;
+          placeBuyDialogLabel(priceEl, worldToScreen(priceBone.worldX, priceBone.worldY, canvasEl), units, BUY_DIALOG.priceMaxUnits, unitPx);
+        }
+        if (spinsEl) {
+          const bone = sk.findBone(BUY_DIALOG.spinsBone);
+          if (bone) placeBuyDialogLabel(spinsEl, worldToScreen(bone.worldX, bone.worldY, canvasEl), BUY_DIALOG.spinsUnits, BUY_DIALOG.spinsMaxUnits, unitPx);
+        }
+        if (noteEl) {
+          const rs = [yesR, noR].filter(Boolean);
+          if (rs.length) {
+            const bottom = Math.max(...rs.map((r) => r.bottom));
+            const left = Math.min(...rs.map((r) => r.left));
+            const right = Math.max(...rs.map((r) => r.right));
+            const noteSize = BUY_DIALOG.noteUnits * unitPx;
+            // Capped to the card's width (and the viewport) — the line can be long.
+            const maxUnits = Math.min(union ? union.right - union.left : Infinity, window.innerWidth * 0.94) / unitPx;
+            placeBuyDialogLabel(noteEl, { left: (left + right) / 2, top: bottom + noteSize * 0.95 }, BUY_DIALOG.noteUnits, maxUnits, unitPx);
+          }
+        }
+        raf = requestAnimationFrame(tick);
+      };
+      tick();
+
+      instance.play(BUY_DIALOG_CLIP('start'), false);
+      instance.onSettle = () => {
+        instance.onSettle = null;
+        if (!answered) instance.play(BUY_DIALOG_CLIP('idle'), true);
+      };
+    })().catch((err) => {
+      console.error('buy dialog failed to open:', err);
+      cleanup(false);
+    });
+  });
+}
+
 function setupDevPanel() {
   const toggleBtn = document.getElementById('devToggle');
   toggleBtn.addEventListener('click', () => {

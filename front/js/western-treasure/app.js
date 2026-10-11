@@ -17,6 +17,12 @@ const gameState = {
   freeSpinsTrigger: null,
 };
 
+// Buy Bonus: the price is bet × BUY_BONUS_COST_MULTIPLIER and the buy awards
+// BUY_BONUS_SPINS free spins — both from the bonus_buy / free_spins features
+// in app/seed/western_treasure.py. Keep them in sync with the seed.
+const BUY_BONUS_COST_MULTIPLIER = 100;
+const BUY_BONUS_SPINS = 10;
+
 const WIN_TIER_SOUNDS = { bigWin: 'bigWin', epicWin: 'epicWin', megaWin: 'megaWin', bonusSpinsTotalWin: 'bonusTotalWin' };
 
 function formatNumber(n) {
@@ -35,12 +41,12 @@ function renderBalance() {
 
 function setupBetStepper() {
   document.querySelector('[data-action="bet-minus"]').addEventListener('click', () => {
-    if (gameState.isSpinning || gameState.freeSpinsRemaining > 0) return;
+    if (gameState.isSpinning || gameState.freeSpinsRemaining > 0 || buyDialogOpen) return;
     gameState.betIndex = Math.max(0, gameState.betIndex - 1);
     renderBet();
   });
   document.querySelector('[data-action="bet-plus"]').addEventListener('click', () => {
-    if (gameState.isSpinning || gameState.freeSpinsRemaining > 0) return;
+    if (gameState.isSpinning || gameState.freeSpinsRemaining > 0 || buyDialogOpen) return;
     gameState.betIndex = Math.min(gameState.betSteps.length - 1, gameState.betIndex + 1);
     renderBet();
   });
@@ -84,7 +90,10 @@ async function applySpinResult(data) {
     // The entry's bonusSpinsWin is shown by the intro transition itself; a
     // re-trigger inside the bonus still shows its popup normally here.
     const shownByIntro = enteringBonus && data.popup.type === 'bonusSpinsWin';
-    if (!shownByIntro) {
+    // buyFreeSpins = receipt for a purchase the player already confirmed in
+    // the Buy Bonus dialog — never replay it.
+    const alreadyConfirmed = data.popup.type === 'buyFreeSpins';
+    if (!shownByIntro && !alreadyConfirmed) {
       const tierSound = WIN_TIER_SOUNDS[data.popup.type];
       if (tierSound) Sound.playSfx(tierSound);
       playPopup(data.popup.type, data.popup.amount);
@@ -98,7 +107,7 @@ async function applySpinResult(data) {
 }
 
 async function runSpin(request) {
-  if (gameState.isSpinning || !gameState.sessionId) return;
+  if (gameState.isSpinning || !gameState.sessionId || buyDialogOpen) return;
   gameState.isSpinning = true;
 
   const spinBtn = document.querySelector('[data-action="spin"]');
@@ -132,11 +141,46 @@ function setupSpinButton() {
   });
 }
 
+// The sign opens the confirm dialog (slot.js:openBuyBonusDialog); only BUY
+// spends. js/buy-bonus.js prices it: at the default bet the 100× buy is beyond
+// the starting balance, so the dialog quotes the highest bet step the balance
+// covers and the bet is switched to that step before buying.
+function canOpenBuyBonus() {
+  return (
+    gameState.sessionId &&
+    !gameState.isSpinning &&
+    gameState.freeSpinsRemaining === 0 &&
+    document.getElementById('screen').dataset.mode !== 'freespins' &&
+    !buyDialogOpen &&
+    dimActiveCount === 0 &&
+    !document.querySelector('.game-popup, .info-popup:not([hidden]), .wof:not([hidden])')
+  );
+}
+
 function setupBuyBonusButton() {
   const buyBtn = document.querySelector('.sign-buy-bonus');
   if (!buyBtn) return;
-  buyBtn.addEventListener('click', () => {
-    if (gameState.freeSpinsRemaining > 0) return;
+  buyBtn.addEventListener('click', async () => {
+    if (!canOpenBuyBonus()) return;
+    const prevBet = gameState.betSteps[gameState.betIndex];
+    const quote = BuyBonus.quote({
+      betSteps: gameState.betSteps,
+      betIndex: gameState.betIndex,
+      balance: gameState.balance,
+      multiplier: BUY_BONUS_COST_MULTIPLIER,
+    });
+    const confirmed = await openBuyBonusDialog({
+      spins: BUY_BONUS_SPINS,
+      quote,
+      prevBet,
+      currency: gameState.currency,
+    });
+    if (!confirmed || !quote.affordable) return;
+    if (gameState.isSpinning || gameState.freeSpinsRemaining > 0 || buyDialogOpen) return;
+    if (quote.betIndex !== gameState.betIndex) {
+      gameState.betIndex = quote.betIndex;
+      renderBet();
+    }
     const betAmount = gameState.betSteps[gameState.betIndex];
     runSpin(() => Api.buyFeature(gameState.sessionId, 'free_spins_buy', betAmount));
   });

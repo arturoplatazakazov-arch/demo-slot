@@ -402,6 +402,20 @@ body {
   pointer-events: none;
 }
 .buy-dialog-hits[hidden] { display: none; }
+/* While the dialog is up the whole layer catches taps: a tap that misses the
+   ✓/✗ (the backdrop) cancels. */
+.buy-dialog-hits.is-open { pointer-events: auto; }
+.buy-dialog-note {
+  position: absolute;
+  transform: translate(-50%, 95%);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: clamp(11px, 1.1vw, 17px);
+  color: var(--text-cream);
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.popup-amount.popup-amount--notice { font-size: clamp(14px, 1.8vw, 28px); }
 .buy-dialog-hit {
   position: absolute;
   transform: translate(-50%, -50%);

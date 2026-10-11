@@ -869,3 +869,40 @@ body.layout-fit .ui-bar {
   --pl-border: rgba(255,176,84,0.45);
   --pl-shadow: rgba(255,176,84,0.6);
 }
+
+/* ---------- Buy Bonus confirm dialog (slot.js showBuyBonusDialog) ----------
+   Transparent full-screen layer: swallows clicks while the card is up
+   (backdrop tap = cancel). The hit-areas sit invisibly over the ✓/✗ drawn on
+   the Spine canvas; the labels are pinned to the card's bones per frame. */
+.buy-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+.buy-dialog[hidden] { display: none; }
+.buy-dialog__hit {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.buy-dialog__hit[hidden] { display: none; }
+.buy-dialog__label {
+  position: absolute;
+  left: -9999px;
+  transform: translate(-50%, -50%);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text-cream);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85), 0 0 14px rgba(255, 205, 92, 0.65);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.buy-dialog.is-ready .buy-dialog__label { opacity: 1; }
+.buy-dialog__price.is-error { color: #ff7a6b; }
+.buy-dialog__note { font-weight: 700; color: #ffffff; }

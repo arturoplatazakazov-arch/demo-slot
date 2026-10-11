@@ -517,8 +517,7 @@ img.is-missing {
   white-space: nowrap;
 }
 
-/* ================================================================
-   Bottom UI bar
+/* =========================================================   Bottom UI bar
    ================================================================ */
 .ui-bar {
   position: sticky;
@@ -720,10 +719,8 @@ img.is-missing {
   .ui-spin-btn { width: 58px; height: 58px; }
 }
 
-/* ================================================================
-   EXPERIMENTAL: desktop "fit everything, no scroll" layout
-   ================================================================
-   Same experiment as Amy's Fruit Farm (see style.css) — toggled via the
+/* =========================================================   EXPERIMENTAL: desktop "fit everything, no scroll" layout
+   =========================================================   Same experiment as Amy's Fruit Farm (see style.css) — toggled via the
    dev-panel "fit-screen" button (slot.js setupDevPanel), not the default.
    .screen is normally a fixed 940px tall regardless of viewport, so a short
    viewport can need to scroll; this pins .screen to the viewport box and
@@ -753,8 +750,7 @@ body.layout-fit .ui-bar {
   -webkit-backdrop-filter: blur(6px);
 }
 
-/* ================================================================
-   Mobile (portrait) layout — same breakpoint/technique as Amy's Fruit
+/* =========================================================   Mobile (portrait) layout — same breakpoint/technique as Amy's Fruit
    Farm (see style.css), numbers re-derived from this theme's mobile bg
    art (bg-base-mob.jpg / bg-bonus-mob.jpg, 779x1416 / 780x1416) — first
    pass, expect follow-up tweaks once seen live.
@@ -868,8 +864,7 @@ body.layout-fit .ui-bar {
   --pl-shadow: rgba(255,207,61,0.6);
 }
 
-/* ================================================================
-   Idle-анимации статики (лого, рамка, баннер, счётчик, FX)
+/* =========================================================   Idle-анимации статики (лого, рамка, баннер, счётчик, FX)
    Всё на transform/opacity/filter — без layout, дёшево для мобильных вебвью.
    ================================================================ */
 
@@ -1017,8 +1012,7 @@ body.is-info-screen .ambient-fx { display: none; }
   .logo__img, .sign-buy-bonus__img, .sign-buy-bonus__label, .fs-counter, .fs-counter__img { animation: none; }
 }
 
-/* ================================================================
-   Превью-экраны: фичи (после прелоадера) и бонус (вход во фриспины)
+/* =========================================================   Превью-экраны: фичи (после прелоадера) и бонус (вход во фриспины)
    Лежат внутри .screen на z-index 4 (под #spineCanvas = 5, поэтому
    Spine-символы рисуются поверх DOM-вёрстки); бар и вывески прячутся.
    ================================================================ */
@@ -1301,3 +1295,39 @@ body.is-info-screen .dev-panel { visibility: hidden; }
   .hw-stage { width: min(70%, 36vh); }
   .info-screen--holdwin .bonus-intro__sub--small { font-size: 6vw; }
 }
+/* ---------- Buy Bonus confirm dialog (slot.js showBuyBonusDialog) ----------
+   Transparent full-screen layer: swallows clicks while the card is up
+   (backdrop tap = cancel). The hit-areas sit invisibly over the ✓/✗ drawn on
+   the Spine canvas; the labels are pinned to the card's bones per frame. */
+.buy-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+.buy-dialog[hidden] { display: none; }
+.buy-dialog__hit {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.buy-dialog__hit[hidden] { display: none; }
+.buy-dialog__label {
+  position: absolute;
+  left: -9999px;
+  transform: translate(-50%, -50%);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff6df;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85), 0 0 14px rgba(255, 211, 92, 0.65);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.buy-dialog.is-ready .buy-dialog__label { opacity: 1; }
+.buy-dialog__price.is-error { color: #ff7a6b; }
+.buy-dialog__note { font-weight: 700; color: #ffffff; }

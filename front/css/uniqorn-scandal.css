@@ -1161,3 +1161,83 @@ body.layout-fit .ui-bar {
 .sign-buy-bonus:hover .sign-buy-bonus__label {
   text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9), 0 0 16px rgba(255, 105, 190, 0.9);
 }
+
+/* ---------- Buy Bonus confirm dialog ----------
+   The win-popup plaque (popup_plate.png) with the Buy Bonus sign art
+   (buy_bonus.png) reused as the BUY / CANCEL buttons under it. The overlay
+   catches backdrop taps; the dim itself is #screenDim (pushScreenDim). */
+.buy-dialog {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: auto;
+}
+.game-popup.buy-popup {
+  top: 40%;
+  width: min(540px, 44vw);
+  pointer-events: auto;
+}
+.game-popup.buy-popup.is-mobile { width: min(540px, 78vw); }
+.buy-popup__actions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% - 3cqw);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5cqw 5cqw;
+}
+.buy-popup__note {
+  flex-basis: 100%;
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-size: 4.6cqw;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #fff6e2;
+  text-shadow: 0 0.4cqw 1.2cqw rgba(0, 0, 0, 0.95);
+  white-space: nowrap;
+}
+.buy-popup__btn {
+  position: relative;
+  width: 24cqw;
+  aspect-ratio: 731 / 736;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transition: transform 160ms ease, filter 160ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.buy-popup__btn img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 1cqw 2cqw rgba(0, 0, 0, 0.6));
+}
+.buy-popup__btn:hover { transform: scale(1.06); }
+.buy-popup__btn:active { transform: scale(0.95); }
+.buy-popup__btn:focus-visible { outline: none; }
+.buy-popup__btn:focus-visible img { filter: drop-shadow(0 0 2cqw rgba(255, 226, 138, 0.95)); }
+/* CANCEL / CLOSE = the same sign, drained of colour so BUY reads as the main action. */
+.buy-popup__btn.is-cancel img { filter: grayscale(0.85) brightness(0.75) drop-shadow(0 1cqw 2cqw rgba(0, 0, 0, 0.6)); }
+.buy-popup__btn-label {
+  position: absolute;
+  left: 50%;
+  top: 44.8%;
+  transform: translate(-50%, -50%);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-size: 5.4cqw;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: #fff6e2;
+  text-shadow: 0 0.4cqw 1cqw rgba(0, 0, 0, 0.95), 0 0 2cqw rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.buy-popup__btn.is-cancel .buy-popup__btn-label { font-size: 4.4cqw; }

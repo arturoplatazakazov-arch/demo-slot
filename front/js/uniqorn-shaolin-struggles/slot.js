@@ -957,8 +957,17 @@ function showBuyBonusDialog({ betSteps, betIndex, costMultiplier, currency, bala
   if (buyDialogOpen) return Promise.resolve({ confirmed: false, betIndex });
   buyDialogOpen = true;
 
+  // js/buy-bonus.js: открываемся на самой высокой ступени ставки, которую
+  // покрывает баланс (с пометкой «BET a → b», если она ниже игровой), «+» выше
+  // неё не пускает, а если не тянет даже минимальная — карточка превращается в
+  // уведомление NOT ENOUGH BALANCE с одной кнопкой закрытия.
+  const q = BuyBonus.quote({ betSteps, betIndex, balance, multiplier: costMultiplier });
+  const maxIndex = q.affordable
+    ? betSteps.reduce((best, bet, i) => (bet * costMultiplier <= balance ? i : best), 0)
+    : 0;
+
   return new Promise((resolve) => {
-    let index = betIndex;
+    let index = q.betIndex;
     pushScreenDim(false);
     Sound.playSfx('popupOpen');
 
@@ -982,45 +991,53 @@ function showBuyBonusDialog({ betSteps, betIndex, costMultiplier, currency, bala
     void node.offsetWidth;
     node.classList.add('is-in');
 
+    const fmt = (n) => Number(n).toLocaleString('en-US');
+    if (!q.affordable) {
+      node.classList.add('is-notice');
+      node.querySelector('.buy-dialog__bet').hidden = true;
+      node.querySelector('[data-answer="1"]').hidden = true;
+    }
     const render = () => {
       const bet = betSteps[index];
       const cost = bet * costMultiplier;
-      node.querySelector('#buyDialogPrice').textContent =
-        `${Number(cost).toLocaleString('en-US')} ${currency}`;
-      node.querySelector('#buyDialogBet').textContent =
-        `BET ${Number(bet).toLocaleString('en-US')}`;
-      // Раунд стоит 50 ставок, так что на верхних ступенях он дороже всего
-      // баланса — сервер ответил бы 400, а игрок не понял бы почему. Гасим ✓ и
-      // говорим прямо: ступенька ставки тут же рядом.
-      const affordable = balance == null || cost <= balance;
-      const yes = node.querySelector('[data-answer="1"]');
-      yes.disabled = !affordable;
-      yes.style.opacity = affordable ? '' : '0.35';
-      node.querySelector('#buyDialogNote').textContent = affordable
-        ? 'Раунд запускается сразу, ставка списывается один раз'
-        : 'Не хватает баланса — уменьшите ставку';
+      node.querySelector('#buyDialogPrice').textContent = q.affordable
+        ? `${fmt(cost)} ${currency}`
+        : 'NOT ENOUGH BALANCE';
+      node.querySelector('#buyDialogBet').textContent = `BET ${fmt(bet)}`;
+      let note = 'Раунд запускается сразу, ставка списывается один раз';
+      if (!q.affordable) note = `Минимальная цена — ${fmt(betSteps[0] * costMultiplier)} ${currency}`;
+      else if (index !== betIndex) note = `BET ${fmt(betSteps[betIndex])} → ${fmt(bet)}`;
+      node.querySelector('#buyDialogNote').textContent = note;
     };
     render();
 
     let answered = false;
+    const onKey = (event) => { if (event.key === 'Escape') answer(false); };
+    // Тап мимо карточки (по затемнению) — отмена. Вешаем на следующий тик,
+    // чтобы сюда не долетел тот же клик, что открыл диалог.
+    const onOutside = (event) => { if (!node.contains(event.target)) answer(false); };
     const answer = (confirmed) => {
       if (answered) return;
       answered = true;
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('click', onOutside, true);
       Sound.playSfx('click');
       node.classList.remove('is-in');
       setTimeout(() => {
         node.remove();
         popScreenDim(false);
         buyDialogOpen = false;
-        resolve({ confirmed, betIndex: index });
+        resolve({ confirmed: confirmed && q.affordable, betIndex: index });
       }, POPUP_EXIT_MS);
     };
+    document.addEventListener('keydown', onKey);
+    setTimeout(() => { if (!answered) document.addEventListener('click', onOutside, true); }, 0);
 
     node.querySelectorAll('[data-step]').forEach((btn) => {
       btn.addEventListener('click', () => {
         Sound.playSfx('click');
         const delta = Number(btn.dataset.step);
-        index = Math.min(betSteps.length - 1, Math.max(0, index + delta));
+        index = Math.min(maxIndex, Math.max(0, index + delta));
         render();
       });
     });

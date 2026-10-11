@@ -942,10 +942,18 @@ function playPopup(key, amount = 0, holdMs = 2500) {
   return playPopupSequence(key, amount, holdMs, { ownDim: true });
 }
 
-// Buy-bonus confirmation: resolves true on ✓, false on ✗ / backdrop.
-function openBuyDialog(price) {
+// Buy-bonus confirmation: resolves true on ✓, false on ✗ / backdrop / Escape.
+// `note` is a small line under the price ("BET a → b" when the bet had to be
+// lowered — js/buy-bonus.js); `affordable: false` turns the card into a
+// NOT ENOUGH BALANCE notice with only ✗.
+function openBuyDialog(price, { note = '', affordable = true } = {}) {
   const dlg = document.getElementById('buyDialog');
-  document.getElementById('buyDialogPrice').textContent = Number(price).toLocaleString('en-US');
+  const priceEl = document.getElementById('buyDialogPrice');
+  priceEl.textContent = affordable ? Number(price).toLocaleString('en-US') : 'NOT ENOUGH BALANCE';
+  priceEl.classList.toggle('is-notice', !affordable);
+  const noteEl = document.getElementById('buyDialogNote');
+  if (noteEl) noteEl.textContent = note;
+  document.getElementById('buyYes').hidden = !affordable;
   dlg.hidden = false;
   void dlg.offsetWidth;
   dlg.classList.add('is-open');
@@ -957,14 +965,17 @@ function openBuyDialog(price) {
       yes.removeEventListener('click', onYes);
       no.removeEventListener('click', onNo);
       dlg.removeEventListener('click', onBackdrop);
+      document.removeEventListener('keydown', onKey);
       setTimeout(() => { dlg.hidden = true; }, DIM_TRANSITION_MS);
-      resolve(answer);
+      resolve(answer && affordable);
     };
     const yes = document.getElementById('buyYes');
     const no = document.getElementById('buyNo');
     const onYes = () => close(true);
     const onNo = () => close(false);
     const onBackdrop = (e) => { if (e.target === dlg) close(false); };
+    const onKey = (e) => { if (e.key === 'Escape') close(false); };
+    document.addEventListener('keydown', onKey);
     yes.addEventListener('click', onYes);
     no.addEventListener('click', onNo);
     dlg.addEventListener('click', onBackdrop);

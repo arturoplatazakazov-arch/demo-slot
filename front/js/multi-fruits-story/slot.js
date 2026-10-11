@@ -1061,7 +1061,7 @@ const BUY_DIALOG_BUTTONS = [
 
 let buyDialogOpen = false;
 
-function trackBuyDialogHits(instance, buttons) {
+function trackBuyDialogHits(instance, buttons, noteEl = null) {
   const canvasEl = document.getElementById('spineCanvas');
   const dpr = window.devicePixelRatio || 1;
   let raf = null;
@@ -1078,6 +1078,13 @@ function trackBuyDialogHits(instance, buttons) {
       el.style.width = `${spec.w * scale}px`;
       el.style.height = `${spec.h * scale}px`;
     }
+    // The note sits just under the price, which rides POPUP_AMOUNT_BONE.
+    const priceBone = noteEl && instance.skeleton.findBone(POPUP_AMOUNT_BONE.buyFreeSpins);
+    if (priceBone) {
+      const pos = worldToScreen(priceBone.worldX, priceBone.worldY, canvasEl);
+      noteEl.style.left = `${pos.left}px`;
+      noteEl.style.top = `${pos.top}px`;
+    }
     raf = requestAnimationFrame(tick);
   };
   tick();
@@ -1086,7 +1093,12 @@ function trackBuyDialogHits(instance, buttons) {
 
 // Resolves true if the player confirmed, false if they cancelled — the caller
 // only spends money on true.
-function showBuyBonusDialog(cost) {
+//
+// `affordable: false` (BuyBonus.quote found no bet step the balance covers)
+// turns the card into a notice: the price spot reads NOT ENOUGH BALANCE, the
+// ✓ is dropped and only ✗ / backdrop / Escape remain. `note` is a small line
+// under the price (e.g. "BET 120,000 → 30,000" when the bet was lowered).
+function showBuyBonusDialog(cost, { affordable = true, note = '' } = {}) {
   const key = 'buyFreeSpins';
   if (buyDialogOpen) return Promise.resolve(false);
   buyDialogOpen = true;
@@ -1101,13 +1113,28 @@ function showBuyBonusDialog(cost) {
       const resource = await popupResourceCache[key];
 
       const instance = createPopupInstance(resource, key);
+      if (!affordable) {
+        const yesSlot = instance.skeleton.findSlot('popup_buy_bonus_spins_yes');
+        if (yesSlot) yesSlot.setAttachment(null);
+      }
       stage.addOverlay(instance);
       startPopupAmountTracking(instance, key, cost);
+      const amountEl = document.getElementById('popupAmount');
+      amountEl.classList.toggle('popup-amount--notice', !affordable);
+      if (!affordable) amountEl.textContent = 'NOT ENOUGH BALANCE';
 
       const layer = document.getElementById('buyDialogHits');
       layer.innerHTML = '';
       layer.hidden = false;
-      const buttons = BUY_DIALOG_BUTTONS.map((spec) => {
+      layer.classList.add('is-open');
+      let noteEl = null;
+      if (note) {
+        noteEl = document.createElement('div');
+        noteEl.className = 'buy-dialog-note';
+        noteEl.textContent = note;
+        layer.appendChild(noteEl);
+      }
+      const buttons = BUY_DIALOG_BUTTONS.filter((spec) => affordable || !spec.answer).map((spec) => {
         const el = document.createElement('button');
         el.type = 'button';
         el.className = 'buy-dialog-hit';
@@ -1115,14 +1142,19 @@ function showBuyBonusDialog(cost) {
         layer.appendChild(el);
         return { el, spec };
       });
-      const stopTracking = trackBuyDialogHits(instance, buttons);
+      const stopTracking = trackBuyDialogHits(instance, buttons, noteEl);
 
       let answered = false;
+      const onKey = (event) => { if (event.key === 'Escape') answer(false); };
+      const onBackdrop = (event) => { if (event.target === layer) answer(false); };
       const answer = (confirmed) => {
         if (answered) return;
         answered = true;
         Sound.playSfx('click');
         stopTracking();
+        document.removeEventListener('keydown', onKey);
+        layer.removeEventListener('click', onBackdrop);
+        layer.classList.remove('is-open');
         layer.hidden = true;
         layer.innerHTML = '';
         instance.play(popupClip(resource, 'end'), false);
@@ -1130,14 +1162,17 @@ function showBuyBonusDialog(cost) {
           instance.onSettle = null;
           stage.removeOverlay(instance);
           stopPopupAmountTracking();
+          amountEl.classList.remove('popup-amount--notice');
           popScreenDim(false);
           buyDialogOpen = false;
-          resolve(confirmed);
+          resolve(confirmed && affordable);
         };
       };
       for (const { el, spec } of buttons) {
         el.addEventListener('click', () => answer(spec.answer));
       }
+      document.addEventListener('keydown', onKey);
+      layer.addEventListener('click', onBackdrop);
 
       instance.play(popupClip(resource, 'start'), false);
       instance.onSettle = () => {

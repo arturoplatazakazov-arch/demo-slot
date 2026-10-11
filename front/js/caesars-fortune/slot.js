@@ -1407,17 +1407,28 @@ let buyDialogOpen = false;
 
 // Резолвится true, если игрок подтвердил, и false, если отменил, — деньги
 // тратит только true.
-function showBuyBonusDialog(spins) {
+//
+// Под плашкой — цена покупки (`price`) и мелкая строка `note` (например,
+// «BET a → b», когда ставку пришлось снизить, см. js/buy-bonus.js). При
+// `affordable: false` вместо цены — NOT ENOUGH BALANCE, ✓ убран, закрыть можно
+// ✗, тапом по затемнению или Escape.
+function showBuyBonusDialog(spins, { price = '', note = '', affordable = true } = {}) {
   if (buyDialogOpen) return Promise.resolve(false);
   buyDialogOpen = true;
 
   return new Promise((resolve) => {
     let node = null;
     let done = false;
+    const onKey = (event) => { if (event.key === 'Escape') finish(false); };
+    // Тап мимо карточки (по затемнению) — отмена. Вешается на следующий тик
+    // после показа, чтобы не поймать клик, который диалог открыл.
+    const onOutside = (event) => { if (node && !node.contains(event.target)) finish(false); };
     const finish = (confirmed) => {
       if (done) return;
       done = true;
       clearTimeout(safetyTimer);
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('click', onOutside, true);
       Sound.playSfx('popupClose');
       if (node) {
         node.classList.remove('is-in');
@@ -1427,8 +1438,9 @@ function showBuyBonusDialog(spins) {
       }
       popScreenDim(false);
       buyDialogOpen = false;
-      resolve(confirmed);
+      resolve(confirmed && affordable);
     };
+    document.addEventListener('keydown', onKey);
     // Диалог ждёт игрока сколько угодно, но не вечно: если попап почему-то
     // не отрисовался, экран не должен остаться затемнённым навсегда.
     const safetyTimer = setTimeout(() => finish(false), 120000);
@@ -1442,6 +1454,7 @@ function showBuyBonusDialog(spins) {
       const choice = document.createElement('div');
       choice.className = 'game-popup__choice';
       for (const spec of BUY_DIALOG_BUTTONS) {
+        if (spec.answer && !affordable) continue;
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.setAttribute('aria-label', spec.label);
@@ -1457,10 +1470,25 @@ function showBuyBonusDialog(spins) {
       }
       node.appendChild(choice);
 
+      const info = document.createElement('div');
+      info.className = 'game-popup__buyinfo';
+      const priceEl = document.createElement('div');
+      priceEl.className = 'game-popup__buyprice';
+      priceEl.textContent = affordable ? price : 'NOT ENOUGH BALANCE';
+      info.appendChild(priceEl);
+      if (note) {
+        const noteEl = document.createElement('div');
+        noteEl.className = 'game-popup__buynote';
+        noteEl.textContent = note;
+        info.appendChild(noteEl);
+      }
+      node.appendChild(info);
+
       document.getElementById('screen').appendChild(node);
       fitPopupText(node);
       void node.offsetWidth;
       node.classList.add('is-in');
+      setTimeout(() => { if (!done) document.addEventListener('click', onOutside, true); }, 0);
     })().catch((err) => {
       console.error('buy-bonus dialog failed — closing it so the screen is usable:', err);
       finish(false);

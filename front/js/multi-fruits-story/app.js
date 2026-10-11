@@ -146,14 +146,29 @@ function setupBuyBonusButton() {
   const buyBtn = document.querySelector('.sign-buy-bonus');
   if (!buyBtn) return;
   buyBtn.addEventListener('click', async () => {
-    if (gameState.isSpinning || gameState.freeSpinsRemaining > 0) return;
-    const betAmount = gameState.betSteps[gameState.betIndex];
+    // Base game only, and never over another popup / transition (any screen
+    // dim) or the Spine preview screens.
+    if (gameState.isSpinning || gameState.freeSpinsRemaining > 0 || !gameState.sessionId) return;
+    if (currentMode() !== 'base' || dimActiveCount > 0 || spineScreenOpen) return;
+    // Price at the current bet when the balance covers it, else at the
+    // highest bet step it does (js/buy-bonus.js).
+    const q = BuyBonus.quote({
+      betSteps: gameState.betSteps,
+      betIndex: gameState.betIndex,
+      balance: gameState.balance,
+      multiplier: BUY_BONUS_COST_MULTIPLIER,
+    });
+    const note = q.lowered
+      ? `BET ${formatNumber(gameState.betSteps[gameState.betIndex])} → ${formatNumber(q.bet)}`
+      : '';
     // The delivered popup art is a ✓/✗ dialog, so the sign opens it and the
     // purchase only fires on ✓ (see slot.js showBuyBonusDialog).
-    const confirmed = await showBuyBonusDialog(betAmount * BUY_BONUS_COST_MULTIPLIER);
-    if (!confirmed) return;
+    const confirmed = await showBuyBonusDialog(q.cost, { affordable: q.affordable, note });
+    if (!confirmed || !q.affordable) return;
+    gameState.betIndex = q.betIndex;
+    renderBet();
     // buy_id matches the bonus_buy product in app/seed/multi_fruits_story.py.
-    runSpin(() => Api.buyFeature(gameState.sessionId, 'free_spins_buy', betAmount));
+    runSpin(() => Api.buyFeature(gameState.sessionId, 'free_spins_buy', q.bet));
   });
 }
 

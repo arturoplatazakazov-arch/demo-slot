@@ -150,12 +150,29 @@ function setupBuyBonusButton() {
   const buyBtn = document.querySelector('.sign-buy-bonus');
   if (!buyBtn) return;
   buyBtn.addEventListener('click', async () => {
-    if (gameState.isSpinning || gameState.freeSpinsRemaining > 0) return;
+    if (gameState.isSpinning || gameState.freeSpinsRemaining > 0 || !gameState.sessionId) return;
+    // Только базовая игра и только когда поверх ничего нет (любое затемнение
+    // = попап / переход / другой диалог).
+    if (document.getElementById('screen').dataset.mode !== 'base' || dimActiveCount > 0) return;
+    // Цена на текущей ставке, если баланс её тянет, иначе на самой высокой
+    // ступени, которую тянет (js/buy-bonus.js).
+    const q = BuyBonus.quote({
+      betSteps: gameState.betSteps,
+      betIndex: gameState.betIndex,
+      balance: gameState.balance,
+      multiplier: BUY_BONUS_COST_MULTIPLIER,
+    });
     // Плашка покупки из макета — диалог с ✓/✗, поэтому указатель открывает
     // её, а деньги уходят только по ✓ (см. slot.js showBuyBonusDialog).
-    const confirmed = await showBuyBonusDialog(BUY_BONUS_SPINS);
-    if (!confirmed) return;
-    const betAmount = gameState.betSteps[gameState.betIndex];
+    const confirmed = await showBuyBonusDialog(BUY_BONUS_SPINS, {
+      price: `${formatNumber(q.cost)} ${gameState.currency}`,
+      note: q.lowered ? `BET ${formatNumber(gameState.betSteps[gameState.betIndex])} → ${formatNumber(q.bet)}` : '',
+      affordable: q.affordable,
+    });
+    if (!confirmed || !q.affordable) return;
+    gameState.betIndex = q.betIndex;
+    renderBet();
+    const betAmount = q.bet;
     // buy_id совпадает с продуктом bonus_buy в app/seed/caesars_fortune.py.
     runSpin(() => Api.buyFeature(gameState.sessionId, 'free_spins_buy', betAmount));
   });

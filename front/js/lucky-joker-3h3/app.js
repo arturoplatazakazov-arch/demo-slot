@@ -199,6 +199,9 @@ function setupBuyBonusButton() {
   if (!buyBtn) return;
   buyBtn.addEventListener('click', async () => {
     if (gameState.isSpinning || gameState.freeSpinsRemaining > 0 || gameState.pendingHoldAndWin) return;
+    // Base game only, and never over another popup / transition (any screen
+    // dim) or the Spine preview screens.
+    if (!gameState.sessionId || currentMode() !== 'base' || dimActiveCount > 0 || screenOpen) return;
     // The delivered popup art is a ✓/✗ dialog with its own bet stepper, so the
     // sign opens it and the purchase only fires on ✓ (slot.js
     // showBuyBonusDialog). Whatever bet the player stepped to in there is the
@@ -207,10 +210,11 @@ function setupBuyBonusButton() {
       betSteps: gameState.betSteps,
       betIndex: gameState.betIndex,
       costMultiplier: BUY_BONUS_COST_MULTIPLIER,
+      balance: gameState.balance,
     });
+    if (!confirmed) return;
     gameState.betIndex = betIndex;
     renderBet();
-    if (!confirmed) return;
     // buy_id matches the bonus_buy product in app/seed/lucky_joker_3h3.py.
     const betAmount = gameState.betSteps[gameState.betIndex];
     runSpin(() => Api.buyFeature(gameState.sessionId, 'free_spins_buy', betAmount));

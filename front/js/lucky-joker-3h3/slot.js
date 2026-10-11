@@ -1233,7 +1233,13 @@ let buyDialogOpen = false;
 // Resolves { confirmed, betIndex } — the caller only spends money on
 // `confirmed`, and takes back whatever bet the player stepped to in the
 // dialog. `betSteps`/`betIndex` come straight from app.js's gameState.
-function showBuyBonusDialog({ betSteps, betIndex, costMultiplier }) {
+//
+// Affordability (js/buy-bonus.js): the dialog opens at the highest bet step
+// the balance covers (a small note shows "BET a → b" when that's below the
+// game's bet), + never steps past what the balance covers, and when even the
+// minimum bet is out of reach the card turns into a notice — NOT ENOUGH
+// BALANCE with only ✗ (plus backdrop / Escape) to close it.
+function showBuyBonusDialog({ betSteps, betIndex, costMultiplier, balance }) {
   const key = 'buyFreeSpins';
   if (buyDialogOpen) return Promise.resolve({ confirmed: false, betIndex });
   buyDialogOpen = true;
@@ -1248,9 +1254,20 @@ function showBuyBonusDialog({ betSteps, betIndex, costMultiplier }) {
       const resource = await popupResourceCache[key];
 
       const instance = createPopupInstance(resource);
+      const q = BuyBonus.quote({ betSteps, betIndex, balance, multiplier: costMultiplier });
+      // Highest step the balance covers — + stops there.
+      const maxIndex = q.affordable
+        ? betSteps.reduce((best, bet, i) => (bet * costMultiplier <= balance ? i : best), 0)
+        : 0;
+      if (!q.affordable) {
+        for (const slotName of ['btn-accept', 'minus', 'plus', 'input-counter']) {
+          const slot = instance.skeleton.findSlot(slotName);
+          if (slot) slot.setAttachment(null);
+        }
+      }
       stage.addOverlay(instance);
 
-      let index = betIndex;
+      let index = q.betIndex;
       // Two live numbers: the total price on the popup's own amount overlay
       // (bone numb_usd) and the current bet inside the stepper's counter
       // (bone number).
@@ -1258,19 +1275,29 @@ function showBuyBonusDialog({ betSteps, betIndex, costMultiplier }) {
       betEl.className = 'coin-amount';
       document.getElementById('coinAmounts').appendChild(betEl);
 
+      const amountEl = document.getElementById('popupAmount');
+      const noteEl = document.createElement('div');
+      noteEl.className = 'buy-dialog-note';
+      const fmt = (n) => Number(n).toLocaleString('en-US');
       const renderNumbers = () => {
         const bet = betSteps[index];
-        document.getElementById('popupAmount').textContent =
-          Number(bet * costMultiplier).toLocaleString('en-US');
-        betEl.textContent = Number(bet).toLocaleString('en-US');
+        amountEl.textContent = q.affordable ? fmt(bet * costMultiplier) : 'NOT ENOUGH BALANCE';
+        betEl.textContent = q.affordable ? fmt(bet) : '';
+        noteEl.textContent = q.affordable && index !== betIndex
+          ? `BET ${fmt(betSteps[betIndex])} → ${fmt(bet)}`
+          : '';
       };
       startPopupAmountTracking(instance, key, betSteps[index] * costMultiplier);
+      amountEl.classList.toggle('popup-amount--notice', !q.affordable);
       renderNumbers();
 
       const layer = document.getElementById('buyDialogHits');
       layer.innerHTML = '';
       layer.hidden = false;
-      const buttons = BUY_DIALOG_BUTTONS.map((spec) => {
+      layer.classList.add('is-open');
+      layer.appendChild(noteEl);
+      const specs = q.affordable ? BUY_DIALOG_BUTTONS : BUY_DIALOG_BUTTONS.filter((spec) => spec.action === 'cancel');
+      const buttons = specs.map((spec) => {
         const el = document.createElement('button');
         el.type = 'button';
         el.className = 'buy-dialog-hit';
@@ -1281,14 +1308,20 @@ function showBuyBonusDialog({ betSteps, betIndex, costMultiplier }) {
       const stopTracking = trackBoneElements([
         ...buttons,
         { instance, bone: 'number', el: betEl },
+        { instance, bone: POPUP_AMOUNT_BONE[key], el: noteEl },
       ]);
 
       let answered = false;
+      const onKey = (event) => { if (event.key === 'Escape') answer(false); };
+      const onBackdrop = (event) => { if (event.target === layer) answer(false); };
       const answer = (confirmed) => {
         if (answered) return;
         answered = true;
         Sound.playSfx('click');
         stopTracking();
+        document.removeEventListener('keydown', onKey);
+        layer.removeEventListener('click', onBackdrop);
+        layer.classList.remove('is-open');
         betEl.remove();
         layer.hidden = true;
         layer.innerHTML = '';
@@ -1297,9 +1330,10 @@ function showBuyBonusDialog({ betSteps, betIndex, costMultiplier }) {
           instance.onSettle = null;
           stage.removeOverlay(instance);
           stopPopupAmountTracking();
+          amountEl.classList.remove('popup-amount--notice');
           popScreenDim(false);
           buyDialogOpen = false;
-          resolve({ confirmed, betIndex: index });
+          resolve({ confirmed: confirmed && q.affordable, betIndex: index });
         };
       };
       for (const { el, spec } of buttons) {
@@ -1308,11 +1342,13 @@ function showBuyBonusDialog({ betSteps, betIndex, costMultiplier }) {
           if (spec.action === 'cancel') return answer(false);
           Sound.playSfx('click');
           index = spec.action === 'bet-plus'
-            ? Math.min(betSteps.length - 1, index + 1)
+            ? Math.min(maxIndex, index + 1)
             : Math.max(0, index - 1);
           renderNumbers();
         });
       }
+      document.addEventListener('keydown', onKey);
+      layer.addEventListener('click', onBackdrop);
 
       instance.play(popupClip(resource, 'start'), false);
       instance.onSettle = () => {

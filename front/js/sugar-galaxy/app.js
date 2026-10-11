@@ -93,7 +93,9 @@ async function applySpinResult(data, totalWinFromCascades) {
   }
 
   if (data.popup) {
-    const shownByIntro = enteringBonus && data.popup.type === 'bonusSpinsWin';
+    // buyFreeSpins: the confirm dialog the purchase went through already showed it.
+    const shownByIntro =
+      (enteringBonus && data.popup.type === 'bonusSpinsWin') || data.popup.type === 'buyFreeSpins';
     if (!shownByIntro) {
       const tierSound = WIN_TIER_SOUNDS[data.popup.type];
       if (tierSound) Sound.playSfx(tierSound);
@@ -135,17 +137,50 @@ async function runSpin(request) {
 
 function setupSpinButton() {
   document.querySelector('[data-action="spin"]').addEventListener('click', () => {
+    if (buyDialogOpen) return; // the buy dialog is modal
     const betAmount = gameState.betSteps[gameState.betIndex];
     runSpin(() => Api.spin(gameState.sessionId, betAmount));
   });
 }
 
+// bonus_buy product in app/seed/sugar_galaxy.py: cost = bet x cost_multiplier.
+// The server charges its own configured cost; this only drives the dialog's
+// price and the affordability check (BuyBonus.quote, js/buy-bonus.js).
+const BUY_BONUS_COST_MULTIPLIER = 100;
+// Spins the purchase awards — the free_spins fallback award the backend gives a
+// forced (bought) entry (flat `spins_awarded` = 7).
+const BUY_BONUS_SPINS = 7;
+
 function setupBuyBonusButton() {
   const buyBtn = document.querySelector('.sign-buy-bonus');
   if (!buyBtn) return;
-  buyBtn.addEventListener('click', () => {
-    if (gameState.freeSpinsRemaining > 0) return;
-    const betAmount = gameState.betSteps[gameState.betIndex];
+  buyBtn.addEventListener('click', async () => {
+    // Base game only, and never over a spin, the bonus, a popup/transition or
+    // a preview screen.
+    if (gameState.isSpinning || gameState.freeSpinsRemaining > 0 || !gameState.sessionId) return;
+    if (document.getElementById('screen').dataset.mode !== 'base' || buyDialogBusy()) return;
+
+    const currentBet = gameState.betSteps[gameState.betIndex];
+    const q = BuyBonus.quote({
+      betSteps: gameState.betSteps,
+      betIndex: gameState.betIndex,
+      balance: gameState.balance,
+      multiplier: BUY_BONUS_COST_MULTIPLIER,
+    });
+    const confirmed = await showBuyBonusDialog({
+      cost: q.cost,
+      spins: BUY_BONUS_SPINS,
+      affordable: q.affordable,
+      betNote: q.lowered ? `BET ${formatNumber(currentBet)} → ${formatNumber(q.bet)}` : '',
+    });
+    if (!confirmed || !q.affordable) return;
+    if (gameState.isSpinning || gameState.freeSpinsRemaining > 0) return;
+    // The purchase is made at the quoted bet (lowered to the highest step the
+    // balance covers when needed) — the bar switches to it too.
+    gameState.betIndex = q.betIndex;
+    renderBet();
+    const betAmount = q.bet;
+    // buy_id matches the bonus_buy product in app/seed/sugar_galaxy.py.
     runSpin(() => Api.buyFeature(gameState.sessionId, 'free_spins_buy', betAmount));
   });
 }

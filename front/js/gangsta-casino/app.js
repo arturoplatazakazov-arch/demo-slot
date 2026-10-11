@@ -146,11 +146,28 @@ function setupBuyBonusButton() {
   if (!buyBtn) return;
   buyBtn.addEventListener('click', async () => {
     if (gameState.isSpinning || gameState.freeSpinsRemaining > 0 || !gameState.sessionId) return;
-    const betAmount = gameState.betSteps[gameState.betIndex];
-    const confirmed = await openBuyDialog(betAmount * BUY_COST_MULTIPLIER);
-    if (!confirmed) return;
+    // Base game only, and never over another popup / transition (screen dim),
+    // the wheel, the Spine preview screens or an already open dialog.
+    const shown = (id) => { const el = document.getElementById(id); return el && !el.hidden; };
+    if (currentMode() !== 'base' || document.getElementById('screenDim').classList.contains('is-active')) return;
+    if (shown('buyDialog') || shown('wofPopup') || shown('featureScreen')) return;
+    // Price at the current bet when the balance covers it, else at the
+    // highest bet step it does (js/buy-bonus.js).
+    const q = BuyBonus.quote({
+      betSteps: gameState.betSteps,
+      betIndex: gameState.betIndex,
+      balance: gameState.balance,
+      multiplier: BUY_COST_MULTIPLIER,
+    });
+    const confirmed = await openBuyDialog(q.cost, {
+      affordable: q.affordable,
+      note: q.lowered ? `BET ${formatNumber(gameState.betSteps[gameState.betIndex])} → ${formatNumber(q.bet)}` : '',
+    });
+    if (!confirmed || !q.affordable) return;
+    gameState.betIndex = q.betIndex;
+    renderBet();
     // buy_id matches the bonus_buy product in app/seed/gangsta_casino.py.
-    runSpin(() => Api.buyFeature(gameState.sessionId, 'free_spins_buy', betAmount));
+    runSpin(() => Api.buyFeature(gameState.sessionId, 'free_spins_buy', q.bet));
   });
 }
 

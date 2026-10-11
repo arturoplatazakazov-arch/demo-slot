@@ -1526,6 +1526,249 @@ function playPopup(key, amount = 0, holdMs = 2500) {
   return playPopupSequence(key, amount, holdMs, { ownDim: true });
 }
 
+// --- Buy Bonus confirmation dialog ------------------------------------------
+//
+// The buyFreeSpins popup is a DIALOG, not an announcement: its card carries a
+// ✓ and an ✗. So the Buy Bonus sign opens it and holds it on its idle loop
+// until the player answers — the purchase only fires on ✓ (app.js). The
+// server's own "buyFreeSpins" popup on the purchase response is skipped there,
+// since it would just repeat the card after the fact.
+//
+// The buttons are drawn on the Spine canvas, which takes no pointer events, so
+// each gets an invisible DOM hit-area sized to its attachment's live world
+// quad every frame. Price / spin count are DOM text pinned to bones the same
+// way the win-amount overlay is (font scaled with the bone), with the card's
+// baked-in placeholder number slots cleared. A full-screen transparent layer
+// under the hit-areas swallows every other click (backdrop tap = cancel).
+const BUY_DIALOG = {
+  clips: { start: 'start', idle: 'idle', end: 'end' },
+  // "1 000 000 USD" is baked placeholder art on the price plate.
+  hiddenSlots: ['1 000 000 usd (1)'],
+  acceptSlot: 'nefrit-accepn 1',
+  cancelSlot: 'nefrit-decline 1',
+  // Positions/fonts in the card's own art units: the 431x101 jade plate on
+  // bone "bone" carries two lines (spins over price) — no other free spot.
+  price: { bone: 'bone', dy: -24, font: 36 },
+  spins: { bone: 'bone', dy: 14, font: 24 },
+  note: { bone: 'bone', dy: -82, font: 26 },
+  spinsText: (n) => `${n} FREE SPINS`,
+};
+function BUY_DIALOG_LOAD(folder) {
+  if (!popupResourceCache.buyFreeSpins) popupResourceCache.buyFreeSpins = loadSpineResource(folder);
+  return popupResourceCache.buyFreeSpins;
+}
+function BUY_DIALOG_FIT() {
+  return 1; // same as every other popup here
+}
+// Anything modal on screen right now: a popup's dim, the dialog.
+function isScreenBusy() {
+  return buyDialogOpen || dimActiveCount > 0;
+}
+
+let buyDialogOpen = false;
+
+function isBuyDialogOpen() {
+  return buyDialogOpen;
+}
+
+function buyDialogEls() {
+  let root = document.getElementById('buyDialog');
+  if (!root) {
+    root = document.createElement('div');
+    root.id = 'buyDialog';
+    root.className = 'buy-dialog';
+    root.hidden = true;
+    root.innerHTML = `
+      <div class="buy-dialog__label buy-dialog__price"></div>
+      <div class="buy-dialog__label buy-dialog__spins"></div>
+      <div class="buy-dialog__label buy-dialog__note"></div>
+      <button type="button" class="buy-dialog__hit" data-answer="yes" aria-label="Buy"></button>
+      <button type="button" class="buy-dialog__hit" data-answer="no" aria-label="Cancel"></button>`;
+    document.body.appendChild(root);
+  }
+  return {
+    root,
+    price: root.querySelector('.buy-dialog__price'),
+    spins: root.querySelector('.buy-dialog__spins'),
+    note: root.querySelector('.buy-dialog__note'),
+    yes: root.querySelector('[data-answer="yes"]'),
+    no: root.querySelector('[data-answer="no"]'),
+  };
+}
+
+// Screen-space AABB (CSS px) of a slot's current region attachment.
+function buyDialogSlotRect(instance, slotName, canvasEl) {
+  const slot = instance.skeleton.findSlot(slotName);
+  const att = slot && slot.getAttachment();
+  if (!att || !(att instanceof spine.RegionAttachment)) return null;
+  const v = new Float32Array(8);
+  att.computeWorldVertices(slot, v, 0, 2);
+  let minX = Infinity; let minY = Infinity; let maxX = -Infinity; let maxY = -Infinity;
+  for (let i = 0; i < 8; i += 2) {
+    const p = worldToScreen(v[i], v[i + 1], canvasEl);
+    minX = Math.min(minX, p.left); maxX = Math.max(maxX, p.left);
+    minY = Math.min(minY, p.top); maxY = Math.max(maxY, p.top);
+  }
+  return { left: minX, top: minY, width: maxX - minX, height: maxY - minY };
+}
+
+// Pins `el` to a bone (+ an offset in the bone's own art units) with its font
+// sized in art units, so the text scales/moves with the card's animation.
+function buyDialogPlaceLabel(instance, el, spec, canvasEl) {
+  if (!spec || !el.textContent) return;
+  const bone = instance.skeleton.findBone(spec.bone);
+  if (!bone) return;
+  const dpr = window.devicePixelRatio || 1;
+  const dx = spec.dx || 0;
+  const dy = spec.dy || 0;
+  const wx = bone.a * dx + bone.b * dy + bone.worldX;
+  const wy = bone.c * dx + bone.d * dy + bone.worldY;
+  const pos = worldToScreen(wx, wy, canvasEl);
+  const scale = Math.hypot(bone.a, bone.c) / dpr;
+  el.style.left = `${pos.left}px`;
+  el.style.top = `${pos.top}px`;
+  // The long "NOT ENOUGH BALANCE" line gets a smaller size to stay on the plate.
+  const font = spec.font * (el.classList.contains('is-error') ? 0.6 : 1);
+  el.style.fontSize = `${Math.max(8, font * scale)}px`;
+}
+
+// opts: { price, spins, note, affordable } — price/note are preformatted
+// strings. Resolves true only if the player confirmed an affordable buy.
+function showBuyBonusDialog({ price = '', spins = 0, note = '', affordable = true } = {}) {
+  if (buyDialogOpen) return Promise.resolve(false);
+  buyDialogOpen = true;
+  const key = 'buyFreeSpins';
+  const cfg = BUY_DIALOG;
+  const els = buyDialogEls();
+  const canvasEl = document.getElementById('spineCanvas');
+
+  return new Promise((resolve) => {
+    let instance = null;
+    let raf = null;
+    let dimmed = false;
+    let answered = false;
+    let closed = false;
+
+    const cleanupDom = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = null;
+      els.root.hidden = true;
+      els.root.classList.remove('is-ready');
+      els.root.onclick = null;
+      els.yes.onclick = null;
+      els.no.onclick = null;
+      document.removeEventListener('keydown', onKey);
+    };
+    const close = (confirmed) => {
+      if (closed) return;
+      closed = true;
+      clearTimeout(safetyTimer);
+      cleanupDom();
+      if (instance) stage.removeOverlay(instance);
+      if (dimmed) popScreenDim(false);
+      buyDialogOpen = false;
+      resolve(confirmed);
+    };
+    const answer = (confirmed) => {
+      if (answered) return;
+      answered = true;
+      Sound.playSfx('click');
+      cleanupDom();
+      if (!instance) { close(confirmed); return; }
+      Sound.playSfx('popupClose');
+      instance.play(cfg.clips.end, false);
+      instance.onSettle = () => {
+        instance.onSettle = null;
+        close(confirmed);
+      };
+      // end clip never completes in a frozen (hidden) tab — don't hang on it.
+      setTimeout(() => close(confirmed), 1500);
+    };
+    function onKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); answer(false); }
+    }
+    // A broken asset must never leave the screen dimmed with the game locked.
+    let safetyTimer = setTimeout(() => {
+      if (!instance) close(false);
+    }, 10000);
+
+    (async () => {
+      Sound.playSfx('popupOpen');
+      pushScreenDim(false);
+      dimmed = true;
+
+      els.price.textContent = affordable ? price : 'NOT ENOUGH BALANCE';
+      els.price.classList.toggle('is-error', !affordable);
+      els.spins.textContent = spins ? cfg.spinsText(spins) : '';
+      els.note.textContent = affordable ? note : '';
+      els.yes.hidden = !affordable;
+      els.root.hidden = false;
+      els.root.onclick = (e) => { if (e.target === els.root) answer(false); };
+      els.yes.onclick = () => answer(true);
+      els.no.onclick = () => answer(false);
+      document.addEventListener('keydown', onKey);
+
+      await wait(DIM_TRANSITION_MS);
+      const resource = await BUY_DIALOG_LOAD(POPUP_FOLDERS[key]);
+      if (answered) { close(false); return; }
+
+      instance = resource.createInstance();
+      instance.anchorEl = document.getElementById('screen');
+      instance.fit = BUY_DIALOG_FIT();
+      for (const slotName of cfg.hiddenSlots) {
+        const slot = instance.skeleton.findSlot(slotName);
+        if (slot) slot.setAttachment(null);
+      }
+      if (!affordable) {
+        const slot = instance.skeleton.findSlot(cfg.acceptSlot);
+        if (slot) slot.setAttachment(null);
+      }
+      // Hidden-slot attachments come back if a clip keys them — re-clear each
+      // frame before tracking.
+      const reclear = () => {
+        for (const slotName of cfg.hiddenSlots.concat(affordable ? [] : [cfg.acceptSlot])) {
+          const slot = instance.skeleton.findSlot(slotName);
+          if (slot && slot.attachment) slot.setAttachment(null);
+        }
+      };
+      stage.addOverlay(instance);
+      instance.play(cfg.clips.start, false);
+      // Labels fade in once the card has landed (its start clip pops the art
+      // in from nothing); the timeout covers a start clip that never settles.
+      const showLabels = () => { if (!answered) els.root.classList.add('is-ready'); };
+      const labelsTimer = setTimeout(showLabels, 2000);
+      instance.onSettle = () => {
+        instance.onSettle = null;
+        clearTimeout(labelsTimer);
+        showLabels();
+        instance.play(cfg.clips.idle, true);
+      };
+
+      const tick = () => {
+        reclear();
+        const place = (btn, slotName) => {
+          const r = buyDialogSlotRect(instance, slotName, canvasEl);
+          if (!r) { btn.style.width = '0px'; return; }
+          btn.style.left = `${r.left}px`;
+          btn.style.top = `${r.top}px`;
+          btn.style.width = `${r.width}px`;
+          btn.style.height = `${r.height}px`;
+        };
+        if (affordable) place(els.yes, cfg.acceptSlot);
+        place(els.no, cfg.cancelSlot);
+        buyDialogPlaceLabel(instance, els.price, cfg.price, canvasEl);
+        buyDialogPlaceLabel(instance, els.spins, cfg.spins, canvasEl);
+        buyDialogPlaceLabel(instance, els.note, cfg.note, canvasEl);
+        raf = requestAnimationFrame(tick);
+      };
+      tick();
+    })().catch((err) => {
+      console.error('buy dialog failed to open — closing it so the game is not left locked:', err);
+      close(false);
+    });
+  });
+}
+
 // --- Big wild preview (dev-only) -------------------------------------------
 //
 // The reel-height "big" dragon wild (static_wild_big.png, big_idle/

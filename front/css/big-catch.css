@@ -1029,6 +1029,26 @@ body:not(.has-spine) .reel__cell.is-winning img {
   transition: transform 140ms ease, filter 140ms ease;
 }
 .game-popup__choice img { display: block; width: 100%; height: auto; }
+/* Цена покупки (или NOT ENOUGH BALANCE) и строка про снижение ставки — под
+   кнопками ✓/✗. */
+.game-popup__buyinfo {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 7cqw);
+  transform: translateX(-50%);
+  text-align: center;
+  white-space: nowrap;
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #fff6e2;
+  text-shadow: 0 0.4cqw 1.2cqw rgba(0, 0, 0, 0.9);
+  padding: 1cqw 4cqw 1.4cqw;
+  border-radius: 3cqw;
+  background: rgba(0, 0, 0, 0.6);
+}
+.game-popup__buyprice { font-size: 5.2cqw; }
+.game-popup__buynote { font-size: 2.6cqw; opacity: 0.9; }
 .game-popup__choice button:hover { transform: scale(1.06); filter: brightness(1.1); }
 .game-popup__choice button:active { transform: scale(0.95); }
 

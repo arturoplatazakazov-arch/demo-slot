@@ -176,7 +176,10 @@ function setupBuyBonusButton() {
   const buyBtn = document.getElementById('buyBonusBtn');
   if (!buyBtn) return;
   buyBtn.addEventListener('click', async () => {
-    if (gameState.isSpinning || gameState.pendingHoldAndWin) return;
+    if (gameState.isSpinning || gameState.pendingHoldAndWin || !gameState.sessionId) return;
+    // Только базовая игра и только когда поверх ничего нет (любое затемнение =
+    // попап / переход / другой диалог).
+    if (currentMode() !== 'base' || dimActiveCount > 0) return;
     const { confirmed, betIndex } = await showBuyBonusDialog({
       betSteps: gameState.betSteps,
       betIndex: gameState.betIndex,
@@ -184,9 +187,9 @@ function setupBuyBonusButton() {
       currency: gameState.currency,
       balance: gameState.balance,
     });
+    if (!confirmed) return;
     gameState.betIndex = betIndex;
     renderBet();
-    if (!confirmed) return;
     // buy_id — единственный продукт bonus_buy в сиде этой игры.
     const betAmount = gameState.betSteps[gameState.betIndex];
     runSpin(() => Api.buyFeature(gameState.sessionId, 'hold_and_win_buy', betAmount), betAmount);

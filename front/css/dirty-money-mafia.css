@@ -782,3 +782,29 @@ body.is-feature-screen .to-catalog-btn { visibility: hidden; }
   .fs-counter { left: 336.5px; top: 863.5px; width: 477px; height: 249px; }
   .fs-counter__value { font-size: 64px; }
 }
+
+/* ---------- Buy Bonus confirmation dialog (slot.js showBuyBonusDialog) ------
+   Full-screen layer over the Spine buy card: invisible hit-areas track the
+   card's own ✓/✗ art, labels reuse the popup-amount look. A tap on the layer
+   outside the card cancels. */
+.buy-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+.buy-dialog__hit {
+  position: fixed;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 24px;
+  -webkit-tap-highlight-color: transparent;
+}
+.buy-dialog__hit:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.85); outline-offset: 2px; }
+.buy-dialog__label { position: fixed; transition: none; line-height: 1; }
+.buy-dialog__note { font-weight: 700; letter-spacing: 0.04em; }
+/* The reel frame + logo (#stageFront) sit ABOVE the Spine canvas; fade them
+   while the buy card is up so they don't cut across it. */
+body.is-buy-dialog .stage--front { opacity: 0; }

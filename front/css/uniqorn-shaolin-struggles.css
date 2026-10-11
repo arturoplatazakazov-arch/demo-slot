@@ -808,6 +808,9 @@ body {
 .buy-dialog__answer--yes { background: linear-gradient(180deg, #8ff0b4, #2fae6a); }
 .buy-dialog__answer--no { background: linear-gradient(180deg, #ffb0a6, #d8442f); }
 .buy-dialog__answer:hover { filter: brightness(1.1); }
+.buy-dialog [hidden] { display: none !important; }
+/* Не хватает даже на минимальную ставку — карточка-уведомление. */
+.buy-dialog.is-notice .buy-dialog__price { font-size: 36px; }
 
 /* ---------- Paytable info popup ---------- */
 .info-popup {

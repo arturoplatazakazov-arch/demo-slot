@@ -965,6 +965,17 @@ function fitPopupText(node) {
   if (!body) return;
   const lines = [...body.querySelectorAll('.game-popup__title, .game-popup__amount, .game-popup__sub')];
 
+  // The panel's height comes from the plate art's intrinsic ratio: until the
+  // image is laid out the body is 0 tall and the height pass below would run
+  // every line down to its floor (tiny text on a session's first popup). Fit
+  // again on load instead (same guard as western-treasure).
+  const art = node.querySelector('.game-popup__art');
+  if (art && !art.complete) {
+    art.addEventListener('load', () => fitPopupText(node), { once: true });
+    return;
+  }
+  if (!body.clientWidth || !body.clientHeight) return;
+
   // Measure against the PANEL, not the line's own box: the body is a centred
   // flex column, so a nowrap line simply grows past its parent and its own
   // scrollWidth/clientWidth stay equal — it never looks overflowing to itself.
@@ -1062,6 +1073,140 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
 // Win-tier / dev popups: own their (partial) screen dim, as before.
 function playPopup(key, amount = 0, holdMs = 2500) {
   return playPopupSequence(key, amount, holdMs, { ownDim: true });
+}
+
+// --- Buy Bonus confirm dialog ------------------------------------------------
+
+// The Buy Bonus sign no longer buys on the spot: it opens this dialog first.
+// Same visual system as the win popups — the base plaque (popup_plate.png)
+// with DOM text fitted by fitPopupText — plus two copies of the Buy Bonus sign
+// art (buy_bonus.png) as the BUY / CANCEL buttons hanging under the plaque.
+// Resolves true on BUY; false on CANCEL / CLOSE, a tap on the backdrop or
+// Escape. `quote` is BuyBonus.quote()'s result (js/buy-bonus.js).
+let buyDialogOpen = false;
+
+function openBuyBonusDialog({ spins, quote, prevBet, currency = '' }) {
+  if (buyDialogOpen) return Promise.resolve(false);
+  buyDialogOpen = true;
+  const fmt = (n) => Number(n).toLocaleString('en-US');
+  const money = (n) => `${fmt(n)} ${currency}`.trim();
+  const cfg = POPUP_CONFIG.buyFreeSpins || {};
+
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'buy-dialog';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Buy free spins');
+
+    const node = document.createElement('div');
+    node.className = `game-popup buy-popup is-${cfg.tone || 'gold'} is-plate-base`;
+    if (isMobileLayout()) node.classList.add('is-mobile');
+
+    const art = document.createElement('img');
+    art.className = 'game-popup__art';
+    art.src = `${ASSET_ROOT}/img/${POPUP_PLATE_SRC.base}`;
+    art.alt = '';
+    node.appendChild(art);
+
+    const body = document.createElement('div');
+    body.className = 'game-popup__body';
+    const line = (cls, text) => {
+      const el = document.createElement('div');
+      el.className = cls;
+      el.textContent = text;
+      body.appendChild(el);
+    };
+    line('game-popup__sub', 'BUY FREE SPINS');
+    if (quote.affordable) {
+      line('game-popup__title', `${spins} FREE SPINS`);
+      line('game-popup__amount', money(quote.cost));
+    } else {
+      line('game-popup__title', 'NOT ENOUGH');
+      line('game-popup__amount', 'BALANCE');
+    }
+    node.appendChild(body);
+
+    const actions = document.createElement('div');
+    actions.className = 'buy-popup__actions';
+    let noteText = '';
+    if (!quote.affordable) noteText = `PRICE ${money(quote.cost)}`;
+    else if (quote.lowered) noteText = `BET ${fmt(prevBet)} → ${fmt(quote.bet)}`;
+    if (noteText) {
+      const note = document.createElement('div');
+      note.className = 'buy-popup__note';
+      note.textContent = noteText;
+      actions.appendChild(note);
+    }
+    const button = (kind, label, result) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `buy-popup__btn is-${kind}`;
+      btn.dataset.action = `buy-${kind}`;
+      const img = document.createElement('img');
+      img.src = `${ASSET_ROOT}/img/buy_bonus.png`;
+      img.alt = '';
+      btn.appendChild(img);
+      const span = document.createElement('span');
+      span.className = 'buy-popup__btn-label';
+      span.textContent = label;
+      btn.appendChild(span);
+      btn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        close(result);
+      });
+      actions.appendChild(btn);
+      return btn;
+    };
+    let focusBtn;
+    if (quote.affordable) {
+      button('cancel', 'CANCEL', false);
+      focusBtn = button('confirm', 'BUY', true);
+    } else {
+      focusBtn = button('cancel', 'CLOSE', false);
+    }
+    node.appendChild(actions);
+    overlay.appendChild(node);
+
+    let closed = false;
+    const onKey = (event) => {
+      if (event.key === 'Escape') close(false);
+    };
+    function close(result) {
+      if (closed) return;
+      closed = true;
+      document.removeEventListener('keydown', onKey);
+      Sound.playSfx(result ? 'click' : 'popupClose');
+      node.classList.remove('is-in');
+      node.classList.add('is-out');
+      overlay.classList.add('is-out');
+      popScreenDim();
+      buyDialogOpen = false;
+      setTimeout(() => overlay.remove(), POPUP_EXIT_MS);
+      resolve(result);
+    }
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) close(false);
+    });
+    document.addEventListener('keydown', onKey);
+
+    try {
+      Sound.playSfx('popupOpen');
+      pushScreenDim();
+      document.getElementById('screen').appendChild(overlay);
+      // The panel's height comes from the plate art's intrinsic ratio — fit
+      // only once it has laid out, or the text collapses to the size floor.
+      if (art.complete) fitPopupText(node);
+      else art.addEventListener('load', () => fitPopupText(node), { once: true });
+      void node.offsetWidth; // commit the pre-enter state before transitioning
+      node.classList.add('is-in');
+      if (focusBtn) focusBtn.focus({ preventScroll: true });
+    } catch (err) {
+      console.error('buy dialog failed to open:', err);
+      overlay.remove();
+      close(false);
+    }
+  });
 }
 
 // --- Dev panel --------------------------------------------------------------

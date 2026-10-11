@@ -41,12 +41,12 @@ function renderBalance() {
 
 function setupBetStepper() {
   document.querySelector('[data-action="bet-minus"]').addEventListener('click', () => {
-    if (gameState.isSpinning || gameState.freeSpinsRemaining > 0) return;
+    if (gameState.isSpinning || gameState.freeSpinsRemaining > 0 || isBuyDialogOpen()) return;
     gameState.betIndex = Math.max(0, gameState.betIndex - 1);
     renderBet();
   });
   document.querySelector('[data-action="bet-plus"]').addEventListener('click', () => {
-    if (gameState.isSpinning || gameState.freeSpinsRemaining > 0) return;
+    if (gameState.isSpinning || gameState.freeSpinsRemaining > 0 || isBuyDialogOpen()) return;
     gameState.betIndex = Math.min(gameState.betSteps.length - 1, gameState.betIndex + 1);
     renderBet();
   });
@@ -75,7 +75,9 @@ async function applySpinResult(data) {
   if (data.popup) {
     // The entry's bonusSpinsWin is shown by the intro transition itself; a
     // re-trigger inside the bonus still shows its popup normally here.
-    const shownByIntro = enteringBonus && data.popup.type === 'bonusSpinsWin';
+    // buyFreeSpins is the confirm card the purchase already went through.
+    const shownByIntro =
+      (enteringBonus && data.popup.type === 'bonusSpinsWin') || data.popup.type === 'buyFreeSpins';
     if (!shownByIntro) {
       const tierSound = WIN_TIER_SOUNDS[data.popup.type];
       if (tierSound) Sound.playSfx(tierSound);
@@ -120,22 +122,48 @@ async function runSpin(request) {
 
 function setupSpinButton() {
   document.querySelector('[data-action="spin"]').addEventListener('click', () => {
+    if (isBuyDialogOpen()) return;
     const betAmount = gameState.betSteps[gameState.betIndex];
     runSpin(() => Api.spin(gameState.sessionId, betAmount));
   });
 }
 
+// free_spins_buy product of the bonus_buy row in app/seed/amys_fruit_farm.py:
+// cost_multiplier 100, awards the free_spins fallback of 10 spins.
+const BUY_BONUS_COST_MULTIPLIER = 100;
+const BUY_BONUS_SPINS = 10;
+
 function setupBuyBonusButton() {
-  // front/img/amys-fruit-farm/img/sign_buy_bonus.png hasn't been delivered yet, so this
-  // renders as the dashed "missing asset" placeholder box (see index.html) —
-  // it's still a real, clickable trigger for the purchase flow underneath.
   const buyBtn = document.querySelector('.sign-buy-bonus');
   if (!buyBtn) return;
   buyBtn.style.cursor = 'pointer';
-  buyBtn.addEventListener('click', () => {
-    if (gameState.freeSpinsRemaining > 0) return;
-    const betAmount = gameState.betSteps[gameState.betIndex];
-    runSpin(() => Api.buyFeature(gameState.sessionId, 'free_spins_buy', betAmount));
+  buyBtn.addEventListener('click', async () => {
+    // Base game only, nothing else on screen.
+    if (!gameState.sessionId || gameState.isSpinning || gameState.freeSpinsRemaining > 0) return;
+    if (document.getElementById('screen').dataset.mode !== 'base' || isScreenBusy()) return;
+
+    // A buy costs bet x 100; when the current bet can't be covered, quote the
+    // highest bet step the balance still can (the bet switches to it on ✓).
+    const currentBet = gameState.betSteps[gameState.betIndex];
+    const q = BuyBonus.quote({
+      betSteps: gameState.betSteps,
+      betIndex: gameState.betIndex,
+      balance: gameState.balance,
+      multiplier: BUY_BONUS_COST_MULTIPLIER,
+    });
+    const confirmed = await showBuyBonusDialog({
+      price: `${formatNumber(q.cost)} ${gameState.currency}`,
+      spins: BUY_BONUS_SPINS,
+      note: q.lowered ? `BET ${formatNumber(currentBet)} → ${formatNumber(q.bet)}` : '',
+      affordable: q.affordable,
+    });
+    if (!confirmed || !q.affordable) return;
+    if (gameState.isSpinning || gameState.freeSpinsRemaining > 0) return;
+    if (q.lowered) {
+      gameState.betIndex = q.betIndex;
+      renderBet();
+    }
+    runSpin(() => Api.buyFeature(gameState.sessionId, 'free_spins_buy', q.bet));
   });
 }
 
