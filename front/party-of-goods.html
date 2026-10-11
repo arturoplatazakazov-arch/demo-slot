@@ -6,7 +6,7 @@
 <title>Party Gods — demo</title>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/preloader.css?v=1">
-<link rel="stylesheet" href="css/party-of-goods.css?v=19">
+<link rel="stylesheet" href="css/party-of-goods.css?v=20">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 </head>
 <body>
@@ -34,6 +34,8 @@
     <button class="dev-btn" data-popup="bonusSpinsWin" type="button">Bonus Spins Win</button>
     <button class="dev-btn" data-popup="bonusSpinsTotalWin" type="button">Bonus Total Win</button>
     <button class="dev-btn" data-popup="buyFreeSpins" type="button">Buy Free Spins</button>
+    <button class="dev-btn" id="devFeatureScreen" type="button">Feature Screen</button>
+    <button class="dev-btn" id="devBonusScreen" type="button">Bonus Screen</button>
     <button class="dev-btn" id="devFitToggle" type="button">fit-screen: on</button>
     <span class="dev-hint">клик по символу в сетке — превью его win-анимации</span>
   </div>
@@ -94,6 +96,15 @@
     </div>
 
   </div>
+
+  <!-- Полноэкранные Spine-экраны: превью фич (после загрузки) и превью бонуса
+       (вход во фриспины). Скелеты — img/party-of-goods/screens/{feature,bonus}_{desk,mob},
+       собираются scripts/party_of_goods_screens.py. Фон — bg игры под #spineCanvas,
+       который на это время поднимается сюда (body.is-preview-screen). -->
+  <div class="pscreen" id="previewScreen" hidden>
+    <img class="pscreen__bg" id="previewScreenBg" alt="">
+  </div>
+  <div class="pscreen-count" id="previewCount" hidden></div>
 
   <!-- Paytable info popup — заполняется из session-start's `symbols`. -->
   <div class="info-popup" id="infoPopup" hidden>
@@ -216,7 +227,7 @@
   <script src="js/api.js?v=2"></script>
   <script src="js/reel-math.js?v=6"></script>
   <script src="js/party-of-goods/sound.js?v=8"></script>
-  <script src="js/party-of-goods/slot.js?v=43"></script>
+  <script src="js/party-of-goods/slot.js?v=46"></script>
   <script src="js/party-of-goods/app.js?v=7"></script>
   <!-- Поведение нижнего бара V3: флайаут, тултипы, заглушки авто/турбо. -->
   <script src="js/ui-bar-v3.js?v=4"></script>

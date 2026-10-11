@@ -971,10 +971,161 @@ const BONUS_INTRO_HOLD_MS = 3000;
 async function enterBonusTransition(amount = 0) {
   pushScreenDim(true); // opaque blackout in
   await wait(DIM_TRANSITION_MS);
-  await playPopupSequence('bonusSpinsWin', amount, BONUS_INTRO_HOLD_MS, { ownDim: false });
   applyModeScreen('freespins');
+  // Spine bonus preview (theatre + real spin count, "TAP TO START"); the
+  // plain popup only if the screen couldn't run (no WebGL / export missing).
+  const ran = await showBonusScreen(amount);
+  if (!ran) await playPopupSequence('bonusSpinsWin', amount, BONUS_INTRO_HOLD_MS, { ownDim: false });
   await wait(DIM_TRANSITION_MS);
   popScreenDim(true); // reveal the bonus screen
+}
+
+// --- Feature / bonus preview screens (full-screen Spine) --------------------
+//
+// Generated skeletons (scripts/party_of_goods_screens.py), one per layout:
+// screens/{feature,bonus}_{desk,mob}. Each is authored on its design canvas
+// around the skeleton origin (1 unit = 1 design px) with `intro` (3s) then a
+// seamless `idle` loop, and is contain-fitted into the viewport — the page's
+// own bg (cover) sits under it, so any aspect ratio is covered. Click
+// anywhere closes the screen with a fade.
+
+const SCREEN_ROOT = `${ASSET_ROOT}/screens`;
+const SCREEN_BOX = {
+  desk: { x: -966, y: -470, width: 1932, height: 940 },
+  mob: { x: -390, y: -708, width: 780, height: 1416 },
+};
+const SCREEN_FADE_MS = 450;
+// Bonus screen: the medallion lands at ~1.75s of `intro`; the count pops in then.
+const BONUS_COUNT_IN_S = 1.75;
+const BONUS_COUNT_FONT_UNITS = 100;
+// Autoplay must not stall on the bonus screen forever.
+const BONUS_SCREEN_AUTOCLOSE_MS = 10000;
+const screenResourceCache = {};
+
+function screenVariant() {
+  return isMobileLayout() ? 'mob' : 'desk';
+}
+
+function getScreenResource(kind, variant = screenVariant()) {
+  const key = `${kind}_${variant}`;
+  if (!screenResourceCache[key]) screenResourceCache[key] = loadSpineResource(`${SCREEN_ROOT}/${key}`);
+  return screenResourceCache[key];
+}
+
+let previewScreenOpen = false;
+
+// Shared lifecycle of the two screens. `onFrame(inst, alpha)` runs every frame
+// while the screen is up. Resolves true once closed, false if it couldn't run.
+function showPreviewScreen(kind, { onFrame = null, autoCloseMs = 0 } = {}) {
+  const root = document.getElementById('previewScreen');
+  if (!stage || !root || previewScreenOpen) return Promise.resolve(false);
+  previewScreenOpen = true;
+  const variant = screenVariant();
+  return getScreenResource(kind, variant).then((resource) => new Promise((resolve) => {
+    const inst = resource.createInstance();
+    inst.anchorEl = root;
+    inst.fit = 1;
+    inst.boundsOverride = SCREEN_BOX[variant];
+
+    document.getElementById('previewScreenBg').src = bgSrcFor(document.getElementById('screen').dataset.mode || 'base');
+    document.body.classList.add('is-preview-screen');
+    stage.baseHidden = true;
+    root.hidden = false;
+    void root.offsetWidth;
+    root.classList.add('is-open');
+    stage.addOverlay(inst);
+    inst.play('intro', false);
+    inst.queue('idle', true);
+
+    let done = false;
+    let alpha = 1;
+    const frame = () => {
+      if (done) return;
+      if (onFrame) onFrame(inst, alpha);
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+
+    let closing = false;
+    let autoTimer = null;
+    const close = () => {
+      if (closing) return;
+      closing = true;
+      clearTimeout(autoTimer);
+      root.removeEventListener('click', close);
+      Sound.playSfx('click');
+      root.classList.remove('is-open');
+      const start = performance.now();
+      const finish = () => {
+        if (done) return;
+        done = true;
+        stage.removeOverlay(inst);
+        stage.baseHidden = false;
+        root.hidden = true;
+        document.body.classList.remove('is-preview-screen');
+        previewScreenOpen = false;
+        resolve(true);
+      };
+      const tick = (now) => {
+        if (done) return;
+        const t = Math.min(1, (now - start) / SCREEN_FADE_MS);
+        alpha = 1 - t;
+        inst.skeleton.color.a = alpha;
+        if (onFrame) onFrame(inst, alpha);
+        if (t < 1) requestAnimationFrame(tick);
+        else finish();
+      };
+      requestAnimationFrame(tick);
+      setTimeout(finish, SCREEN_FADE_MS + 200); // hidden tab: rAF frozen
+    };
+    root.addEventListener('click', close);
+    if (autoCloseMs) autoTimer = setTimeout(close, autoCloseMs);
+  })).catch((err) => {
+    console.warn(`${kind} screen failed:`, err);
+    previewScreenOpen = false;
+    stage.baseHidden = false;
+    document.body.classList.remove('is-preview-screen');
+    root.hidden = true;
+    return false;
+  });
+}
+
+function showFeatureScreen() {
+  return showPreviewScreen('feature');
+}
+
+function showBonusScreen(spins) {
+  const el = document.getElementById('previewCount');
+  const canvasEl = document.getElementById('spineCanvas');
+  const dpr = window.devicePixelRatio || 1;
+  el.textContent = String(spins || 10);
+  el.classList.remove('is-in');
+  el.style.visibility = 'hidden';
+  el.hidden = false;
+  let shown = false;
+  return showPreviewScreen('bonus', {
+    autoCloseMs: BONUS_SCREEN_AUTOCLOSE_MS,
+    onFrame: (inst, alpha) => {
+      const bone = inst.skeleton.findBone('count');
+      if (!bone) return;
+      const entry = inst.animationState.getCurrent(0);
+      const inIntro = entry && entry.animation && entry.animation.name === 'intro';
+      if (!shown && (!inIntro || entry.trackTime >= BONUS_COUNT_IN_S)) {
+        shown = true;
+        el.style.visibility = 'visible';
+        el.classList.add('is-in');
+      }
+      const pos = worldToScreen(bone.worldX, bone.worldY, canvasEl);
+      const scale = Math.hypot(bone.a, bone.c) / dpr;
+      el.style.left = `${pos.left}px`;
+      el.style.top = `${pos.top}px`;
+      el.style.fontSize = `${BONUS_COUNT_FONT_UNITS * scale}px`;
+      el.style.opacity = String(alpha);
+    },
+  }).then((ran) => {
+    el.hidden = true;
+    return ran;
+  });
 }
 
 function setFreeSpinsMode(active, amount = 0) {
@@ -1098,6 +1249,9 @@ function setupDevPanel() {
   document.querySelectorAll('[data-popup]').forEach((btn) => {
     btn.addEventListener('click', () => playPopup(btn.dataset.popup, 12345));
   });
+
+  document.getElementById('devFeatureScreen')?.addEventListener('click', () => showFeatureScreen());
+  document.getElementById('devBonusScreen')?.addEventListener('click', () => showBonusScreen(15));
 
   const fitToggleBtn = document.getElementById('devFitToggle');
   if (fitToggleBtn) {
@@ -1229,6 +1383,10 @@ function preloadAssets() {
   tasks.push(track(preloadImage(bgSrcFor('bonus'))));
   for (const p of Sound.preloadPromises || []) tasks.push(track(p));
   tasks.push(track(warmUpWebGl(getSymbolResource(SYMBOL_CODES[0]))));
+  // The feature screen opens right after boot; the bonus one only on a
+  // trigger, so it loads in the background instead of holding the preloader.
+  tasks.push(track(getScreenResource('feature')));
+  getScreenResource('bonus').catch(() => {});
 
   return Promise.race([Promise.all(tasks), wait(PRELOAD_TIMEOUT_MS)]);
 }
@@ -1253,6 +1411,9 @@ async function init() {
   if (window.Preloader) window.Preloader.done();
 
   window.__slot = { stage, cellInfos };
+
+  // ?nofs — dev/screenshot convenience: straight into the game.
+  if (!new URLSearchParams(location.search).has('nofs')) showFeatureScreen();
 }
 
 init();

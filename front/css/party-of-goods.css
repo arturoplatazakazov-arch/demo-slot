@@ -437,6 +437,62 @@ img.is-missing {
   z-index: 5;
 }
 
+/* ---------- Full-screen Spine screens (feature preview / bonus preview) ----------
+   The skeleton draws on #spineCanvas, lifted above everything while a screen
+   is up; under it, the game's own bg (cover) + a wine vignette. Click anywhere
+   closes it (the whole stack fades out). */
+.pscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  cursor: pointer;
+  background: #12020a;
+  opacity: 0;
+  transition: opacity 350ms ease-out;
+}
+.pscreen[hidden] { display: none; }
+.pscreen.is-open { opacity: 1; }
+.pscreen__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.55;
+}
+.pscreen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 45%, rgba(60, 4, 22, 0.25) 0%, rgba(30, 2, 12, 0.7) 60%, rgba(10, 0, 4, 0.92) 100%);
+}
+body.is-preview-screen #spineCanvas { position: fixed; z-index: 201; }
+body.is-preview-screen .dev-panel,
+body.is-preview-screen .to-catalog-btn { visibility: hidden; }
+
+/* Real free-spin count, glued every frame to the bonus skeleton's `count` bone
+   (centre of the laurel medallion's disc). */
+.pscreen-count {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 202;
+  transform: translate(-50%, -50%);
+  font-family: 'Cinzel', Georgia, serif;
+  font-weight: 900;
+  line-height: 1;
+  color: #fff3d0;
+  text-shadow: 0 3px 0 #6b0c1c, 0 0 10px rgba(255, 190, 70, 0.95), 0 0 26px rgba(255, 120, 40, 0.7);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.pscreen-count[hidden] { display: none; }
+.pscreen-count.is-in { animation: pscreen-count-in 420ms cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes pscreen-count-in {
+  from { transform: translate(-50%, -50%) scale(2.2); filter: brightness(2.4); }
+  to { transform: translate(-50%, -50%) scale(1); filter: none; }
+}
+
 /* ---------- Multi counter (multy_counter.png) — visible in BOTH modes.
    Base game: current spin's running cascade multiplier (resets each spin).
    Free spins: the session-wide token-multiplier accumulator (persists
