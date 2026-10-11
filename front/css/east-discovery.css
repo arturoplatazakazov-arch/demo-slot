@@ -185,9 +185,10 @@ body {
   left: 50%;
   transform: translateX(-50%);
   height: 22.5%;
-  object-fit: contain;
+  aspect-ratio: 351 / 208;
   z-index: 3;
 }
+.logo__img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
 .reel {
   position: absolute;
@@ -865,4 +866,438 @@ body.layout-fit .ui-bar {
   --pl-glow-b: rgba(255,122,61,0.12);
   --pl-border: rgba(255,207,61,0.45);
   --pl-shadow: rgba(255,207,61,0.6);
+}
+
+/* ================================================================
+   Idle-анимации статики (лого, рамка, баннер, счётчик, FX)
+   Всё на transform/opacity/filter — без layout, дёшево для мобильных вебвью.
+   ================================================================ */
+
+/* Лого: дыхание свечения + проход блика по буквам (маска = сама картинка). */
+.logo__img { animation: logo-glow 4.2s ease-in-out infinite; }
+@keyframes logo-glow {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(255, 190, 80, 0.25)); transform: scale(1); }
+  50% { filter: drop-shadow(0 0 16px rgba(255, 205, 100, 0.75)); transform: scale(1.025); }
+}
+.logo__shine {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-mask: url(../img/east-discovery/img/Logo_east.png) center / contain no-repeat;
+  mask: url(../img/east-discovery/img/Logo_east.png) center / contain no-repeat;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.95) 50%, transparent 62%) -160% 0 / 220% 100% no-repeat;
+  mix-blend-mode: screen;
+  animation: logo-shine 6s ease-in-out 1.5s infinite;
+}
+@keyframes logo-shine {
+  0% { background-position: -160% 0; }
+  32%, 100% { background-position: 160% 0; }
+}
+
+/* Рамка барабанов: редкий золотой «проход» по резьбе. */
+.reel__gleam {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  pointer-events: none;
+  -webkit-mask: url(../img/east-discovery/img/frame.png) center / 100% 100% no-repeat;
+  mask: url(../img/east-discovery/img/frame.png) center / 100% 100% no-repeat;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 226, 150, 0.85) 50%, transparent 60%) -150% 0 / 240% 100% no-repeat;
+  mix-blend-mode: screen;
+  animation: frame-gleam 9s ease-in-out 3s infinite;
+}
+@keyframes frame-gleam {
+  0% { background-position: -150% 0; }
+  22%, 100% { background-position: 150% 0; }
+}
+
+/* Баннер Buy Bonus: колышется на бамбуковой жерди (ось у верха). */
+.sign-buy-bonus__img,
+.sign-buy-bonus__label {
+  transform-origin: 50% 8%;
+}
+.sign-buy-bonus__img { animation: banner-sway 5.5s ease-in-out infinite; }
+.sign-buy-bonus__label { animation: banner-sway-label 5.5s ease-in-out infinite; }
+@keyframes banner-sway {
+  0%, 100% { transform: rotate(-1.3deg); }
+  50% { transform: rotate(1.3deg); }
+}
+@keyframes banner-sway-label {
+  0%, 100% { transform: translateX(-50%) rotate(-1.3deg); }
+  50% { transform: translateX(-50%) rotate(1.3deg); }
+}
+
+/* Счётчик фриспинов (фонарь): покачивание + мерцание; цифра «щёлкает» при смене. */
+.fs-counter { animation: lantern-bob 4.8s ease-in-out infinite; transform-origin: 50% 0; }
+@keyframes lantern-bob {
+  0%, 100% { transform: translateY(0) rotate(-1.4deg); }
+  50% { transform: translateY(4px) rotate(1.4deg); }
+}
+.fs-counter__img { animation: lantern-flicker 2.6s ease-in-out infinite; }
+@keyframes lantern-flicker {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 6px rgba(255, 170, 60, 0.35)); }
+  45% { filter: brightness(1.12) drop-shadow(0 0 14px rgba(255, 190, 80, 0.7)); }
+  70% { filter: brightness(0.96) drop-shadow(0 0 8px rgba(255, 170, 60, 0.4)); }
+}
+.fs-counter__value.is-tick { animation: counter-tick 420ms cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes counter-tick {
+  0% { transform: translate(-50%, -50%) scale(1.7); filter: brightness(1.8); }
+  100% { transform: translate(-50%, -50%) scale(1); filter: brightness(1); }
+}
+
+/* Лепестки сакуры (base) и фонарики/светлячки (bonus): частицы генерит setupAmbientFx. */
+.ambient-fx {
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 7;
+}
+.fx-p {
+  position: absolute;
+  top: -6%;
+  left: var(--x);
+  width: var(--s);
+  height: calc(var(--s) * 0.62);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.fx-p--petal {
+  border-radius: 80% 0 80% 0;
+  background: radial-gradient(circle at 30% 30%, #ffe3ee, #f58fb4 70%);
+  animation: petal-fall var(--d) linear var(--delay) infinite;
+}
+@keyframes petal-fall {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 0; }
+  8% { opacity: 0.9; }
+  50% { transform: translate3d(calc(var(--sway) * -1), 55vh, 0) rotate(200deg); }
+  92% { opacity: 0.8; }
+  100% { transform: translate3d(var(--sway), 112vh, 0) rotate(400deg); opacity: 0; }
+}
+.fx-p--lantern {
+  top: auto;
+  bottom: -8%;
+  width: calc(var(--s) * 0.7);
+  height: var(--s);
+  border-radius: 40% 40% 46% 46%;
+  background: radial-gradient(circle at 50% 60%, #fff1b8, #ffb13c 55%, #d2641c 100%);
+  box-shadow: 0 0 calc(var(--s) * 0.9) rgba(255, 170, 60, 0.75);
+  animation: lantern-rise var(--d) ease-in var(--delay) infinite;
+}
+@keyframes lantern-rise {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  10% { opacity: 0.9; }
+  50% { transform: translate3d(var(--sway), -55vh, 0); }
+  92% { opacity: 0.7; }
+  100% { transform: translate3d(calc(var(--sway) * -1), -115vh, 0); opacity: 0; }
+}
+.fx-p--firefly {
+  top: auto;
+  bottom: calc(var(--y) * 1%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff3b0;
+  box-shadow: 0 0 10px 3px rgba(255, 220, 110, 0.85);
+  animation: firefly var(--d) ease-in-out var(--delay) infinite;
+}
+@keyframes firefly {
+  0%, 100% { transform: translate3d(0, 0, 0); opacity: 0; }
+  25% { opacity: 1; }
+  50% { transform: translate3d(var(--sway), -40px, 0); opacity: 0.2; }
+  75% { opacity: 1; }
+}
+.ambient-fx [data-for] { display: none; }
+.screen[data-mode="base"] .fx-p--lantern,
+.screen[data-mode="base"] .fx-p--firefly,
+.screen[data-mode="freespins"] .fx-p--petal { display: none; }
+body.is-info-screen .ambient-fx { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-fx, .logo__shine, .reel__gleam { display: none; }
+  .logo__img, .sign-buy-bonus__img, .sign-buy-bonus__label, .fs-counter, .fs-counter__img { animation: none; }
+}
+
+/* ================================================================
+   Превью-экраны: фичи (после прелоадера) и бонус (вход во фриспины)
+   Лежат внутри .screen на z-index 4 (под #spineCanvas = 5, поэтому
+   Spine-символы рисуются поверх DOM-вёрстки); бар и вывески прячутся.
+   ================================================================ */
+body.is-info-screen .sign-buy-bonus,
+body.is-info-screen .fs-counter,
+body.is-info-screen .v3-bar,
+body.is-info-screen .dev-panel { visibility: hidden; }
+
+.info-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  overflow: hidden;
+  opacity: 0;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  font-family: 'Luckiest Guy', cursive;
+  transition: opacity 500ms ease;
+}
+.info-screen[hidden] { display: none; }
+.info-screen.is-shown { opacity: 1; }
+
+.info-screen__bg {
+  position: absolute;
+  inset: -3%;
+  background: #12080a var(--info-bg, none) center / cover no-repeat;
+  filter: brightness(0.42) saturate(1.15) blur(2px);
+  transform: scale(1.04);
+  animation: info-bg-drift 18s ease-in-out infinite alternate;
+}
+@keyframes info-bg-drift {
+  from { transform: scale(1.04) translateX(-1%); }
+  to { transform: scale(1.1) translateX(1%); }
+}
+.info-screen::after { /* виньетка */
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 45%, transparent 35%, rgba(0, 0, 0, 0.7) 100%);
+}
+.info-screen__rays {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 150vmax;
+  height: 150vmax;
+  margin: -75vmax 0 0 -75vmax;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 214, 120, 0.13) 0deg 7deg, transparent 7deg 22deg);
+  -webkit-mask: radial-gradient(circle, #000 0%, transparent 55%);
+  mask: radial-gradient(circle, #000 0%, transparent 55%);
+  animation: info-rays 70s linear infinite;
+  pointer-events: none;
+}
+@keyframes info-rays { to { transform: rotate(360deg); } }
+
+.info-screen__fx { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.info-screen__fx .fx-p { display: block; }
+
+.info-screen__logo {
+  position: absolute;
+  top: 3%;
+  left: 50%;
+  height: 22%;
+  aspect-ratio: 351 / 208;
+  transform: translateX(-50%);
+  opacity: 0;
+}
+.info-screen__logo img { width: 100%; height: 100%; object-fit: contain; display: block; animation: logo-glow 4.2s ease-in-out infinite; }
+.info-screen.is-shown .info-screen__logo { animation: info-drop 800ms cubic-bezier(.2, 1.3, .4, 1) 100ms forwards; }
+@keyframes info-drop {
+  from { opacity: 0; transform: translate(-50%, -40px) scale(0.85); }
+  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+.info-cards {
+  position: absolute;
+  left: 50%;
+  top: 33%;
+  width: min(86%, 1180px);
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2.2%;
+  justify-content: center;
+}
+.info-card {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 4% 3% 5%;
+  border-radius: 18px;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(120, 28, 36, 0.78), rgba(40, 10, 14, 0.86));
+  border: 2px solid rgba(255, 211, 92, 0.55);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55), inset 0 0 26px rgba(255, 190, 80, 0.12);
+  opacity: 0;
+}
+.info-screen.is-shown .info-card {
+  animation: card-in 650ms cubic-bezier(.2, 1.25, .4, 1) calc(500ms + var(--i) * 220ms) forwards;
+}
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(46px) scale(0.86); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.info-card__art {
+  position: relative;
+  width: 78%;
+  aspect-ratio: 1;
+  margin: 0 auto 4%;
+  animation: card-float 3.6s ease-in-out infinite;
+}
+.info-card:nth-child(2) .info-card__art { animation-delay: -1.2s; }
+.info-card:nth-child(3) .info-card__art { animation-delay: -2.4s; }
+@keyframes card-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+.info-card__art--duo { display: block; }
+.info-card__tiger { position: absolute; inset: 0 14% 8% 0; }
+.info-card__coin { position: absolute; right: 0; bottom: 0; width: 38%; aspect-ratio: 1; }
+
+.info-card__title,
+.bonus-intro__title,
+.bonus-intro__sub {
+  margin: 0;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  background: linear-gradient(180deg, #fff6c8 10%, #ffd35c 45%, #d98a1f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-stroke: 1px #3a1a06;
+  filter: drop-shadow(0 3px 0 #2b1204);
+}
+.info-card__title { font-size: clamp(15px, 2vw, 30px); }
+.info-card__desc {
+  margin: 6px 0 0;
+  font-family: 'Fredoka', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: clamp(11px, 1.15vw, 17px);
+  line-height: 1.25;
+  color: var(--text-cream);
+  opacity: 0.92;
+}
+
+.info-screen__hero {
+  display: none; /* only where there is room beside the cards (wide landscape / bonus) */
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 56%;
+  aspect-ratio: 351 / 541;
+  pointer-events: none;
+}
+@media (min-aspect-ratio: 3/2) {
+  .info-screen__hero { display: block; height: 52%; }
+  #introScreen .info-cards { left: 58%; width: min(66%, 1000px); }
+}
+.info-screen--bonus .info-screen__hero { display: block; left: auto; right: 3%; aspect-ratio: 348 / 566; height: 60%; }
+
+.info-screen__tap {
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  transform: translateX(-50%);
+  font-size: clamp(18px, 2.4vw, 36px);
+  letter-spacing: 0.08em;
+  color: var(--text-cream);
+  -webkit-text-stroke: 1px #3a1a06;
+  text-shadow: 0 3px 0 #2b1204, 0 0 16px rgba(255, 211, 92, 0.6);
+  opacity: 0;
+  white-space: nowrap;
+}
+.info-screen.is-shown .info-screen__tap {
+  animation: tap-in 500ms ease 1800ms forwards, tap-pulse 1.5s ease-in-out 2300ms infinite;
+}
+@keyframes tap-in { to { opacity: 1; } }
+@keyframes tap-pulse {
+  0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+  50% { opacity: 0.55; transform: translateX(-50%) scale(1.06); }
+}
+
+/* Бонус-экран: центральная композиция «BONUS GAME → фонарь с числом → FREE SPINS». */
+.bonus-intro {
+  position: absolute;
+  left: 50%;
+  top: 26%;
+  transform: translateX(-50%);
+  width: min(70%, 640px);
+  text-align: center;
+}
+.bonus-intro__title { font-size: min(5vw, 9.5vh); opacity: 0; }
+.bonus-intro__sub { font-size: min(3.6vw, 6.5vh); opacity: 0; margin-top: 1.5%; }
+.bonus-intro__counter {
+  position: relative;
+  width: min(36%, 28vh);
+  margin: 2% auto 0;
+  aspect-ratio: 533 / 350; /* the PNG is ~60% empty canvas — crop to the lantern itself */
+  overflow: hidden;
+  opacity: 0;
+  transform-origin: 50% 0;
+}
+.bonus-intro__lantern { width: 100%; height: auto; display: block; margin-top: -24%; animation: lantern-flicker 2.6s ease-in-out infinite; }
+.bonus-intro__value {
+  position: absolute;
+  left: 50%;
+  top: 47%;
+  transform: translate(-50%, -50%);
+  font-size: min(6vw, 11vh);
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 0 3px 0 var(--ink), 0 0 22px rgba(255, 200, 80, 0.8);
+}
+.info-screen--bonus.is-shown .bonus-intro__title { animation: bi-in 600ms cubic-bezier(.2, 1.3, .4, 1) 300ms forwards; }
+.info-screen--bonus.is-shown .bonus-intro__counter { animation: bi-lantern 900ms cubic-bezier(.2, 1.2, .4, 1) 700ms forwards, lantern-bob 4.8s ease-in-out 1600ms infinite; }
+.info-screen--bonus.is-shown .bonus-intro__sub { animation: bi-in 600ms cubic-bezier(.2, 1.3, .4, 1) 1200ms forwards; }
+.info-screen--bonus.is-shown .info-screen__tap { animation-delay: 2000ms, 2500ms; }
+@keyframes bi-in {
+  from { opacity: 0; transform: scale(0.7) translateY(18px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes bi-lantern {
+  from { opacity: 0; transform: translateY(-80px) scale(0.8); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Портрет: карточки — горизонтальные ряды (арт слева, текст справа), героя не показываем. */
+@media (orientation: portrait) {
+  .info-screen__logo { height: 14%; top: 2.5%; }
+  .info-cards {
+    top: 19%;
+    width: 92%;
+    flex-direction: column;
+    gap: 2.2vh;
+  }
+  .info-card {
+    display: flex;
+    align-items: center;
+    gap: 4%;
+    text-align: left;
+    padding: 2.2vh 4%;
+  }
+  .info-card__art { width: 26vw; flex: 0 0 26vw; margin: 0; }
+  .info-card__text { flex: 1 1 auto; min-width: 0; }
+  .info-card__title { font-size: 5.2vw; }
+  .info-card__desc { font-size: 3.5vw; }
+  .info-screen__hero { display: none; }
+  .info-screen__tap { font-size: 6vw; bottom: 4%; }
+  .bonus-intro { top: 24%; width: 90%; }
+  .bonus-intro__title { font-size: 11vw; }
+  .bonus-intro__sub { font-size: 8vw; }
+  .bonus-intro__counter { width: 52%; }
+  .bonus-intro__value { font-size: 16vw; }
+  .info-screen--bonus .info-screen__hero { display: block; right: -4%; bottom: 11%; height: 30%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .info-screen__rays, .info-screen__bg, .info-card__art { animation: none; }
+}
+
+
+/* Hold & Win превью: тигр-коллектор в центре, монеты парят вокруг. */
+.hw-stage {
+  position: relative;
+  width: min(66%, 40vh);
+  aspect-ratio: 1;
+  margin: 2% auto 0;
+  opacity: 0;
+}
+.hw-stage__tiger { position: absolute; inset: 0; animation: card-float 3.6s ease-in-out infinite; }
+.hw-coin { position: absolute; width: 24%; aspect-ratio: 1; animation: card-float 2.8s ease-in-out infinite; }
+.hw-coin--a { left: -16%; top: 2%; animation-delay: -0.4s; }
+.hw-coin--b { right: -16%; top: 10%; animation-delay: -1.3s; }
+.hw-coin--c { left: -12%; bottom: 0; animation-delay: -2.1s; }
+.hw-coin--d { right: -12%; bottom: 4%; animation-delay: -0.9s; }
+.info-screen--holdwin.is-shown .hw-stage { animation: bi-lantern 900ms cubic-bezier(.2, 1.2, .4, 1) 600ms forwards; }
+.info-screen--holdwin .bonus-intro__sub--small { font-size: min(2.6vw, 4.8vh); }
+.info-screen--holdwin.is-shown .bonus-intro__sub { animation-delay: 1300ms; }
+@media (orientation: portrait) {
+  .hw-stage { width: min(70%, 36vh); }
+  .info-screen--holdwin .bonus-intro__sub--small { font-size: 6vw; }
 }

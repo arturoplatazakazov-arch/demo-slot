@@ -1103,7 +1103,7 @@ async function landHoldAndWinRespin(grid) {
 }
 
 async function enterHoldAndWinWaitingState() {
-  await setFreeSpinsMode(true, 0, { intro: false }); // Hold & Win shows no entry popup
+  await setFreeSpinsMode(true, 0, { intro: 'holdwin' }); // preview screen, no popup
   await applyGrid(buildHoldAndWinGrid(new Set()));
 }
 
@@ -1200,8 +1200,21 @@ async function enterBonusTransition(amount = 0) {
   await wait(DIM_TRANSITION_MS);
   await playPopupSequence('bonusSpinsWin', amount, BONUS_INTRO_HOLD_MS, { ownDim: false });
   applyModeScreen('freespins');
+  // Bonus preview screen (spin count + "tap to start") over the blackout, then reveal.
+  await showInfoScreen('bonusScreen', { value: amount || 10, autoCloseMs: 6500 });
   await wait(DIM_TRANSITION_MS);
   popScreenDim(true); // reveal the bonus screen
+}
+
+// Hold & Win entry: same blackout -> preview screen -> reveal rhythm as the
+// free-spins intro, minus the popup (the screen itself announces the round).
+async function enterHoldAndWinTransition() {
+  pushScreenDim(true);
+  await wait(DIM_TRANSITION_MS);
+  applyModeScreen('freespins');
+  await showInfoScreen('holdWinScreen', { autoCloseMs: 6500 });
+  await wait(DIM_TRANSITION_MS);
+  popScreenDim(true);
 }
 
 // `intro` is true for the free-spins (scatter) trigger — it gets the full intro
@@ -1216,6 +1229,7 @@ function setFreeSpinsMode(active, amount = 0, { intro = true } = {}) {
 
   Sound.playMusic(next === 'freespins' ? 'bonus' : 'base');
 
+  if (next === 'freespins' && intro === 'holdwin') return enterHoldAndWinTransition();
   if (next === 'freespins' && intro) return enterBonusTransition(amount);
 
   return withScreenDim(
@@ -1447,10 +1461,32 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
   if (!folder) return Promise.resolve();
 
   return new Promise((resolve) => {
+    // Every exit goes through ONE finish(), and it is guaranteed to run: on
+    // the normal end clip, on any error, and on a safety timeout. The dim is
+    // raised BEFORE the popup's assets are awaited, so anything that throws in
+    // between (a broken or stale atlas, a 404, a missing clip) used to leave
+    // the screen dimmed and the frame hidden FOREVER, with no popup ever
+    // appearing.
+    let instance = null;
+    let dimmed = false;
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(safetyTimer);
+      if (instance) stage.removeOverlay(instance);
+      stopPopupAmountTracking();
+      if (dimmed) popScreenDim(opaque);
+      resolve();
+    };
+    // Longest a healthy popup can take: dim + start clip + hold + end clip.
+    const safetyTimer = setTimeout(finish, holdMs + 8000);
+
     (async () => {
       Sound.playSfx('popupOpen');
       if (ownDim) {
         pushScreenDim(opaque);
+        dimmed = true;
         await wait(DIM_TRANSITION_MS);
       }
 
@@ -1459,7 +1495,7 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
       }
       const resource = await popupResourceCache[key];
 
-      const instance = resource.createInstance();
+      instance = resource.createInstance();
       instance.anchorEl = document.getElementById('screen');
       instance.fit = 1;
       stage.addOverlay(instance);
@@ -1474,14 +1510,14 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
           instance.play('end', false);
           instance.onSettle = () => {
             instance.onSettle = null;
-            stage.removeOverlay(instance);
-            stopPopupAmountTracking();
-            if (ownDim) popScreenDim(opaque);
-            resolve();
+            finish();
           };
         }, holdMs);
       };
-    })();
+    })().catch((err) => {
+      console.error(`popup "${key}" failed to play — closing it so the screen isn't left dimmed:`, err);
+      finish();
+    });
   });
 }
 
@@ -1535,6 +1571,10 @@ function setupDevPanel() {
     setFreeSpinsMode(next === 'freespins', 10); // demo spins count for the intro popup
     toggleBtn.textContent = `mode: ${next}`;
   });
+
+  document.getElementById('devFeatureScreen')?.addEventListener('click', () => showInfoScreen('introScreen', { force: true }));
+  document.getElementById('devHoldWinScreen')?.addEventListener('click', () => showInfoScreen('holdWinScreen', { force: true }));
+  document.getElementById('devBonusScreen')?.addEventListener('click', () => showInfoScreen('bonusScreen', { force: true, value: 10 }));
 
   document.querySelectorAll('[data-popup]').forEach((btn) => {
     btn.addEventListener('click', () => playPopup(btn.dataset.popup, 12345));
@@ -1670,6 +1710,162 @@ async function warmUpWebGl(resourcePromise) {
   stage.removeOverlay(instance);
 }
 
+// --- Ambient FX + preview screens ---------------------------------------------
+//
+// Ambient FX: falling sakura petals (base) / rising sky lanterns + fireflies
+// (bonus) as pure CSS-animated DOM particles (see .fx-p in east-discovery.css);
+// which set shows follows .screen[data-mode]. The same generator fills the
+// particle layers of the two preview screens below.
+
+function fillAmbientFx(host, kind, { count, edgeOnly = false } = {}) {
+  if (!host || host.dataset.filled === kind) return;
+  host.dataset.filled = kind;
+  host.textContent = '';
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const add = (cls, vars) => {
+    const el = document.createElement('span');
+    el.className = `fx-p ${cls}`;
+    for (const [k, v] of Object.entries(vars)) el.style.setProperty(k, v);
+    host.appendChild(el);
+  };
+  const xPos = () => {
+    if (!edgeOnly) return rnd(2, 98);
+    const x = rnd(0, 26); // keep the middle (the reels) clear
+    return Math.random() < 0.5 ? x : 100 - x;
+  };
+  if (kind === 'petals') {
+    for (let i = 0; i < count; i += 1) {
+      add('fx-p--petal', {
+        '--x': `${xPos()}%`, '--s': `${rnd(9, 17)}px`, '--d': `${rnd(9, 15)}s`,
+        '--delay': `${-rnd(0, 15)}s`, '--sway': `${rnd(40, 130)}px`,
+      });
+    }
+  } else {
+    for (let i = 0; i < Math.ceil(count * 0.4); i += 1) {
+      add('fx-p--lantern', {
+        '--x': `${xPos()}%`, '--s': `${rnd(18, 30)}px`, '--d': `${rnd(15, 24)}s`,
+        '--delay': `${-rnd(0, 20)}s`, '--sway': `${rnd(20, 70)}px`,
+      });
+    }
+    for (let i = 0; i < count; i += 1) {
+      add('fx-p--firefly', {
+        '--x': `${xPos()}%`, '--y': `${rnd(4, 60)}`, '--d': `${rnd(4, 8)}s`,
+        '--delay': `${-rnd(0, 8)}s`, '--sway': `${rnd(-50, 50)}px`,
+      });
+    }
+  }
+}
+
+function setupAmbientFx() {
+  const host = document.getElementById('ambientFx');
+  if (!host) return;
+  // Both sets live in the DOM; CSS shows the one matching data-mode.
+  const petals = document.createElement('div');
+  const lanterns = document.createElement('div');
+  for (const h of [petals, lanterns]) { h.style.cssText = 'position:absolute;inset:0'; host.appendChild(h); }
+  fillAmbientFx(petals, 'petals', { count: 12, edgeOnly: true });
+  fillAmbientFx(lanterns, 'lanterns', { count: 12, edgeOnly: true });
+
+  // Free-spins lantern number "ticks" whenever the count changes.
+  const value = document.getElementById('freeSpinsValue');
+  if (value) {
+    new MutationObserver(() => {
+      value.classList.remove('is-tick');
+      void value.offsetWidth;
+      value.classList.add('is-tick');
+    }).observe(value, { childList: true, characterData: true, subtree: true });
+  }
+}
+
+// Preview screens (feature screen after the boot preloader, bonus screen on
+// free-spins entry) — modelled on Gangsta Casino's feature_screen/bonus_screen,
+// but DOM+CSS instead of a designer Spine pack: the layout/choreography is CSS,
+// the symbols on it are the game's real Spine clips drawn as overlay instances
+// on the shared #spineCanvas (base layer hidden meanwhile via stage.baseHidden).
+// Each instance's alpha follows the computed opacity of its DOM ancestors, so
+// CSS entrance/fade animations carry the Spine art with them. `?nofs` skips both.
+
+const INFO_FADE_MS = 500;
+const INFO_MIN_SHOW_MS = 900; // ignore the tap that dismissed the preloader / a stray double-tap
+let infoScreenActive = false;
+
+async function showInfoScreen(id, { value = null, autoCloseMs = 0, force = false } = {}) {
+  const root = document.getElementById(id);
+  if (!root || infoScreenActive) return;
+  if (!force && new URLSearchParams(location.search).has('nofs')) return;
+  infoScreenActive = true;
+
+  root.querySelector('.info-screen__bg').style.setProperty('--info-bg', `url(${new URL(bgSrcFor(root.dataset.screen === 'bonus' ? 'bonus' : 'base'), location.href).href})`);
+  fillAmbientFx(root.querySelector('.info-screen__fx'), root.dataset.screen === 'bonus' ? 'lanterns' : 'petals', { count: 22 });
+  if (value !== null) {
+    const v = root.querySelector('#bonusIntroValue');
+    if (v) v.textContent = value;
+  }
+
+  root.hidden = false; // must be laid out before the anchors can be measured
+  const entries = [];
+  const created = [];
+  for (const el of root.querySelectorAll('[data-spine]')) {
+    if (el.getBoundingClientRect().width < 8) continue; // e.g. hero hidden in portrait
+    try {
+      const resource = await loadSpineResource(`${ASSET_ROOT}/Export/${el.dataset.spine}`);
+      const inst = resource.createInstance();
+      inst.anchorEl = el;
+      inst.fit = parseFloat(el.dataset.fit) || 1;
+      inst.play(el.dataset.clip, true);
+      inst.verticalOffsetRatio = parseFloat(el.dataset.voff) || 0; // wild's big_idle is posed below its skeleton bounds' center
+      inst.skeleton.color.set(1, 1, 1, 0);
+      entries.push({ el, inst });
+      created.push(inst);
+    } catch (err) {
+      console.warn('[info-screen] spine failed', el.dataset.spine, err);
+    }
+  }
+
+  stage.baseHidden = true;
+  document.body.classList.add('is-info-screen');
+  for (const inst of created) stage.addOverlay(inst);
+
+  let running = true;
+  const opacityOf = (el) => {
+    let a = 1;
+    for (let n = el; n && n !== root.parentElement; n = n.parentElement) a *= parseFloat(getComputedStyle(n).opacity) || 0;
+    return a;
+  };
+  const tick = () => {
+    if (!running) return;
+    for (const { el, inst } of entries) inst.skeleton.color.set(1, 1, 1, opacityOf(el));
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+  requestAnimationFrame(() => requestAnimationFrame(() => root.classList.add('is-shown')));
+
+  const openedAt = performance.now();
+  await new Promise((resolve) => {
+    let timer = null;
+    const finish = () => {
+      root.removeEventListener('pointerup', onTap);
+      document.removeEventListener('keydown', onKey);
+      clearTimeout(timer);
+      resolve();
+    };
+    const onTap = () => { if (performance.now() - openedAt >= INFO_MIN_SHOW_MS) finish(); };
+    const onKey = (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onTap(); } };
+    root.addEventListener('pointerup', onTap);
+    document.addEventListener('keydown', onKey);
+    if (autoCloseMs > 0) timer = setTimeout(finish, autoCloseMs);
+  });
+
+  root.classList.remove('is-shown'); // 500ms CSS fade; the tick loop fades the Spine art with it
+  await wait(INFO_FADE_MS + 30);
+  running = false;
+  for (const inst of created) stage.removeOverlay(inst);
+  root.hidden = true;
+  stage.baseHidden = false;
+  document.body.classList.remove('is-info-screen');
+  infoScreenActive = false;
+}
+
 function preloadAssets() {
   const P = window.Preloader;
   const track = (promise) => {
@@ -1721,12 +1917,17 @@ async function init() {
   environmentControllerRef = await setupEnvironment();
   characterControllerRef = await setupCharacter();
   setupDevPanel();
+  setupAmbientFx();
 
   await Promise.all(cellInfos.map((info) => setCellSymbol(info, info.symbol)));
 
   if (window.Preloader) window.Preloader.done();
 
-  window.__slot = { stage, cellInfos };
+  window.__slot = { stage, cellInfos, showInfoScreen };
+
+  // Feature preview screen right after the preloader (skip with ?nofs).
+  await wait(350);
+  await showInfoScreen('introScreen');
 }
 
 init();
