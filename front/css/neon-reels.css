@@ -356,6 +356,63 @@ body {
 }
 .popup-amount.is-visible { opacity: 1; }
 
+/* ---------- Feature preview / bonus screens ----------
+   The art is a Spine skeleton on #spineCanvas (lifted above the V3 bar and
+   popups while a screen is up); this layer is just the game's own background
+   (object-fit: cover, so any aspect is covered) with a neon vignette. */
+.fscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 58;
+  background: #05010d;
+  opacity: 0;
+  transition: opacity 420ms ease;
+  cursor: pointer;
+  overflow: hidden;
+}
+.fscreen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--fs-bg) center / cover no-repeat;
+}
+.fscreen.is-open::before { animation: fscreen-zoom 1.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes fscreen-zoom { from { transform: scale(1.12); } }
+.fscreen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(5, 1, 13, 0.15) 0%, rgba(5, 1, 13, 0.55) 62%, rgba(5, 1, 13, 0.9) 100%),
+    linear-gradient(rgba(40, 6, 70, 0.25), rgba(40, 6, 70, 0.25));
+}
+.fscreen[hidden] { display: none; }
+.fscreen.is-open { opacity: 1; }
+body.is-feature-screen #spineCanvas { position: fixed; z-index: 59; }
+body.is-feature-screen .dev-panel,
+body.is-feature-screen .to-catalog-btn { visibility: hidden; }
+
+/* Live free-spins count over the bonus screen's counter plate (glued to the
+   skeleton's "count" bone every frame by slot.js). */
+.fscreen-count {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 60;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  font-family: 'Luckiest Guy', cursive;
+  line-height: 1;
+  color: #fff4c2;
+  background: linear-gradient(#fff8d2 10%, #ffc928 55%, #ff8a00 95%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 0 #2a0638) drop-shadow(0 0 10px rgba(255, 63, 208, 0.85));
+  opacity: 0;
+}
+.fscreen-count[hidden] { display: none; }
+
 /* ---------- Coin multiplier value ("10X", "1000X", ...) ---------- */
 .coin-multiplier-amount {
   position: fixed;

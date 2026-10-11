@@ -6,7 +6,7 @@
 <title>Neon Reels — demo</title>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/preloader.css?v=1">
-<link rel="stylesheet" href="css/neon-reels.css?v=15">
+<link rel="stylesheet" href="css/neon-reels.css?v=16">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 </head>
 <body>
@@ -89,6 +89,12 @@
     <div class="screen-dim" id="screenDim"></div>
     <canvas class="spine-canvas" id="spineCanvas"></canvas>
   </div>
+
+  <!-- Превью фич (после прелоадера) и экран входа в бонус: арт — Spine-скелеты
+       img/neon-reels/screens/*, рисуются на #spineCanvas; здесь только фон игры
+       (cover) под ними и живое число фриспинов поверх плашки — см. slot.js. -->
+  <div class="fscreen" id="featureScreen" hidden></div>
+  <div class="fscreen-count" id="fscreenCount" hidden></div>
 
   <!-- Сумма выигрыша, наложенная поверх поп-апа — см. POPUP_AMOUNT_BONE в slot.js. -->
   <div class="popup-amount" id="popupAmount"></div>
@@ -216,7 +222,7 @@
   <script src="js/preloader.js?v=1"></script>
   <script src="js/neon-reels/sound.js?v=6"></script>
   <script src="js/reel-math.js?v=6"></script>
-  <script src="js/neon-reels/slot.js?v=26"></script>
+  <script src="js/neon-reels/slot.js?v=28"></script>
   <script src="js/neon-reels/app.js?v=2"></script>
   <!-- Поведение нижнего бара V3: флайаут, тултипы, заглушки авто/турбо. -->
   <script src="js/ui-bar-v3.js?v=4"></script>
