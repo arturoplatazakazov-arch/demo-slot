@@ -466,6 +466,63 @@ img.is-missing {
   z-index: 5;
 }
 
+/* ---------- Feature preview / bonus screens ----------
+   Art is a Spine skeleton on #spineCanvas (scripts/multi_fruits_story_screens.py);
+   this layer is only the game's own static bg (cover, any aspect) with a soft
+   green vignette, and it catches the tap that closes the screen. */
+.fscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 58;
+  background: #0b1406;
+  opacity: 0;
+  transition: opacity 420ms ease;
+  cursor: pointer;
+  overflow: hidden;
+}
+.fscreen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--fs-bg) center / cover no-repeat;
+}
+.fscreen.is-open::before { animation: fscreen-zoom 1.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes fscreen-zoom { from { transform: scale(1.12); } }
+.fscreen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(8, 24, 4, 0) 0%, rgba(8, 24, 4, 0.35) 62%, rgba(8, 24, 4, 0.8) 100%),
+    linear-gradient(rgba(10, 25, 5, 0.3), rgba(10, 25, 5, 0.3));
+}
+.fscreen[hidden] { display: none; }
+.fscreen.is-open { opacity: 1; }
+body.is-feature-screen #spineCanvas { position: fixed; z-index: 59; }
+body.is-feature-screen .dev-panel,
+body.is-feature-screen .to-catalog-btn { visibility: hidden; }
+
+/* Live free-spins count over the bonus screen's counter plate. */
+.fscreen-count {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 60;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  font-family: 'Luckiest Guy', cursive;
+  line-height: 1;
+  padding-top: 0.08em; /* Luckiest Guy sits high in its line box */
+  color: #ffd23a;
+  background: linear-gradient(#fffbd0 10%, #ffd23a 50%, #f08a00 95%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 3px 0 #3a1a06) drop-shadow(0 0 2px #3a1a06) drop-shadow(0 0 14px rgba(190, 255, 90, 0.7));
+  opacity: 0;
+}
+.fscreen-count[hidden] { display: none; }
+
 /* ---------- Paytable info popup ---------- */
 .info-popup {
   position: fixed;

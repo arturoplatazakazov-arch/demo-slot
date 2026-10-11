@@ -6,7 +6,7 @@
 <title>Lucky Joker — demo</title>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/preloader.css?v=1">
-<link rel="stylesheet" href="css/lucky-joker-3h3.css?v=13">
+<link rel="stylesheet" href="css/lucky-joker-3h3.css?v=14">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 </head>
 <body>
@@ -36,6 +36,8 @@
          подложены, дальше Hold & Win идёт своим обычным путём. -->
     <button class="dev-btn" id="devHoldAndWin" type="button">Hold &amp; Win</button>
     <button class="dev-btn" id="devJackpot" type="button">Jackpot win</button>
+    <button class="dev-btn" id="devFeatureScreen" type="button">Feature Screen</button>
+    <button class="dev-btn" id="devBonusScreen" type="button">Bonus Screen</button>
     <span class="dev-hint">клик по символу в сетке — его win-анимация</span>
   </div>
 
@@ -120,6 +122,12 @@
     <div class="buy-dialog-hits" id="buyDialogHits" hidden></div>
 
   </div>
+
+  <!-- Feature preview / bonus screens: Spine art on #spineCanvas (lifted above
+       the V3 bar while a screen is up); this layer is the game's own bg under it
+       and catches the tap. Spin count is glued to the skeleton's "count" bone. -->
+  <div class="fscreen" id="featureScreen" hidden></div>
+  <div class="fscreen-count" id="fscreenCount" hidden></div>
 
   <!-- Paytable info popup — заполняется из session-start's `symbols`. -->
   <div class="info-popup" id="infoPopup" hidden>
@@ -233,7 +241,7 @@
   </div>
 
   <script src="vendor/spine-webgl.js"></script>
-  <script src="js/spine-engine.js?v=7"></script>
+  <script src="js/spine-engine.js?v=8"></script>
   <script src="js/slot-calibration.js?v=3"></script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="js/telegram.js?v=2"></script>
@@ -242,7 +250,7 @@
   <script src="js/api.js?v=2"></script>
   <script src="js/reel-math.js?v=6"></script>
   <script src="js/lucky-joker-3h3/sound.js?v=1"></script>
-  <script src="js/lucky-joker-3h3/slot.js?v=15"></script>
+  <script src="js/lucky-joker-3h3/slot.js?v=16"></script>
   <script src="js/lucky-joker-3h3/app.js?v=13"></script>
   <!-- Поведение нижнего бара V3: флайаут, тултипы, заглушки авто/турбо. -->
   <script src="js/ui-bar-v3.js?v=4"></script>

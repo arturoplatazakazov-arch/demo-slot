@@ -696,3 +696,66 @@ img.is-missing {
   --pl-border: rgba(255, 207, 90, 0.45);
   --pl-shadow: rgba(255, 47, 160, 0.6);
 }
+
+/* ---------- Feature preview / bonus screens ----------
+   Art is a Spine skeleton on #spineCanvas (scripts/lucky_joker_3h3_screens.py);
+   this layer is only the game's own static bg (cover, any aspect) with a
+   purple vignette, and it catches the tap that closes the screen. */
+.fscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 58;
+  background: #14030d;
+  opacity: 0;
+  transition: opacity 420ms ease;
+  cursor: pointer;
+  overflow: hidden;
+}
+.fscreen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--fs-bg) center / cover no-repeat;
+}
+.fscreen.is-open::before { animation: fscreen-zoom 1.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes fscreen-zoom { from { transform: scale(1.12); } }
+.fscreen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(20, 3, 13, 0.1) 0%, rgba(20, 3, 13, 0.5) 62%, rgba(20, 3, 13, 0.9) 100%),
+    linear-gradient(rgba(70, 10, 90, 0.2), rgba(70, 10, 90, 0.2));
+}
+/* Bonus preview: no game bg, just the dark blackout it sits on. */
+.fscreen.is-dark { background: #000; }
+.fscreen.is-dark::before { display: none; }
+.fscreen.is-dark::after {
+  background: radial-gradient(ellipse at 50% 45%, rgba(110, 20, 120, 0.38) 0%, rgba(0, 0, 0, 0) 65%);
+}
+.fscreen[hidden] { display: none; }
+.fscreen.is-open { opacity: 1; }
+body.is-feature-screen #spineCanvas { position: fixed; z-index: 59; }
+body.is-feature-screen .dev-panel,
+body.is-feature-screen .to-catalog-btn { visibility: hidden; }
+
+/* Live free-spins count over the bonus screen's counter plate. */
+.fscreen-count {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 60;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  font-family: 'Luckiest Guy', cursive;
+  line-height: 1;
+  padding-top: 0.08em; /* Luckiest Guy sits high in its line box */
+  color: var(--gold);
+  background: linear-gradient(#fff6c8 10%, #ffcf5a 50%, #e07a10 95%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 3px 0 var(--ink)) drop-shadow(0 0 12px rgba(255, 47, 160, 0.8));
+  opacity: 0;
+}
+.fscreen-count[hidden] { display: none; }
