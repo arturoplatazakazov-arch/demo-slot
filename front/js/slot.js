@@ -847,6 +847,17 @@ const BONUS_INTRO_HOLD_MS = 3000;
 async function enterBonusTransition(amount = 0) {
   pushScreenDim(true); // opaque blackout in
   await wait(DIM_TRANSITION_MS);
+  // Spine bonus preview screen first; it swaps the bonus screen in under
+  // itself as it starts fading, so the dissolve lands straight on the bonus.
+  const ran = await showPreviewScreen('bonus', {
+    count: amount,
+    onClose: () => {
+      applyModeScreen('freespins');
+      popScreenDim(true);
+    },
+  });
+  if (ran) return;
+  // Fallback (no WebGL / export failed to load): the old popup intro.
   await playPopupSequence('bonusSpinsWin', amount, BONUS_INTRO_HOLD_MS, { ownDim: false });
   applyModeScreen('freespins');
   await wait(DIM_TRANSITION_MS);
@@ -952,10 +963,32 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
   if (!folder) return Promise.resolve();
 
   return new Promise((resolve) => {
+    // Every exit goes through ONE finish(), and it is guaranteed to run: on
+    // the normal end clip, on any error, and on a safety timeout. The dim is
+    // raised BEFORE the popup's assets are awaited, so anything that throws in
+    // between (a broken or stale atlas, a 404, a missing clip) used to leave
+    // the screen dimmed and the frame hidden FOREVER, with no popup ever
+    // appearing.
+    let instance = null;
+    let dimmed = false;
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(safetyTimer);
+      if (instance) stage.removeOverlay(instance);
+      stopPopupAmountTracking();
+      if (dimmed) popScreenDim(opaque);
+      resolve();
+    };
+    // Longest a healthy popup can take: dim + start clip + hold + end clip.
+    const safetyTimer = setTimeout(finish, holdMs + 8000);
+
     (async () => {
       Sound.playSfx('popupOpen');
       if (ownDim) {
         pushScreenDim(opaque);
+        dimmed = true;
         await wait(DIM_TRANSITION_MS);
       }
 
@@ -964,7 +997,7 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
       }
       const resource = await popupResourceCache[key];
 
-      const instance = resource.createInstance();
+      instance = resource.createInstance();
       instance.anchorEl = document.getElementById('screen');
       // Portrait doubles the popup (product): fine art scale for landscape
       // reads tiny on a tall phone screen. Glow overflowing the viewport is
@@ -982,14 +1015,14 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
           instance.play('end', false);
           instance.onSettle = () => {
             instance.onSettle = null;
-            stage.removeOverlay(instance);
-            stopPopupAmountTracking();
-            if (ownDim) popScreenDim(opaque);
-            resolve();
+            finish();
           };
         }, holdMs);
       };
-    })();
+    })().catch((err) => {
+      console.error(`popup "${key}" failed to play — closing it so the screen isn't left dimmed:`, err);
+      finish();
+    });
   });
 }
 
@@ -998,8 +1031,177 @@ function playPopup(key, amount = 0, holdMs = 2500) {
   return playPopupSequence(key, amount, holdMs, { ownDim: true });
 }
 
+// --- Preview screens (Screens/feature_screen_*, Screens/bonus_screen_*) ------
+//
+// Full-screen Spine skeletons, one per layout: *_desk authored on the
+// 1932x940 desktop canvas, *_mob on the 780x1416 portrait one (origin = box
+// centre, 1 unit = 1 design px). Each ships `intro` then a looping `idle`, and
+// carries its own background, overscanned so a contain-fit of the box still
+// covers the whole viewport. Shown on the shared #spineCanvas as an overlay
+// (raised above the V3 bar, base layer hidden); closed by a click/tap/key — a
+// plain dissolve. The bonus screen's spin count is three digit slots (n1..n3)
+// whose attachments and bone x are set here. `?nofs` skips the feature screen.
+
+const PREVIEW_ROOT = 'img/amys-fruit-farm/Screens';
+const PREVIEW_BOX = {
+  desk: { x: -966, y: -470, width: 1932, height: 940 },
+  mob: { x: -390, y: -708, width: 780, height: 1416 },
+};
+const PREVIEW_FADE_MS = 500;
+const PREVIEW_MIN_SHOW_MS = 900; // swallow the tap that dismissed the preloader / double taps
+// Bonus screen closes itself if nobody taps — autoplay must not stall on it.
+const BONUS_PREVIEW_AUTOCLOSE_MS = 12000;
+const PREVIEW_DIGIT_KERN = -0.16; // same overlap the export lays its setup "10" out with
+let previewActive = false;
+
+function previewLayout() {
+  return isMobileLayout() ? 'mob' : 'desk';
+}
+
+function getPreviewResource(kind, layout = previewLayout()) {
+  const key = `preview:${kind}:${layout}`;
+  if (!popupResourceCache[key]) {
+    popupResourceCache[key] = SpineEngine.SpineResource.load(stage.assetManager, `${PREVIEW_ROOT}/${kind}_screen_${layout}`);
+  }
+  return popupResourceCache[key];
+}
+
+function setPreviewCount(inst, count) {
+  const digits = String(Math.max(0, Math.min(999, Math.round(count)))).split('');
+  const skeleton = inst.skeleton;
+  const atts = digits.map((d, i) => {
+    const slot = skeleton.findSlot(`n${i + 1}`);
+    return slot ? skeleton.getAttachment(slot.data.index, `n${d}`) : null;
+  });
+  const widths = atts.map((a) => (a ? a.width * a.scaleX : 0));
+  const total = widths.reduce((sum, w) => sum + w * (1 + PREVIEW_DIGIT_KERN), 0) - (widths[widths.length - 1] || 0) * PREVIEW_DIGIT_KERN;
+  let x = -total / 2;
+  for (let i = 0; i < 3; i++) {
+    const slot = skeleton.findSlot(`n${i + 1}`);
+    const bone = skeleton.findBone(`num${i + 1}`);
+    if (!slot || !bone) continue;
+    slot.setAttachment(atts[i] || null);
+    if (atts[i]) {
+      bone.x = x + widths[i] / 2;
+      x += widths[i] * (1 + PREVIEW_DIGIT_KERN);
+    }
+  }
+}
+
+// Resolves true once the screen has been shown and dismissed, false if it
+// couldn't run (so the caller can fall back). `onClose` fires the moment the
+// dissolve starts — the bonus intro swaps the game screen in under it there.
+async function showPreviewScreen(kind, { count = null, onClose = null } = {}) {
+  const root = document.getElementById('previewScreen');
+  if (!stage || !root || previewActive) return false;
+  previewActive = true;
+
+  let layout = previewLayout();
+  let inst;
+  const makeInstance = async (clip) => {
+    const next = (await getPreviewResource(kind, layout)).createInstance();
+    next.anchorEl = root;
+    next.fit = 1;
+    next.boundsOverride = PREVIEW_BOX[layout];
+    if (count !== null) setPreviewCount(next, count);
+    next.play(clip, clip === 'idle');
+    if (clip === 'intro') next.queue('idle', true);
+    return next;
+  };
+  try {
+    inst = await makeInstance('intro');
+  } catch (err) {
+    console.warn(`[preview] ${kind} screen failed to load:`, err);
+    previewActive = false;
+    return false;
+  }
+
+  // Rotating across the portrait breakpoint swaps to the other layout's
+  // skeleton, straight into its idle loop.
+  let swapping = false;
+  const onResize = async () => {
+    if (swapping || previewLayout() === layout) return;
+    swapping = true;
+    layout = previewLayout();
+    try {
+      const next = await makeInstance('idle');
+      next.skeleton.color.a = inst.skeleton.color.a;
+      stage.removeOverlay(inst);
+      stage.addOverlay(next);
+      inst = next;
+    } catch (err) {
+      console.warn('[preview] layout swap failed:', err);
+    }
+    swapping = false;
+  };
+  window.addEventListener('resize', onResize);
+
+  stage.baseHidden = true;
+  document.body.classList.add('is-preview-screen');
+  root.hidden = false;
+  void root.offsetWidth;
+  root.classList.add('is-open');
+  stage.addOverlay(inst);
+  Sound.playSfx('popupOpen');
+
+  const openedAt = performance.now();
+  await new Promise((resolve) => {
+    let timer = null;
+    const finish = () => {
+      root.removeEventListener('pointerup', onTap);
+      document.removeEventListener('keydown', onKey);
+      clearTimeout(timer);
+      resolve();
+    };
+    const onTap = () => { if (performance.now() - openedAt >= PREVIEW_MIN_SHOW_MS) finish(); };
+    const onKey = (e) => {
+      if (e.key !== ' ' && e.key !== 'Enter') return;
+      e.preventDefault();
+      onTap();
+    };
+    root.addEventListener('pointerup', onTap);
+    document.addEventListener('keydown', onKey);
+    if (kind === 'bonus') timer = setTimeout(finish, BONUS_PREVIEW_AUTOCLOSE_MS);
+  });
+
+  Sound.playSfx('click');
+  if (onClose) onClose();
+  stage.baseHidden = false; // whatever is under the dissolve is the game itself
+  root.classList.remove('is-open'); // CSS fade of the black backdrop
+  await new Promise((resolve) => {
+    const start = performance.now();
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      resolve();
+    };
+    const tick = (now) => {
+      if (done) return;
+      const t = Math.min(1, (now - start) / PREVIEW_FADE_MS);
+      inst.skeleton.color.a = 1 - t;
+      if (t < 1) requestAnimationFrame(tick);
+      else finish();
+    };
+    requestAnimationFrame(tick);
+    setTimeout(finish, PREVIEW_FADE_MS + 200); // hidden tab: rAF frozen
+  });
+  window.removeEventListener('resize', onResize);
+  stage.removeOverlay(inst);
+  root.hidden = true;
+  document.body.classList.remove('is-preview-screen');
+  previewActive = false;
+  return true;
+}
+
 function setupDevPanel() {
   const toggleBtn = document.getElementById('devToggle');
+
+  const featureBtn = document.getElementById('devFeatureScreen');
+  if (featureBtn) featureBtn.addEventListener('click', () => showPreviewScreen('feature'));
+  // Preview only — no mode switch (the real entry goes through the mode toggle).
+  const bonusBtn = document.getElementById('devBonusScreen');
+  if (bonusBtn) bonusBtn.addEventListener('click', () => showPreviewScreen('bonus', { count: 10 + 5 * Math.floor(Math.random() * 3) }));
 
   toggleBtn.addEventListener('click', () => {
     const next = document.getElementById('screen').dataset.mode === 'base' ? 'freespins' : 'base';
@@ -1139,6 +1341,8 @@ function preloadAssets() {
     tasks.push(track(popupResourceCache[key]));
   }
   tasks.push(track(getWinLineResource()));
+  tasks.push(track(getPreviewResource('feature')));
+  tasks.push(track(getPreviewResource('bonus')));
   tasks.push(track(preloadImage(bgSrcFor('base'))));
   tasks.push(track(preloadImage(bgSrcFor('bonus'))));
   for (const p of Sound.preloadPromises || []) tasks.push(track(p));
@@ -1176,7 +1380,10 @@ async function init() {
 
   if (window.Preloader) window.Preloader.done();
 
-  window.__slot = { stage, cellInfos };
+  window.__slot = { stage, cellInfos, showPreviewScreen };
+
+  // ?nofs — dev/screenshot convenience: straight into the game.
+  if (!new URLSearchParams(location.search).has('nofs')) showPreviewScreen('feature');
 }
 
 init();

@@ -470,6 +470,31 @@ img.is-missing {
   z-index: 5;
 }
 
+/* ---------- Preview screens (feature / bonus — Spine, see slot.js showPreviewScreen) ---------- */
+.preview-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 58;
+  background: #000;
+  opacity: 0;
+  transition: opacity 500ms ease-out;
+  cursor: pointer;
+}
+.preview-screen[hidden] { display: none; }
+.preview-screen.is-open { opacity: 1; transition-duration: 250ms; }
+/* The skeleton draws on the shared game canvas — lift it over the bar and
+   stretch it to the viewport while a preview is up. */
+body.is-preview-screen .spine-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  z-index: 59;
+}
+body.is-preview-screen .dev-panel,
+body.is-preview-screen .to-catalog-btn { visibility: hidden; }
+
 /* ---------- Free Spins counter (sign_freespins_counter.png) ---------- */
 .fs-counter {
   display: none;

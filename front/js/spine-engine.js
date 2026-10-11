@@ -173,6 +173,7 @@ class SpineStage {
     this.baseInstances = [];
     this.overlayInstances = []; // always drawn on top of base (popups)
     this.baseDimmed = false; // see setBaseDim below
+    this.baseHidden = false; // true = base layer skipped at draw time (full-screen intro/preview screens)
 
     // The stage is empty most of the time (win/popup animations only exist
     // after a landing), but SpineCanvas still ticks its rAF loop every frame.
@@ -197,7 +198,7 @@ class SpineStage {
       this._idleCleared = empty;
       if (empty) return;
       renderer.begin();
-      for (const inst of this.baseInstances) renderer.drawSkeleton(inst.skeleton, inst.resource.premultipliedAlpha);
+      if (!this.baseHidden) for (const inst of this.baseInstances) renderer.drawSkeleton(inst.skeleton, inst.resource.premultipliedAlpha);
       for (const inst of this.overlayInstances) renderer.drawSkeleton(inst.skeleton, inst.resource.premultipliedAlpha);
       renderer.end();
     };
@@ -222,8 +223,11 @@ class SpineStage {
   // atlas. So: watch for it, say so loudly, and run the loop ourselves — the
   // assets that DID load should still animate.
   _ensureRenderLoop(update, render) {
+    let attempts = 0;
     const check = () => {
-      if (this.spineCanvas.disposed || this.spineCanvas.time.frameCount > 0) return;
+      // Bounded: a tab that stays hidden never ticks a frame, and polling for
+      // that forever would leave a timer running for the life of the page.
+      if (this.spineCanvas.disposed || this.spineCanvas.time.frameCount > 0 || ++attempts > 100) return;
       const am = this.assetManager;
       const failed = Object.keys(am.getErrors ? am.getErrors() : {});
       // ONLY this exact case — loading finished AND something failed — is
