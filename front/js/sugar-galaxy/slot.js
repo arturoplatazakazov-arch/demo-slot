@@ -979,20 +979,23 @@ async function withScreenDim(mutateFn, { opaque = false } = {}) {
 // bonus screen is revealed behind it (product: ~3s of popup, then reveal).
 const BONUS_INTRO_HOLD_MS = 3000;
 
-// The base -> free-spins moment: black the screen out, play the bonusSpinsWin
-// popup over the black for BONUS_INTRO_HOLD_MS, swap the bonus screen in behind
-// the still-opaque black, then lift the blackout to reveal it. Shared by both
-// the real scatter trigger (app.js) and the dev mode toggle, since both enter
-// the bonus through setFreeSpinsMode below.
+// The base -> free-spins moment (product): the bonusSpinsWin popup plays over
+// the BASE screen (with its own light dim); once it has fully closed the
+// screen blacks out and the Spine bonus preview screen plays on that dark
+// backdrop; a tap dismisses it, revealing the still-black screen, and the
+// blackout then fades away to show the bonus screen (swapped in behind it).
+// Shared by the real scatter trigger (app.js) and the dev mode toggle, since
+// both enter the bonus through setFreeSpinsMode below.
 async function enterBonusTransition(amount = 0) {
   const screen = document.getElementById('screen');
-  pushScreenDim(true); // opaque blackout in
+  await playPopupSequence('bonusSpinsWin', amount, BONUS_INTRO_HOLD_MS, { ownDim: true });
+  pushScreenDim(true); // popup's dim deepens straight into the opaque blackout
   await wait(DIM_TRANSITION_MS);
-  await playPopupSequence('bonusSpinsWin', amount, BONUS_INTRO_HOLD_MS, { ownDim: false });
   screen.dataset.mode = 'freespins';
   setBackground('freespins');
+  await showBonusScreen(amount); // resolves after the tap + its fade-out (false = couldn't run)
+  popScreenDim(true); // blackout fades to transparent -> bonus screen
   await wait(DIM_TRANSITION_MS);
-  popScreenDim(true); // reveal the bonus screen
 }
 
 function setFreeSpinsMode(active, amount = 0) {
@@ -1063,10 +1066,32 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
   if (!folder) return Promise.resolve();
 
   return new Promise((resolve) => {
+    // Every exit goes through ONE finish(), and it is guaranteed to run: on
+    // the normal end clip, on any error, and on a safety timeout. The dim is
+    // raised BEFORE the popup's assets are awaited, so anything that throws in
+    // between (a broken or stale atlas, a 404, a missing clip) used to leave
+    // the screen dimmed and the frame hidden FOREVER, with no popup ever
+    // appearing.
+    let instance = null;
+    let dimmed = false;
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(safetyTimer);
+      if (instance) stage.removeOverlay(instance);
+      stopPopupAmountTracking();
+      if (dimmed) popScreenDim(opaque);
+      resolve();
+    };
+    // Longest a healthy popup can take: dim + start clip + hold + end clip.
+    const safetyTimer = setTimeout(finish, holdMs + 8000);
+
     (async () => {
       Sound.playSfx('popupOpen');
       if (ownDim) {
         pushScreenDim(opaque);
+        dimmed = true;
         await wait(DIM_TRANSITION_MS);
       }
 
@@ -1075,7 +1100,7 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
       }
       const resource = await popupResourceCache[key];
 
-      const instance = resource.createInstance();
+      instance = resource.createInstance();
       instance.anchorEl = document.getElementById('screen');
       // Portrait doubles the popup (product); glow overflow accepted.
       instance.fit = isMobileLayout() ? 2 : 1;
@@ -1091,14 +1116,14 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
           instance.play('end', false);
           instance.onSettle = () => {
             instance.onSettle = null;
-            stage.removeOverlay(instance);
-            stopPopupAmountTracking();
-            if (ownDim) popScreenDim(opaque);
-            resolve();
+            finish();
           };
         }, holdMs);
       };
-    })();
+    })().catch((err) => {
+      console.error(`popup "${key}" failed to play — closing it so the screen isn't left dimmed:`, err);
+      finish();
+    });
   });
 }
 
@@ -1118,6 +1143,8 @@ function setupDevPanel() {
   document.querySelectorAll('[data-popup]').forEach((btn) => {
     btn.addEventListener('click', () => playPopup(btn.dataset.popup, 12345));
   });
+  document.getElementById('devFeatureScreen')?.addEventListener('click', () => showFeatureScreen());
+  document.getElementById('devBonusScreen')?.addEventListener('click', () => showBonusScreen(7));
 
   // fit toggle is a no-op holdover from the party template — the layout now
   // always uses the design-space contain-scale below (there's no alternate
@@ -1127,6 +1154,177 @@ function setupDevPanel() {
     fitToggleBtn.textContent = 'fit-screen: on';
     fitToggleBtn.disabled = true;
   }
+}
+
+// --- Feature preview / bonus screens -----------------------------------------
+//
+// Spine skeletons generated by scripts/sugar_galaxy_screens.py from the game's
+// own art: `intro` (3s) then `idle` (looped) until a tap, then a 500ms fade.
+// Authored on the design canvas (origin = canvas centre, 1 unit = 1 design
+// px), one skeleton per orientation, so each is anchored to #stage itself
+// with its design box and lands exactly on the game layout. The background
+// is the DOM layer #featureScreen (the game's static bg PNG, cover), so the
+// skeleton never has to fill odd aspect ratios. Same contract as Neon Reels.
+
+const SCREEN_ROOT = `${ASSET_ROOT}/screens`;
+const SCREEN_BOX = {
+  desk: { x: -966, y: -470, width: 1932, height: 940 },
+  mob: { x: -390, y: -708, width: 780, height: 1416 },
+};
+const SCREEN_FADE_MS = 500;
+// Bonus screen: the counter plate pops in at 1.0-1.6s of intro; the spin
+// count then counts up over it. Font size in skeleton units (plate ~330 wide).
+const SCREEN_COUNT_AT = 1.5;
+const SCREEN_COUNT_UP_S = 0.6;
+const SCREEN_COUNT_UNITS = 150;
+
+function screenVariant() {
+  return isMobileLayout() ? 'mob' : 'desk';
+}
+
+// Unlike every other Sugar Galaxy export, the generated screens ARE
+// premultiplied (the kit saves PMA atlases, `pma:true`).
+function getScreenResource(kind, variant = screenVariant()) {
+  return SpineEngine.SpineResource.load(stage.assetManager, `${SCREEN_ROOT}/${kind}_${variant}`, {
+    premultipliedAlpha: true,
+  });
+}
+
+// Resolves true once the screen was shown and tapped away, false if it
+// couldn't run at all (so a caller can fall back).
+function showSpineScreen(kind, { bgMode = 'base', onFrame = null } = {}) {
+  const root = document.getElementById('featureScreen');
+  if (!stage || !root) return Promise.resolve(false);
+  return getScreenResource(kind).then((resource) => new Promise((resolve) => {
+    let variant = screenVariant();
+    let inst = null;
+    let alpha = 1;
+    let done = false;
+    let closing = false;
+
+    // (Re)mount for the current orientation; `fromEntry` carries the clip and
+    // time over when the device is rotated mid-screen.
+    const mount = (res, fromEntry) => {
+      const next = res.createInstance();
+      next.anchorEl = document.getElementById('stage');
+      next.fit = 1;
+      next.boundsOverride = SCREEN_BOX[variant];
+      if (fromEntry && fromEntry.animation) {
+        const entry = next.animationState.setAnimation(0, fromEntry.animation.name, fromEntry.loop);
+        entry.trackTime = fromEntry.trackTime;
+        if (!fromEntry.loop) next.queue('idle', true);
+      } else {
+        next.play('intro', false);
+        next.queue('idle', true);
+      }
+      next.skeleton.color.a = alpha;
+      if (inst) stage.removeOverlay(inst);
+      inst = next;
+      stage.addOverlay(inst);
+    };
+    // Absolute URL: a url() inside a custom property resolves against the
+    // stylesheet that uses it (css/), not the page.
+    // bgMode null = plain dark backdrop (the bonus preview sits on the blackout).
+    root.classList.toggle('is-dark', !bgMode);
+    const setBg = () => {
+      if (bgMode) root.style.setProperty('--fs-bg', `url("${new URL(bgFallbackSrc(bgMode), location.href).href}")`);
+    };
+    const onResize = () => {
+      setBg();
+      const v = screenVariant();
+      if (v === variant || closing) return;
+      variant = v;
+      const entry = inst.animationState.getCurrent(0);
+      getScreenResource(kind, v).then((res) => { if (!done) mount(res, entry); }).catch(() => {});
+    };
+
+    setBg();
+    mount(resource, null);
+    window.addEventListener('resize', onResize);
+    stage.baseHidden = true; // grid symbols share the canvas — keep them off the screen
+    document.body.classList.add('is-feature-screen');
+    root.hidden = false;
+    void root.offsetWidth;
+    root.classList.add('is-open');
+
+    const frame = () => {
+      if (done) return;
+      if (onFrame) onFrame(inst, alpha);
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+
+    const finish = () => {
+      if (done) return;
+      done = true;
+      stage.removeOverlay(inst);
+      stage.baseHidden = false;
+      window.removeEventListener('resize', onResize);
+      root.hidden = true;
+      root.style.transition = '';
+      document.body.classList.remove('is-feature-screen');
+      resolve(true);
+    };
+    const close = () => {
+      if (closing) return;
+      closing = true;
+      root.removeEventListener('click', close);
+      Sound.playSfx('click');
+      // Skeleton alpha and the DOM layer fade together; the clip keeps
+      // playing underneath so nothing freezes mid-fade.
+      root.style.transition = `opacity ${SCREEN_FADE_MS}ms ease-out`;
+      root.classList.remove('is-open');
+      const start = performance.now();
+      const tick = (now) => {
+        if (done) return;
+        const t = Math.min(1, (now - start) / SCREEN_FADE_MS);
+        alpha = 1 - t;
+        inst.skeleton.color.a = alpha;
+        if (t < 1) requestAnimationFrame(tick);
+        else finish();
+      };
+      requestAnimationFrame(tick);
+      setTimeout(finish, SCREEN_FADE_MS + 200); // hidden tab: rAF frozen
+    };
+    root.addEventListener('click', close);
+  })).catch((err) => {
+    console.warn(`${kind} screen failed:`, err);
+    return false;
+  });
+}
+
+function showFeatureScreen() {
+  return showSpineScreen('feature', { bgMode: 'base' });
+}
+
+function showBonusScreen(spins) {
+  const el = document.getElementById('fscreenCount');
+  const canvasEl = document.getElementById('spineCanvas');
+  const total = Math.max(0, Number(spins) || 0);
+  el.textContent = '0';
+  el.style.opacity = '0';
+  el.hidden = false;
+  return showSpineScreen('bonus', {
+    bgMode: null,
+    onFrame: (inst, alpha) => {
+      const bone = inst.skeleton.findBone('count');
+      if (!bone) return;
+      const dpr = window.devicePixelRatio || 1;
+      const pos = worldToScreen(bone.worldX, bone.worldY, canvasEl);
+      el.style.left = `${pos.left}px`;
+      el.style.top = `${pos.top}px`;
+      el.style.fontSize = `${(SCREEN_COUNT_UNITS * Math.hypot(bone.b, bone.d)) / dpr}px`;
+      const entry = inst.animationState.getCurrent(0);
+      const inIntro = entry && entry.animation && entry.animation.name === 'intro';
+      const t = inIntro ? entry.trackTime : Infinity;
+      const k = Math.max(0, Math.min(1, (t - SCREEN_COUNT_AT) / SCREEN_COUNT_UP_S));
+      el.textContent = String(Math.round(total * k));
+      el.style.opacity = t < SCREEN_COUNT_AT ? '0' : String(alpha);
+    },
+  }).then((ran) => {
+    el.hidden = true;
+    return ran;
+  });
 }
 
 // The whole game is authored in a fixed design canvas that matches the
@@ -1277,6 +1475,8 @@ function preloadAssets() {
     if (!popupResourceCache[key]) popupResourceCache[key] = loadSpineResource(POPUP_FOLDERS[key]);
     tasks.push(track(popupResourceCache[key]));
   }
+  tasks.push(track(getScreenResource('feature')));
+  tasks.push(track(getScreenResource('bonus')));
   for (const p of Sound.preloadPromises || []) tasks.push(track(p));
   tasks.push(track(warmUpWebGl(getSymbolResource(SYMBOL_CODES[0]))));
 
@@ -1309,7 +1509,10 @@ async function init() {
 
   if (window.Preloader) window.Preloader.done();
 
-  window.__slot = { stage, bgStage, cellInfos };
+  window.__slot = { stage, bgStage, cellInfos, showFeatureScreen, showBonusScreen };
+
+  // ?nofs — dev/screenshot convenience: straight into the game.
+  if (!new URLSearchParams(location.search).has('nofs')) showFeatureScreen();
 }
 
 init();

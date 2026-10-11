@@ -6,7 +6,7 @@
 <title>Sugar Galaxy — demo</title>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/preloader.css?v=1">
-<link rel="stylesheet" href="css/sugar-galaxy.css?v=6">
+<link rel="stylesheet" href="css/sugar-galaxy.css?v=8">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 </head>
 <body>
@@ -34,6 +34,8 @@
     <button class="dev-btn" data-popup="bonusSpinsWin" type="button">Bonus Spins Win</button>
     <button class="dev-btn" data-popup="bonusSpinsTotalWin" type="button">Bonus Total Win</button>
     <button class="dev-btn" data-popup="buyFreeSpins" type="button">Buy Free Spins</button>
+    <button class="dev-btn" id="devFeatureScreen" type="button">Feature Screen</button>
+    <button class="dev-btn" id="devBonusScreen" type="button">Bonus Screen</button>
     <button class="dev-btn" id="devFitToggle" type="button">fit-screen: on</button>
     <span class="dev-hint">клик по символу в сетке — превью его win-анимации</span>
   </div>
@@ -100,6 +102,12 @@
     <div class="popup-amount" id="popupAmount"></div>
 
   </div>
+
+  <!-- Feature preview / bonus screens: Spine art on #spineCanvas (lifted above
+       the V3 bar while a screen is up); this layer is the game's own bg under it
+       and catches the tap. Spin count is glued to the skeleton's "count" bone. -->
+  <div class="fscreen" id="featureScreen" hidden></div>
+  <div class="fscreen-count" id="fscreenCount" hidden></div>
 
   <!-- Paytable info popup — заполняется из session-start's `symbols`. -->
   <div class="info-popup" id="infoPopup" hidden>
@@ -222,7 +230,7 @@
   <script src="js/api.js?v=2"></script>
   <script src="js/reel-math.js?v=6"></script>
   <script src="js/sugar-galaxy/sound.js?v=6"></script>
-  <script src="js/sugar-galaxy/slot.js?v=21"></script>
+  <script src="js/sugar-galaxy/slot.js?v=24"></script>
   <script src="js/sugar-galaxy/app.js?v=7"></script>
   <!-- Поведение нижнего бара V3: флайаут, тултипы, заглушки авто/турбо. -->
   <script src="js/ui-bar-v3.js?v=4"></script>

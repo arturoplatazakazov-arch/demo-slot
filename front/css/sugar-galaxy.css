@@ -257,7 +257,9 @@ body {
   background: rgba(0, 0, 0, 0.7);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 320ms ease;
+  /* background-color too: a popup's light dim deepens smoothly into the
+     opaque blackout before the bonus preview screen. */
+  transition: opacity 320ms ease, background-color 320ms ease;
   z-index: 4; /* above #stage (1), below the symbol/popup canvas (5) */
 }
 .screen-dim.is-active { opacity: 1; }
@@ -583,6 +585,69 @@ img.is-missing {
 .ui-balance__currency { font-size: 12px; opacity: 0.7; }
 .ui-icon-btn[data-action="sound"].is-muted { opacity: 0.4; }
 .ui-icon-btn[data-action="sound"].is-muted svg path:last-child { display: none; }
+
+/* ---------- Feature preview / bonus screens ----------
+   Art is a Spine skeleton on #spineCanvas (scripts/sugar_galaxy_screens.py);
+   this layer is only the game's own static bg (cover, any aspect) with a
+   purple vignette, and it catches the tap that closes the screen. */
+.fscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 58;
+  background: #0b0220;
+  opacity: 0;
+  transition: opacity 420ms ease;
+  cursor: pointer;
+  overflow: hidden;
+}
+.fscreen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--fs-bg) center / cover no-repeat;
+}
+.fscreen.is-open::before { animation: fscreen-zoom 1.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes fscreen-zoom { from { transform: scale(1.12); } }
+.fscreen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(11, 2, 32, 0.1) 0%, rgba(11, 2, 32, 0.5) 62%, rgba(11, 2, 32, 0.88) 100%),
+    linear-gradient(rgba(60, 10, 110, 0.22), rgba(60, 10, 110, 0.22));
+}
+/* Bonus preview: no game bg, just the dark blackout it sits on. */
+.fscreen.is-dark { background: #000; }
+.fscreen.is-dark::before { display: none; }
+.fscreen.is-dark::after {
+  background: radial-gradient(ellipse at 50% 45%, rgba(70, 14, 120, 0.35) 0%, rgba(0, 0, 0, 0) 65%);
+}
+.fscreen[hidden] { display: none; }
+.fscreen.is-open { opacity: 1; }
+body.is-feature-screen #spineCanvas { position: fixed; z-index: 59; }
+body.is-feature-screen .dev-panel,
+body.is-feature-screen .to-catalog-btn { visibility: hidden; }
+
+/* Live free-spins count over the bonus screen's counter plate. */
+.fscreen-count {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 60;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  font-family: 'Luckiest Guy', cursive;
+  line-height: 1;
+  padding-top: 0.08em; /* Luckiest Guy sits high in its line box */
+  color: #fff4c2;
+  background: linear-gradient(#fffbd0 10%, #ffd83a 50%, #ff8a00 95%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 3px 0 #3b0a63) drop-shadow(0 0 12px rgba(255, 63, 208, 0.85));
+  opacity: 0;
+}
+.fscreen-count[hidden] { display: none; }
 
 /* ---------- Paytable info popup ---------- */
 .info-popup {
