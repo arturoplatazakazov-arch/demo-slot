@@ -1,0 +1,680 @@
+/* Uniqorn Shaolin Struggles — FX-слой (js/uniqorn-shaolin-struggles/fx.js).
+
+   Подключается ПОСЛЕ основного css игры и только добавляет: базовая вёрстка
+   не меняется. Трансформации FX идут через отдельные свойства translate /
+   scale / rotate, чтобы складываться с keyframes игры на `transform`, а не
+   перебивать их. */
+
+@property --fx-a {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+/* ===================== Канвасы частиц ===================== */
+.fx-canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.fx-canvas--bg { z-index: 0; }
+.fx-canvas--fg { z-index: 25; }
+
+/* ===================== Фон ===================== */
+@keyframes fx-kenburns {
+  0%   { scale: 1.02; translate: 0 0; }
+  50%  { scale: 1.07; translate: -0.6% -0.5%; }
+  100% { scale: 1.04; translate: 0.5% 0.3%; }
+}
+.fx-kenburns {
+  animation: fx-kenburns 38s ease-in-out infinite alternate;
+  transform-origin: 50% 50%;
+}
+
+.fx-bgrig {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.fx-bgrig > * { position: absolute; pointer-events: none; }
+
+/* Лучи солнца из-за гор: вращающийся конус лучей, гаснущий к краям. */
+.fx-godrays {
+  width: 150%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(255, 226, 160, 0.55) 0deg 4deg,
+    rgba(255, 226, 160, 0) 4deg 13deg,
+    rgba(255, 196, 120, 0.35) 13deg 15deg,
+    rgba(255, 226, 160, 0) 15deg 24deg
+  );
+  -webkit-mask-image: radial-gradient(circle, #000 0%, rgba(0, 0, 0, 0.5) 18%, transparent 52%);
+  mask-image: radial-gradient(circle, #000 0%, rgba(0, 0, 0, 0.5) 18%, transparent 52%);
+  mix-blend-mode: soft-light;
+  opacity: 0.75;
+  animation: fx-spin 140s linear infinite;
+}
+.fx-sunglow {
+  width: 46%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  background: radial-gradient(circle, rgba(255, 236, 190, 0.75), rgba(255, 190, 110, 0.25) 35%, transparent 68%);
+  mix-blend-mode: screen;
+  animation: fx-breathe 6s ease-in-out infinite;
+}
+.fx-moonrays {
+  width: 70%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  background: repeating-conic-gradient(from 0deg, rgba(190, 220, 255, 0.4) 0deg 3deg, transparent 3deg 17deg);
+  -webkit-mask-image: radial-gradient(circle, #000 4%, transparent 50%);
+  mask-image: radial-gradient(circle, #000 4%, transparent 50%);
+  mix-blend-mode: screen;
+  opacity: 0.45;
+  animation: fx-spin 120s linear infinite reverse;
+}
+.fx-moonglow {
+  width: 22%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  background: radial-gradient(circle, rgba(230, 240, 255, 0.7), rgba(150, 190, 255, 0.2) 40%, transparent 70%);
+  mix-blend-mode: screen;
+  animation: fx-breathe 5s ease-in-out infinite;
+}
+@keyframes fx-spin { to { rotate: 360deg; } }
+@keyframes fx-breathe {
+  0%, 100% { opacity: 0.7; scale: 1; }
+  50%      { opacity: 1; scale: 1.08; }
+}
+
+/* Фонари: тёплое мерцание свечи внутри. */
+.fx-lantern {
+  width: 5.5%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  background: radial-gradient(circle, rgba(255, 190, 110, 0.85), rgba(255, 90, 50, 0.35) 38%, transparent 70%);
+  mix-blend-mode: screen;
+  animation: fx-flicker 2.4s ease-in-out infinite;
+}
+@keyframes fx-flicker {
+  0%, 100% { opacity: 0.55; scale: 1; }
+  20%      { opacity: 0.9; scale: 1.08; }
+  35%      { opacity: 0.65; }
+  60%      { opacity: 1; scale: 1.12; }
+  80%      { opacity: 0.7; scale: 1.02; }
+}
+/* Жаровни: пульсирующий жар над огнём. */
+.fx-brazier {
+  width: 11%;
+  aspect-ratio: 1;
+  translate: -50% -70%;
+  background: radial-gradient(circle, rgba(255, 200, 100, 0.8), rgba(255, 110, 40, 0.35) 40%, transparent 70%);
+  mix-blend-mode: screen;
+  animation: fx-flicker 0.9s ease-in-out infinite;
+}
+/* Виньетка: кино-затемнение краёв, фокус на автомат. */
+.fx-vignette {
+  inset: 0;
+  background: radial-gradient(ellipse 75% 70% at 50% 52%, transparent 55%, rgba(10, 2, 6, 0.55) 100%);
+}
+
+/* ===================== Тряска / вспышка ===================== */
+@keyframes fx-shake-s {
+  0%, 100% { translate: 0 0; }
+  20% { translate: -4px 3px; } 40% { translate: 4px -3px; } 60% { translate: -3px -2px; } 80% { translate: 2px 2px; }
+}
+@keyframes fx-shake-m {
+  0%, 100% { translate: 0 0; scale: 1.02; }
+  10% { translate: -9px 6px; } 25% { translate: 9px -7px; } 40% { translate: -7px -5px; }
+  55% { translate: 6px 6px; } 70% { translate: -4px 3px; } 85% { translate: 2px -2px; }
+}
+@keyframes fx-shake-l {
+  0%, 100% { translate: 0 0; scale: 1.04; }
+  8% { translate: -16px 10px; rotate: -0.4deg; } 20% { translate: 15px -12px; rotate: 0.4deg; }
+  34% { translate: -12px -8px; } 48% { translate: 10px 10px; rotate: -0.3deg; } 62% { translate: -7px 5px; }
+  76% { translate: 5px -4px; } 90% { translate: -2px 2px; }
+}
+.screen.fx-shake-s { animation: fx-shake-s 320ms ease-out; }
+.screen.fx-shake-m { animation: fx-shake-m 520ms ease-out; }
+.screen.fx-shake-l { animation: fx-shake-l 680ms ease-out; }
+
+.fx-screen-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 26;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, var(--fx-flash, #fff), transparent 75%);
+  opacity: 0;
+  mix-blend-mode: screen;
+}
+.fx-screen-flash.is-on { animation: fx-flash 620ms ease-out; }
+@keyframes fx-flash {
+  0%   { opacity: var(--fx-flash-a, 0.85); }
+  100% { opacity: 0; }
+}
+
+/* ===================== Рамка барабанов ===================== */
+/* Мягкое золотое свечение под корпусом — «автомат светится изнутри». */
+.fx-frame-aura {
+  position: absolute;
+  inset: -30px;
+  z-index: 0;
+  border-radius: 40px;
+  pointer-events: none;
+  background: radial-gradient(closest-side, rgba(255, 196, 90, 0.38), rgba(255, 120, 60, 0.12) 70%, transparent);
+  filter: blur(18px);
+  animation: fx-breathe 4.5s ease-in-out infinite;
+}
+.reel.fx-spin .fx-frame-aura { background: radial-gradient(closest-side, rgba(255, 210, 120, 0.55), rgba(255, 140, 60, 0.2) 70%, transparent); }
+.reel.fx-win .fx-frame-aura { animation: fx-aura-win 0.5s ease-in-out infinite alternate; }
+.reel.fx-antic .fx-frame-aura {
+  background: radial-gradient(closest-side, rgba(255, 90, 40, 0.65), rgba(255, 40, 20, 0.25) 70%, transparent);
+  animation: fx-aura-win 0.28s ease-in-out infinite alternate;
+}
+@keyframes fx-aura-win {
+  from { opacity: 0.7; scale: 1; }
+  to   { opacity: 1; scale: 1.05; }
+}
+
+/* Кольцо поверх канта рамки: та же геометрия и та же маска «прямоугольник
+   минус content-box», что у .reel__frame, — свет живёт строго на канте. */
+.fx-frame-ring {
+  position: absolute;
+  inset: calc(var(--reel-inset) - var(--frame-thickness) - 3px);
+  padding: calc(var(--frame-thickness) + 3px);
+  border-radius: 12px;
+  pointer-events: none;
+  z-index: 6;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+/* Две бегущие «кометы» света по периметру. */
+.fx-frame-chase {
+  background: conic-gradient(
+    from var(--fx-a),
+    transparent 0deg, rgba(255, 246, 200, 0) 120deg,
+    rgba(255, 250, 220, 0.95) 158deg, rgba(255, 210, 110, 0.6) 166deg, transparent 180deg,
+    rgba(255, 246, 200, 0) 300deg,
+    rgba(255, 250, 220, 0.95) 338deg, rgba(255, 210, 110, 0.6) 346deg, transparent 360deg
+  );
+  mix-blend-mode: plus-lighter;
+  animation: fx-chase 5.5s linear infinite;
+}
+.fx-frame-chase--fast {
+  opacity: 0;
+  animation-duration: 0.9s;
+  transition: opacity 240ms ease;
+}
+.reel.fx-spin .fx-frame-chase--fast { opacity: 1; }
+.reel.fx-antic .fx-frame-chase--fast { opacity: 1; filter: hue-rotate(-30deg) saturate(2); animation-duration: 0.5s; }
+@keyframes fx-chase { to { --fx-a: 360deg; } }
+
+/* Диагональный блик, пробегающий по всей рамке раз в несколько секунд. */
+.fx-frame-sweep {
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 240, 0.9) 50%, transparent 60%) no-repeat;
+  background-size: 300% 100%;
+  background-position: 150% 0;
+  mix-blend-mode: plus-lighter;
+  animation: fx-sweep 4.8s ease-in-out infinite;
+}
+@keyframes fx-sweep {
+  0%, 55% { background-position: 150% 0; }
+  100%    { background-position: -50% 0; }
+}
+.reel.fx-win .fx-frame-sweep { animation-duration: 0.9s; }
+
+/* Вся рамка вспыхивает на выигрыше и на посадке колонки. */
+.reel.fx-win .reel__frame { animation: fx-frame-flash 0.45s ease-in-out infinite alternate; }
+@keyframes fx-frame-flash {
+  from { filter: brightness(1); }
+  to   { filter: brightness(1.55) saturate(1.2); }
+}
+.reel.fx-land { animation: fx-reel-land 220ms ease-out; }
+@keyframes fx-reel-land {
+  0%   { translate: 0 0; }
+  35%  { translate: 0 5px; }
+  100% { translate: 0 0; }
+}
+.reel.fx-hit { animation: fx-reel-hit 320ms ease-out; }
+@keyframes fx-reel-hit {
+  0%   { translate: 0 0; rotate: 0deg; }
+  25%  { translate: 10px 0; rotate: 0.5deg; }
+  55%  { translate: -5px 0; rotate: -0.25deg; }
+  100% { translate: 0 0; rotate: 0deg; }
+}
+
+/* Глубина окна: тени сверху/снизу, барабан читается цилиндром. */
+.fx-window-depth {
+  position: absolute;
+  inset: var(--reel-inset);
+  z-index: 4;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.55) 0%, transparent 9%, transparent 91%, rgba(0, 0, 0, 0.55) 100%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.35) 0%, transparent 5%, transparent 95%, rgba(0, 0, 0, 0.35) 100%);
+}
+
+/* Уголки-пагоды: самоцвет в центре + вспыхивающая четырёхлучевая звезда. */
+.reel__corner { overflow: visible; }
+.fx-gem {
+  position: absolute;
+  inset: 11px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffd6dc, #e0213f 45%, #6b0414 100%);
+  box-shadow: 0 0 10px rgba(255, 60, 80, 0.8), inset 0 -2px 3px rgba(0, 0, 0, 0.4);
+  animation: fx-gem 2.6s ease-in-out infinite;
+}
+.reel__corner--tr .fx-gem, .reel__corner--tr .fx-gem-star { animation-delay: 0.65s; }
+.reel__corner--br .fx-gem, .reel__corner--br .fx-gem-star { animation-delay: 1.3s; }
+.reel__corner--bl .fx-gem, .reel__corner--bl .fx-gem-star { animation-delay: 1.95s; }
+@keyframes fx-gem {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.6); box-shadow: 0 0 22px rgba(255, 80, 100, 1), inset 0 -2px 3px rgba(0, 0, 0, 0.4); }
+}
+.fx-gem-star {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 70px;
+  height: 70px;
+  translate: -50% -50%;
+  background:
+    linear-gradient(90deg, transparent 46%, #fff 50%, transparent 54%),
+    linear-gradient(0deg, transparent 46%, #fff 50%, transparent 54%),
+    radial-gradient(circle, rgba(255, 255, 255, 0.95) 0 8%, transparent 30%);
+  -webkit-mask-image: radial-gradient(circle, #000 10%, transparent 70%);
+  mask-image: radial-gradient(circle, #000 10%, transparent 70%);
+  mix-blend-mode: plus-lighter;
+  opacity: 0;
+  animation: fx-star 2.6s ease-in-out infinite;
+}
+@keyframes fx-star {
+  0%, 40%, 100% { opacity: 0; scale: 0.2; rotate: 0deg; }
+  52%           { opacity: 1; scale: 1; rotate: 45deg; }
+  66%           { opacity: 0; scale: 0.4; rotate: 90deg; }
+}
+.reel.fx-win .fx-gem-star { animation-duration: 0.8s; }
+
+/* Блик по лаковым плашкам (джекпоты, Buy Bonus, счётчик). */
+.jp, .sign-buy-bonus, .respin-counter { overflow: hidden; }
+.fx-sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(110deg, transparent 35%, rgba(255, 250, 225, 0.5) 48%, rgba(255, 250, 225, 0.08) 56%, transparent 62%) no-repeat;
+  background-size: 260% 100%;
+  background-position: 140% 0;
+  mix-blend-mode: plus-lighter;
+  animation: fx-sheen 5s ease-in-out infinite;
+  animation-delay: var(--fx-delay, 0s);
+}
+@keyframes fx-sheen {
+  0%, 62% { background-position: 140% 0; }
+  100%    { background-position: -40% 0; }
+}
+.jp__coin { animation: fx-jp-coin 3.4s ease-in-out infinite; animation-delay: var(--fx-delay, 0s); }
+@keyframes fx-jp-coin {
+  0%, 70%, 100% { rotate: 0deg; scale: 1; }
+  80%           { rotate: -8deg; scale: 1.08; }
+  90%           { rotate: 6deg; scale: 1.04; }
+}
+.jp--grand { animation: fx-grand 2.2s ease-in-out infinite; }
+@keyframes fx-grand {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.18) drop-shadow(0 0 18px rgba(255, 90, 77, 0.8)); }
+}
+.sign-buy-bonus { animation: fx-buy 2.4s ease-in-out infinite; }
+@keyframes fx-buy {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.12) drop-shadow(0 0 22px rgba(255, 207, 90, 0.7)); }
+}
+.respin-counter.fx-reset { animation: fx-counter-reset 500ms cubic-bezier(0.2, 1.6, 0.4, 1); }
+.respin-counter.fx-tick { animation: fx-counter-tick 400ms ease-out; }
+@keyframes fx-counter-reset {
+  0%   { scale: 1; filter: brightness(1); }
+  40%  { scale: 1.22; filter: brightness(1.8); }
+  100% { scale: 1; filter: brightness(1); }
+}
+@keyframes fx-counter-tick {
+  0%   { scale: 1; }
+  40%  { scale: 0.92; }
+  100% { scale: 1; }
+}
+
+/* ===================== Символы ===================== */
+/* Картинка символа и метка монеты поднимаются над sunburst'ом. */
+.reel__cell > img { position: relative; z-index: 1; }
+.reel__cell > .coin-value { z-index: 3; }
+
+/* Motion blur ленты при падении. */
+.reel__strip.fx-blur { filter: url(#fxVBlur) brightness(1.1); }
+
+/* Удар колонки о «дно»: световая полоса снизу вверх. */
+.reel__col::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(0deg, rgba(255, 230, 160, 0.55), rgba(255, 230, 160, 0.08) 45%, transparent 70%);
+  mix-blend-mode: plus-lighter;
+}
+.reel__col.fx-col-impact::after { animation: fx-col-impact 420ms ease-out; }
+@keyframes fx-col-impact {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Антиципация: колонка горит, остальные тонут в тени. */
+.reel.fx-antic .reel__col:not(.is-anticipating) { filter: brightness(0.4) saturate(0.6); transition: filter 300ms ease; }
+.reel__col.is-anticipating::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  box-shadow: inset 0 0 40px 6px rgba(255, 110, 40, 0.95), inset 0 0 0 4px rgba(255, 220, 140, 0.9);
+  background: linear-gradient(0deg, rgba(255, 90, 30, 0.45), transparent 40%);
+  mix-blend-mode: plus-lighter;
+  animation: fx-antic 0.32s ease-in-out infinite alternate;
+}
+@keyframes fx-antic {
+  from { opacity: 0.6; }
+  to   { opacity: 1; }
+}
+
+/* Притушенные символы — в кинотень, а не просто полупрозрачность. */
+.reel__cell.is-dimmed img { opacity: 0.6; filter: grayscale(0.75) brightness(0.4); transition: opacity 260ms ease, filter 260ms ease; }
+
+/* Посадка: сильнее сквош и «пыль». */
+@keyframes cell-land {
+  0%   { transform: translateY(-10%) scale(1.06, 0.88); }
+  45%  { transform: translateY(2%) scale(0.95, 1.06); }
+  75%  { transform: translateY(0) scale(1.02, 0.98); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+
+/* Выигрыш: мощный поп с золотым ореолом и лёгким вращением. */
+@keyframes cell-win {
+  0%   { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 0 rgba(255, 207, 90, 0)) brightness(1); }
+  25%  { transform: scale(1.24) rotate(-4deg); filter: drop-shadow(0 0 26px rgba(255, 220, 120, 1)) brightness(1.35); }
+  50%  { transform: scale(1.12) rotate(3deg); filter: drop-shadow(0 0 18px rgba(255, 207, 90, 0.85)) brightness(1.15); }
+  75%  { transform: scale(1.16) rotate(-1deg); filter: drop-shadow(0 0 14px rgba(255, 207, 90, 0.7)) brightness(1.1); }
+  100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 0 rgba(255, 207, 90, 0)) brightness(1); }
+}
+
+/* Sunburst за выигрышным символом: лучи крутятся, пока символ в выигрыше. */
+.fx-burst {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 150%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--fx-burst, #ffcf5a) 80%, white) 0%, transparent 42%),
+    repeating-conic-gradient(from 0deg, var(--fx-burst, #ffcf5a) 0deg 7deg, transparent 7deg 22deg);
+  -webkit-mask-image: radial-gradient(circle, #000 20%, transparent 64%);
+  mask-image: radial-gradient(circle, #000 20%, transparent 64%);
+  mix-blend-mode: plus-lighter;
+  opacity: 0.75;
+  animation: fx-burst-in 380ms cubic-bezier(0.2, 1.4, 0.4, 1) both, fx-spin 6s linear infinite;
+}
+@keyframes fx-burst-in {
+  from { scale: 0; opacity: 0; }
+  to   { scale: 1; opacity: 0.75; }
+}
+.reel__cell.is-dimmed .fx-burst { opacity: 0.15; }
+
+/* Блик по альфе символа: маска = сам PNG символа. */
+.fx-shine {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  -webkit-mask-image: var(--fx-mask);
+  mask-image: var(--fx-mask);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  background: linear-gradient(115deg, transparent 38%, rgba(255, 255, 245, 0.95) 48%, rgba(255, 240, 200, 0.4) 53%, transparent 62%) no-repeat;
+  background-size: 300% 100%;
+  background-position: 150% 0;
+  mix-blend-mode: plus-lighter;
+  opacity: 0;
+}
+.fx-shine.is-on { animation: fx-shine 850ms ease-in-out; }
+.reel__cell.is-winning .fx-shine { animation: fx-shine 620ms ease-in-out, cell-win 620ms ease-in-out; }
+@keyframes fx-shine {
+  0%   { background-position: 150% 0; opacity: 1; }
+  100% { background-position: -50% 0; opacity: 1; }
+}
+
+/* Монеты Hold & Win: удар при залипании. */
+.reel__cell.fx-pop { animation: fx-pop 500ms cubic-bezier(0.2, 1.6, 0.4, 1); z-index: 3; }
+@keyframes fx-pop {
+  0%   { scale: 1.35; filter: brightness(2); }
+  60%  { scale: 0.94; filter: brightness(1.2); }
+  100% { scale: 1; filter: brightness(1); }
+}
+.coin-value.fx-bump { animation: fx-bump 400ms cubic-bezier(0.2, 1.6, 0.4, 1); }
+@keyframes fx-bump {
+  0%   { scale: 1.45; filter: brightness(1.8); }
+  100% { scale: 1; filter: brightness(1); }
+}
+
+/* ===================== Герой ===================== */
+.fx-hero-aura {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+}
+/* Ки: вращающееся радужное пламя за спиной — грива у единорога радужная. */
+.fx-hero-aura__ki {
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  width: 115%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, #ff5fa8, #ffcf5a, #6fe39a, #6fc8ff, #b48cff, #ff5fa8);
+  -webkit-mask-image: radial-gradient(circle, transparent 28%, #000 40%, transparent 66%);
+  mask-image: radial-gradient(circle, transparent 28%, #000 40%, transparent 66%);
+  filter: blur(22px);
+  opacity: 0.45;
+  mix-blend-mode: screen;
+  animation: fx-spin 9s linear infinite, fx-breathe 3.2s ease-in-out infinite;
+}
+.fx-hero-aura__glow {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 95%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 220, 140, 0.55), rgba(255, 150, 80, 0.15) 45%, transparent 68%);
+  mix-blend-mode: screen;
+  animation: fx-breathe 4.5s ease-in-out infinite;
+}
+.fx-hero-aura.is-charged .fx-hero-aura__ki { opacity: 0.85; animation-duration: 1.6s, 0.4s; }
+.fx-hero-aura.is-charged .fx-hero-aura__glow { animation-duration: 0.5s; }
+
+.hero { filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 2px rgba(255, 240, 200, 0.7)); }
+
+/* Ката: замах -> выпад к автомату -> возврат (отдельные свойства, поверх
+   idle/tense/cheer-лупа на transform). */
+.hero.fx-strike {
+  animation: fx-strike 760ms cubic-bezier(0.3, 0.7, 0.3, 1);
+}
+@keyframes fx-strike {
+  0%   { translate: 0 0; rotate: 0deg; scale: 1; }
+  28%  { translate: calc(var(--fx-reach, 7%) * -0.35) 0.5%; rotate: -5deg; scale: 0.96 1.03; }
+  52%  { translate: var(--fx-reach, 7%) -2%; rotate: 5deg; scale: 1.07 0.97; }
+  68%  { translate: calc(var(--fx-reach, 7%) * 0.85) -1.5%; rotate: 4deg; scale: 1.04; }
+  100% { translate: 0 0; rotate: 0deg; scale: 1; }
+}
+.fx-hero-ghost {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  transform-origin: 50% 100%;
+  filter: blur(3px) hue-rotate(var(--fx-hue, 40deg)) brightness(1.6);
+  mix-blend-mode: screen;
+  animation: fx-ghost 520ms ease-out both;
+}
+@keyframes fx-ghost {
+  0%   { opacity: 0.55; translate: -2% 0; }
+  100% { opacity: 0; translate: 6% -2%; scale: 1.05; }
+}
+
+/* ===================== Логотип ===================== */
+.logo { overflow: visible; }
+.logo__img { position: relative; z-index: 1; animation: fx-logo-float 5s ease-in-out infinite; }
+@keyframes fx-logo-float {
+  0%, 100% { translate: 0 0; rotate: 0deg; }
+  50%      { translate: 0 -6px; rotate: -0.6deg; }
+}
+.fx-logo-glow {
+  position: absolute;
+  inset: -12% -6%;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(closest-side, rgba(255, 120, 170, 0.45), rgba(255, 200, 90, 0.18) 60%, transparent);
+  filter: blur(14px);
+  animation: fx-breathe 3.6s ease-in-out infinite;
+}
+.fx-logo-shine {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  -webkit-mask-image: var(--fx-mask);
+  mask-image: var(--fx-mask);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  background: linear-gradient(110deg, transparent 40%, rgba(255, 255, 250, 0.95) 48%, rgba(255, 230, 180, 0.35) 53%, transparent 60%) no-repeat;
+  background-size: 320% 100%;
+  background-position: 160% 0;
+  mix-blend-mode: plus-lighter;
+  animation: fx-logo-shine 4.2s ease-in-out infinite, fx-logo-float 5s ease-in-out infinite;
+}
+@keyframes fx-logo-shine {
+  0%, 58% { background-position: 160% 0; }
+  100%    { background-position: -60% 0; }
+}
+.fx-twinkle {
+  position: absolute;
+  z-index: 3;
+  width: 34px;
+  height: 34px;
+  translate: -50% -50%;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 45%, #fff 50%, transparent 55%),
+    linear-gradient(0deg, transparent 45%, #fff 50%, transparent 55%),
+    radial-gradient(circle, #fff 0 10%, rgba(255, 220, 140, 0.6) 22%, transparent 45%);
+  -webkit-mask-image: radial-gradient(circle, #000 15%, transparent 70%);
+  mask-image: radial-gradient(circle, #000 15%, transparent 70%);
+  mix-blend-mode: plus-lighter;
+  opacity: 0;
+  animation: fx-twinkle 3s ease-in-out infinite;
+}
+@keyframes fx-twinkle {
+  0%, 100% { opacity: 0; scale: 0; rotate: 0deg; }
+  15%      { opacity: 1; scale: var(--fx-s, 1); rotate: 45deg; }
+  30%      { opacity: 0; scale: 0; rotate: 90deg; }
+}
+.logo.fx-logo-enter { animation: fx-logo-enter 1100ms cubic-bezier(0.3, 0.9, 0.3, 1) both; }
+@keyframes fx-logo-enter {
+  0%   { opacity: 0; scale: 2.6; translate: 0 -40%; filter: brightness(3) blur(6px); }
+  40%  { opacity: 1; scale: 0.9; translate: 0 2%; filter: brightness(2.2) blur(0); }
+  55%  { scale: 1.08; translate: 0 -1%; filter: brightness(1.5); }
+  72%  { scale: 0.98; translate: 0 0; filter: brightness(1.15); }
+  100% { opacity: 1; scale: 1; translate: 0 0; filter: brightness(1); }
+}
+.logo.fx-logo-pulse { animation: fx-logo-pulse 900ms ease-out; }
+@keyframes fx-logo-pulse {
+  0%   { scale: 1; filter: brightness(1); }
+  25%  { scale: 1.09; filter: brightness(1.6) drop-shadow(0 0 24px rgba(255, 200, 120, 0.9)); }
+  100% { scale: 1; filter: brightness(1); }
+}
+
+/* ===================== Попапы ===================== */
+.fx-popup-rays {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 29;
+  width: 150vmax;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--fx-ray) 70%, white) 0%, transparent 22%),
+    repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--fx-ray) 75%, transparent) 0deg 5deg, transparent 5deg 15deg);
+  -webkit-mask-image: radial-gradient(circle, #000 6%, rgba(0, 0, 0, 0.5) 22%, transparent 46%);
+  mask-image: radial-gradient(circle, #000 6%, rgba(0, 0, 0, 0.5) 22%, transparent 46%);
+  mix-blend-mode: plus-lighter;
+  opacity: 0;
+  scale: 0.2;
+  transition: opacity 360ms ease, scale 600ms cubic-bezier(0.2, 1.2, 0.4, 1);
+  animation: fx-spin 16s linear infinite;
+}
+.fx-popup-rays.is-in { opacity: 0.85; scale: 1; }
+
+.game-popup { overflow: hidden; }
+.game-popup.is-in { animation: fx-popup-glow 1.2s ease-in-out infinite alternate; }
+@keyframes fx-popup-glow {
+  from { filter: brightness(1); }
+  to   { filter: brightness(1.12); }
+}
+.fx-popup-sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 38%, rgba(255, 250, 225, 0.45) 48%, transparent 58%) no-repeat;
+  background-size: 300% 100%;
+  background-position: 150% 0;
+  mix-blend-mode: plus-lighter;
+  animation: fx-sheen-fast 1.8s ease-in-out 0.4s infinite;
+}
+@keyframes fx-sheen-fast {
+  0%   { background-position: 150% 0; }
+  70%, 100% { background-position: -50% 0; }
+}
+.fx-ch {
+  display: inline-block;
+  animation: fx-ch-in 520ms cubic-bezier(0.2, 1.7, 0.4, 1) both, fx-ch-wave 1.6s ease-in-out 900ms infinite;
+}
+@keyframes fx-ch-in {
+  0%   { opacity: 0; scale: 3; translate: 0 -40%; filter: blur(6px) brightness(3); }
+  100% { opacity: 1; scale: 1; translate: 0 0; filter: blur(0) brightness(1); }
+}
+@keyframes fx-ch-wave {
+  0%, 100% { translate: 0 0; }
+  50%      { translate: 0 -6%; }
+}
+.game-popup__amount.fx-amount-done { animation: fx-bump 600ms cubic-bezier(0.2, 1.6, 0.4, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-kenburns, .fx-godrays, .fx-moonrays, .fx-frame-chase, .fx-frame-sweep, .fx-sheen,
+  .fx-twinkle, .fx-logo-shine, .fx-hero-aura__ki, .fx-popup-rays, .fx-burst { animation: none !important; }
+}

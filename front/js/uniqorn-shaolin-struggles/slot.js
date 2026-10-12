@@ -113,6 +113,11 @@ let reelCols = [];
 // пересобирать под новое устройство.
 let reelsBusy = false;
 
+// FX-слой (fx.js) — необязательный: без него игра работает как раньше.
+function fx(name, ...args) {
+  if (window.ShaolinFX) window.ShaolinFX.hook(name, ...args);
+}
+
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -315,6 +320,7 @@ function playWinAnimationOnce(info) {
   info.cell.classList.remove('is-winning');
   void info.cell.offsetWidth; // рестарт кейфреймов
   info.cell.classList.add('is-winning');
+  fx('cellPulse', info);
   return wait(WIN_PULSE_MS).then(() => {
     info.cell.classList.remove('is-winning');
   });
@@ -409,6 +415,7 @@ function playWinCells(winningCells, lineWins, countWins) {
     if (info) setCellDimmed(info, allWinInfos.length > 0 && !winSet.has(info));
   }
   setHeroMood(allWinInfos.length > 0 ? 'cheer' : 'idle');
+  fx('win', allWinInfos);
 
   const groups = buildWinGroups(lineWins, countWins);
   if (groups.length > 1) {
@@ -480,6 +487,7 @@ let reelClearDone = Promise.resolve();
 function startReelLoop() {
   Sound.playSfx('spinStart');
   reelsBusy = true;
+  fx('spinStart');
   teardownCellInstances();
   setHeroMood('tense');
   const gen = ++reelLoopGeneration;
@@ -545,6 +553,7 @@ function landReel(colIndex, finalCodes, delayMs, isAnticipating = false, fillerF
       const landStartY = -(REEL_LAND_FILLER_COUNT * rowStep);
 
       const beginLanding = () => {
+        fx('colDrop', colIndex);
         stripEl.style.transition = `transform ${REEL_LAND_DURATION_MS}ms cubic-bezier(0.19, 0.79, 0.24, 1)`;
         stripEl.style.transform = 'translateY(0px)';
         setTimeout(() => Sound.playSfx(stopSound), Math.max(0, REEL_LAND_DURATION_MS - 200));
@@ -558,6 +567,7 @@ function landReel(colIndex, finalCodes, delayMs, isAnticipating = false, fillerF
           for (const cell of cellEls.slice(GRID_ROWS)) cell.remove();
           stripEl.style.transition = 'none';
           stripEl.style.transform = 'translateY(0px)';
+          fx('colLand', colIndex);
           resolve(cellEls.slice(0, GRID_ROWS));
         };
         const onTransitionEnd = (event) => {
@@ -691,7 +701,10 @@ async function landReelsInner(grid, coinMultiplier) {
     const finalCodes = columnCodes(col);
     const cols = columnLabels(col);
     const isAnticipating = anticipationSet.has(col);
-    if (isAnticipating) reelCols[col].colEl.classList.add('is-anticipating');
+    if (isAnticipating) {
+      reelCols[col].colEl.classList.add('is-anticipating');
+      fx('anticipation', col);
+    }
     const cellEls = await landReel(col, finalCodes, 0, isAnticipating, randomSymbolCode, cols);
     await settleColumnCells(cellEls, col, finalCodes);
   }
@@ -778,6 +791,7 @@ async function enterBonusMode() {
   applyModeScreen('bonus');
   await wait(DIM_TRANSITION_MS);
   popScreenDim(true);
+  fx('bonusEnter');
 }
 
 function leaveBonusMode() {
@@ -787,6 +801,7 @@ function leaveBonusMode() {
     async () => {
       applyModeScreen('base');
       await wait(DIM_TRANSITION_MS);
+      fx('bonusLeave');
     },
     { opaque: true },
   );
@@ -872,6 +887,7 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
       document.getElementById('screen').appendChild(node);
       void node.offsetWidth; // зафиксировать пред-входное состояние
       node.classList.add('is-in');
+      fx('popup', key, node, amount, holdMs);
 
       await wait(POPUP_ENTER_MS + holdMs);
       Sound.playSfx('popupClose');
@@ -933,6 +949,7 @@ function playJackpotAward(tier) {
       document.getElementById('screen').appendChild(node);
       void node.offsetWidth;
       node.classList.add('is-in');
+      fx('jackpot', tier, node);
 
       await wait(POPUP_ENTER_MS + JACKPOT_AWARD_HOLD_MS);
       node.classList.remove('is-in');
@@ -1126,6 +1143,7 @@ function paintLockedCoins(locked) {
 function setRespinCounter(value) {
   const el = document.getElementById('respinValue');
   if (el) el.textContent = value;
+  fx('respin', value);
 }
 
 // Крутит ОДНУ ячейку до `code`: полоса филлера над результатом, обрезанная по
@@ -1166,7 +1184,10 @@ function spinCellTo(info, code, fillerFn, delayMs) {
         settled = true;
         spinner.remove();
         setCellSymbol(info, code).then(() => {
-          if (code !== 'blank') playLandBounce(info);
+          if (code !== 'blank') {
+            playLandBounce(info);
+            fx('coinLand', info, code);
+          }
           resolve();
         });
       };
@@ -1233,6 +1254,9 @@ async function runHoldAndWinSequence(result, locked, baseGrid = null, baseCoins 
     for (const [key, coin] of landing) locked.set(key, coin);
     holdAndWinLocked = locked;
     paintLockedCoins(locked);
+    if (respin.landed.length) {
+      fx('collect', respin.landed.map((c) => cellInfos[c.row * GRID_COLS + c.col]), cellInfos.slice());
+    }
 
     // Любая посадка сбрасывает счётчик — это и есть правило раунда.
     respinsLeft = respin.landed.length ? RESPIN_COUNT : respinsLeft - 1;
@@ -1374,6 +1398,7 @@ async function init() {
 
   await preloadAssets();
   if (window.Preloader) window.Preloader.done();
+  fx('ready');
 
   window.__slot = { cellInfos };
 }
