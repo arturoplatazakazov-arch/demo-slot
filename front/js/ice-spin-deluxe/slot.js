@@ -196,6 +196,28 @@ function clearCellAnimation(info) {
     info.winLoopTimeout = null;
   }
   info.cell.classList.remove('is-winning', 'is-win-active', 'is-landing');
+  dropSymbolFx(info);
+}
+
+// Spine win animation of the symbol itself (js/ice-spin-deluxe/fx.js). While
+// it plays, the DOM tile is hidden — the Spine copy IS the symbol.
+function dropSymbolFx(info) {
+  if (!info.fx) return;
+  IceFx.dropSymbol(info.fx);
+  info.fx = null;
+  info.img.style.visibility = '';
+}
+
+function playSymbolFx(info) {
+  if (!window.IceFx || !IceFx.ready) return false;
+  if (info.fx) {
+    IceFx.replaySymbol(info.fx);
+    return true;
+  }
+  info.fx = IceFx.symbol(info.cell, info.symbol);
+  if (!info.fx) return false;
+  info.img.style.visibility = 'hidden';
+  return true;
 }
 
 // --- Win line (same idea as uniqorn-scandal's css/*.css .win-line): one
@@ -355,6 +377,7 @@ function setCellSymbol(info, code) {
 // --- Показ выигрыша ----------------------------------------------------------
 
 function playWinAnimationOnce(info) {
+  if (playSymbolFx(info)) return wait(WIN_PULSE_MS);
   info.cell.classList.remove('is-winning');
   void info.cell.offsetWidth; // рестарт кейфреймов
   info.cell.classList.add('is-winning');
@@ -391,11 +414,15 @@ function playLandBounce(info) {
 
 function setCellActive(info, active) {
   info.cell.classList.toggle('is-win-active', active);
-  if (!active) info.cell.classList.remove('is-winning');
+  if (!active) {
+    info.cell.classList.remove('is-winning');
+    dropSymbolFx(info);
+  }
 }
 
 function setCellDimmed(info, dimmed) {
   info.cell.classList.toggle('is-dimmed', dimmed);
+  if (dimmed) dropSymbolFx(info);
 }
 
 let multiLineSequenceTimeout = null;

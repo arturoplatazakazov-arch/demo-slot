@@ -849,6 +849,155 @@ def build_winlines():
     return sk
 
 
+# --------------------------------------------------------------------------
+# symbols (cell space): one clip per symbol code, 1.1s, ends on the rest pose
+
+SYMBOLS = {
+    # code: (sym fraction from CSS, glow colour, motion)
+    'cherry': (0.9, (255, 70, 90), 'hop'),
+    'plum': (0.9, (190, 90, 255), 'hop'),
+    'lemon': (0.9, (255, 230, 70), 'hop'),
+    'orange': (0.9, (255, 150, 40), 'hop'),
+    'grape': (0.9, (90, 140, 255), 'jiggle'),
+    'bell': (0.98, (255, 205, 60), 'swing'),
+    'star': (1.0, (255, 220, 80), 'spin'),
+    'bar': (0.96, (120, 210, 255), 'stretch'),
+    'seven': (1.0, (70, 200, 255), 'slam'),
+}
+SYM_DUR = 1.1
+
+
+def sym_motion(kind, t):
+    """(sx, sy, rot, dy) of the symbol bone at time t; rest = (1, 1, 0, 0)."""
+    def settle(t0, amp, freq=15, damp=7):
+        u = t - t0
+        return amp * math.exp(-damp * u) * math.cos(freq * u) if u > 0 else amp
+    if kind == 'hop':
+        if t < 0.08:  # crouch
+            k = out_cubic(t / 0.08)
+            return 1 + 0.14 * k, 1 - 0.16 * k, 0, -8 * k
+        if t < 0.34:  # jump, stretched
+            u = (t - 0.08) / 0.26
+            h = math.sin(math.pi * u)
+            return 1.14 + 0.1 * h - 0.14 * u, 1.16 * h + (1 - h) * 0.95, 6 * math.sin(2 * math.pi * u), 34 * h
+        if t < 0.42:  # land squash
+            k = math.sin(math.pi * (t - 0.34) / 0.08)
+            return 1.1 + 0.12 * k, 1.1 - 0.2 * k, 0, -4 * k
+        e = settle(0.42, 0.1)
+        return 1 + e, 1 + e, 0, 0
+    if kind == 'jiggle':
+        if t < 0.1:
+            k = out_cubic(t / 0.1)
+            return 1 + 0.2 * k, 1 + 0.2 * k, 0, 0
+        u = t - 0.1
+        w = 0.2 * math.exp(-4.5 * u)
+        return 1 + w + 0.09 * math.exp(-4 * u) * math.sin(26 * u), 1 + w - 0.09 * math.exp(-4 * u) * math.sin(26 * u), 0, 0
+    if kind == 'swing':
+        s = 1 + 0.2 * (out_cubic(clamp(t / 0.1)) if t < 0.1 else math.exp(-5 * (t - 0.1)))
+        return s, s, 24 * math.exp(-3.6 * t) * math.sin(13 * t), 0
+    if kind == 'spin':
+        s = 1 + 0.32 * math.sin(math.pi * clamp(t / 0.5)) + (settle(0.5, 0.0) if t > 0.5 else 0)
+        rot = -360 * out_cubic(clamp(t / 0.55))
+        return s, s, rot, 10 * math.sin(math.pi * clamp(t / 0.5))
+    if kind == 'stretch':
+        if t < 0.12:
+            k = out_cubic(t / 0.12)
+            return 1 + 0.3 * k, 1 + 0.06 * k, 0, 0
+        e = math.exp(-6 * (t - 0.12)) * math.cos(16 * (t - 0.12))
+        return 1 + 0.3 * e, 1 + 0.06 * e, 0, 0
+    if kind == 'slam':
+        if t < 0.1:  # wind up big
+            k = out_cubic(t / 0.1)
+            return 1 + 0.4 * k, 1 + 0.4 * k, 0, 0
+        if t < 0.18:  # slam down
+            k = (t - 0.1) / 0.08
+            return 1.4 - 0.5 * k, 1.4 - 0.62 * k, 0, 0
+        e = settle(0.18, 0.15, 18, 5.5)
+        shake = 5 * math.exp(-6 * (t - 0.18)) * math.sin(70 * t)
+        return 1 + 0.12 - 0.12 * clamp((t - 0.18) / 0.5) + e - 0.15 * math.exp(-5.5 * 0) * 0, 1 + 0.12 - 0.12 * clamp((t - 0.18) / 0.5) + e, shake, 0
+    return 1, 1, 0, 0
+
+
+def build_symbols():
+    CW, CH = CELL_W, CELL_H
+    sk = Fx('symbols', CW, CH, 1.0, {code: SYM_DUR for code in SYMBOLS})
+    sk.image('halo', soft_glow(256))
+    sk.res_of['halo'] = 0.5
+    sk.image('rays', rays(512, n=14))
+    sk.res_of['rays'] = 0.6
+    sk.image('ring', ring(256))
+    sk.image('spark', star4(128))
+    sk.image('dot', glow_dot(64, core=0.3, col=(230, 245, 255)))
+    rnd = random.Random(21)
+    for code, (symf, col, kind) in SYMBOLS.items():
+        im = Image.open(os.path.join(ROOT, 'symbols', f'{code}.png')).convert('RGBA')
+        k = min(CW * symf / im.width, CH * symf / im.height)
+        w, h = im.width * k, im.height * k
+        hexcol = '%02x%02x%02x' % col
+        sk.image(code, im)
+        sk.res_of[code] = 2.0  # full source res: the DOM tile it replaces is sharp
+        flash = Image.new('RGBA', im.size, (255, 255, 255, 0))
+        flash.putalpha(im.getchannel('A'))
+        sk.image(f'{code}_flash', flash)
+        sk.res_of[f'{code}_flash'] = 0.5
+
+        C = code
+        fx = sk.bone(f'{C}_fx')
+        sk.hidden_slot(f'{C}_halo', fx, 'halo', hexcol, w=CW * 1.25, h=CH * 1.6, blend='additive')
+        sk.hidden_slot(f'{C}_rays', fx, 'rays', hexcol, w=CH * 2.1, blend='additive')
+        rb = sk.bone(f'{C}_rb')
+        sk.hidden_slot(f'{C}_ring', rb, 'ring', 'e8f8ff', w=CH * 1.0, blend='additive')
+        # bell swings from its handle: pivot at the top of the art
+        piv = h * 0.42 if kind == 'swing' else 0
+        sb = sk.bone(f'{C}_sym', y=piv)
+        sk.hidden_slot(f'{C}_img', sb, code, w=w, y=-piv)
+        hl = highlight(im, gamma=1.2, gain=1.5)
+        N = 16
+        sweep = []
+        for i, (sim, x0, x1) in enumerate(strips(hl, N)):
+            r = f'{C}_sw{i}'
+            sk.image(r, sim)
+            sk.res_of[r] = 0.8
+            sk.hidden_slot(r, sb, r, w=(x1 - x0) * k, x=((x0 + x1) / 2 - im.width / 2) * k, y=-piv, blend='additive')
+            sweep.append((r, (x0 + x1) / 2 * k))
+        sk.hidden_slot(f'{C}_flash', sb, f'{C}_flash', w=w, y=-piv, blend='additive')
+        sparks = []
+        for i in range(7):
+            a = 2 * math.pi * i / 7 + rnd.uniform(-0.3, 0.3)
+            b = sk.bone(f'{C}_sp{i}')
+            sk.hidden_slot(f'{C}_sp{i}', b, 'spark' if i % 2 == 0 else 'dot', 'ffffff', w=rnd.uniform(34, 56), blend='additive')
+            sparks.append((b, f'{C}_sp{i}', a, rnd.uniform(0.75, 1.1), rnd.uniform(0, 0.08)))
+
+        sk.anim(C, f'{C}_img', 'alpha', lambda t: 1.0)
+        sk.anim(C, sb, 'scale', lambda t, kind=kind: sym_motion(kind, t)[:2])
+        sk.anim(C, sb, 'rotate', lambda t, kind=kind: sym_motion(kind, t)[2])
+        sk.anim(C, sb, 'translate', lambda t, kind=kind, piv=piv: (0, piv + sym_motion(kind, t)[3]))
+        sk.anim(C, f'{C}_flash', 'alpha', lambda t: seg(t, 0, 0.06, 0, 0.85) if t < 0.06 else 0.85 * math.exp(-11 * (t - 0.06)))
+        for r, cx in sweep:
+            sk.anim(C, r, 'alpha', lambda t, cx=cx: 0.0 if not 0.12 <= t <= 0.62 else
+                    0.9 * math.exp(-((cx - lerp(-60, w + 60, in_out_sine((t - 0.12) / 0.5))) / 70) ** 2))
+        big = 1.25 if kind == 'slam' else 1.0
+        sk.anim(C, f'{C}_halo', 'alpha', lambda t, big=big: seg(t, 0, 0.1, 0, 0.9 * big) if t < 0.1 else seg(t, 0.1, SYM_DUR, 0.9 * big, 0, in_out_sine))
+        sk.anim(C, fx, 'scale', lambda t: (seg(t, 0, 0.2, 0.5, 1.15, out_back) if t < 0.2 else seg(t, 0.2, SYM_DUR, 1.15, 0.9),) * 2)
+        sk.anim(C, f'{C}_rays', 'alpha', lambda t, big=big: seg(t, 0, 0.12, 0, 0.75 * big) if t < 0.12 else seg(t, 0.12, SYM_DUR, 0.75 * big, 0, in_out_sine))
+        sk.anim(C, fx, 'rotate', lambda t: -50 * t / SYM_DUR)
+        t0 = 0.18 if kind == 'slam' else 0.04
+        sk.anim(C, f'{C}_ring', 'alpha', lambda t, t0=t0: 0.0 if t < t0 else seg(t, t0, t0 + 0.45, 1, 0))
+        sk.anim(C, rb, 'scale', lambda t, t0=t0, big=big: (seg(t, t0, t0 + 0.45, 0.3, 1.9 * big),) * 2)
+        for b, sl, a, dist, delay in sparks:
+            def sp_pos(t, a=a, dist=dist, delay=delay):
+                u = clamp((t - 0.05 - delay) / 0.7)
+                d = (CH * 0.35 + CH * 0.45 * dist * out_cubic(u))
+                spin = a + 1.2 * u
+                return (math.cos(spin) * d * 1.3, math.sin(spin) * d)
+            sk.anim(C, b, 'translate', sp_pos)
+            sk.anim(C, sl, 'alpha', lambda t, delay=delay: 0.0 if t < 0.05 + delay else seg(t, 0.05 + delay, 0.85 + delay, 1, 0, in_cubic_ease))
+            sk.anim(C, b, 'scale', lambda t, delay=delay: (0.4 + 0.9 * pulse(t - delay, 0.35, 0.0, 2),) * 2)
+            sk.anim(C, b, 'rotate', lambda t: 180 * t)
+    sk.write()
+    return sk
+
+
 def linear_ease(t):
     return t
 
@@ -969,6 +1118,8 @@ def main():
         built['bg_mob'] = build_bg('bg_mob', 780, 1080, 1.4)
     if not only or 'winlines' in only:
         built['winlines'] = build_winlines()
+    if not only or 'symbols' in only:
+        built['symbols'] = build_symbols()
     if not preview:
         return
     cab = Image.open(os.path.join(ART, 'cabinet.png'))
@@ -978,6 +1129,8 @@ def main():
     for name, sk in built.items():
         for clip, dur in sk.durs.items():
             if name == 'winlines' and not clip.startswith(('line1', 'line4')):
+                continue
+            if name == 'symbols' and clip not in ('cherry', 'bell', 'star', 'seven'):
                 continue
             frames = [render(sk, clip, dur * k / 6, (800, int(800 * sk.h / sk.w)),
                              under={'frame': cab, 'logo': logo, 'bg_desk': bg}.get(name),

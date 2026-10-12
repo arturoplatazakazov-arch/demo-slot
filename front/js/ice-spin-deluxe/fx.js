@@ -77,6 +77,7 @@
       load(front, 'frame'),
       load(front, 'logo'),
       load(front, 'winlines'),
+      load(front, 'symbols'),
     ]).then(() => {
       IceFx.ready = true;
       mountBg();
@@ -130,6 +131,28 @@
     if (lineInst) front.removeOverlay(lineInst);
     lineInst = null;
     lineShown = 0;
+  };
+
+  // Winning symbol: a Spine copy of the tile plays its own clip (named after
+  // the symbol code) over the cell; the caller hides the DOM <img> meanwhile.
+  // The skeleton's bounds ARE the cell box, so no boundsOverride.
+  IceFx.symbol = function symbol(cellEl, code) {
+    if (!IceFx.ready || !res.symbols.skeletonData.findAnimation(code)) return null;
+    const inst = res.symbols.createInstance();
+    inst.anchorEl = cellEl;
+    inst.fit = 1;
+    inst.play(code, false);
+    front.addBase(inst);
+    return inst;
+  };
+
+  IceFx.replaySymbol = function replaySymbol(inst) {
+    const entry = inst.animationState.getCurrent(0);
+    if (entry) inst.play(entry.animation.name, false);
+  };
+
+  IceFx.dropSymbol = function dropSymbol(inst) {
+    if (inst && front) front.removeBase(inst);
   };
 
   window.IceFx = IceFx;
