@@ -6,7 +6,7 @@
 <title>Ice Spin Deluxe — demo</title>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/preloader.css?v=1">
-<link rel="stylesheet" href="css/ice-spin-deluxe.css?v=8">
+<link rel="stylesheet" href="css/ice-spin-deluxe.css?v=9">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 </head>
 <body>
@@ -37,6 +37,11 @@
     <!-- Фон на весь экран: свой на десктоп, свой на портрет. -->
     <img class="layer bg" id="bgLayer" src="img/ice-spin-deluxe/img/bg_base.jpg?v=1" alt="">
 
+    <!-- Spine FX (js/ice-spin-deluxe/fx.js): фон-эффекты ПОД сценой и рама,
+         логотип и линии выигрыша НАД ней — один WebGL-холст не может лечь
+         и за рамой, и перед ней. -->
+    <canvas class="layer fx-canvas fx-canvas--back" id="fxBack"></canvas>
+
     <!-- Дизайн-канвас: всё внутри позиционировано в его координатах и
          масштабируется как одно целое (slot.js updateStageScale). -->
     <div class="stage" id="stage">
@@ -64,6 +69,8 @@
       <div class="obj hint-line" id="hintLine">СДЕЛАЙТЕ СТАВКУ</div>
 
     </div>
+
+    <canvas class="layer fx-canvas fx-canvas--front" id="fxFront"></canvas>
 
     <!-- Затемнение перед попапом. -->
     <div class="layer screen-dim" id="screenDim"></div>
@@ -184,8 +191,11 @@
   <script src="js/config.js?v=2"></script>
   <script src="js/api.js?v=2"></script>
   <script src="js/reel-math.js?v=6"></script>
+  <script src="vendor/spine-webgl.js"></script>
+  <script src="js/spine-engine.js?v=8"></script>
+  <script src="js/ice-spin-deluxe/fx.js?v=1"></script>
   <script src="js/ice-spin-deluxe/sound.js?v=1"></script>
-  <script src="js/ice-spin-deluxe/slot.js?v=3"></script>
+  <script src="js/ice-spin-deluxe/slot.js?v=4"></script>
   <script src="js/ice-spin-deluxe/app.js?v=1"></script>
   <!-- Поведение нижнего бара V3: флайаут, тултипы, заглушки авто/турбо. -->
   <script src="js/ui-bar-v3.js?v=4"></script>

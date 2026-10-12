@@ -244,8 +244,22 @@ function cellCentre(row, col) {
 
 // One flash of the line: draw it, run the dash-in, resolve when it has
 // played once. The caller owns the repeat cadence.
+// Payline number (1..5) whose shape the win's cells trace, or 0.
+function paylineOf(positions) {
+  if (positions.length !== GRID_COLS) return 0;
+  const rows = positions.slice().sort((a, b) => a.col - b.col).map((p) => p.row);
+  return PAYLINE_ROWS.findIndex((line) => line.every((r, c) => r === rows[c])) + 1;
+}
+
 function showWinLine(win) {
   const positions = (win && win.positions) || [];
+  // Spine line (js/ice-spin-deluxe/fx.js) when the FX layer is up; the SVG
+  // below stays as the fallback.
+  const line = window.IceFx && IceFx.ready ? paylineOf(positions) : 0;
+  if (line && IceFx.showLine(line)) {
+    if (winLineSvg) { winLineSvg.remove(); winLineSvg = null; }
+    return wait(WIN_PULSE_MS);
+  }
   const svg = positions.length >= 2 ? ensureWinLineSvg() : null;
   if (!svg) {
     hideWinLine();
@@ -303,6 +317,7 @@ function previewWinLine(win) {
 
 function hideWinLine() {
   winLineToken += 1;
+  if (window.IceFx) IceFx.hideLine();
   if (winLineLoopTimeout) {
     clearTimeout(winLineLoopTimeout);
     winLineLoopTimeout = null;
@@ -319,6 +334,7 @@ function teardownCellInstances() {
     multiLineSequenceTimeout = null;
   }
   hideWinLine();
+  if (window.IceFx) IceFx.setWin(false);
   for (const info of cellInfos) {
     if (!info) continue;
     info.cell.classList.remove('is-dimmed');
@@ -441,6 +457,8 @@ function playWinCells(winningCells, lineWins, countWins) {
   for (const info of cellInfos) {
     if (info) setCellDimmed(info, allWinInfos.length > 0 && !winSet.has(info));
   }
+
+  if (window.IceFx) IceFx.setWin(allWinInfos.length > 0);
 
   const groups = buildWinGroups(lineWins, countWins);
   if (groups.length > 1) {
@@ -852,6 +870,7 @@ function preloadAssets() {
   tasks.push(track(preloadImage(assetSrc(`img/bg_base${suffix}.jpg`))));
   tasks.push(track(preloadImage(assetSrc('img/cabinet.png'))));
   for (const p of Sound.preloadPromises || []) tasks.push(track(p));
+  if (window.IceFx) tasks.push(track(IceFx.load()));
 
   return Promise.race([Promise.all(tasks), wait(PRELOAD_TIMEOUT_MS)]);
 }
