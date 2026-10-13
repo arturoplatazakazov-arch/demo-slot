@@ -641,3 +641,21 @@ img.is-missing {
   --pl-border: rgba(240, 192, 74, 0.45);
   --pl-shadow: rgba(200, 40, 55, 0.55);
 }
+
+/* ---------- Spine FX (js/baku-fx.js) ----------
+   #fxBack лежит над картинкой фона (тот же z-index 0, но позже в DOM) и под
+   сценой. Рама, логотип, линии и монеты рисуются на канвасе НАД корпусом
+   (#fxFront, между .stage--front и затемнением).
+   На время попапа он поднимается над затемнением — монетный дождь виден
+   вокруг плашки, а рама/логотип/символы притушены самим Spine (setBaseDim). */
+.fx-canvas {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.fx-canvas--back { z-index: 0; }
+.fx-canvas--front { z-index: 7; }
+body.fx-over-dim .fx-canvas--front { z-index: 9; }
+/* Логотип рисует Spine (со своей тенью и свечением). */
+.fx-ready .logo__img { visibility: hidden; animation: none; }

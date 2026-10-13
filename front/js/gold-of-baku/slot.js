@@ -382,8 +382,25 @@ function cellCentre(row, col) {
 
 // One flash of the line: draw it, run the dash-in, resolve when it has
 // played once. The caller owns the repeat cadence.
+// Payline number 1..5 (PAYLINE_ROWS index + 1) of a win, 0 if it isn't one.
+function paylineOf(positions) {
+  if (!positions || positions.length !== GRID_COLS) return 0;
+  const rows = positions.slice().sort((a, b) => a.col - b.col).map((p) => p.row);
+  const i = PAYLINE_ROWS.findIndex((line) => line.every((r, c) => r === rows[c]));
+  return i + 1;
+}
+
 function showWinLine(win) {
   const positions = (win && win.positions) || [];
+  // Spine line (js/baku-fx.js) when the FX layer is up; the SVG is the fallback.
+  const line = window.BakuFx && BakuFx.ready ? paylineOf(positions) : 0;
+  if (line && BakuFx.showLine(line)) {
+    if (winLineSvg) {
+      winLineSvg.remove();
+      winLineSvg = null;
+    }
+    return wait(WIN_PULSE_MS);
+  }
   const svg = positions.length >= 2 ? ensureWinLineSvg() : null;
   if (!svg) {
     hideWinLine();
@@ -445,6 +462,7 @@ function hideWinLine() {
     clearTimeout(winLineLoopTimeout);
     winLineLoopTimeout = null;
   }
+  if (window.BakuFx) BakuFx.hideLine();
   if (!winLineSvg) return;
   winLineSvg.remove();
   winLineSvg = null;
@@ -457,6 +475,7 @@ function teardownCellInstances() {
     multiLineSequenceTimeout = null;
   }
   hideWinLine();
+  if (window.BakuFx) BakuFx.setWin(false);
   for (const info of cellInfos) {
     if (!info) continue;
     info.cell.classList.remove('is-dimmed');
@@ -601,6 +620,9 @@ function playWinCells(winningCells, lineWins, countWins) {
     if (info) setCellDimmed(info, allWinInfos.length > 0 && !winSet.has(info));
   }
 
+  // Рама и логотип переходят в клип `win`, пока выигрыш на экране.
+  if (window.BakuFx) BakuFx.setWin(allWinInfos.length > 0);
+
   const groups = buildWinGroups(lineWins, countWins);
   if (groups.length > 1) {
     playMultiLineWinSequence(groups, allWinInfos, lineWins);
@@ -625,6 +647,8 @@ function showInlineWinAmount(amount) {
     inlineWinAmountTimeout = null;
   }
   el.dataset.amount = Number(amount).toLocaleString('en-US');
+  // Выигрыш ниже порога попапа: фонтан монет и звёзд из окна барабанов.
+  if (window.BakuFx) BakuFx.burst();
   el.classList.add('is-visible');
   inlineWinAmountTimeout = setTimeout(() => {
     inlineWinAmountTimeout = null;
@@ -936,6 +960,7 @@ function playPopup(key, amount = 0, holdMs = 2500) {
       done = true;
       clearTimeout(safetyTimer);
       if (node) node.remove();
+      if (window.BakuFx) BakuFx.stopShower();
       if (dimmed) popScreenDim();
       resolve();
     };
@@ -952,6 +977,8 @@ function playPopup(key, amount = 0, holdMs = 2500) {
       fitPopupAmount(node);
       void node.offsetWidth; // зафиксировать пред-входное состояние
       node.classList.add('is-in');
+      // Золотой дождь над затемнением, пока висит плашка.
+      if (window.BakuFx) BakuFx.startShower();
 
       await wait(POPUP_ENTER_MS + holdMs);
       Sound.playSfx('popupClose');
@@ -1061,6 +1088,10 @@ function preloadAssets() {
     for (const code of SYMBOL_CODES) tasks.push(track(loadSymbolResource(code)));
   }
   for (const p of Sound.preloadPromises || []) tasks.push(track(p));
+  // Spine FX (js/baku-fx.js): фон, рама, логотип, линии, монеты.
+  if (window.BakuFx) {
+    tasks.push(track(BakuFx.load({ root: `${ASSET_ROOT}/fx`, frontStage: null })));
+  }
 
   return Promise.race([Promise.all(tasks), wait(PRELOAD_TIMEOUT_MS)]);
 }
