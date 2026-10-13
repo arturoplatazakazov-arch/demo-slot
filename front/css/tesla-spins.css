@@ -1,0 +1,898 @@
+/* Tesla Spins — 3x3, five lines, centre-reel expanding lightning wild.
+
+   СТРУКТУРА как у css/gold-of-baku.css: всё живёт в фиксированном
+   дизайн-канвасе (десктоп 1280x930, портрет 720x1280), который целиком
+   contain-масштабируется в .screen.
+
+   Весь арт вырезан из ОДНОЙ картинки-референса (scripts/tesla_spins_art.py):
+   - scene_ext.jpg — сцена целиком (катушки, пол, шкаф) с перерисованными
+     пустыми ячейками и небом сверху (SKY = 260px над оригиналом);
+   - cabinet.png — рама шкафа поверх лент, ячейки прозрачные;
+   - symbols/*.png — девять символов из ячеек референса.
+   Поэтому ВСЯ геометрия ниже — пиксели референса (1280x623), сдвинутые на
+   положение сцены в канвасе: --scene-x/--scene-y = где лежит (0,0) референса.
+
+   Ячейки шкафа нарисованы от руки и неровные: левая колонка 189px, две
+   другие по 195, перемычки 6 и 2px. Поэтому у каждой колонки свои left/width
+   (--c0-l … --c2-w), а не flex на троих. Высота строки одна (498/3): ленте
+   нужен ровный шаг, а разница с нарисованными строками (167/163/155) прячется
+   под горизонтальными перемычками рамы. */
+
+:root {
+  --steel: #2b3550;
+  --steel-deep: #0b0f22;
+  --copper: #d98a3d;
+  --copper-bright: #ffcf8a;
+  --volt: #6fb6ff;
+  --volt-bright: #d8ecff;
+  --volt-deep: #1d4fd8;
+  --ink: #070a18;
+  --text: #e8f1ff;
+  --ui-border: rgba(111, 182, 255, 0.3);
+
+  /* (0,0) референса в канвасе. */
+  --scene-x: 0px;
+  --scene-y: 150px;
+
+  /* Окно ячеек в пикселях референса: x 349..935, y 62..559. */
+  --win-x: 349px;
+  --win-y: 62px;
+  --win-w: 587px;
+  --win-h: 498px;
+  --cell-h: calc(var(--win-h) / 3);
+  --c0-l: 0px;   --c0-w: 189px;
+  --c1-l: 195px; --c1-w: 195px;
+  --c2-l: 392px; --c2-w: 195px;
+
+  /* Оптический вес символа в ячейке (ячейка ~1.15:1). */
+  --sym: 0.84;
+
+  --design-w: 1280px;
+  --design-h: 930px;
+  --stage-scale: 1;
+}
+
+* { box-sizing: border-box; }
+
+html, body { overflow: hidden; }
+
+body {
+  margin: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--ink);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  color: var(--text);
+}
+
+/* ---------- Back-to-catalog button ---------- */
+.to-catalog-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 110;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(7, 10, 24, 0.75);
+  border: 1px solid rgba(111, 182, 255, 0.5);
+  color: var(--volt-bright);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(4px);
+}
+.to-catalog-btn:hover { background: rgba(7, 10, 24, 0.92); border-color: var(--volt); }
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+/* ---------- Dev panel ---------- */
+.dev-panel {
+  position: fixed;
+  top: 52px;
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 260px;
+  justify-content: flex-end;
+}
+.dev-btn {
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #222;
+  color: #ddd;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.dev-btn:hover { opacity: 1; }
+.dev-hint { font-size: 10px; color: #999; width: 100%; text-align: right; }
+
+/* ---------- Screen / stage ---------- */
+.screen {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  background: var(--ink);
+}
+
+.layer { position: absolute; }
+
+/* Края экрана за канвасом: та же сцена, размытая и притушенная. */
+.bg {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  filter: blur(22px) brightness(0.45) saturate(1.2);
+  transform: scale(1.08);
+}
+
+.stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--design-w);
+  height: var(--design-h);
+  transform: translate(-50%, -50%) scale(var(--stage-scale));
+  z-index: 1;
+}
+.stage--front { z-index: 6; pointer-events: none; }
+
+.spine-canvas {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+  pointer-events: none;
+}
+.tesla-canvas {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 7;
+  pointer-events: none;
+}
+
+.stage .obj { position: absolute; }
+
+/* ---------- Сцена ----------
+   scene_ext.jpg = 260px неба + референс 1280x623. Края растворяются в
+   размытой подложке, чтобы граница канваса не читалась швом. */
+.scene {
+  left: var(--scene-x);
+  top: calc(var(--scene-y) - 260px);
+  width: 1280px;
+  height: 883px;
+  z-index: 0;
+  pointer-events: none;
+  -webkit-mask-image:
+    linear-gradient(90deg, transparent 0, #000 70px, #000 calc(100% - 70px), transparent 100%),
+    linear-gradient(180deg, transparent 0, #000 60px, #000 calc(100% - 50px), transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(90deg, transparent 0, #000 70px, #000 calc(100% - 70px), transparent 100%),
+    linear-gradient(180deg, transparent 0, #000 60px, #000 calc(100% - 50px), transparent 100%);
+  mask-composite: intersect;
+}
+
+.coil { display: none; pointer-events: none; }
+
+/* ---------- Рама шкафа ----------
+   cabinet.png = кроп сцены (309,22)-(976,600) с прозрачными ячейками. */
+.cabinet {
+  left: calc(var(--scene-x) + 309px);
+  top: calc(var(--scene-y) + 22px);
+  width: 667px;
+  height: 578px;
+  z-index: 4;
+  pointer-events: none;
+}
+
+/* ---------- Якоря колец катушек (невидимые) ----------
+   Тороиды на референсе: центры (196,145) и (1080,145), полуоси ~112x38. */
+.coil-anchor {
+  width: 224px;
+  height: 76px;
+  top: calc(var(--scene-y) + 145px - 38px);
+  pointer-events: none;
+}
+.coil-anchor--l { left: calc(var(--scene-x) + 196px - 112px); }
+.coil-anchor--r { left: calc(var(--scene-x) + 1080px - 112px); }
+
+/* ---------- Логотип ---------- */
+.logo {
+  left: calc(50% - 215px);
+  top: 0;
+  width: 430px;
+  height: 195px;
+  z-index: 6;
+  pointer-events: none;
+}
+.logo__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  animation: logo-volt 3.8s ease-in-out infinite;
+}
+/* Блик по меди: полоса света, обрезанная альфой самого логотипа (маска =
+   тот же PNG), проезжает раз в 4.5с. */
+.logo__sheen {
+  position: absolute;
+  inset: 0;
+  -webkit-mask: url(../img/tesla-spins/img/logo.png?v=3) center / contain no-repeat;
+  mask: url(../img/tesla-spins/img/logo.png?v=3) center / contain no-repeat;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 250, 230, 0.75) 47%, rgba(255, 255, 255, 0.95) 50%, rgba(255, 250, 230, 0.75) 53%, transparent 62%);
+  background-size: 300% 100%;
+  background-repeat: no-repeat;
+  animation: logo-sheen 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes logo-sheen {
+  0%, 55% { background-position: 120% 0; }
+  85%, 100% { background-position: -20% 0; }
+}
+/* Неровное «мигание» неона: пара коротких провалов в цикле. */
+@keyframes logo-volt {
+  0%, 100% { filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 18px rgba(90, 160, 255, 0.45)); }
+  46%      { filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 34px rgba(120, 190, 255, 0.85)); }
+  48%      { filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 8px rgba(120, 190, 255, 0.2)); }
+  50%      { filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 40px rgba(160, 210, 255, 0.95)); }
+}
+
+/* ---------- Барабаны ---------- */
+.reel {
+  left: calc(var(--scene-x) + var(--win-x));
+  top: calc(var(--scene-y) + var(--win-y));
+  width: var(--win-w);
+  height: var(--win-h);
+  z-index: 2;
+}
+
+/* Колонка = своё окно обрезки над своей нарисованной ячейкой. Подложки нет:
+   пустые панели уже в сцене под лентой. */
+.reel__col {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  overflow: hidden;
+}
+.reel__col:nth-child(1) { left: var(--c0-l); width: var(--c0-w); }
+.reel__col:nth-child(2) { left: var(--c1-l); width: var(--c1-w); }
+.reel__col:nth-child(3) { left: var(--c2-l); width: var(--c2-w); }
+
+/* Колонка «на подходе» — холодное электрическое зарево. */
+.reel__col.is-anticipating::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(70% 55% at 50% 50%, rgba(90, 160, 255, 0.4), transparent 72%);
+  box-shadow: inset 0 0 40px rgba(110, 180, 255, 0.7);
+  animation: anticipate 380ms steps(3, jump-none) infinite alternate;
+}
+@keyframes anticipate {
+  from { opacity: 0.35; }
+  to   { opacity: 1; }
+}
+
+/* Раскрытый вайлд: колонка под скелетом wild_big — синий накал панели. */
+.reel__col.is-wild-column {
+  background: radial-gradient(80% 60% at 50% 50%, rgba(40, 90, 230, 0.55), rgba(10, 20, 70, 0.3) 70%);
+}
+.reel__col.is-wild-column .reel__cell img { visibility: hidden; }
+
+.reel__strip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.reel__cell {
+  position: relative;
+  width: 100%;
+  height: var(--cell-h);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.reel__cell img {
+  width: calc(100% * var(--sym));
+  height: calc(100% * var(--sym));
+  object-fit: contain;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.55));
+}
+/* Монета-молния — круглая и должна читаться главной в ячейке. */
+.reel__cell[data-symbol="wild"] { --sym: 0.94; }
+.reel__cell[data-symbol="seven"],
+.reel__cell[data-symbol="star"] { --sym: 0.86; }
+.reel__cell[data-symbol="lemon"] { --sym: 0.8; }
+.reel__cell.is-dimmed img { opacity: 0.32; }
+.reel__cell.is-animating img { visibility: hidden; }
+
+@keyframes cell-win {
+  0%   { transform: scale(1); filter: drop-shadow(0 0 0 rgba(120, 190, 255, 0)); }
+  35%  { transform: scale(1.14); filter: drop-shadow(0 0 22px rgba(140, 200, 255, 0.95)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(120, 190, 255, 0)); }
+}
+.reel__cell.is-winning img { animation: cell-win 620ms ease-in-out; }
+.reel__cell.is-win-active { z-index: 3; }
+
+/* ---------- Win line: «провод под током» ---------- */
+.win-line {
+  position: absolute;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 3;
+}
+.win-line path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.win-line__glow {
+  stroke: rgba(90, 160, 255, 0.65);
+  stroke-width: 20;
+  filter: blur(7px);
+}
+.win-line__core {
+  stroke: var(--volt-bright);
+  stroke-width: 4;
+  stroke-dasharray: 26 10 6 10;
+  animation: current 380ms linear infinite;
+}
+@keyframes current {
+  to { stroke-dashoffset: -52; }
+}
+
+/* ---------- Сумма выигрыша ниже порога попапа ---------- */
+.reel-win-amount-viewport {
+  left: calc(var(--scene-x) + var(--win-x));
+  top: calc(var(--scene-y) + var(--win-y));
+  width: var(--win-w);
+  height: var(--win-h);
+  z-index: 5;
+  pointer-events: none;
+}
+.reel-win-amount {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.reel-win-amount.is-visible { opacity: 1; }
+.reel-win-amount::before {
+  content: attr(data-amount);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 54px;
+  color: var(--volt-bright);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 3px 0 var(--ink), 0 0 24px rgba(90, 160, 255, 0.95);
+  white-space: nowrap;
+  padding: 6px 26px;
+  background: rgba(7, 10, 24, 0.8);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(111, 182, 255, 0.55), 0 0 30px rgba(60, 120, 255, 0.45);
+}
+
+/* Подсказка — на полу под шкафом. */
+.hint-line {
+  left: 0;
+  width: 100%;
+  top: calc(var(--scene-y) + 606px);
+  z-index: 5;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--volt-bright);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9), 0 0 12px rgba(90, 160, 255, 0.6);
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+.hint-line__text {
+  display: inline-block;
+  padding: 4px 22px;
+  border-radius: 999px;
+  background: rgba(7, 10, 24, 0.7);
+  box-shadow: 0 0 0 1px rgba(111, 182, 255, 0.35);
+}
+.hint-line.is-hidden { opacity: 0; }
+
+/* ---------- Затемнение ---------- */
+.screen-dim {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(2, 4, 14, 0.7);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  z-index: 8;
+}
+.screen-dim.is-active { opacity: 1; }
+
+/* ---------- Попапы ----------
+   Своих плашек нет: заголовок — неоновый текст, сумма — на стальной
+   пластине с медным кантом. Всё в cqw (доли ширины попапа). */
+.game-popup {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 30;
+  width: min(620px, 82%);
+  container-type: inline-size;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2cqw;
+  transform: translate(-50%, -50%) scale(0.6);
+  opacity: 0;
+  transition: transform 420ms cubic-bezier(0.2, 1.5, 0.4, 1), opacity 300ms ease;
+}
+.game-popup.is-in { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.game-popup.is-out {
+  transform: translate(-50%, -50%) scale(0.86);
+  opacity: 0;
+  transition-duration: 260ms;
+  transition-timing-function: ease-in;
+}
+.game-popup__title {
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 15cqw;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: #fff;
+  -webkit-text-stroke: 0.5cqw var(--volt-deep);
+  paint-order: stroke fill;
+  text-shadow:
+    0 0 1.5cqw #fff,
+    0 0 4cqw var(--volt),
+    0 0 9cqw var(--volt-deep),
+    0 0.8cqw 0 #0a1440;
+  animation: popup-flicker 1.6s steps(1, end) infinite;
+}
+.game-popup--megaWin .game-popup__title { font-size: 14cqw; }
+.game-popup--epicWin .game-popup__title {
+  font-size: 15cqw;
+  -webkit-text-stroke-color: #7a2bd8;
+  text-shadow: 0 0 1.5cqw #fff, 0 0 4cqw #b78bff, 0 0 9cqw #6a2bd8, 0 0.8cqw 0 #1e0a40;
+}
+@keyframes popup-flicker {
+  0%, 100% { opacity: 1; }
+  41% { opacity: 0.55; }
+  43% { opacity: 1; }
+  77% { opacity: 0.7; }
+  78% { opacity: 1; }
+}
+.game-popup__amount {
+  min-width: 62cqw;
+  padding: 2.2cqw 6cqw;
+  border-radius: 3cqw;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0) 40%),
+    linear-gradient(180deg, #2c3756, #11172d);
+  box-shadow:
+    0 0 0 0.6cqw var(--copper),
+    0 0 0 1.2cqw #3b2412,
+    0 0 6cqw rgba(90, 160, 255, 0.55),
+    inset 0 0 3cqw rgba(0, 0, 0, 0.6);
+  text-align: center;
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 9cqw;
+  line-height: 1.1;
+  white-space: nowrap;
+  color: var(--copper-bright);
+  -webkit-text-stroke: 0.35cqw #3b1d08;
+  paint-order: stroke fill;
+  text-shadow: 0 0.4cqw 0 #3b1d08, 0 0 2.5cqw rgba(255, 190, 110, 0.5);
+}
+
+/* ---------- Paytable info popup ---------- */
+.info-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 20px;
+}
+.info-popup[hidden] { display: none; }
+.info-popup__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(720px, 90vh);
+  overflow-y: auto;
+  background: linear-gradient(180deg, #1a2140, #0b0f22);
+  border: 3px solid var(--copper);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 30px rgba(60, 120, 255, 0.25);
+}
+.info-popup__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.info-popup__title {
+  margin: 0 0 6px;
+  color: var(--volt-bright);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 24px;
+  text-align: center;
+  text-shadow: 0 0 14px var(--volt);
+}
+.info-popup__note { text-align: center; font-size: 12px; opacity: 0.8; margin: 0 0 16px; }
+.info-popup__note b { color: var(--volt); }
+.info-popup__list { display: flex; flex-direction: column; gap: 10px; }
+.info-popup__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.info-popup__row img { width: 48px; height: 48px; object-fit: contain; flex-shrink: 0; }
+.info-popup__row-name { flex: 1 1 auto; min-width: 90px; font-weight: 700; }
+.info-popup__row-pays { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; }
+.info-popup__row-pays b { color: var(--copper-bright); }
+
+img.is-missing {
+  width: 55%;
+  height: 55%;
+  object-fit: contain;
+  outline: 2px dashed rgba(111, 182, 255, 0.5);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+
+/* ================================================================
+   HOLD & WIN
+   ================================================================ */
+
+/* ---------- Лестница джекпотов ----------
+   Десктоп: по две плашки в небе над катушками (слева GRAND/MAJOR, справа
+   MINOR/MINI). Цвет тира = цвет монеты-джекпота (coins/<tier>.png). */
+.jackpots {
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+.jp {
+  position: absolute;
+  width: 270px;
+  height: 62px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0) 45%),
+    linear-gradient(180deg, #27304d, #0d1226);
+  box-shadow:
+    0 0 0 3px var(--jp-rim, #c97a35),
+    0 0 0 6px #2a170b,
+    0 0 22px var(--jp-glow, rgba(90, 160, 255, 0.5)),
+    inset 0 0 18px rgba(0, 0, 0, 0.7);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  line-height: 1;
+}
+.jp__name {
+  font-size: 17px;
+  letter-spacing: 0.14em;
+  color: #fff;
+  text-shadow: 0 0 6px var(--jp-col), 0 0 14px var(--jp-col);
+}
+.jp__value {
+  margin-top: 4px;
+  font-size: 26px;
+  color: var(--copper-bright);
+  -webkit-text-stroke: 1.5px #3b1d08;
+  paint-order: stroke fill;
+  text-shadow: 0 2px 0 #3b1d08, 0 0 12px rgba(255, 190, 110, 0.45);
+}
+.jp--grand { --jp-col: #ffc63d; --jp-rim: #f0b030; --jp-glow: rgba(255, 190, 60, 0.6); left: 110px; top: 24px; }
+.jp--major { --jp-col: #e070ff; --jp-rim: #b85ad6; --jp-glow: rgba(200, 90, 255, 0.5); left: 110px; top: 104px; }
+.jp--minor { --jp-col: #6fb6ff; --jp-rim: #4f8fe0; --jp-glow: rgba(90, 160, 255, 0.5); left: 900px; top: 24px; }
+.jp--mini  { --jp-col: #50f0b4; --jp-rim: #37b98a; --jp-glow: rgba(60, 230, 170, 0.5); left: 900px; top: 104px; }
+.jp--grand { width: 290px; height: 68px; left: 100px; }
+.jp--grand .jp__value { font-size: 30px; }
+
+/* Удар по плашке: вспышка, толчок, неон на пределе. */
+@keyframes jp-hit {
+  0%   { transform: scale(1); filter: brightness(1); }
+  12%  { transform: scale(1.18); filter: brightness(2.4); }
+  30%  { transform: scale(1.06); filter: brightness(1.4); }
+  45%  { transform: scale(1.12); filter: brightness(2); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+.jp.is-hit { animation: jp-hit 1.1s ease-out; z-index: 2; }
+@keyframes jp-idle { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.18); } }
+.jp--grand { animation: jp-idle 2.4s ease-in-out infinite; }
+
+/* ---------- Монеты в раунде ---------- */
+.reel__cell .coin-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  line-height: 1;
+}
+.coin-face__mult {
+  font-size: 50px;
+  color: #fff3d6;
+  -webkit-text-stroke: 2px #2a1206;
+  paint-order: stroke fill;
+  text-shadow: 0 3px 0 #2a1206, 0 0 14px rgba(255, 200, 120, 0.9), 0 0 28px rgba(90, 160, 255, 0.6);
+}
+.coin-face__amount {
+  margin-top: 4px;
+  font-size: 18px;
+  color: var(--volt-bright);
+  -webkit-text-stroke: 1px #06102a;
+  paint-order: stroke fill;
+  text-shadow: 0 0 8px rgba(90, 160, 255, 0.9);
+}
+/* Монета в раунде всегда видна (не притушивается), а зафиксированная
+   дышит электрическим ореолом. */
+.reel__cell.is-locked img {
+  opacity: 1 !important;
+  animation: coin-charged 1.3s ease-in-out infinite;
+}
+@keyframes coin-charged {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(110, 180, 255, 0.55)) drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6)); }
+  50%      { filter: drop-shadow(0 0 18px rgba(150, 210, 255, 0.95)) drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6)); }
+}
+/* Раскрытие номинала: монета переворачивается ребром, на ребре — вспышка. */
+@keyframes coin-flip {
+  0%   { transform: perspective(600px) rotateY(0deg) scale(1); filter: brightness(1); }
+  45%  { transform: perspective(600px) rotateY(90deg) scale(1.15); filter: brightness(3); }
+  55%  { transform: perspective(600px) rotateY(-90deg) scale(1.15); filter: brightness(3); }
+  80%  { transform: perspective(600px) rotateY(10deg) scale(1.08); filter: brightness(1.4); }
+  100% { transform: perspective(600px) rotateY(0deg) scale(1); filter: brightness(1); }
+}
+.reel__cell.is-flipping { animation: coin-flip 520ms cubic-bezier(0.3, 0.7, 0.3, 1); }
+/* Приземление новой монеты на респине: с высоты с ударом. */
+@keyframes coin-slam {
+  0%   { transform: translateY(-60%) scale(1.5); opacity: 0; }
+  55%  { transform: translateY(0) scale(0.92); opacity: 1; }
+  75%  { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+.reel__cell.is-slam { animation: coin-slam 420ms cubic-bezier(0.4, 0, 0.6, 1); }
+/* Сбор: монета «отдаёт» заряд. */
+@keyframes coin-collect {
+  0%   { transform: scale(1); filter: brightness(1); }
+  30%  { transform: scale(1.22); filter: brightness(2.6); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+.reel__cell.is-collect { animation: coin-collect 420ms ease-out; }
+
+/* Пустая ячейка раунда: ленты нет, панель шкафа видна насквозь. */
+.reel__cell.is-empty img { visibility: hidden; }
+/* Респин пустой ячейки: мелькание размытых монет-силуэтов. */
+.reel__cell.is-hw-spin::before {
+  content: '';
+  position: absolute;
+  inset: 8%;
+  background: url(../img/tesla-spins/symbols/coin.png?v=3) center / 70% auto repeat-y;
+  filter: blur(3px) brightness(0.8);
+  opacity: 0.55;
+  animation: hw-spin 140ms linear infinite;
+}
+@keyframes hw-spin {
+  from { background-position: center 0; }
+  to   { background-position: center 100%; }
+}
+
+/* Режим раунда: сцена темнее, ячейки подсвечены изнутри холодным светом. */
+.screen.is-hw .scene { filter: brightness(0.62) saturate(1.2); transition: filter 600ms ease; }
+.screen.is-hw .reel__col { background: radial-gradient(90% 70% at 50% 50%, rgba(40, 90, 230, 0.28), transparent 75%); }
+.screen.is-hw .hint-line { opacity: 0; }
+
+/* ---------- HUD раунда ---------- */
+.hw-hud {
+  left: calc(var(--scene-x) + 349px);
+  width: 587px;
+  top: calc(var(--scene-y) + 582px);
+  height: 64px;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 300ms ease, transform 300ms ease;
+  pointer-events: none;
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+}
+.hw-hud.is-on { opacity: 1; transform: none; }
+.hw-hud__respins,
+.hw-hud__total {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 56px;
+  padding: 0 18px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #27304d, #0d1226);
+  box-shadow: 0 0 0 3px var(--copper), 0 0 0 6px #2a170b, 0 0 20px rgba(90, 160, 255, 0.45);
+}
+.hw-hud__label { font-size: 15px; letter-spacing: 0.12em; color: var(--volt); }
+.hw-lamp {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #39425e, #12172b);
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.8), 0 0 0 2px #5b3a1d;
+  transition: background 150ms ease, box-shadow 150ms ease;
+}
+.hw-lamp.is-lit {
+  background: radial-gradient(circle at 35% 30%, #ffffff, #8fd0ff 40%, #2d6dff);
+  box-shadow: 0 0 14px #6fb6ff, 0 0 30px rgba(90, 160, 255, 0.8), 0 0 0 2px #c97a35;
+}
+.hw-hud__respins.is-reset { animation: jp-hit 600ms ease-out; }
+.hw-hud__value {
+  min-width: 150px;
+  text-align: right;
+  font-size: 34px;
+  color: var(--copper-bright);
+  -webkit-text-stroke: 1.5px #3b1d08;
+  paint-order: stroke fill;
+  text-shadow: 0 2px 0 #3b1d08, 0 0 14px rgba(255, 190, 110, 0.55);
+}
+.hw-hud__total.is-pulse { animation: jp-hit 380ms ease-out; }
+
+/* ---------- Баннер старта раунда ---------- */
+.hw-banner {
+  left: 0;
+  width: 100%;
+  top: calc(var(--scene-y) + 240px);
+  z-index: 9;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.4);
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  line-height: 1;
+}
+.hw-banner.is-on { animation: hw-banner 1.9s cubic-bezier(0.2, 1.4, 0.4, 1) forwards; }
+@keyframes hw-banner {
+  0%   { opacity: 0; transform: scale(0.4); }
+  18%  { opacity: 1; transform: scale(1.12); }
+  28%  { transform: scale(1); }
+  80%  { opacity: 1; transform: scale(1.03); }
+  100% { opacity: 0; transform: scale(1.4); }
+}
+.hw-banner__title {
+  font-size: 104px;
+  color: #fff;
+  -webkit-text-stroke: 4px var(--volt-deep);
+  paint-order: stroke fill;
+  text-shadow: 0 0 12px #fff, 0 0 34px var(--volt), 0 0 80px var(--volt-deep), 0 8px 0 #0a1440;
+  animation: popup-flicker 0.9s steps(1, end) infinite;
+}
+.hw-banner__sub {
+  margin-top: 6px;
+  font-size: 40px;
+  letter-spacing: 0.2em;
+  color: var(--copper-bright);
+  -webkit-text-stroke: 2px #3b1d08;
+  paint-order: stroke fill;
+  text-shadow: 0 0 18px rgba(255, 180, 90, 0.8);
+}
+
+/* ================================================================
+   Портрет — канвас 720x1280. Шкаф (667px) почти во всю ширину, центрирован:
+   сцена сдвинута на -282px. Катушки сцены уезжают за края, поэтому их
+   спрайты (coil_l/coil_r, вырезаны из той же сцены) встают шкафу на плечи по
+   бокам от логотипа, и молнии бьют от них.
+   ================================================================ */
+@media (orientation: portrait) {
+  :root {
+    --scene-x: -282px;
+    --scene-y: 278px;
+    --design-w: 720px;
+    --design-h: 1280px;
+  }
+
+  .scene {
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 60px, #000 calc(100% - 50px), transparent 100%);
+    mask-image: linear-gradient(180deg, transparent 0, #000 60px, #000 calc(100% - 50px), transparent 100%);
+  }
+
+  /* спрайт 270x520 x(2/3) = 180x347; тороид в нём на (136,145) / (130,145) */
+  .coil {
+    display: block;
+    top: 10px;
+    width: 180px;
+    height: 347px;
+    z-index: 1;
+  }
+  .coil--l { left: -20px; }
+  .coil--r { left: 560px; }
+
+  .coil-anchor {
+    width: 150px;
+    height: 50px;
+    top: calc(10px + 97px - 25px);
+  }
+  .coil-anchor--l { left: calc(-20px + 91px - 75px); }
+  .coil-anchor--r { left: calc(560px + 87px - 75px); }
+
+  .logo { left: calc(50% - 200px); top: 92px; width: 400px; height: 181px; }
+
+  .reel-win-amount::before { font-size: 46px; }
+  .hint-line { font-size: 22px; top: calc(var(--scene-y) + 700px); }
+
+  /* джекпоты — рядом под шкафом */
+  .jp { width: 166px; height: 64px; top: calc(var(--scene-y) + 612px); }
+  .jp--grand { width: 166px; height: 64px; left: 10px; }
+  .jp--major { left: 186px; }
+  .jp--minor { left: 362px; }
+  .jp--mini  { left: 538px; }
+  .jp__name { font-size: 15px; }
+  .jp__value, .jp--grand .jp__value { font-size: 22px; }
+
+  .hw-hud { top: calc(var(--scene-y) + 690px); }
+  .hw-banner__title { font-size: 84px; }
+
+  .game-popup { width: min(640px, 90%); }
+}
+
+/* ---------- Boot preloader theme ---------- */
+.preloader {
+  --pl-bg: #070a18;
+  --pl-accent-a: #6fb6ff;
+  --pl-accent-b: #d98a3d;
+  --pl-glow-a: rgba(111, 182, 255, 0.45);
+  --pl-glow-b: rgba(217, 138, 61, 0.2);
+  --pl-border: rgba(111, 182, 255, 0.45);
+  --pl-shadow: rgba(30, 80, 220, 0.55);
+}

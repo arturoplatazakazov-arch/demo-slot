@@ -28,6 +28,7 @@ from app.seed.multi_fruits_story import get_or_seed_active_config as get_or_seed
 from app.seed.neon_reels import get_or_seed_active_config as get_or_seed_neon_reels
 from app.seed.party_of_goods import get_or_seed_active_config as get_or_seed_party_of_goods
 from app.seed.sugar_galaxy import get_or_seed_active_config as get_or_seed_sugar_galaxy
+from app.seed.tesla_spins import get_or_seed_active_config as get_or_seed_tesla_spins
 from app.seed.uniqorn_bad_santa import get_or_seed_active_config as get_or_seed_uniqorn_bad_santa
 from app.seed.uniqorn_back_to_fabulous import (
     get_or_seed_active_config as get_or_seed_uniqorn_back_to_fabulous,
@@ -73,6 +74,7 @@ async def lifespan(app: FastAPI):
         await get_or_seed_neon_reels(db)
         await get_or_seed_party_of_goods(db)
         await get_or_seed_sugar_galaxy(db)
+        await get_or_seed_tesla_spins(db)
         await get_or_seed_uniqorn_bad_santa(db)
         await get_or_seed_uniqorn_back_to_fabulous(db)
         await get_or_seed_uniqorn_scandal(db)
