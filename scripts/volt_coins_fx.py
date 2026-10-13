@@ -137,6 +137,25 @@ class Fx(Skel):
 # --------------------------------------------------------------------------
 # images
 
+def edge_fade(im, frac_x=0.06, frac_y=0.12):
+    """Fade alpha to zero towards the image border. Every procedural glow
+    sprite goes through this: a glow that still has alpha at its border is
+    drawn as a visible rectangle (the coil ring did exactly that)."""
+    w, h = im.size
+    fx = max(2, int(w * frac_x))
+    fy = max(2, int(h * frac_y))
+    xs = [clamp(min(x, w - 1 - x) / fx) for x in range(w)]
+    ys = [clamp(min(y, h - 1 - y) / fy) for y in range(h)]
+    row = Image.new('L', (w, 1))
+    row.putdata([int(255 * (v * v * (3 - 2 * v))) for v in xs])
+    col = Image.new('L', (1, h))
+    col.putdata([int(255 * (v * v * (3 - 2 * v))) for v in ys])
+    mask = ImageChops.multiply(row.resize((w, h)), col.resize((w, h)))
+    out = im.copy()
+    out.putalpha(ImageChops.multiply(im.getchannel('A'), mask))
+    return out
+
+
 def tint(im, rgb):
     out = Image.new('RGBA', im.size, rgb + (0,))
     out.putalpha(im.getchannel('A'))
@@ -167,22 +186,28 @@ def star4(size, col=(255, 255, 255), thin=0.035):
     m = ImageChops.lighter(ImageChops.lighter(m, g), core)
     out = Image.new('RGBA', (size, size), col + (0,))
     out.putalpha(m)
-    return out
+    return edge_fade(out, 0.12, 0.12)
 
 
 def ring(size, thick=0.07, col=(255, 255, 255), sy=1.0):
+    """Glowing ellipse ring. The ellipse is (1 - 2*0.12) of the width wide and
+    `sy` times that tall; the canvas keeps the SAME absolute padding above and
+    below as at the sides, so the blur never reaches the border (with the old
+    `pad * sy` a flat ring got almost no vertical room — the coil's ring glow
+    showed as a rectangle)."""
     big = size * 2
-    h = int(big * sy)
+    pad = big * 0.12
+    eh = (big - 2 * pad) * sy
+    h = int(round(eh + 2 * pad))
     m = Image.new('L', (big, h))
     d = ImageDraw.Draw(m)
-    pad = big * 0.12
-    d.ellipse([pad, pad * sy, big - pad, h - pad * sy], outline=255, width=max(2, int(big * thick)))
-    m = m.filter(ImageFilter.GaussianBlur(big * 0.02)).resize((size, max(2, int(size * sy))), Image.LANCZOS)
+    d.ellipse([pad, pad, big - pad, pad + eh], outline=255, width=max(2, int(big * thick)))
+    m = m.filter(ImageFilter.GaussianBlur(big * 0.02)).resize((size, max(2, int(round(h / 2)))), Image.LANCZOS)
     m2 = m.filter(ImageFilter.GaussianBlur(size * 0.04))
     m = ImageChops.lighter(m, m2.point(lambda v: min(255, v * 2)))
     out = Image.new('RGBA', m.size, col + (0,))
     out.putalpha(m)
-    return out
+    return edge_fade(out, 0.04, 0.04)
 
 
 def hband(w, h, sigma=0.22, taper=0.06, col=(255, 255, 255)):
@@ -226,7 +251,7 @@ def bolt(w, h, seed, forks=5, rough=0.55, width=5):
     a = ImageChops.lighter(m, glow.point(lambda v: v * 2 // 3))
     out = Image.new('RGBA', (w, h), (255, 255, 255, 0))
     out.putalpha(a)
-    return out
+    return edge_fade(out, 0.04, 0.1)
 
 
 def rect_line(w, h, line, blur, r=8):
@@ -808,7 +833,7 @@ def build_winlines():
         sk.image(f'bolt{j}', bolt(1024, 96, j * 11 + 3))
         sk.res_of[f'bolt{j}'] = 0.8
     sk.image('head', glow_dot(256, core=0.22, col=(255, 255, 255)))
-    sk.image('comet', spark(256, 40))
+    sk.image('comet', edge_fade(spark(256, 40), 0.08, 0.2))
     sk.image('ring', ring(256))
     sk.image('flare', star4(256, thin=0.025))
     fw, fh = int(CELL_W * 0.94), int(CELL_H * 0.92)
