@@ -353,16 +353,45 @@ let winLineLoopTimeout = null;
 // promise from re-arming the timeout afterwards without this.
 let winLineToken = 0;
 
+// Appended to #stageFront (z-index 6), not #reel (z-index 2): #reel is
+// itself a positioned, z-indexed element, so it opens its OWN stacking
+// context — anything inside it, this SVG included, is capped at that level
+// no matter what z-index the SVG itself asks for, always painting under
+// .spine-canvas (z-index 5, reported live: the line hid behind a symbol's
+// win effect). #stageFront already sits above spine-canvas, so appending
+// there is enough — no per-game CSS position formula to keep in sync with
+// #reel's own; positionWinLineOverlay measures #reel's real screen rect
+// each time instead (same "measure live" approach cellCentre already uses).
 function ensureWinLineSvg() {
-  const gridEl = document.getElementById('reel');
-  if (!gridEl) return null;
-  if (winLineSvg && winLineSvg.parentNode === gridEl) return winLineSvg;
+  const parentEl = document.getElementById('stageFront');
+  if (!parentEl) return null;
+  if (winLineSvg && winLineSvg.parentNode === parentEl) return winLineSvg;
   const svg = document.createElementNS(WIN_LINE_NS, 'svg');
   svg.setAttribute('class', 'win-line');
   svg.setAttribute('preserveAspectRatio', 'none');
-  gridEl.appendChild(svg);
+  parentEl.appendChild(svg);
   winLineSvg = svg;
   return svg;
+}
+
+// Sizes/positions the (now cross-parent) SVG to sit exactly over #reel in
+// real screen pixels, independent of whatever transform #stageFront itself
+// carries.
+function positionWinLineOverlay(svg, gridEl) {
+  const parentEl = svg.parentNode;
+  if (!parentEl) return;
+  const gridRect = gridEl.getBoundingClientRect();
+  const parentRect = parentEl.getBoundingClientRect();
+  // parentEl (#stageFront) carries its own transform: scale(--stage-scale),
+  // which then ALSO scales this SVG's inline left/top/width/height (they're
+  // interpreted in the parent's pre-transform local space, not real screen
+  // px) — dividing by that factor here is what cancels it back out so the
+  // assigned px values land at gridRect's real on-screen position/size.
+  const scale = parentRect.width / parentEl.offsetWidth || 1;
+  svg.style.left = `${(gridRect.left - parentRect.left) / scale}px`;
+  svg.style.top = `${(gridRect.top - parentRect.top) / scale}px`;
+  svg.style.width = `${gridRect.width / scale}px`;
+  svg.style.height = `${gridRect.height / scale}px`;
 }
 
 // Cell centres in #reel's own coordinate space, measured live rather than
@@ -407,6 +436,7 @@ function showWinLine(win) {
     return Promise.resolve();
   }
   const gridEl = document.getElementById('reel');
+  positionWinLineOverlay(svg, gridEl);
   svg.setAttribute('viewBox', `0 0 ${gridEl.offsetWidth} ${gridEl.offsetHeight}`);
 
   const points = positions
@@ -433,27 +463,6 @@ function showWinLine(win) {
   svg.classList.add('is-playing');
 
   return wait(WIN_PULSE_MS);
-}
-
-// Lone-line case only (playWinCells' single-group branch): repeats
-// showWinLine on the same play-once/pause/repeat cadence the winning
-// symbols use.
-function previewWinLine(win) {
-  if (winLineLoopTimeout) {
-    clearTimeout(winLineLoopTimeout);
-    winLineLoopTimeout = null;
-  }
-  const token = ++winLineToken;
-  const playOnce = () => {
-    showWinLine(win).then(() => {
-      if (token !== winLineToken) return;
-      winLineLoopTimeout = setTimeout(() => {
-        winLineLoopTimeout = null;
-        playOnce();
-      }, WIN_LOOP_PAUSE_MS);
-    });
-  };
-  playOnce();
 }
 
 function hideWinLine() {
@@ -624,15 +633,14 @@ function playWinCells(winningCells, lineWins, countWins) {
   if (window.BakuFx) BakuFx.setWin(allWinInfos.length > 0);
 
   const groups = buildWinGroups(lineWins, countWins);
-  if (groups.length > 1) {
+  // Always through playMultiLineWinSequence, even for a single group: it
+  // gates the phase's own pause behind Promise.all of every cell's own win
+  // animation, so a longer clip (e.g. a bigger/slower symbol) still holds
+  // the line and the rest of the cells until it actually finishes, instead
+  // of each cell and the line looping on its own independent timer and
+  // drifting out of phase with each other (reported live).
+  if (groups.length > 0) {
     playMultiLineWinSequence(groups, allWinInfos, lineWins);
-  } else {
-    if (lineWins && lineWins.length === 1 && countWins && countWins.length === 0) {
-      previewWinLine(lineWins[0]);
-    } else {
-      hideWinLine();
-    }
-    for (const info of allWinInfos) previewSymbolWin(info);
   }
 }
 

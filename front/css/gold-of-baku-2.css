@@ -301,14 +301,19 @@ body {
 /* ---------- Win line ----------
    Одна SVG-линия через центры выигравших ячеек (см. slot.js showWinLine) —
    не арт под конкретную payline, а сама рисуется поверх #reel. */
+/* Appended to #screen, not #reel (see ensureWinLineSvg): #reel opens its own
+   stacking context at z-index 2, capping anything inside it — including
+   this SVG — below .spine-canvas (z-index 7, deliberately above even the
+   frame here — see .spine-canvas's own comment). left/top/width/height are
+   set inline by positionWinLineOverlay (measured from #reel's live rect)
+   rather than a copied CSS formula, since #screen and #reel don't share a
+   coordinate space (the stage's own translate+scale sits between them) to
+   make one valid. */
 .win-line {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
   overflow: visible;
   pointer-events: none;
-  z-index: 4; /* над ячейками, под рамой */
+  z-index: 8; /* above .spine-canvas (7), so above every symbol win effect too */
 }
 .win-line path {
   fill: none;

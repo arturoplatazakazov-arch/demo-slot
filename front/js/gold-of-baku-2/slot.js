@@ -204,16 +204,41 @@ let winLineLoopTimeout = null;
 // promise from re-arming the timeout afterwards without this.
 let winLineToken = 0;
 
+// Appended to #screen (z-index auto, but painted last => on top), not #reel
+// (z-index 2): #reel opens its own stacking context, capping anything
+// inside it — this SVG included — below .spine-canvas (z-index 7 here; this
+// game's spine layer deliberately lives outside #stage entirely, see its own
+// comment in gold-of-baku-2.css, so #stageFront-style trick used in
+// gold-of-baku doesn't apply — reported live: the line hid behind a
+// symbol's win effect). positionWinLineOverlay measures #reel's live rect
+// each time instead of a CSS position formula, since #screen and #reel
+// don't share a coordinate space (the stage's own translate+scale sits
+// between them) to make one valid.
 function ensureWinLineSvg() {
-  const gridEl = document.getElementById('reel');
-  if (!gridEl) return null;
-  if (winLineSvg && winLineSvg.parentNode === gridEl) return winLineSvg;
+  const parentEl = document.getElementById('screen');
+  if (!parentEl) return null;
+  if (winLineSvg && winLineSvg.parentNode === parentEl) return winLineSvg;
   const svg = document.createElementNS(WIN_LINE_NS, 'svg');
   svg.setAttribute('class', 'win-line');
   svg.setAttribute('preserveAspectRatio', 'none');
-  gridEl.appendChild(svg);
+  parentEl.appendChild(svg);
   winLineSvg = svg;
   return svg;
+}
+
+function positionWinLineOverlay(svg, gridEl) {
+  const parentEl = svg.parentNode;
+  if (!parentEl) return;
+  const gridRect = gridEl.getBoundingClientRect();
+  const parentRect = parentEl.getBoundingClientRect();
+  // #screen itself carries no transform (scale resolves to 1 here), but
+  // dividing by it anyway keeps this identical to gold-of-baku's version —
+  // safe/inert now, and correct if #screen ever gains one.
+  const scale = parentRect.width / parentEl.offsetWidth || 1;
+  svg.style.left = `${(gridRect.left - parentRect.left) / scale}px`;
+  svg.style.top = `${(gridRect.top - parentRect.top) / scale}px`;
+  svg.style.width = `${gridRect.width / scale}px`;
+  svg.style.height = `${gridRect.height / scale}px`;
 }
 
 // Cell centres in #reel's own coordinate space, measured live rather than
@@ -258,6 +283,7 @@ function showWinLine(win) {
     return Promise.resolve();
   }
   const gridEl = document.getElementById('reel');
+  positionWinLineOverlay(svg, gridEl);
   svg.setAttribute('viewBox', `0 0 ${gridEl.offsetWidth} ${gridEl.offsetHeight}`);
 
   const points = positions
@@ -284,27 +310,6 @@ function showWinLine(win) {
   svg.classList.add('is-playing');
 
   return wait(WIN_PULSE_MS);
-}
-
-// Lone-line case only (playWinCells' single-group branch): repeats
-// showWinLine on the same play-once/pause/repeat cadence the winning
-// symbols use.
-function previewWinLine(win) {
-  if (winLineLoopTimeout) {
-    clearTimeout(winLineLoopTimeout);
-    winLineLoopTimeout = null;
-  }
-  const token = ++winLineToken;
-  const playOnce = () => {
-    showWinLine(win).then(() => {
-      if (token !== winLineToken) return;
-      winLineLoopTimeout = setTimeout(() => {
-        winLineLoopTimeout = null;
-        playOnce();
-      }, WIN_LOOP_PAUSE_MS);
-    });
-  };
-  playOnce();
 }
 
 function hideWinLine() {
@@ -575,15 +580,13 @@ function playWinCells(winningCells, lineWins, countWins) {
   if (window.BakuFx) BakuFx.setWin(allWinInfos.length > 0);
 
   const groups = buildWinGroups(lineWins, countWins);
-  if (groups.length > 1) {
+  // Always through playMultiLineWinSequence, even for a single group: it
+  // gates the phase's own pause behind Promise.all of every cell's own win
+  // animation, so a longer clip still holds the line and the rest of the
+  // cells until it actually finishes, instead of each cell and the line
+  // looping on its own independent timer and drifting out of phase.
+  if (groups.length > 0) {
     playMultiLineWinSequence(groups, allWinInfos, lineWins);
-  } else {
-    if (lineWins && lineWins.length === 1 && countWins && countWins.length === 0) {
-      previewWinLine(lineWins[0]);
-    } else {
-      hideWinLine();
-    }
-    for (const info of allWinInfos) previewSymbolWin(info);
   }
 }
 
