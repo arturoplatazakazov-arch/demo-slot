@@ -109,6 +109,7 @@ async def run_spin(
         coin_result = coin_feature.execute(ctx, coin_config.params)
         coin_bonus = coin_result.win_amount
         coin_details = coin_result.details
+        ctx.coin_values = coin_details["coin_positions"]
 
     # multiplier_wild is the same shape as coin_multiplier — it needs the line
     # wins to already exist and returns the DELTA over them (see the module

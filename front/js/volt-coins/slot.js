@@ -32,6 +32,10 @@ const JACKPOT_VALUE_BY_TIER = Object.fromEntries(JACKPOT_LADDER.map((j) => [j.ti
 
 const COIN_STATE_ART = ['coin_value', 'coin_mini', 'coin_minor', 'coin_major'];
 
+// = PAYLINES сида (ряд на каждом барабане). Три монеты на любой из них
+// открывают Hold & Win (hold_and_win trigger_mode "payline").
+const PAYLINES = [[1, 1, 1], [0, 0, 0], [2, 2, 2], [0, 1, 2], [2, 1, 0]];
+
 // В прокрутке не мелькают монеты: мелькнувший триггер читается как обман.
 const FILLER_CODES = SYMBOL_CODES.filter((code) => code !== 'coin');
 
@@ -289,7 +293,9 @@ function showCoinFace(info, face) {
 
 // Один «удар» выигрыша по ячейке: Spine-копия символа, если есть, иначе CSS-пульс.
 function playWinAnimationOnce(info) {
-  if (info.symbol !== 'blank') {
+  // Монета с номиналом: Spine-копия нарисовала бы голую монету без числа,
+  // поэтому у неё CSS-пульс (число едет вместе с картинкой).
+  if (info.symbol !== 'blank' && !info.coinFace) {
     dropSymbolFx(info);
     const inst = fx('symbol', info.cell, info.symbol);
     if (inst) {
@@ -447,7 +453,9 @@ function stopReelLoop() {
   }
 }
 
-function landReel(colIndex, finalCodes, delayMs, isAnticipating = false) {
+// `faces` — по записи на ряд (null, где монеты нет): монета собирается в ленту
+// уже со своим номиналом и падает с ним, а не получает его после остановки.
+function landReel(colIndex, finalCodes, delayMs, isAnticipating = false, faces = null) {
   const { stripEl } = reelCols[colIndex];
   const stopSound = colIndex === GRID_COLS - 1 ? 'finalReelStop' : 'reelStop';
   const prerollCount = isAnticipating ? ANTICIPATION_PREROLL_FILLER_COUNT : 0;
@@ -463,8 +471,13 @@ function landReel(colIndex, finalCodes, delayMs, isAnticipating = false) {
         ...Array.from({ length: REEL_LAND_FILLER_COUNT }, randomSymbolCode),
         ...Array.from({ length: prerollCount }, randomSymbolCode),
       ];
-      const cellEls = sequence.map((code) => {
-        const { cell } = createCellNode(code);
+      const cellEls = sequence.map((code, index) => {
+        const { cell, img } = createCellNode(code);
+        const face = faces && index < GRID_ROWS ? faces[index] : null;
+        if (face) {
+          img.src = symbolSrc(face.art);
+          cell.appendChild(makeCoinFace(face));
+        }
         stripEl.appendChild(cell);
         return cell;
       });
@@ -521,7 +534,7 @@ function settleColumnCells(cellEls, col, finalCodes) {
       symbol: code, row, col, cell,
       img: cell.querySelector('img'),
       winLoopTimeout: null,
-      coinFace: null,
+      coinFace: cell.querySelector('.coin-face'),
       fxInst: null,
     };
     cell.addEventListener('click', () => previewSymbolWin(info));
@@ -536,29 +549,62 @@ function settleColumnCells(cellEls, col, finalCodes) {
   return Promise.resolve();
 }
 
-// 3 монеты открывают раунд, значит последний барабан решает, если на первых
-// двух уже лежат две (и меньше трёх). Считается по серверной сетке — честно.
+// Раунд открывают 3 монеты В ЛИНИЮ, значит последний барабан решает, если
+// хоть одна линия уже несёт монеты на первых двух. По серверной сетке — честно.
 function anticipationColumns(codes) {
-  let coins = 0;
-  for (let col = 0; col < GRID_COLS - 1; col++) {
-    for (let row = 0; row < GRID_ROWS; row++) if (codes[row][col] === 'coin') coins++;
-  }
-  return coins === 2 ? [GRID_COLS - 1] : [];
+  const open = PAYLINES.some((line) => codes[line[0]][0] === 'coin' && codes[line[1]][1] === 'coin');
+  return open ? [GRID_COLS - 1] : [];
 }
 
-async function landReels(grid) {
+// Номиналы монет базовой сетки (3x3, null без монеты) из coin_multiplier.
+// Хранятся отдельно: пересборка сетки при повороте и возврат из раунда
+// должны вернуть монетам их числа.
+let lastBaseFaces = null;
+
+function baseFacesFor(grid, coinMultiplier) {
+  const faces = grid.map((row) => row.map(() => null));
+  for (const pos of (coinMultiplier && coinMultiplier.positions) || []) {
+    if (grid[pos.row]?.[pos.col] === 'coin') faces[pos.row][pos.col] = coinFaceFor(pos.kind, pos.value);
+  }
+  return faces;
+}
+
+function paintBaseFaces() {
+  if (!lastBaseFaces) return;
+  for (let row = 0; row < GRID_ROWS; row++) {
+    for (let col = 0; col < GRID_COLS; col++) {
+      const face = lastBaseFaces[row][col];
+      const info = cellInfos[row * GRID_COLS + col];
+      if (face && info && info.symbol === 'coin') showCoinFace(info, face);
+    }
+  }
+}
+
+// Линии, на которых стоят три монеты (их подсветка перед входом в раунд).
+function coinLines(grid) {
+  const out = [];
+  PAYLINES.forEach((line, i) => {
+    if (line.every((row, col) => grid[row][col] === 'coin')) out.push(i + 1);
+  });
+  return out;
+}
+
+async function landReels(grid, coinMultiplier = null) {
   reelsBusy = true;
   try {
-    await landReelsInner(grid);
+    await landReelsInner(grid, coinMultiplier);
   } finally {
     reelsBusy = false;
     await flushDeviceRebuild();
   }
 }
 
-async function landReelsInner(grid) {
+async function landReelsInner(grid, coinMultiplier) {
   teardownCellInstances();
+  const faces = baseFacesFor(grid, coinMultiplier);
+  lastBaseFaces = faces;
   const columnCodes = (col) => [grid[0][col], grid[1][col], grid[2][col]];
+  const columnFaces = (col) => [faces[0][col], faces[1][col], faces[2][col]];
   const antic = anticipationColumns(grid);
   const firstAnticipationCol = antic.length ? Math.min(...antic) : GRID_COLS;
 
@@ -566,7 +612,7 @@ async function landReelsInner(grid) {
   for (let col = 0; col < firstAnticipationCol; col++) {
     const finalCodes = columnCodes(col);
     leadTasks.push(
-      landReel(col, finalCodes, col * REEL_LAND_STAGGER_MS)
+      landReel(col, finalCodes, col * REEL_LAND_STAGGER_MS, false, columnFaces(col))
         .then((cellEls) => settleColumnCells(cellEls, col, finalCodes)),
     );
   }
@@ -587,7 +633,7 @@ async function landReelsInner(grid) {
   for (let col = firstAnticipationCol; col < GRID_COLS; col++) {
     const finalCodes = columnCodes(col);
     reelCols[col].colEl.classList.add('is-anticipating');
-    const cellEls = await landReel(col, finalCodes, 0, true);
+    const cellEls = await landReel(col, finalCodes, 0, true, columnFaces(col));
     await settleColumnCells(cellEls, col, finalCodes);
   }
   fx('anticipation', false);
@@ -925,7 +971,7 @@ function setRespinCounter(value, reset = false) {
   }
 }
 
-function spinCellTo(info, code, delayMs) {
+function spinCellTo(info, code, delayMs, face = null) {
   return new Promise((resolve) => {
     setTimeout(() => {
       const spinner = document.createElement('div');
@@ -933,14 +979,18 @@ function spinCellTo(info, code, delayMs) {
       const strip = document.createElement('div');
       strip.className = 'cell-spinner__strip';
       const filler = () => (Math.random() < HW_COIN_FILLER_CHANCE ? 'coin' : 'blank');
-      for (const itemCode of [code, ...Array.from({ length: HW_CELL_SPIN_FILLER }, filler)]) {
+      for (const [i, itemCode] of [code, ...Array.from({ length: HW_CELL_SPIN_FILLER }, filler)].entries()) {
         const item = document.createElement('div');
+        if (i === 0 && face) {
+          item.appendChild(makeCoinFace(face));
+          item.style.position = 'relative';
+        }
         item.className = 'cell-spinner__item';
         if (itemCode !== 'blank') {
           const img = document.createElement('img');
           img.decoding = 'async';
-          img.src = symbolSrc(itemCode);
-          item.appendChild(img);
+          img.src = symbolSrc(i === 0 && face ? face.art : itemCode === 'coin' ? 'coin_value' : itemCode);
+          item.insertBefore(img, item.firstChild);
         }
         strip.appendChild(item);
       }
@@ -957,6 +1007,7 @@ function spinCellTo(info, code, delayMs) {
         settled = true;
         spinner.remove();
         setCellSymbol(info, code).then(() => {
+          if (face) showCoinFace(info, face);
           if (code !== 'blank') playLandBounce(info);
           resolve();
         });
@@ -977,7 +1028,9 @@ async function respinEmptyCells(locked, landing) {
       if (locked.has(key)) continue;
       const info = cellInfos[row * GRID_COLS + col];
       if (!info) continue;
-      tasks.push(spinCellTo(info, landing.has(key) ? 'coin' : 'blank', col * REEL_LAND_STAGGER_MS));
+      const coin = landing.get(key);
+      tasks.push(spinCellTo(info, coin ? 'coin' : 'blank', col * REEL_LAND_STAGGER_MS,
+        coin ? coinFaceFor(coin.kind, coin.value) : null));
     }
   }
   await Promise.all(tasks);
@@ -988,13 +1041,24 @@ async function respinEmptyCells(locked, landing) {
 async function enterHoldAndWinWaitingState(result) {
   const locked = new Map();
   for (const c of result.initial || []) locked.set(coinKey(c.row, c.col), { value: c.value, kind: c.kind });
-  // Короткий «звон» монет триггера до входа: каждая получает дугу от катушки.
-  for (const [key] of locked) {
-    const [row, col] = key.split('-').map(Number);
-    const info = cellInfos[row * GRID_COLS + col];
-    if (info) previewSymbolWin(info);
+  // Сначала — что сработало: линия из трёх монет загорается молнией, её
+  // монеты пульсируют, остальное притухает. Потом вход в раунд.
+  const grid = buildHoldAndWinGrid(locked);
+  const lines = coinLines(grid);
+  const lineCells = new Set();
+  for (const n of lines) PAYLINES[n - 1].forEach((row, col) => lineCells.add(row * GRID_COLS + col));
+  for (const [i, info] of cellInfos.entries()) {
+    if (!info) continue;
+    if (lineCells.has(i)) previewSymbolWin(info);
+    else setCellDimmed(info, !locked.has(coinKey(info.row, info.col)));
   }
-  await wait(900);
+  if (lines.length) {
+    fx('setWin', true);
+    fx('showLine', lines[0]);
+    for (const i of lineCells) fx('coinLanded', cellInfos[i].cell);
+  }
+  Sound.playSfx('coinLand');
+  await wait(1500);
   teardownCellInstances();
   await enterBonusMode();
   await applyGrid(buildHoldAndWinGrid(locked));
@@ -1050,7 +1114,10 @@ async function runHoldAndWinSequence(result, locked, baseGrid = null) {
   Sound.playSfx('roundTotalWin');
   await playPopup('holdWinTotal', result.total_win, 3000);
   holdAndWinLocked = null;
-  if (baseGrid) await applyGrid(baseGrid);
+  if (baseGrid) {
+    await applyGrid(baseGrid);
+    paintBaseFaces();
+  }
   await leaveBonusMode();
 }
 
@@ -1155,6 +1222,7 @@ async function flushDeviceRebuild() {
   buildReelGrid();
   await Promise.all(cellInfos.map((info, i) => setCellSymbol(info, snapshot[i] || info.symbol)));
   if (holdAndWinLocked) paintLockedCoins(holdAndWinLocked);
+  else paintBaseFaces();
 }
 
 // --- Прелоадер ---------------------------------------------------------------

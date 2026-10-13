@@ -22,7 +22,7 @@ const gameState = {
 };
 
 // = BONUS_BUY_COST_MULTIPLIER в app/seed/volt_coins.py (только для показа).
-const BUY_BONUS_COST_MULTIPLIER = 26;
+const BUY_BONUS_COST_MULTIPLIER = 28;
 
 function formatNumber(n) {
   return Number(n).toLocaleString('en-US');
@@ -108,7 +108,8 @@ async function runSpin(request, betAmount) {
   startReelLoop();
   try {
     const data = await request();
-    await landReels(data.grid);
+    // Монеты падают уже с номиналом/джекпотом (coin_multiplier, display_only).
+    await landReels(data.grid, data.coin_multiplier);
     await applySpinResult(data, betAmount);
   } catch (err) {
     console.error('spin failed:', err);
@@ -221,7 +222,7 @@ function renderInfoPopupContent() {
     row.className = 'info-popup__row';
     const pays = symbol.paytable['3'] !== undefined
       ? `<span>×3: <b>${formatNumber(symbol.paytable['3'])}</b> × ставка на линию</span>`
-      : '<span>3+ запускают Hold &amp; Win</span>';
+      : '<span>3 в линию запускают Hold &amp; Win</span>';
     row.innerHTML = `
       <img src="img/volt-coins/symbols/${symbol.code}.png" alt="">
       <span class="info-popup__row-name"></span>

@@ -3,6 +3,7 @@ from decimal import Decimal
 from app.engine.types import LineWin, SpinGrid, WinEvaluation
 from app.features.base import FeatureContext
 from app.features.coin_multiplier import CoinMultiplierFeature
+
 from tests.fakes import FakeRNG
 
 
@@ -108,3 +109,19 @@ def test_config_schema_lists_expected_fields():
     assert set(schema["required"]) <= set(schema["properties"].keys())
     assert "coin_symbol_code" in schema["properties"]
     assert "collector_symbol_code" in schema["properties"]
+
+
+def test_display_only_draws_faces_but_never_multiplies():
+    from decimal import Decimal as D
+    from app.engine.types import SpinGrid
+    from app.features.base import FeatureContext
+    from app.features.coin_multiplier import CoinMultiplierFeature
+    from tests.fakes import FakeRNG
+    grid = SpinGrid(reels=[["coin"], ["x"]], draws=[])
+    evaluation = _win_eval(10)
+    ctx = FeatureContext(session_state={}, rng=FakeRNG([0] * 5), bet_amount=D(1), grid=grid, win_evaluation=evaluation)
+    config = {"coin_symbol_code": "coin", "requires_collector": False, "display_only": True, "value_weights": {"5": 1}}
+    result = CoinMultiplierFeature().execute(ctx, config)
+    assert result.details["applied"] is False
+    assert result.win_amount == D(0)
+    assert result.details["coin_positions"][0]["value"] == "5"

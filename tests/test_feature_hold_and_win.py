@@ -194,3 +194,40 @@ def test_full_grid_jackpot_is_not_paid_on_a_partial_grid():
 
     assert result.details["full_grid_jackpot"] is None
     assert result.win_amount == Decimal(3)
+
+
+def test_payline_trigger_needs_three_coins_in_a_line():
+    lines = [[1, 1, 1], [0, 0, 0], [2, 2, 2], [0, 1, 2], [2, 1, 0]]
+    config = {"trigger_symbol_code": "coin", "trigger_mode": "payline", "trigger_lines": lines}
+    feature = HoldAndWinFeature()
+    # diagonal 0,1,2 -> triggers
+    diag = _grid(["coin", "x", "x"], ["x", "coin", "x"], ["x", "x", "coin"])
+    ctx = FeatureContext(session_state={}, rng=FakeRNG([]), bet_amount=Decimal("1"), grid=diag)
+    assert feature.is_triggered(ctx, config) is True
+    # three coins, but not on one line -> no round
+    scattered = _grid(["coin", "x", "x"], ["x", "x", "coin"], ["coin", "x", "x"])
+    ctx = FeatureContext(session_state={}, rng=FakeRNG([]), bet_amount=Decimal("1"), grid=scattered)
+    assert feature.is_triggered(ctx, config) is False
+
+
+def test_initial_coins_keep_their_base_game_faces():
+    grid = _grid(["coin", "x"], ["coin", "x"])
+    ctx = FeatureContext(
+        session_state={}, rng=FakeRNG([0] * 20), bet_amount=Decimal("1"), grid=grid,
+        coin_values=[
+            {"reel": 0, "row": 0, "value": "15", "kind": "15"},
+            {"reel": 1, "row": 0, "value": "20", "kind": "mini"},
+        ],
+    )
+    config = {
+        "respin_count": 1,
+        "coin_value_weights": {"1": 1},
+        "respin_land_weights": {"blank": 1, "coin": 0},
+        "trigger_symbol_code": "coin",
+        "jackpot_values": {"mini": 20},
+        "initial_from_base_coins": True,
+    }
+    result = HoldAndWinFeature().execute(ctx, config)
+    faces = {(c["reel"], c["row"]): (c["kind"], c["value"]) for c in result.details["initial"]}
+    assert faces == {(0, 0): ("15", "15"), (1, 0): ("mini", "20")}
+    assert result.win_amount == Decimal(35)

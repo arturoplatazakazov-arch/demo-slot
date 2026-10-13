@@ -59,6 +59,15 @@ class HoldAndWinFeature(BonusFeature):
                 for index, column in enumerate(reels)
                 if index != collector_reel
             )
+        # "payline" (Volt Coins, product): three coins IN A LINE — the trigger
+        # symbol on every position of one of `trigger_lines` (the game's
+        # paylines, row index per reel), not a count anywhere on the grid.
+        if config.get("trigger_mode") == "payline":
+            reels = spin_result.grid.reels
+            return any(
+                all(reels[reel][row] == trigger_code for reel, row in enumerate(line))
+                for line in config.get("trigger_lines", [])
+            )
         trigger_count = config.get("trigger_count", 6)
         count = sum(column.count(trigger_code) for column in spin_result.grid.reels)
         return count >= trigger_count
@@ -103,13 +112,23 @@ class HoldAndWinFeature(BonusFeature):
         # to know what the coins it can already SEE are worth. Always empty for
         # start_empty=True rounds (East Discovery), which begin on a bare grid.
         initial: list[dict] = []
+        # Volt Coins: the coins already showed their faces in the base game
+        # (coin_multiplier, display_only) — they lock with exactly those.
+        base_faces = {}
+        if config.get("initial_from_base_coins") and game_state.coin_values:
+            base_faces = {(c["reel"], c["row"]): c for c in game_state.coin_values}
         if not start_empty:
             for reel_index, column in enumerate(game_state.grid.reels):
                 for row_index, code in enumerate(column):
                     if code == trigger_code:
-                        kind, value = self._draw_coin_value(
-                            value_weights, grand_multiplier, game_state.rng, jackpot_values
-                        )
+                        face = base_faces.get((reel_index, row_index))
+                        if face is not None:
+                            kind = face.get("kind") or str(face["value"])
+                            value = Decimal(str(face["value"]))
+                        else:
+                            kind, value = self._draw_coin_value(
+                                value_weights, grand_multiplier, game_state.rng, jackpot_values
+                            )
                         locked[(reel_index, row_index)] = value
                         initial.append(
                             {"reel": reel_index, "row": row_index, "value": str(value), "kind": kind}
@@ -361,7 +380,7 @@ class HoldAndWinFeature(BonusFeature):
                 "grand_value_multiplier": {"type": "integer", "minimum": 1, "default": 50},
                 "trigger_mode": {
                     "type": "string",
-                    "enum": ["count", "one_per_reel", "collector_and_coins"],
+                    "enum": ["count", "one_per_reel", "collector_and_coins", "payline"],
                     "default": "count",
                     "description": (
                         "'one_per_reel': the trigger symbol on EVERY reel. "
@@ -394,6 +413,17 @@ class HoldAndWinFeature(BonusFeature):
                         "A coin_value_weights key matching a name here pays that multiplier and is reported "
                         "with kind=<name> so the client can show the tier's own coin art."
                     ),
+                },
+                "trigger_lines": {
+                    "type": "array",
+                    "items": {"type": "array", "items": {"type": "integer"}},
+                    "default": [],
+                    "description": "trigger_mode 'payline': row index per reel for each line that opens the round.",
+                },
+                "initial_from_base_coins": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Lock the triggering coins with the faces coin_multiplier drew for them.",
                 },
                 "full_grid_jackpot": {
                     "type": "string",

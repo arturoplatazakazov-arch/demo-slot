@@ -29,6 +29,11 @@ class FeatureContext:
     grid: SpinGrid | None = None
     win_evaluation: WinEvaluation | None = None
     is_bonus_buy: bool = False
+    # Coin faces coin_multiplier already drew for THIS grid ({reel, row, value,
+    # kind} per coin). hold_and_win reuses them as the round's starting coins
+    # when `initial_from_base_coins` is set, so a coin keeps the value the
+    # player saw on it in the base game.
+    coin_values: list | None = None
 
 
 @dataclass

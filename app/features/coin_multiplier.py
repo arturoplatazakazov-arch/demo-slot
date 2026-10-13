@@ -66,7 +66,10 @@ class CoinMultiplierFeature(BonusFeature):
             True if not requires_collector
             else any(collector_code in column for column in game_state.grid.reels)
         )
-        applied = has_collector and line_pay_total > 0
+        # Volt Coins (product): coins carry a face value / jackpot tier in the
+        # base game purely so the player sees what they'd lock into Hold & Win
+        # — they never multiply anything there.
+        applied = has_collector and line_pay_total > 0 and not config.get("display_only", False)
         bonus_win = line_pay_total * (multiplier_sum - 1) if applied and multiplier_sum > 0 else Decimal(0)
 
         return FeatureResult(
@@ -108,6 +111,11 @@ class CoinMultiplierFeature(BonusFeature):
                     "type": "object",
                     "additionalProperties": {"type": "integer", "minimum": 0},
                     "default": _DEFAULT_VALUE_WEIGHTS,
+                },
+                "display_only": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "True: values are drawn and reported but never multiply a line (Volt Coins).",
                 },
                 "jackpot_values": {
                     "type": "object",
