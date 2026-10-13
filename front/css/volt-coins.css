@@ -156,25 +156,25 @@ body.fx-over-dim .fx-canvas--front { z-index: 9; }
 body.lights-off .fx-canvas { display: none; }
 
 /* ---------- Катушки Теслы ----------
-   coil.png 304x538, правая — зеркальная копия. По бокам автомата, основание
-   уходит под градиент нижнего бара. */
+   coil.png 566x1080 (перегенерирована в fal), правая — зеркальная копия.
+   По бокам автомата, основание уходит под градиент нижнего бара. */
 .coil {
   top: 286px;
-  width: 362px;
+  width: 336px;
   height: 641px;
   z-index: 1;
   pointer-events: none;
   filter: drop-shadow(0 20px 30px rgba(0, 0, 0, 0.7));
 }
-.coil--left { left: 40px; }
-.coil--right { left: 1518px; transform: scaleX(-1); }
+.coil--left { left: 53px; }
+.coil--right { left: 1531px; transform: scaleX(-1); }
 
 /* ---------- Логотип ---------- */
 .logo {
-  left: 650px;
-  top: 4px;
-  width: 620px;
-  height: 128px;
+  left: 600px;
+  top: -34px;
+  width: 720px;
+  height: 206px;
   z-index: 5;
   pointer-events: none;
 }
@@ -807,12 +807,12 @@ img.is-missing { outline: 2px dashed rgba(57, 216, 255, 0.5); }
   .stage { top: 0; transform: translate(-50%, 0) scale(var(--stage-scale)); transform-origin: 50% 0; }
 
   /* Две маленькие катушки по сторонам логотипа (по бокам автомата места нет). */
-  .coil { top: 100px; width: 146px; height: 258px; }
-  .coil--left { left: 4px; }
-  .coil--right { left: 650px; }
+  .coil { top: 100px; width: 135px; height: 258px; }
+  .coil--left { left: 10px; }
+  .coil--right { left: 655px; }
 
   /* Лого — между катушками. */
-  .logo { left: 150px; top: 176px; width: 500px; height: 103px; }
+  .logo { left: 130px; top: 140px; width: 540px; height: 154px; }
 
   .jp-row { left: 16px; top: 300px; width: 768px; height: 110px; gap: 8px; }
   .jp { flex-basis: 172px; height: 92px; }

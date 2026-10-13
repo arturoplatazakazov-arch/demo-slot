@@ -350,10 +350,10 @@ def build_cover():
     bg = bg.resize((round(bg.width * k), round(bg.height * k)), Image.LANCZOS)
     canvas = bg.crop(((bg.width - W) // 2, (bg.height - H) // 2, (bg.width - W) // 2 + W,
                       (bg.height - H) // 2 + H)).convert('RGBA')
-    coil = Image.open(os.path.join(IMG, 'coil.png')).resize((362, 641), Image.LANCZOS)
-    canvas.alpha_composite(coil, (40, 286))
-    canvas.alpha_composite(coil.transpose(Image.FLIP_LEFT_RIGHT), (1518, 286))
-    cw, ch = 220, 174
+    coil = Image.open(os.path.join(IMG, 'coil.png')).resize((336, 641), Image.LANCZOS)
+    canvas.alpha_composite(coil, (53, 286))
+    canvas.alpha_composite(coil.transpose(Image.FLIP_LEFT_RIGHT), (1531, 286))
+    cw, ch = 220, 174  # cell; symbol PNGs are 1.5x
     wx, wy = 627, 270
     canvas.alpha_composite(Image.new('RGBA', (cw * 3, ch * 3), (6, 10, 34, 255)), (wx, wy))
     for ri in range(3):
@@ -362,21 +362,125 @@ def build_cover():
             canvas.alpha_composite(sym, (wx + ci * cw, wy + ri * ch))
     frame = Image.open(os.path.join(IMG, 'frame.png')).resize((750, 598), Image.LANCZOS)
     canvas.alpha_composite(frame, (585, 229))
-    logo = Image.open(os.path.join(IMG, 'logo.png')).resize((700, 145), Image.LANCZOS)
-    canvas.alpha_composite(logo, ((W - 700) // 2, 60))
+    logo = Image.open(os.path.join(IMG, 'logo.png')).resize((760, 217), Image.LANCZOS)
+    canvas.alpha_composite(logo, ((W - 760) // 2, 20))
     canvas = canvas.crop((0, 20, W, 900)).convert('RGB')
     canvas.resize((960, 440), Image.LANCZOS).save(os.path.join(IMG, 'cover.jpg'), quality=85, optimize=True)
     print('cover ok')
+
+
+# --------------------------------------------------------------------------
+# v2 (2026-10-13, art-director pass): symbols, logo and coil re-generated in
+# fal (nano-banana-pro/edit, the v1 cut-outs as reference) on pure black with
+# room for the whole glow — the v1 cuts had their glow sliced flat by the
+# mockup's cell edges and dirty shadow halos from the keying. Sources (2K gen
+# + birefnet mask) live in art/volt-coins-src/, outside front/ so they never
+# ship. Alpha = max(birefnet body mask, luminance key of the glow).
+
+GEN = os.path.join(os.path.dirname(__file__), '..', 'art', 'volt-coins-src')
+SYM_SCALE = 1.5  # symbol PNGs are 1.5x the 320x254 cell units (retina)
+
+
+def glow_cut(name, glow_lo=6, glow_span=110):
+    rgb = arr(Image.open(os.path.join(GEN, name + '.jpg')).convert('RGB'))
+    m = Image.open(os.path.join(GEN, name + '_mask.png')).convert('L')
+    if m.size != (rgb.shape[1], rgb.shape[0]):
+        m = m.resize((rgb.shape[1], rgb.shape[0]), Image.LANCZOS)
+    m = np.asarray(m, np.float32) / 255
+    g = np.clip((rgb.max(2) - glow_lo) / glow_span, 0, 1) ** 0.9
+    a = np.maximum(m, g)
+    unp = np.clip(rgb / np.maximum(a, 1e-3)[..., None], 0, 255)
+    col = rgb * m[..., None] + unp * (1 - m[..., None])
+    return to_im(np.dstack([col, a * 255])), m
+
+
+def body_box(m, thr=0.5):
+    ys, xs = np.where(m > thr)
+    return xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
+
+
+# Share of the cell the solid body (alpha > 200) takes along its larger
+# relative axis — the hierarchy: wild/coin biggest, highs next, lows smallest.
+BODY = {
+    'wild': 0.86, 'coin': 0.86, 'ingot': 0.74, 'seven': 0.68, 'diamond': 0.66, 'bell': 0.64,
+    'horseshoe': 0.62, 'star': 0.62, 'bar': 0.58,
+}
+
+
+def build_symbols_v2():
+    os.makedirs(SYM, exist_ok=True)
+    W, H = round(SYM_W * SYM_SCALE), round(SYM_H * SYM_SCALE)
+
+    def place(im, k, cx, cy):
+        big = im.resize((max(1, round(im.width * k)), max(1, round(im.height * k))), Image.LANCZOS)
+        canvas = Image.new('RGBA', (W, H))
+        canvas.alpha_composite(big, (round(W / 2 - cx * k), round(H / 2 - cy * k)))
+        return canvas
+
+    for code in [c for row in CELL_CODES for c in row]:
+        im, _ = glow_cut(code)
+        a = np.asarray(im.getchannel('A'))
+        ys, xs = np.where(a > 200)
+        bx0, by0, bx1, by1 = xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
+        # cap by the VISIBLE glow (alpha > 40); its faint tail beyond that is
+        # faded out towards the cell edge below instead of being sliced
+        gx0, gy0, gx1, gy1 = trim_box(im, 40)
+        cx, cy = (bx0 + bx1) / 2, (by0 + by1) / 2
+        k = BODY[code] / max((bx1 - bx0) / W, (by1 - by0) / H)
+        k = min(k, (W / 2 - 1) / max(cx - gx0, gx1 - cx), (H / 2 - 1) / max(cy - gy0, gy1 - cy))
+        tile = place(im, k, cx, cy)
+        yy, xx = np.mgrid[0:H, 0:W]
+        edge = np.minimum.reduce([xx, W - 1 - xx, yy, H - 1 - yy]).astype(np.float32)
+        fade = np.clip(edge / 22, 0, 1)
+        fade = fade * fade * (3 - 2 * fade)
+        al = np.asarray(tile.getchannel('A'), np.float32) * fade
+        tile.putalpha(Image.fromarray(al.astype(np.uint8)))
+        tile.save(os.path.join(SYM, f'{code}.png'), optimize=True)
+    print('symbols v2 ok', (W, H))
+
+
+def trim_box(im, thr=6):
+    a = np.asarray(im.getchannel('A'))
+    ys, xs = np.where(a > thr)
+    return xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
+
+
+def build_logo_v2(width=1240):
+    im, _ = glow_cut('logo', glow_lo=8, glow_span=120)
+    im = im.crop(trim_box(im, 4))
+    im = im.resize((width, round(im.height * width / im.width)), Image.LANCZOS)
+    im.save(os.path.join(IMG, 'logo.png'), optimize=True)
+    # where the bolt in the O is (fx/logo crackles there)
+    c = arr(im)
+    hot = (c[..., 2] > 225) & (c[..., 1] > 200) & (c[..., 0] < 200) & (c[..., 3] > 200)
+    ys, xs = np.where(hot[:, : im.width // 3])
+    print('logo v2', im.size, 'bolt', round(xs.mean()), round(ys.mean()))
+
+
+def build_coil_v2(height=1080):
+    im, m = glow_cut('coil', glow_lo=10, glow_span=60)
+    # the coil is "off": no glow wanted, only the body + its soft edge
+    a = np.minimum(np.asarray(im.getchannel('A'), np.float32),
+                   np.asarray(Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(5)), np.float32))
+    im.putalpha(Image.fromarray(a.astype(np.uint8)))
+    im = im.crop(trim_box(im, 4))
+    im = im.resize((round(im.width * height / im.height), height), Image.LANCZOS)
+    im.save(os.path.join(IMG, 'coil.png'), optimize=True)
+    al = np.asarray(im.getchannel('A')) > 128
+    rows = al.sum(1)
+    top = int(np.argmax(rows > 0))
+    ring_row = top + int(np.argmax(rows[top: top + height // 5]))
+    print('coil v2', im.size, 'ring row', ring_row, 'ring half-width', rows[ring_row] // 2)
 
 
 def main():
     os.makedirs(IMG, exist_ok=True)
     desk = Image.open(os.path.join(SRC, 'ref_desk.png')).convert('RGB')
     mob = Image.open(os.path.join(SRC, 'ref_mob.png')).convert('RGB')
-    build_symbols(mob)
+    build_symbols_v2()
     build_frame(mob)
-    build_logo(desk)
-    build_coil(desk)
+    build_logo_v2()
+    build_coil_v2()
     build_bg(desk, DESK_HOLES, DESK_COIL_CXS, 'bg_desk', 0.5)
     build_bg(mob, MOB_HOLES + MOB_COIL_HOLES, [], 'bg_mob', 0.5)
     build_cover()

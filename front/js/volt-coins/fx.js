@@ -21,13 +21,13 @@
   const BOX = {
     bg_desk: { x: -899, y: -437.5, width: 1798, height: 875 },
     bg_mob: { x: -465.5, y: -845, width: 931, height: 1690 },
-    coil: { x: -152, y: -269, width: 304, height: 538 },
+    coil: { x: -283, y: -540, width: 566, height: 1080 },
     frame: { x: -435, y: -347, width: 870, height: 694 },
-    logo: { x: -319.5, y: -66, width: 639, height: 132 },
+    logo: { x: -620, y: -177, width: 1240, height: 354 },
     winlines: { x: -383, y: -302, width: 766, height: 604 },
   };
   // Where a coil's head (the ring) is, as a fraction of the coil image.
-  const COIL_HEAD = { x: 152 / 304, y: 45 / 538 };
+  const COIL_HEAD = { x: 283 / 566, y: 85 / 1080 };
   const ARC_LEN = 1000;
 
   let back = null;

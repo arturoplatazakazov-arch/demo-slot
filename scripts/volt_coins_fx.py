@@ -319,10 +319,10 @@ def build_arc():
 
 
 # --------------------------------------------------------------------------
-# Tesla coil (coil.png px, 304x538)
+# Tesla coil (coil.png px, 566x1080)
 
-COIL_W, COIL_H = 304, 538
-COIL_RING = (152, 45, 129, 40)  # cx, cy, rx, ry  (coil px)
+COIL_W, COIL_H = 566, 1080
+COIL_RING = (283, 85, 258, 70)  # cx, cy, rx, ry  (coil px, v2 regen)
 
 
 def build_coil():
@@ -346,8 +346,8 @@ def build_coil():
     sk.hidden_slot('ring', head, 'ringglow', '8fe2ff', w=rx * 2.5, blend='additive')
     sk.hidden_slot('ringhot', head, 'ringglow', 'ffffff', w=rx * 2.46, blend='additive')
     # glow down the spring (coil px y 85..300)
-    col = sk.bone('column', x=0, y=sk.xy(cx, 190)[1], rot=90)
-    sk.hidden_slot('column', col, 'column', '3fa8ff', w=300, h=120, blend='additive')
+    col = sk.bone('column', x=0, y=sk.xy(cx, 380)[1], rot=90)
+    sk.hidden_slot('column', col, 'column', '3fa8ff', w=560, h=200, blend='additive')
 
     # arcs: 6 sockets round the head, each with 4 flickering shapes
     sockets = []
@@ -360,11 +360,11 @@ def build_coil():
         names = []
         for j in range(4):
             n = f'arc{i}_{j}'
-            sk.hidden_slot(n, b, f'zz{j}', 'cdf3ff', w=150 + 25 * (i % 3), h=40, x=75, blend='additive')
+            sk.hidden_slot(n, b, f'zz{j}', 'cdf3ff', w=280 + 45 * (i % 3), h=74, x=140, blend='additive')
             names.append(n)
         sockets.append((b, names, a))
     fb = sk.bone('flare', x=hx, y=hy + 8)
-    sk.hidden_slot('flare', fb, 'flare', w=300, blend='additive')
+    sk.hidden_slot('flare', fb, 'flare', w=560, blend='additive')
 
     def arcs(clip, level_fn, rate=0.06, active=6):
         for i, (b, names, _) in enumerate(sockets):
@@ -700,7 +700,7 @@ def build_frame():
 # --------------------------------------------------------------------------
 # logo (logo.png px)
 
-LOGO_BOLT = (148, 69)
+LOGO_BOLT = (292, 168)  # bolt in the O, logo.png px (v2 regen, 1240x354)
 
 
 def build_logo():
@@ -709,9 +709,9 @@ def build_logo():
     sk = Fx('logo', W, H, 1.0, {'idle': 4.0, 'win': 1.2})
     sk.image('logo', logo)
     sk.res_of['logo'] = 1.0
-    halo = silhouette_halo(logo, 40, 16, CYAN, inner=0.6)
+    halo = silhouette_halo(logo, 60, 26, CYAN, inner=0.6)
     sk.image('halo', halo)
-    sk.res_of['halo'] = 0.5
+    sk.res_of['halo'] = 0.25
     sk.hidden_slot('halo', 'root', 'halo', w=halo.width, blend='additive')
     sk.slot('logo', 'root', 'logo', w=W)
 
@@ -720,14 +720,14 @@ def build_logo():
     for i, (im, x0, x1) in enumerate(strips(hl, 18)):
         r = f'sw{i}'
         sk.image(r, im)
-        sk.res_of[r] = 0.7
+        sk.res_of[r] = 0.35  # soft additive sweep: resolution doesn't show
         sk.hidden_slot(r, 'root', r, w=x1 - x0, x=sk.xy((x0 + x1) / 2, 0)[0], blend='additive')
         sweep.append((r, (x0 + x1) / 2))
 
     bx, by = sk.xy(*LOGO_BOLT)
     bb = sk.bone('bolt', x=bx, y=by)
     sk.image('boltglow', glow_dot(256, core=0.3, col=CYAN))
-    sk.hidden_slot('boltglow', bb, 'boltglow', w=150, blend='additive')
+    sk.hidden_slot('boltglow', bb, 'boltglow', w=290, blend='additive')
     for j in range(4):
         sk.image(f'zz{j}', bolt(256, 64, 201 + j * 5, forks=2, rough=0.9, width=3))
     zz = []
@@ -736,18 +736,18 @@ def build_logo():
         names = []
         for j in range(4):
             n = f'z{i}_{j}'
-            sk.hidden_slot(n, b, f'zz{j}', 'cdf3ff', w=90, h=24, x=50, blend='additive')
+            sk.hidden_slot(n, b, f'zz{j}', 'cdf3ff', w=175, h=46, x=95, blend='additive')
             names.append(n)
         zz.append(names)
 
     sk.image('glint', star4(192))
     glints = []
-    for gi, (x, y) in enumerate(((60, 30), (330, 35), (470, 30), (590, 40), (250, 100))):
+    for gi, (x, y) in enumerate(((150, 110), (640, 105), (900, 100), (1110, 120), (520, 250))):
         b = sk.bone(f'g{gi}', x=sk.xy(x, y)[0], y=sk.xy(x, y)[1])
-        sk.hidden_slot(f'g{gi}', b, 'glint', w=80, blend='additive')
+        sk.hidden_slot(f'g{gi}', b, 'glint', w=150, blend='additive')
         glints.append((b, f'g{gi}', gi * 0.21))
 
-    def sweep_fn(cx, t0, dur, peak, sigma=60):
+    def sweep_fn(cx, t0, dur, peak, sigma=110):
         def f(t):
             if not t0 <= t <= t0 + dur:
                 return 0.0
@@ -1019,11 +1019,11 @@ def build_symbols():
         w, h = SW, SH
         hexcol = '%02x%02x%02x' % col
         sk.image(code, im)
-        sk.res_of[code] = 1.0
+        sk.res_of[code] = 1.5  # v2 symbol PNGs are 1.5x the cell units
         flash = Image.new('RGBA', im.size, (255, 255, 255, 0))
         flash.putalpha(im.getchannel('A'))
         sk.image(f'{code}_flash', flash)
-        sk.res_of[f'{code}_flash'] = 0.5
+        sk.res_of[f'{code}_flash'] = 0.35
 
         C = code
         fxb = sk.bone(f'{C}_fx')
@@ -1039,7 +1039,7 @@ def build_symbols():
         for i, (sim, x0, x1) in enumerate(strips(hl, 14)):
             r = f'{C}_sw{i}'
             sk.image(r, sim)
-            sk.res_of[r] = 0.7
+            sk.res_of[r] = 0.4
             sk.hidden_slot(r, sb, r, w=x1 - x0, x=(x0 + x1) / 2 - im.width / 2, y=-piv, blend='additive')
             sweep.append((r, (x0 + x1) / 2))
         sk.hidden_slot(f'{C}_flash', sb, f'{C}_flash', w=w, y=-piv, blend='additive')
