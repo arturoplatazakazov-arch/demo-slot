@@ -26,6 +26,7 @@ from app.seed.lucky_miami_3 import get_or_seed_active_config as get_or_seed_luck
 from app.seed.miami_fruits_3 import get_or_seed_active_config as get_or_seed_miami_fruits_3
 from app.seed.mr_president_unicorn import get_or_seed_active_config as get_or_seed_mr_president_unicorn
 from app.seed.multi_fruits_story import get_or_seed_active_config as get_or_seed_multi_fruits_story
+from app.seed.monster_factory import get_or_seed_active_config as get_or_seed_monster_factory
 from app.seed.neon_reels import get_or_seed_active_config as get_or_seed_neon_reels
 from app.seed.party_of_goods import get_or_seed_active_config as get_or_seed_party_of_goods
 from app.seed.sugar_galaxy import get_or_seed_active_config as get_or_seed_sugar_galaxy
@@ -73,6 +74,7 @@ async def lifespan(app: FastAPI):
         await get_or_seed_miami_fruits_3(db)
         await get_or_seed_mr_president_unicorn(db)
         await get_or_seed_multi_fruits_story(db)
+        await get_or_seed_monster_factory(db)
         await get_or_seed_neon_reels(db)
         await get_or_seed_party_of_goods(db)
         await get_or_seed_sugar_galaxy(db)

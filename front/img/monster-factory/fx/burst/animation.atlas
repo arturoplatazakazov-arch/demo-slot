@@ -1,0 +1,16 @@
+animation.png
+size:760,256
+filter:Linear,Linear
+pma:true
+flash
+bounds:0,0,256,256
+ring
+bounds:258,0,256,256
+coin
+bounds:516,0,92,92
+star
+bounds:610,0,52,52
+goo2
+bounds:664,0,49,49
+goo0
+bounds:715,0,43,43

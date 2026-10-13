@@ -1,0 +1,1087 @@
+/* Monster Factory — fluffy-monster factory avalanche/cascade demo.
+
+   Mechanics and layout model are Uniqorn Bad Santa's (itself Sugar Galaxy's
+   cascade plumbing): a fixed design canvas (desktop 1932x940, mobile portrait
+   780x1416), every object absolutely positioned in design px inside #stage,
+   and #stage contain-scaled to the viewport as one unit (--stage-scale, set by
+   slot.js:updateStageScale). Cells are absolutely positioned and moved by
+   `top`, clipped by .reel__grid's overflow.
+
+   All art is AI-generated flat PNG (ChatGPT, see scripts/monster_factory_build.py),
+   so every animation is DOM + CSS here, plus one canvas of ambient particles
+   (js/monster-factory/fx.js). Timings are duplicated as constants in slot.js
+   (WIN_PULSE_MS, BOOM_MS, POPUP_ENTER_MS, ...) — change both together.
+
+   The reel frame sits BEHIND the cells and its opening is exactly the grid
+   rect; the two device variants were 9-sliced from one generated frame to each
+   layout's grid aspect, so they are separate files rather than one stretch. */
+
+:root {
+  --orange: #ff8a1f;
+  --orange-dark: #b44a06;
+  --gold: #ffd23f;
+  --ink: #2a1206;
+  --navy: #141c3a;
+  --purple: #a64dff;
+  --ui-border: rgba(255, 190, 90, 0.22);
+  --text-cream: #fff6df;
+
+  /* Grid geometry — 6 cols x 5 rows. Desktop: 153x124 cells, 10px gaps = the
+     968x660 opening of frame_desk.png. Mobile overrides below. slot.js reads
+     these back through readCellDims(), so they are the single source of truth. */
+  --cell-w: 153px;
+  --cell-h: 124px;
+  --cell-gap-x: 10px;
+  --cell-gap-y: 10px;
+
+  --design-w: 1932px;
+  --design-h: 940px;
+  --stage-scale: 1;
+}
+
+* { box-sizing: border-box; }
+
+html, body { overflow-x: hidden; }
+
+body {
+  margin: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #120a06;
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  color: var(--text-cream);
+}
+
+/* ---------- Back-to-catalog button ---------- */
+.to-catalog-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 110;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(20, 12, 6, 0.75);
+  border: 1px solid rgba(255, 160, 60, 0.5);
+  color: #ffb347;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(4px);
+}
+.to-catalog-btn:hover { background: rgba(20, 12, 6, 0.92); border-color: #ffb347; }
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+/* ---------- Dev panel ---------- */
+.dev-panel {
+  position: fixed;
+  top: 52px;
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 260px;
+  align-items: center;
+}
+.dev-btn {
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #222;
+  color: #ddd;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.dev-btn:hover { opacity: 1; }
+.dev-hint { font-size: 10px; color: #999; width: 100%; text-align: right; }
+
+/* ---------- Screen / stage ---------- */
+.screen {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  background: #120a06;
+}
+.layer { position: absolute; }
+
+.bg {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  animation: bg-breathe 18s ease-in-out infinite;
+}
+/* A very slow push-in so the factory never reads as a still photo. */
+@keyframes bg-breathe {
+  0%, 100% { transform: scale(1.0); }
+  50%      { transform: scale(1.035); }
+}
+
+/* ---------- Ambient factory FX (behind the stage) ----------
+   Lamps: warm pools of light that flicker like old factory lamps.
+   Steam: two soft plumes rising from the machinery on the sides.
+   Canvas: goo bubbles / sparks / dust, drawn by fx.js.
+   Bolt: full-screen lightning flash, bonus mode only (fx.js triggers it). */
+.fx-lamps {
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 14% 22% at 30% 4%, rgba(255, 190, 90, 0.35), transparent 70%),
+    radial-gradient(ellipse 14% 22% at 70% 4%, rgba(255, 190, 90, 0.35), transparent 70%),
+    radial-gradient(ellipse 30% 30% at 50% 100%, rgba(255, 140, 40, 0.18), transparent 70%);
+  mix-blend-mode: screen;
+  animation: lamp-flicker 7s steps(1, end) infinite;
+}
+@keyframes lamp-flicker {
+  0%, 100% { opacity: 1; }
+  41%      { opacity: 0.78; }
+  42%      { opacity: 1; }
+  43.5%    { opacity: 0.7; }
+  44.5%    { opacity: 1; }
+  77%      { opacity: 0.9; }
+}
+.screen[data-mode="freespins"] .fx-lamps {
+  background:
+    radial-gradient(ellipse 16% 24% at 30% 4%, rgba(190, 110, 255, 0.4), transparent 70%),
+    radial-gradient(ellipse 16% 24% at 70% 4%, rgba(190, 110, 255, 0.4), transparent 70%),
+    radial-gradient(ellipse 34% 30% at 50% 100%, rgba(150, 70, 255, 0.22), transparent 70%);
+}
+
+.fx-steam {
+  bottom: -10%;
+  width: 34%;
+  height: 80%;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.55;
+  background:
+    radial-gradient(ellipse 40% 26% at 50% 80%, rgba(255, 240, 230, 0.35), transparent 70%),
+    radial-gradient(ellipse 34% 22% at 40% 55%, rgba(255, 240, 230, 0.22), transparent 70%),
+    radial-gradient(ellipse 30% 20% at 60% 30%, rgba(255, 240, 230, 0.14), transparent 70%);
+  filter: blur(14px);
+  animation: steam-rise 9s ease-in-out infinite;
+}
+.fx-steam--l { left: -8%; }
+.fx-steam--r { right: -8%; animation-delay: -4.5s; }
+@keyframes steam-rise {
+  0%   { transform: translateY(12%) scale(0.9);  opacity: 0; }
+  25%  { opacity: 0.55; }
+  100% { transform: translateY(-22%) scale(1.25); opacity: 0; }
+}
+
+.fx-canvas {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Spine FX canvases (js/monster-factory/spine-fx.js): the back one paints
+   over the background art under the stage, the front one over the stage
+   (frame/logo/symbol clips/coins) but under the dim — until a win popup's
+   coin rain lifts it over the dim (body.fx-over-dim), still under the popup. */
+.spine-fx {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.spine-fx--back { z-index: 1; }
+.spine-fx--front { z-index: 3; }
+body.fx-over-dim .spine-fx--front { z-index: 25; }
+/* The Spine logo draws the logo itself (with its sweep and glints). */
+body.fx-ready .logo { visibility: hidden; }
+
+.fx-bolt {
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(ellipse 80% 70% at 50% 30%, rgba(210, 160, 255, 0.55), rgba(120, 60, 255, 0.15) 60%, transparent 80%);
+  mix-blend-mode: screen;
+}
+.fx-bolt.is-flash { animation: bolt-flash 520ms ease-out; }
+@keyframes bolt-flash {
+  0%   { opacity: 0; }
+  8%   { opacity: 1; }
+  16%  { opacity: 0.2; }
+  26%  { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+
+.stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--design-w);
+  height: var(--design-h);
+  transform: translate(-50%, -50%) scale(var(--stage-scale));
+  z-index: 2;
+}
+.stage .obj { position: absolute; }
+
+/* ---------- Logo ----------
+   Sits on the frame's top rail, like a sign bolted to the machine. A slow
+   bob plus a "boing" squash every few seconds. */
+.logo {
+  left: 616px;
+  top: -18px;
+  width: 700px;
+  height: 196px;
+  object-fit: contain;
+  z-index: 4;
+  transform-origin: 50% 90%;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.55));
+  animation: logo-boing 5.2s ease-in-out infinite;
+}
+@keyframes logo-boing {
+  0%, 70%, 100% { transform: translateY(0) scale(1, 1); }
+  76%           { transform: translateY(2%) scale(1.06, 0.9); }
+  82%           { transform: translateY(-6%) scale(0.96, 1.06); }
+  88%           { transform: translateY(0) scale(1.02, 0.98); }
+  94%           { transform: translateY(0) scale(1, 1); }
+}
+
+/* ---------- Hero ----------
+   The red cyclops foreman, standing left of the reels and in front of the
+   machinery. #hero carries the mood animation, the inner img its idle sway, so
+   a cheer layers on top of the idle instead of replacing it. */
+.hero {
+  left: 58px;
+  top: 448px;
+  width: 380px;
+  height: 484px;
+  z-index: 3;
+  pointer-events: none;
+  transform-origin: 50% 100%;
+}
+.hero__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: 50% 100%;
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.6));
+  animation: hero-idle 3.8s ease-in-out infinite;
+}
+@keyframes hero-idle {
+  0%, 100% { transform: scale(1, 1) rotate(0deg); }
+  50%      { transform: scale(1.015, 0.985) rotate(-1deg); }
+}
+@keyframes hero-cheer {
+  0%   { transform: translateY(0) scale(1.06, 0.92); }
+  30%  { transform: translateY(-9%) scale(0.96, 1.06) rotate(-3deg); }
+  55%  { transform: translateY(-4%) scale(1, 1) rotate(3deg); }
+  78%  { transform: translateY(0) scale(1.07, 0.92); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+.hero.is-cheer { animation: hero-cheer 720ms cubic-bezier(0.3, 0.9, 0.4, 1) infinite; }
+.hero.is-cheer .hero__img {
+  filter: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 24px rgba(255, 120, 60, 0.6));
+}
+
+/* ---------- Reel frame + avalanche grid ---------- */
+/* frame_desk.png (1092x808) has its opening at (62,74) sized exactly 968x660 —
+   the grid rect — so left/top below are the grid's position minus that inset.
+   Drawn by scripts/monster_factory_ui.py; re-derive these if it changes. */
+.frame {
+  left: 420px;   /* grid 482 - 62 */
+  top: 86px;     /* grid 160 - 74 */
+  width: 1092px;
+  height: 808px;
+  object-fit: fill;
+  pointer-events: none;
+  z-index: 1;
+}
+/* Dark backplate behind the cells — the frame's opening is a hole, and the
+   factory wall alone is too busy behind the symbols. */
+.reel__grid::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent calc(100% / 6 - 1px), rgba(255, 255, 255, 0.05) calc(100% / 6 - 1px), rgba(255, 255, 255, 0.05) calc(100% / 6), transparent calc(100% / 6)) 0 0 / calc(100% / 6 * 1.0) 100%,
+    linear-gradient(180deg, rgba(18, 22, 44, 0.86), rgba(10, 12, 26, 0.92));
+  pointer-events: none;
+}
+.screen[data-mode="freespins"] .reel__grid::before {
+  background:
+    linear-gradient(90deg, transparent calc(100% / 6 - 1px), rgba(200, 150, 255, 0.07) calc(100% / 6 - 1px), rgba(200, 150, 255, 0.07) calc(100% / 6), transparent calc(100% / 6)) 0 0 / calc(100% / 6 * 1.0) 100%,
+    linear-gradient(180deg, rgba(36, 14, 60, 0.86), rgba(18, 6, 34, 0.92));
+}
+.reel__grid {
+  left: 482px;
+  top: 160px;
+  width: 968px;
+  height: 660px;
+  z-index: 2;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.reel__grid-inner {
+  position: relative;
+  width: calc(6 * var(--cell-w) + 5 * var(--cell-gap-x));
+  height: calc(5 * var(--cell-h) + 4 * var(--cell-gap-y));
+}
+.reel__col {
+  position: absolute;
+  top: 0;
+  width: var(--cell-w);
+  height: 100%;
+}
+.reel__cell {
+  position: absolute;
+  left: 0;
+  width: var(--cell-w);
+  height: var(--cell-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* `top` duration must match slot.js's CASCADE_DROP_MS. */
+  transition: top 100ms cubic-bezier(0.36, 0.66, 0.32, 1), opacity 280ms ease;
+  --glow: rgba(255, 210, 120, 0.95);
+}
+.reel__cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  transition: opacity 200ms ease, filter 200ms ease;
+}
+.reel__cell.is-dimmed img { opacity: 0.32; filter: saturate(0.5); }
+.reel__cell.is-removing { opacity: 0; }
+img.is-missing { outline: 2px dashed rgba(255,255,255,0.35); background: rgba(0,0,0,0.25); }
+
+/* Per-symbol glow colour — drives the win glow and the goo splat colour. */
+.reel__cell[data-symbol$="_red"]    { --glow: rgba(255, 70, 50, 0.95); }
+.reel__cell[data-symbol$="_yellow"] { --glow: rgba(255, 214, 40, 0.95); }
+.reel__cell[data-symbol$="_green"]  { --glow: rgba(120, 255, 60, 0.95); }
+.reel__cell[data-symbol$="_blue"]   { --glow: rgba(50, 160, 255, 0.95); }
+.reel__cell[data-symbol="wild"]     { --glow: rgba(140, 255, 70, 0.95); }
+.reel__cell[data-symbol="scatter"]  { --glow: rgba(190, 90, 255, 0.95); }
+.reel__cell[data-symbol="bomb"]     { --glow: rgba(255, 120, 40, 0.95); }
+.reel__cell[data-symbol="x2"]       { --glow: rgba(120, 255, 60, 0.95); }
+.reel__cell[data-symbol="x3"]       { --glow: rgba(60, 170, 255, 0.95); }
+.reel__cell[data-symbol="x5"]       { --glow: rgba(190, 90, 255, 0.95); }
+.reel__cell[data-symbol="x7"]       { --glow: rgba(255, 110, 40, 0.95); }
+
+/* ---------- Symbol idle / landing / win ---------- */
+
+/* Specials idle so they read as alive on an otherwise still grid. Paused while
+   the cell is winning so the two never fight. */
+@keyframes vat-idle {
+  0%, 100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 6px rgba(140, 255, 70, 0.35)); }
+  50%      { transform: scale(1.04) rotate(0.6deg); filter: drop-shadow(0 0 16px rgba(140, 255, 70, 0.7)); }
+}
+@keyframes potion-idle {
+  0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 6px rgba(190, 90, 255, 0.35)); }
+  50%      { transform: translateY(-2%) scale(1.04); filter: drop-shadow(0 0 16px rgba(190, 90, 255, 0.75)); }
+}
+@keyframes bomb-idle {
+  0%, 86%, 100% { transform: rotate(0deg) scale(1); }
+  89%           { transform: rotate(-7deg) scale(1.04); }
+  92%           { transform: rotate(6deg) scale(1.04); }
+  95%           { transform: rotate(-3deg) scale(1.02); }
+}
+@keyframes core-idle {
+  0%, 100% { filter: drop-shadow(0 0 4px var(--glow)) brightness(1); }
+  50%      { filter: drop-shadow(0 0 14px var(--glow)) brightness(1.12); }
+}
+.reel__cell[data-symbol="wild"] img    { animation: vat-idle 2.4s ease-in-out infinite; }
+.reel__cell[data-symbol="scatter"] img { animation: potion-idle 2.1s ease-in-out infinite; }
+.reel__cell[data-symbol="bomb"] img    { animation: bomb-idle 3.2s ease-in-out infinite; transform-origin: 50% 70%; }
+.reel__cell[data-symbol^="x"] img      { animation: core-idle 1.8s ease-in-out infinite; }
+
+/* Landing: a fluffy squash from the bottom edge (no vertical offset — a shift
+   after the column has already stopped reads as a twitch). */
+@keyframes symbol-land {
+  0%   { transform: scale(1.06, 0.88); }
+  55%  { transform: scale(0.97, 1.04); }
+  100% { transform: scale(1, 1); }
+}
+.reel__cell.is-landing img {
+  transform-origin: 50% 90%;
+  animation: symbol-land 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Win pulse — 700ms everywhere (slot.js WIN_PULSE_MS), choreography per kind. */
+@keyframes monster-win {
+  0%   { transform: translateY(0) scale(1, 1);          filter: drop-shadow(0 0 0 transparent); }
+  18%  { transform: translateY(2%) scale(1.14, 0.86);   filter: drop-shadow(0 0 18px var(--glow)) brightness(1.15); }
+  40%  { transform: translateY(-10%) scale(0.9, 1.16);  filter: drop-shadow(0 0 26px var(--glow)) brightness(1.25); }
+  58%  { transform: translateY(0) scale(1.12, 0.9) rotate(-4deg); }
+  74%  { transform: translateY(0) scale(1.04, 1.02) rotate(4deg); filter: drop-shadow(0 0 18px var(--glow)) brightness(1.12); }
+  100% { transform: translateY(0) scale(1, 1) rotate(0); filter: drop-shadow(0 0 0 transparent); }
+}
+@keyframes letter-win {
+  0%   { transform: scale(1) rotate(0deg);      filter: drop-shadow(0 0 0 transparent); }
+  25%  { transform: scale(1.22) rotate(-10deg); filter: drop-shadow(0 0 22px var(--glow)) brightness(1.2); }
+  50%  { transform: scale(1.12) rotate(8deg);   filter: drop-shadow(0 0 18px var(--glow)) brightness(1.15); }
+  75%  { transform: scale(1.16) rotate(-4deg); }
+  100% { transform: scale(1) rotate(0deg);      filter: drop-shadow(0 0 0 transparent); }
+}
+@keyframes special-win {
+  0%   { transform: scale(1);    filter: drop-shadow(0 0 0 transparent); }
+  20%  { transform: scale(1.24); filter: drop-shadow(0 0 30px var(--glow)) brightness(1.35); }
+  35%  { transform: scale(1.12) rotate(-5deg); }
+  50%  { transform: scale(1.2)  rotate(5deg); filter: drop-shadow(0 0 26px var(--glow)) brightness(1.25); }
+  70%  { transform: scale(1.1)  rotate(-2deg); }
+  100% { transform: scale(1);    filter: drop-shadow(0 0 0 transparent); }
+}
+@keyframes core-win {
+  0%   { transform: scale(1) rotate(0deg);     filter: drop-shadow(0 0 0 transparent); }
+  35%  { transform: scale(1.3) rotate(180deg); filter: drop-shadow(0 0 28px var(--glow)) brightness(1.4); }
+  70%  { transform: scale(1.18) rotate(340deg); filter: drop-shadow(0 0 22px var(--glow)) brightness(1.25); }
+  100% { transform: scale(1.1) rotate(360deg);  filter: drop-shadow(0 0 16px var(--glow)); }
+}
+.reel__cell.is-winning { z-index: 3; }
+.reel__cell.is-winning img {
+  transform-origin: 50% 85%;
+  animation: monster-win 700ms ease-in-out both;
+}
+.reel__cell.is-winning[data-symbol^="lp_"] img { transform-origin: 50% 50%; animation-name: letter-win; }
+.reel__cell.is-winning[data-symbol="wild"] img,
+.reel__cell.is-winning[data-symbol="scatter"] img,
+.reel__cell.is-winning[data-symbol="bomb"] img { transform-origin: 50% 50%; animation-name: special-win; }
+.reel__cell.is-winning[data-symbol^="x"] img { transform-origin: 50% 50%; animation-name: core-win; }
+/* A soft colour bloom behind a winning symbol. */
+.reel__cell.is-winning::before {
+  content: '';
+  position: absolute;
+  inset: -6%;
+  border-radius: 22%;
+  background: radial-gradient(circle, var(--glow) 0%, transparent 68%);
+  opacity: 0;
+  animation: win-bloom 700ms ease-out;
+  pointer-events: none;
+}
+@keyframes win-bloom {
+  0%   { opacity: 0;    transform: scale(0.6); }
+  35%  { opacity: 0.55; transform: scale(1.05); }
+  100% { opacity: 0;    transform: scale(1.2); }
+}
+
+/* ---------- Goo splat (stand-in for boom_standart / boom_bomb) ----------
+   Coloured by the cleared symbol's --glow: a flash, a splat ring and goo drops
+   that arc out under gravity (slot.js spawnBoom sets each drop's --a/--d). */
+.boom {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--cell-w) * 1.35);
+  height: calc(var(--cell-w) * 1.35);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 6;
+}
+.boom__flash,
+.boom__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+.boom__flash {
+  background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, var(--glow) 30%, transparent 68%);
+  animation: boom-flash 420ms ease-out forwards;
+}
+.boom__ring {
+  border: 6px dotted var(--glow);
+  animation: boom-ring 480ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+.boom__spark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.9) 0 18%, var(--glow) 45%);
+  box-shadow: 0 0 10px var(--glow);
+  animation: goo-drop 520ms cubic-bezier(0.25, 0.6, 0.5, 1) forwards;
+}
+@keyframes boom-flash {
+  0%   { transform: scale(0.25); opacity: 1; }
+  60%  { transform: scale(1);    opacity: 0.85; }
+  100% { transform: scale(1.25); opacity: 0; }
+}
+@keyframes boom-ring {
+  0%   { transform: scale(0.15) rotate(0deg);  opacity: 0.95; }
+  100% { transform: scale(1.1) rotate(40deg);  opacity: 0; }
+}
+@keyframes goo-drop {
+  0%   { transform: rotate(var(--a)) translateX(6px) scale(1.1); opacity: 1; }
+  70%  { opacity: 1; }
+  100% { transform: rotate(var(--a)) translateX(var(--d)) translateY(18px) scale(0.35); opacity: 0; }
+}
+/* A bomb's own detonation: bigger, hotter, longer, with a shockwave. */
+.boom--bomb { width: calc(var(--cell-w) * 1.9); height: calc(var(--cell-w) * 1.9); --glow: rgba(255, 130, 40, 0.95); }
+.boom--bomb .boom__flash {
+  background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,200,90,0.92) 22%, rgba(255,80,40,0.7) 46%, transparent 72%);
+  animation-duration: 560ms;
+}
+.boom--bomb .boom__ring { border: 5px solid rgba(255, 170, 70, 0.9); animation-duration: 620ms; }
+.boom--bomb .boom__spark {
+  border-radius: 2px;
+  width: 12px;
+  height: 12px;
+  background: linear-gradient(135deg, #ffd23f 0 50%, #2a1206 50% 100%);
+  box-shadow: 0 0 8px rgba(255, 170, 70, 0.9);
+  animation-duration: 680ms;
+}
+
+/* The bomb's wind-up before the blast (slot.js BOMB_PRE_EXPLODE_MS). */
+@keyframes bomb-arm {
+  0%, 100% { transform: scale(1)    rotate(0deg);   filter: brightness(1); }
+  20%      { transform: scale(1.12) rotate(-8deg);  filter: brightness(1.4) drop-shadow(0 0 12px rgba(255, 90, 40, 0.9)); }
+  40%      { transform: scale(1.06) rotate(7deg);   filter: brightness(1.1); }
+  60%      { transform: scale(1.2)  rotate(-6deg);  filter: brightness(1.6) drop-shadow(0 0 20px rgba(255, 90, 40, 1)); }
+  80%      { transform: scale(1.26) rotate(4deg);   filter: brightness(1.9) drop-shadow(0 0 26px rgba(255, 200, 80, 1)); }
+}
+.reel__cell.is-arming img { animation: bomb-arm 620ms ease-in-out; }
+
+/* The whole reel block jolts when a bomb goes off (fx.js splatAt). */
+@keyframes grid-shake {
+  0%, 100% { transform: translate(0, 0); }
+  15%      { transform: translate(-9px, 5px); }
+  30%      { transform: translate(8px, -6px); }
+  45%      { transform: translate(-6px, -3px); }
+  60%      { transform: translate(5px, 4px); }
+  80%      { transform: translate(-2px, 1px); }
+}
+.reel__grid-inner.is-shake { animation: grid-shake 420ms ease-out; }
+
+/* ---------- Per-cascade-step multiplier + win banner ---------- */
+.cascade-banner {
+  position: absolute;
+  left: 482px;
+  top: 160px;
+  width: 968px;
+  height: 660px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 200ms ease, transform 260ms cubic-bezier(0.34, 1.6, 0.5, 1);
+}
+.cascade-banner.is-visible { opacity: 1; transform: scale(1); }
+.cascade-banner__mult {
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 76px;
+  color: var(--gold);
+  -webkit-text-stroke: 3px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 5px 0 var(--orange-dark), 0 0 30px rgba(255, 170, 60, 0.85);
+  white-space: nowrap;
+}
+.cascade-banner__win {
+  font-weight: 800;
+  font-size: 26px;
+  color: var(--text-cream);
+  background: rgba(20, 10, 4, 0.7);
+  border: 2px solid rgba(255, 160, 60, 0.6);
+  border-radius: 999px;
+  padding: 4px 20px;
+  white-space: nowrap;
+}
+
+/* ---------- Inline win amount (wins below the popup threshold) ---------- */
+.reel-win-amount-viewport {
+  position: absolute;
+  left: 482px;
+  top: 160px;
+  width: 968px;
+  height: 660px;
+  z-index: 3;
+  pointer-events: none;
+}
+.reel-win-amount {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 220ms ease, transform 300ms cubic-bezier(0.34, 1.6, 0.5, 1);
+}
+.reel-win-amount.is-visible { opacity: 1; transform: scale(1); }
+.reel-win-amount::before {
+  content: attr(data-amount);
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 58px;
+  color: var(--gold);
+  -webkit-text-stroke: 3px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 4px 0 var(--orange-dark), 0 0 26px rgba(255, 190, 60, 0.75);
+  white-space: nowrap;
+  padding: 10px 34px 4px;
+  background: rgba(20, 10, 4, 0.66);
+  border: 3px solid rgba(255, 160, 60, 0.65);
+  border-radius: 999px;
+}
+
+/* ---------- Buy Bonus (blank generated panel + DOM label) ---------- */
+.sign-buy-bonus {
+  left: 74px;
+  top: 126px;
+  width: 330px;
+  height: 300px;
+  cursor: pointer;
+  z-index: 4;
+  transition: transform 150ms ease;
+  animation: buy-bob 3.4s ease-in-out infinite;
+}
+@keyframes buy-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+.sign-buy-bonus:hover { transform: scale(1.04); animation-play-state: paused; }
+.sign-buy-bonus:active { transform: scale(0.97); }
+.sign-buy-bonus__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.sign-buy-bonus__label {
+  position: absolute;
+  inset: 40.4% 12.7% 11.1% 12.7%; /* buy_bonus.png's navy window */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 40px;
+  line-height: 1.02;
+  text-align: center;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 3px 0 var(--orange-dark), 0 0 16px rgba(255, 170, 60, 0.6);
+  pointer-events: none;
+}
+.screen[data-mode="freespins"] .sign-buy-bonus { display: none; }
+
+/* ---------- Multiplier counter (both modes) + free spins counter --------- */
+.multi-counter,
+.fs-counter {
+  left: 1528px;
+  top: 190px;
+  width: 330px;
+  height: 250px;
+  z-index: 3;
+}
+.multi-counter__img,
+.fs-counter__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+/* Both counters share one plate with an empty display window; the window's
+   measured bounds (--counter-panel) place the label + value. */
+.multi-counter__label,
+.fs-counter__label {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  transform: translate(-50%, -50%);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #ffcf8a;
+  white-space: nowrap;
+}
+.multi-counter__value,
+.fs-counter__value {
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  transform: translate(-50%, -50%);
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 58px;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 3px 0 var(--orange-dark), 0 0 18px rgba(255, 190, 60, 0.6);
+  white-space: nowrap;
+}
+.fs-counter { display: none; top: 470px; }
+.screen[data-mode="freespins"] .fs-counter { display: block; }
+.fs-counter__label { color: #e2c2ff; }
+.fs-counter__value { color: #ffffff; text-shadow: 0 3px 0 #4a1a7a, 0 0 18px rgba(200, 140, 255, 0.8); }
+
+/* A consumed goo core's flight to .multi-counter (slot.js flyTokenToBadge) —
+   viewport-space, since the badge sits outside the grid. Must match
+   TOKEN_FLIGHT_MS. */
+.token-flight {
+  position: fixed;
+  z-index: 60;
+  pointer-events: none;
+  object-fit: contain;
+  filter: drop-shadow(0 0 14px rgba(255, 200, 80, 0.9));
+  animation: token-flight-fly 1000ms linear forwards;
+}
+@keyframes token-flight-fly {
+  0%   { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; }
+  50%  { transform: translate(var(--tf-mid-x), var(--tf-mid-y)) scale(1.18) rotate(200deg); }
+  100% { transform: translate(var(--tf-end-x), var(--tf-end-y)) scale(0.7) rotate(360deg); opacity: 0; }
+}
+@keyframes badge-pop {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  40%      { transform: scale(1.12); filter: brightness(1.35); }
+}
+.multi-counter.is-hit { animation: badge-pop 320ms ease-out; }
+
+/* ---------- Screen dim ---------- */
+.screen-dim {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(10, 4, 2, 0.72);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  z-index: 20;
+}
+.screen-dim.is-active { opacity: 1; }
+.screen-dim.is-opaque { background: #000; }
+
+/* ---------- Popups (title art + amount plaque, no Spine) ----------
+   Each win tier has its own generated title art (monster + lettering); the
+   number sits on a separate amount plaque overlapping the art's bottom edge.
+   Behind it: rotating light rays; around it: a coin burst from fx.js. */
+.game-popup {
+  position: absolute;
+  left: 50%;
+  top: 43%;
+  width: min(560px, 46vw);
+  transform: translate(-50%, -50%) scale(0.4) rotate(-6deg);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 30;
+  transition: transform 520ms cubic-bezier(0.3, 1.7, 0.5, 1), opacity 300ms ease;
+  text-align: center;
+  container-type: inline-size;
+}
+.game-popup.is-in  { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+.game-popup.is-out {
+  transform: translate(-50%, -50%) scale(0.8);
+  opacity: 0;
+  transition-duration: 260ms;
+}
+.game-popup.is-mobile { width: min(560px, 86vw); }
+
+.game-popup__rays {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  width: 190%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, var(--ray, rgba(255, 210, 90, 0.32)) 0deg 9deg, transparent 9deg 22deg);
+  -webkit-mask: radial-gradient(circle, #000 18%, transparent 68%);
+  mask: radial-gradient(circle, #000 18%, transparent 68%);
+  animation: rays-spin 14s linear infinite;
+  z-index: -1;
+}
+@keyframes rays-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+.game-popup.is-tone-green  { --ray: rgba(150, 255, 80, 0.3); }
+.game-popup.is-tone-blue   { --ray: rgba(90, 180, 255, 0.32); }
+.game-popup.is-tone-gold   { --ray: rgba(255, 210, 90, 0.36); }
+.game-popup.is-tone-purple { --ray: rgba(200, 110, 255, 0.34); }
+
+.game-popup__art {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 24px 50px rgba(0, 0, 0, 0.7));
+  transform-origin: 50% 80%;
+}
+.game-popup.is-in .game-popup__art { animation: popup-art-bounce 1.6s ease-in-out 520ms infinite; }
+@keyframes popup-art-bounce {
+  0%, 100% { transform: scale(1, 1); }
+  50%      { transform: scale(1.025, 0.985) translateY(-1%); }
+}
+
+.game-popup__sub {
+  position: absolute;
+  left: 50%;
+  top: -4%;
+  transform: translateX(-50%);
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 9cqw;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  color: #fff6e2;
+  -webkit-text-stroke: 0.5cqw var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 0.8cqw 0 var(--orange-dark), 0 0 3cqw rgba(0, 0, 0, 0.6);
+}
+
+/* Amount plaque: the generated plate with an empty navy window, or — until a
+   plate image loads — a CSS pill of the same proportions. */
+.game-popup__plate {
+  position: relative;
+  width: 96%;
+  margin: -14% auto 0;
+  aspect-ratio: var(--plate-ratio, 3.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: inline-size;
+}
+.game-popup__plate-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+.game-popup__plate-img.is-missing,
+.game-popup__plate-img[hidden] { display: none; }
+.game-popup__plate.no-art {
+  background: linear-gradient(180deg, #1d2650, #0d1330);
+  border: 0.9cqw solid var(--orange);
+  border-radius: 999px;
+  box-shadow: 0 0 0 0.5cqw var(--ink), 0 1.4cqw 3cqw rgba(0, 0, 0, 0.6);
+  width: 80%;
+  aspect-ratio: 4.4;
+}
+.game-popup__amount {
+  position: relative;
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 11cqw;
+  line-height: 1;
+  padding-top: 1.2cqw;
+  white-space: nowrap;
+  color: var(--gold);
+  -webkit-text-stroke: 0.5cqw var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 0.7cqw 0 var(--orange-dark), 0 0 3cqw rgba(255, 200, 80, 0.55);
+}
+
+/* ---------- Buy Bonus confirm dialog ----------
+   The FREE SPINS title art + price plaque, with the Buy Bonus panel
+   (buy_bonus.png) reused as the BUY / CANCEL buttons under it. The overlay
+   catches backdrop taps; the dim itself is #screenDim (pushScreenDim). */
+.buy-dialog {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: auto;
+}
+.game-popup.buy-popup {
+  top: 38%;
+  width: min(440px, 38vw);
+  pointer-events: auto;
+}
+.game-popup.buy-popup.is-mobile { width: min(460px, 74vw); }
+.buy-popup__actions {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  top: calc(100% + 1cqw);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5cqw 5cqw;
+}
+.buy-popup__note {
+  flex-basis: 100%;
+  font-size: 5cqw;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #fff6e2;
+  text-align: center;
+  text-shadow: 0 0.4cqw 1.2cqw rgba(0, 0, 0, 0.95);
+  white-space: nowrap;
+}
+.buy-popup__btn {
+  position: relative;
+  width: 34cqw;
+  aspect-ratio: 520 / 470;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transition: transform 160ms ease, filter 160ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.buy-popup__btn img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 1cqw 2cqw rgba(0, 0, 0, 0.6));
+}
+.buy-popup__btn:hover { transform: scale(1.06); }
+.buy-popup__btn:active { transform: scale(0.95); }
+.buy-popup__btn:focus-visible { outline: none; }
+.buy-popup__btn:focus-visible img { filter: drop-shadow(0 0 2cqw rgba(255, 190, 80, 0.95)); }
+/* CANCEL / CLOSE = the same panel drained of colour, so BUY reads as the main action. */
+.buy-popup__btn.is-cancel img { filter: grayscale(0.85) brightness(0.75) drop-shadow(0 1cqw 2cqw rgba(0, 0, 0, 0.6)); }
+.buy-popup__btn-label {
+  position: absolute;
+  left: 50%;
+  top: 67%;
+  transform: translate(-50%, -50%);
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 7.5cqw;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: var(--gold);
+  -webkit-text-stroke: 0.4cqw var(--ink);
+  paint-order: stroke fill;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.buy-popup__btn.is-cancel .buy-popup__btn-label { color: #fff6e2; font-size: 6cqw; }
+
+/* ---------- Paytable info popup ---------- */
+.info-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 20px;
+}
+.info-popup[hidden] { display: none; }
+.info-popup__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(720px, 90vh);
+  overflow-y: auto;
+  background: linear-gradient(180deg, #1d2650, #0f1530);
+  border: 3px solid var(--orange);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.info-popup__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-cream);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.info-popup__close:hover { background: rgba(0, 0, 0, 0.55); }
+.info-popup__title {
+  margin: 0 0 6px;
+  color: var(--gold);
+  font-family: 'Luckiest Guy', cursive;
+  font-weight: 400;
+  font-size: 26px;
+  text-align: center;
+  text-shadow: 0 2px 0 var(--orange-dark);
+}
+.info-popup__note { text-align: center; font-size: 12px; opacity: 0.75; margin: 0 0 16px; }
+.info-popup__list { display: flex; flex-direction: column; gap: 10px; }
+.info-popup__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.info-popup__row img { width: 48px; height: 48px; object-fit: contain; flex-shrink: 0; }
+.info-popup__row-name { flex: 1 1 auto; min-width: 90px; font-weight: 700; }
+.info-popup__row-pays { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; }
+.info-popup__row-pays span { white-space: nowrap; opacity: 0.9; }
+.info-popup__row-pays b { color: var(--gold); }
+
+/* ================================================================
+   Mobile (portrait) — the same design-space model on the 780x1416 canvas.
+   frame_mob.png's opening is the 662x534 grid rect.
+   ================================================================ */
+@media (orientation: portrait) {
+  :root {
+    --cell-w: 102px;
+    --cell-h: 102px;
+    --cell-gap-x: 10px;
+    --cell-gap-y: 6px;
+  }
+
+  /* The V3 bar overlays the bottom ~370 design px on a typical phone, so the
+     whole layout lives above y≈1040: logo, frame, then one band of plates. */
+  .logo { left: 140px; top: 4px; width: 500px; height: 158px; }
+
+  /* frame_mob.png is 754x650 with its opening at (46,58) sized 662x534. */
+  .frame { left: 13px; top: 160px; width: 754px; height: 650px; }
+  .reel__grid,
+  .cascade-banner,
+  .reel-win-amount-viewport { left: 59px; top: 218px; width: 662px; height: 534px; }
+
+  .cascade-banner__mult { font-size: 58px; }
+  .reel-win-amount::before { font-size: 44px; }
+
+  /* Bottom band: Buy Bonus left, multiplier middle, hero right. */
+  .sign-buy-bonus { left: 26px; top: 818px; width: 230px; height: 208px; }
+  .sign-buy-bonus__label { font-size: 29px; }
+  .multi-counter { left: 270px; top: 836px; width: 224px; height: 170px; }
+  .multi-counter__value, .fs-counter__value { font-size: 46px; }
+  .multi-counter__label, .fs-counter__label { font-size: 15px; }
+  /* Bonus-only, and the Buy Bonus sign is hidden in the bonus — so the counter
+     takes that same slot instead of stacking a third row. */
+  .fs-counter { left: 30px; top: 836px; width: 224px; height: 170px; }
+  .hero { left: 512px; top: 790px; width: 250px; height: 262px; }
+  .game-popup.is-mobile { top: 38%; }
+}
+
+/* ---------- Boot preloader theme (structure lives in css/preloader.css) --- */
+.preloader {
+  --pl-bg: #140b06;
+  --pl-accent-a: #ff8a1f;
+  --pl-accent-b: #a64dff;
+  --pl-glow-a: rgba(255, 138, 31, 0.35);
+  --pl-glow-b: rgba(166, 77, 255, 0.15);
+  --pl-border: rgba(255, 138, 31, 0.45);
+  --pl-shadow: rgba(255, 138, 31, 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg, .fx-lamps, .fx-steam, .logo, .hero__img, .sign-buy-bonus,
+  .reel__cell img, .game-popup__rays { animation: none !important; }
+}
