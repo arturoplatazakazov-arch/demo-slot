@@ -591,23 +591,23 @@ function coinLines(grid) {
   return out;
 }
 
-async function landReels(grid, coinMultiplier = null) {
+async function landReels(grid, coinMultiplier = null, { anticipate = true } = {}) {
   reelsBusy = true;
   try {
-    await landReelsInner(grid, coinMultiplier);
+    await landReelsInner(grid, coinMultiplier, anticipate);
   } finally {
     reelsBusy = false;
     await flushDeviceRebuild();
   }
 }
 
-async function landReelsInner(grid, coinMultiplier) {
+async function landReelsInner(grid, coinMultiplier, anticipate = true) {
   teardownCellInstances();
   const faces = baseFacesFor(grid, coinMultiplier);
   lastBaseFaces = faces;
   const columnCodes = (col) => [grid[0][col], grid[1][col], grid[2][col]];
   const columnFaces = (col) => [faces[0][col], faces[1][col], faces[2][col]];
-  const antic = anticipationColumns(grid);
+  const antic = anticipate ? anticipationColumns(grid) : [];
   const firstAnticipationCol = antic.length ? Math.min(...antic) : GRID_COLS;
 
   const leadTasks = [];

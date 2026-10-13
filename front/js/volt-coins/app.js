@@ -22,7 +22,7 @@ const gameState = {
 };
 
 // = BONUS_BUY_COST_MULTIPLIER в app/seed/volt_coins.py (только для показа).
-const BUY_BONUS_COST_MULTIPLIER = 28;
+const BUY_BONUS_COST_MULTIPLIER = 40;
 
 function formatNumber(n) {
   return Number(n).toLocaleString('en-US');
@@ -100,7 +100,9 @@ async function applySpinResult(data, betAmount) {
   }
 }
 
-async function runSpin(request, betAmount) {
+// opts.bought: купленный раунд — исход известен заранее, антиципация
+// последнего барабана была бы обманом.
+async function runSpin(request, betAmount, opts = {}) {
   if (gameState.isSpinning || !gameState.sessionId) return;
   gameState.isSpinning = true;
   const spinBtn = document.querySelector('[data-action="spin"]');
@@ -109,7 +111,7 @@ async function runSpin(request, betAmount) {
   try {
     const data = await request();
     // Монеты падают уже с номиналом/джекпотом (coin_multiplier, display_only).
-    await landReels(data.grid, data.coin_multiplier);
+    await landReels(data.grid, data.coin_multiplier, { anticipate: !opts.bought });
     await applySpinResult(data, betAmount);
   } catch (err) {
     console.error('spin failed:', err);
@@ -165,7 +167,9 @@ function setupBuyBonusButton() {
     renderBet();
     if (!confirmed) return;
     const betAmount = currentBet();
-    runSpin(() => Api.buyFeature(gameState.sessionId, 'hold_and_win_buy', betAmount), betAmount);
+    // Сервер кладёт в купленный спин линию монет по центру (buy_coin_line)
+    // с номиналами — она падает, подсвечивается и уводит в Hold & Win.
+    runSpin(() => Api.buyFeature(gameState.sessionId, 'hold_and_win_buy', betAmount), betAmount, { bought: true });
   });
 }
 

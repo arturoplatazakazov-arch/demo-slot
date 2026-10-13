@@ -304,6 +304,16 @@ async def run_feature_buy(
     grid = spin_reels(reel_set, rng)
     grid = apply_reel_caps(grid, reel_set, rng)
 
+    # Volt Coins (product): a bought Hold & Win lands its own trigger — the
+    # coin line from `buy_coin_line` (row index per reel) — so the player
+    # sees the line that "won" the round, exactly like a natural trigger.
+    hw_params = plan.target_config.params if plan.target_feature_id == "hold_and_win" else {}
+    buy_line = hw_params.get("buy_coin_line")
+    if buy_line:
+        coin_code = hw_params.get("trigger_symbol_code", "coin")
+        for reel_index, row_index in enumerate(buy_line):
+            grid.reels[reel_index][row_index] = coin_code
+
     wild_config = find_feature_config(game_config, "expanding_wild")
     wild_events = apply_expanding_wild(
         grid, wild_config, state, rng, Decimal(bet_amount), reel_set, is_bonus_buy=True
@@ -322,6 +332,18 @@ async def run_feature_buy(
         win_evaluation=evaluation,
         is_bonus_buy=True,
     )
+    # Games whose round starts from the coins' base-game faces
+    # (initial_from_base_coins — Volt Coins) need those faces drawn on the
+    # bought spin too; nobody else runs coin_multiplier on a buy.
+    coin_details = None
+    if hw_params.get("initial_from_base_coins"):
+        coin_feature = default_registry.get("coin_multiplier")
+        coin_config = find_feature_config(game_config, "coin_multiplier")
+        if coin_feature is not None and coin_config is not None and coin_feature.is_triggered(ctx, coin_config.params):
+            coin_result = coin_feature.execute(ctx, coin_config.params)
+            coin_details = coin_result.details
+            ctx.coin_values = coin_details["coin_positions"]
+            spin_win += coin_result.win_amount
     # Forced entry: bonus_buy bypasses is_triggered (that's the point of
     # paying for it) and calls execute() directly, without also running the
     # natural scatter-trigger check — avoids double-awarding spins if the
@@ -394,5 +416,6 @@ async def run_feature_buy(
         balance=int(balance_after),
         feature=feature_out,
         popup=popup,
+        coin_multiplier=coin_multiplier_out(coin_details),
         hold_and_win=hold_and_win_out(hold_and_win_result),
     )

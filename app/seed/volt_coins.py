@@ -112,12 +112,13 @@ _SYMBOLS: list[tuple[str, str, str, str, int]] = [
     ("coin", "Монета", SymbolType.BONUS.value, "special", COIN_WEIGHT),
 ]
 
-# What a bought Hold & Win costs, in bets. A bought round runs on whatever
-# coins the purchase spin itself drew (often a couple), so it is worth less
-# than a natural one: ~27x the bet including that spin's line pay, sold at
-# the game's own RTP -> 28x. Mirrors BUY_BONUS_COST_MULTIPLIER
+# What a bought Hold & Win costs, in bets. The purchase spin lands its own
+# coin line in the middle row (buy_coin_line) plus whatever other coins it
+# draws, so a bought round is worth ~39x the bet including that spin's line
+# pay (60k bought rounds x2 seeds: 39.7 / 38.3) — sold at the game's own RTP
+# -> 40x. Mirrors BUY_BONUS_COST_MULTIPLIER
 # in front/js/volt-coins/app.js (display only; the server charges this).
-BONUS_BUY_COST_MULTIPLIER = 28
+BONUS_BUY_COST_MULTIPLIER = 40
 
 
 def build_game_config() -> tuple[Game, GameConfig]:
@@ -192,6 +193,9 @@ def build_game_config() -> tuple[Game, GameConfig]:
             # coin), each with the face it showed in the base game.
             "start_empty": False,
             "initial_from_base_coins": True,
+            # Bought round: the purchase spin lands three coins in the middle
+            # row (payline 1) and the round opens from that line.
+            "buy_coin_line": [1, 1, 1],
             "respin_land_weights": {"blank": 93, "coin": 7},
             # GRAND is absent on purpose: it is only the 9/9 prize below.
             "coin_value_weights": COIN_FACE_WEIGHTS,
