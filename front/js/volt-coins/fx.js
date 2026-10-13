@@ -23,7 +23,7 @@
     bg_mob: { x: -465.5, y: -845, width: 931, height: 1690 },
     coil: { x: -283, y: -540, width: 566, height: 1080 },
     frame: { x: -435, y: -347, width: 870, height: 694 },
-    logo: { x: -620, y: -177, width: 1240, height: 354 },
+    logo: { x: -620, y: -186, width: 1240, height: 372 },
     winlines: { x: -383, y: -302, width: 766, height: 604 },
   };
   // Where a coil's head (the ring) is, as a fraction of the coil image.

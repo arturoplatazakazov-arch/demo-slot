@@ -29,6 +29,7 @@ Geometry of every cut lives in the constants below; slot.css mirrors FRAME_*.
 """
 
 import collections
+import math
 import os
 
 import numpy as np
@@ -381,11 +382,30 @@ GEN = os.path.join(os.path.dirname(__file__), '..', 'art', 'volt-coins-src')
 SYM_SCALE = 1.5  # symbol PNGs are 1.5x the 320x254 cell units (retina)
 
 
+# Metal tone matching for the coin states (hue degrees, sat x, value x), only
+# on warm metal pixels — the gold value coin came out coppery, next to the
+# bronze MINI it read as the same coin. Targets the base coin (hue ~35).
+TONE = {'coin_value': (5.0, 1.12, 1.08), 'coin_major': (2.5, 1.08, 1.05)}
+
+
+def tone(rgb_im, dh, ks, kv):
+    hsv = np.asarray(rgb_im.convert('HSV')).astype(np.float32)
+    h, s_, v = hsv[..., 0], hsv[..., 1], hsv[..., 2]
+    warm = (h < 60 * 255 / 360) & (s_ > 40)
+    h[warm] = np.clip(h[warm] + dh * 255 / 360, 0, 255)
+    s_[warm] = np.clip(s_[warm] * ks, 0, 255)
+    v[warm] = np.clip(v[warm] * kv, 0, 255)
+    return Image.fromarray(np.dstack([h, s_, v]).astype(np.uint8), 'HSV').convert('RGB')
+
+
 def glow_cut(name, glow_lo=6, glow_span=110):
-    rgb = arr(Image.open(os.path.join(GEN, name + '.jpg')).convert('RGB'))
+    rgb_im = Image.open(os.path.join(GEN, name + '.jpg')).convert('RGB')
+    if name in TONE:
+        rgb_im = tone(rgb_im, *TONE[name])
     m = Image.open(os.path.join(GEN, name + '_mask.png')).convert('L')
-    if m.size != (rgb.shape[1], rgb.shape[0]):
-        m = m.resize((rgb.shape[1], rgb.shape[0]), Image.LANCZOS)
+    if m.size != rgb_im.size:
+        m = m.resize(rgb_im.size, Image.LANCZOS)
+    rgb = arr(rgb_im)
     m = np.asarray(m, np.float32) / 255
     g = np.clip((rgb.max(2) - glow_lo) / glow_span, 0, 1) ** 0.9
     a = np.maximum(m, g)
@@ -402,9 +422,12 @@ def body_box(m, thr=0.5):
 # Share of the cell the solid body (alpha > 200) takes along its larger
 # relative axis — the hierarchy: wild/coin biggest, highs next, lows smallest.
 BODY = {
-    'wild': 0.86, 'coin': 0.86, 'ingot': 0.74, 'seven': 0.68, 'diamond': 0.66, 'bell': 0.64,
+    'wild': 0.86, 'coin': 0.86, 'ingot': 0.74, 'seven': 0.8, 'diamond': 0.66, 'bell': 0.64,
     'horseshoe': 0.62, 'star': 0.62, 'bar': 0.58,
+    # Hold & Win coin states: empty enamel centre, the client prints xN / tier name
+    'coin_value': 0.86, 'coin_mini': 0.86, 'coin_minor': 0.86, 'coin_major': 0.86,
 }
+COIN_STATES = ['coin_value', 'coin_mini', 'coin_minor', 'coin_major']
 
 
 def build_symbols_v2():
@@ -417,7 +440,7 @@ def build_symbols_v2():
         canvas.alpha_composite(big, (round(W / 2 - cx * k), round(H / 2 - cy * k)))
         return canvas
 
-    for code in [c for row in CELL_CODES for c in row]:
+    for code in [c for row in CELL_CODES for c in row] + COIN_STATES:
         im, _ = glow_cut(code)
         a = np.asarray(im.getchannel('A'))
         ys, xs = np.where(a > 200)

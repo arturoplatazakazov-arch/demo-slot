@@ -172,9 +172,9 @@ body.lights-off .fx-canvas { display: none; }
 /* ---------- Логотип ---------- */
 .logo {
   left: 600px;
-  top: -34px;
+  top: -40px;
   width: 720px;
-  height: 206px;
+  height: 216px;
   z-index: 5;
   pointer-events: none;
 }
@@ -429,47 +429,40 @@ body.lights-off .logo__img { visibility: visible; }
 .reel__cell.is-coin img { animation: coin-idle 2.2s ease-in-out infinite; }
 
 /* ---------- Номинал монеты ----------
-   На базе монета без номинала (с молнией). Номинал появляется в раунде:
-   тёмный «дисплей» поверх центра монеты закрывает молнию, число занимает
-   ~половину символа (требование: не меньше 45% площади). */
+   На базе монета без номинала (с молнией). В раунде ячейка показывает арт
+   состояния (coin_value / coin_mini / coin_minor / coin_major — пустая эмаль в
+   центре), а число или имя тира печатается поверх. Число крупное, с тёмной
+   обводкой, чтобы читалось и там, где выходит за эмаль на металл (заказчик:
+   номинал не меньше 45% площади символа). */
 .coin-face {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: calc(var(--cell-h) * 0.6);
-  height: calc(var(--cell-h) * 0.6);
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at 50% 35%, #1d2f7a, #070b26 72%);
-  box-shadow: 0 0 0 3px #ffd75a, 0 0 0 5px #8a4f08, inset 0 0 14px rgba(57, 216, 255, 0.55);
   pointer-events: none;
   transition: opacity 200ms ease;
 }
 .coin-face__text {
   font-family: 'Roboto Mono', ui-monospace, monospace;
   font-weight: 700;
-  font-size: calc(var(--cell-h) * 0.25);
-  letter-spacing: -0.06em;
-  color: #fff4c2;
-  text-shadow: 0 0 8px rgba(255, 201, 60, 0.9), 0 2px 0 #000;
+  font-size: calc(var(--cell-h) * 0.27);
+  letter-spacing: -0.07em;
+  color: #fff6cf;
+  -webkit-text-stroke: 1.5px rgba(10, 14, 40, 0.9);
+  paint-order: stroke fill;
+  text-shadow: 0 0 10px rgba(255, 201, 60, 0.85), 0 2px 0 #000;
   white-space: nowrap;
 }
 .coin-face.is-tier .coin-face__text {
   font-family: 'Baloo 2', system-ui, sans-serif;
   font-weight: 800;
-  font-size: calc(var(--cell-h) * 0.13);
-  letter-spacing: 0.04em;
+  font-size: calc(var(--cell-h) * 0.15);
+  letter-spacing: 0.03em;
 }
-.coin-face.is-mini  { box-shadow: 0 0 0 3px #e7a066, 0 0 0 5px #6b3510, inset 0 0 14px rgba(224, 145, 90, 0.7); }
-.coin-face.is-mini  .coin-face__text { color: #ffd2ab; text-shadow: 0 0 8px rgba(224, 145, 90, 0.95), 0 2px 0 #000; }
-.coin-face.is-minor { box-shadow: 0 0 0 3px #e4ebf5, 0 0 0 5px #59657a, inset 0 0 14px rgba(214, 222, 233, 0.6); }
-.coin-face.is-minor .coin-face__text { color: #ffffff; text-shadow: 0 0 8px rgba(214, 222, 233, 0.95), 0 2px 0 #000; }
-.coin-face.is-major { box-shadow: 0 0 0 3px #ffe170, 0 0 0 5px #8a4f08, inset 0 0 16px rgba(255, 201, 60, 0.8); }
-.coin-face.is-major .coin-face__text { color: #fff0a8; }
-.coin-face__tier { display: block; line-height: 1; text-align: center; }
+.coin-face.is-mini  .coin-face__text { color: #ffd6b0; text-shadow: 0 0 10px rgba(224, 145, 90, 0.95), 0 2px 0 #000; }
+.coin-face.is-minor .coin-face__text { color: #ffffff; text-shadow: 0 0 10px rgba(214, 222, 233, 0.95), 0 2px 0 #000; }
+.coin-face.is-major .coin-face__text { color: #fff0a8; text-shadow: 0 0 12px rgba(255, 201, 60, 0.95), 0 2px 0 #000; }
 
 /* Пустая ячейка раунда: тусклый электрический контур — видно, что она «ждёт». */
 .reel__cell.is-blank::before {
@@ -812,7 +805,7 @@ img.is-missing { outline: 2px dashed rgba(57, 216, 255, 0.5); }
   .coil--right { left: 655px; }
 
   /* Лого — между катушками. */
-  .logo { left: 130px; top: 140px; width: 540px; height: 154px; }
+  .logo { left: 130px; top: 136px; width: 540px; height: 162px; }
 
   .jp-row { left: 16px; top: 300px; width: 768px; height: 110px; gap: 8px; }
   .jp { flex-basis: 172px; height: 92px; }

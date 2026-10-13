@@ -700,7 +700,7 @@ def build_frame():
 # --------------------------------------------------------------------------
 # logo (logo.png px)
 
-LOGO_BOLT = (292, 168)  # bolt in the O, logo.png px (v2 regen, 1240x354)
+LOGO_BOLT = (297, 172)  # bolt in the O, logo.png px (v2 regen, 1240x372)
 
 
 def build_logo():

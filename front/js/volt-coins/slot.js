@@ -30,6 +30,8 @@ const JACKPOT_LADDER = [
 ];
 const JACKPOT_VALUE_BY_TIER = Object.fromEntries(JACKPOT_LADDER.map((j) => [j.tier, j.value]));
 
+const COIN_STATE_ART = ['coin_value', 'coin_mini', 'coin_minor', 'coin_major'];
+
 // В прокрутке не мелькают монеты: мелькнувший триггер читается как обман.
 const FILLER_CODES = SYMBOL_CODES.filter((code) => code !== 'coin');
 
@@ -256,11 +258,15 @@ function clearCoinFace(info) {
   if (!info || !info.coinFace) return;
   info.coinFace.remove();
   info.coinFace = null;
+  if (info.symbol === 'coin') info.img.src = symbolSrc('coin');
 }
 
+// Арт монеты в раунде: золото с пустой эмалью под номинал, у тиров джекпота —
+// свой металл (MINI бронза, MINOR серебро, MAJOR золото с камнями). Подпись
+// печатает клиент, чтобы суммы не разъезжались с математикой сида.
 function coinFaceFor(kind, value) {
-  if (JACKPOT_TIERS.includes(kind)) return { text: kind.toUpperCase(), cls: `is-tier is-${kind}` };
-  return { text: `x${value}`, cls: '' };
+  if (JACKPOT_TIERS.includes(kind)) return { text: kind.toUpperCase(), cls: `is-tier is-${kind}`, art: `coin_${kind}` };
+  return { text: `x${value}`, cls: '', art: 'coin_value' };
 }
 
 function makeCoinFace(face) {
@@ -273,6 +279,7 @@ function makeCoinFace(face) {
 
 function showCoinFace(info, face) {
   clearCoinFace(info);
+  if (face.art) info.img.src = symbolSrc(face.art);
   const el = makeCoinFace(face);
   info.cell.appendChild(el);
   info.coinFace = el;
@@ -784,7 +791,7 @@ function playJackpotAward(tier) {
       node.style.setProperty('--tier-color', c);
       node.style.setProperty('--tier-lt', lt);
       node.innerHTML = `
-        <img class="game-popup__coin" src="${symbolSrc('coin')}" alt="">
+        <img class="game-popup__coin" src="${symbolSrc(tier === 'grand' ? 'coin' : `coin_${tier}`)}" alt="">
         <div class="game-popup__sub">${tier === 'grand' ? '9 / 9 — JACKPOT' : 'JACKPOT'}</div>
         <div class="game-popup__title">${tier.toUpperCase()}</div>
         <div class="game-popup__amount">${formatAmount(value * jackpotBet)}</div>
@@ -1167,7 +1174,7 @@ function preloadAssets() {
     return Promise.resolve(promise).catch(() => {}).finally(() => { if (P) P.step(); });
   };
   const tasks = [];
-  for (const code of SYMBOL_CODES) tasks.push(track(preloadImage(symbolSrc(code))));
+  for (const code of [...SYMBOL_CODES, ...COIN_STATE_ART]) tasks.push(track(preloadImage(symbolSrc(code))));
   tasks.push(track(preloadImage(`${ASSET_ROOT}/img/logo.png`)));
   tasks.push(track(preloadImage(`${ASSET_ROOT}/img/frame.png`)));
   tasks.push(track(preloadImage(`${ASSET_ROOT}/img/${isMobileLayout() ? 'bg_mob' : 'bg_desk'}.jpg`)));
