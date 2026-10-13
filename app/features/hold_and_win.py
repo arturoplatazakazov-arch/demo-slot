@@ -161,19 +161,31 @@ class HoldAndWinFeature(BonusFeature):
                     respins_left = respin_count  # TZ §6.2: any new symbol resets the counter
 
         full_grid = len(locked) == total_positions
-        total_win = sum(locked.values(), Decimal(0)) * game_state.bet_amount
+        coin_total = sum(locked.values(), Decimal(0))
+        # Volt Coins (product): filling the whole grid awards a named jackpot
+        # tier ON TOP of the coins ("Grand 9/9") — that tier is then never a
+        # coin face, only this. Unset (every other game) changes nothing.
+        full_grid_jackpot = config.get("full_grid_jackpot")
+        awarded_jackpot = None
+        if full_grid and full_grid_jackpot and full_grid_jackpot in jackpot_values:
+            awarded_jackpot = full_grid_jackpot
+            coin_total += Decimal(str(jackpot_values[full_grid_jackpot]))
+        total_win = coin_total * game_state.bet_amount
 
+        details = {
+            "locked_count": len(locked),
+            "full_grid": full_grid,
+            "initial": initial,
+            "respins": respins,
+        }
+        if full_grid_jackpot:
+            details["full_grid_jackpot"] = awarded_jackpot
         return FeatureResult(
             feature_id=self.feature_id,
             triggered=True,
             win_amount=total_win,
             state_patch={},
-            details={
-                "locked_count": len(locked),
-                "full_grid": full_grid,
-                "initial": initial,
-                "respins": respins,
-            },
+            details=details,
         )
 
     def _execute_collector(self, game_state: FeatureContext, config: dict) -> FeatureResult:
@@ -381,6 +393,14 @@ class HoldAndWinFeature(BonusFeature):
                         "Named jackpot tiers, name -> bet multiplier (e.g. {\"mini\": 25, \"grand\": 1000}). "
                         "A coin_value_weights key matching a name here pays that multiplier and is reported "
                         "with kind=<name> so the client can show the tier's own coin art."
+                    ),
+                },
+                "full_grid_jackpot": {
+                    "type": "string",
+                    "default": None,
+                    "description": (
+                        "Classic mode: a jackpot_values tier paid on top of the coins when the round "
+                        "fills every cell (Volt Coins: GRAND for 9/9)."
                     ),
                 },
                 "start_empty": {

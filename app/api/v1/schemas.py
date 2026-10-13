@@ -194,6 +194,9 @@ class HoldAndWinOut(BaseModel):
     respins: list[HoldAndWinRespinOut]
     total_win: int
     full_grid: bool
+    # Tier awarded on top of the coins for filling the grid (Volt Coins'
+    # "Grand 9/9"); None for every game without full_grid_jackpot.
+    full_grid_jackpot: str | None = None
 
 
 class WheelSegmentOut(BaseModel):

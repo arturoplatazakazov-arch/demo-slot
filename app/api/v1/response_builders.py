@@ -101,6 +101,7 @@ def hold_and_win_out(result) -> schemas.HoldAndWinOut | None:
         ],
         total_win=int(result.win_amount),
         full_grid=result.details["full_grid"],
+        full_grid_jackpot=result.details.get("full_grid_jackpot"),
     )
 
 

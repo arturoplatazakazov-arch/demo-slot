@@ -1,0 +1,12 @@
+animation.png
+size:1776,958
+filter:Linear,Linear
+pma:true
+ringline
+bounds:0,0,958,958
+halo
+bounds:960,0,256,256
+beam
+bounds:1218,0,504,63
+seg
+bounds:1724,0,50,50

@@ -19,7 +19,7 @@
 //     needs to special-case that.
 // A section with zero cards hides itself (including its heading) rather
 // than showing an empty title.
-const ILLUMINATOR_CODES = new Set(['gold-of-baku', 'gold-of-baku-2', 'big-catch', 'caesars-fortune']);
+const ILLUMINATOR_CODES = new Set(['gold-of-baku', 'gold-of-baku-2', 'big-catch', 'caesars-fortune', 'volt-coins']);
 const READY_PINNED_CODES = new Set(['gangsta-casino']);
 const READY_COUNT = 10;
 

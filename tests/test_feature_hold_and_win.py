@@ -3,6 +3,7 @@ from decimal import Decimal
 from app.engine.types import SpinGrid
 from app.features.base import FeatureContext
 from app.features.hold_and_win import HoldAndWinFeature
+
 from tests.fakes import FakeRNG
 
 
@@ -159,3 +160,37 @@ def test_respins_log_extends_past_respin_count_when_a_late_landing_resets_it():
     # number here, a tier name for a game with named jackpot_values.
     assert respins[0]["landed"] == [{"reel": 1, "row": 0, "value": "1", "kind": "1"}]
     assert respins[1]["landed"] == []
+
+
+def test_full_grid_jackpot_pays_its_tier_on_top_of_the_coins():
+    # Volt Coins: 9/9 awards GRAND in addition to every coin's own value.
+    grid = _grid(["COIN", "x"], ["COIN", "x"])
+    ctx = FeatureContext(session_state={}, rng=FakeRNG([0] * 20), bet_amount=Decimal("2"), grid=grid)
+    config = {
+        "respin_count": 1,
+        "coin_value_weights": {"1": 1},
+        "respin_land_weights": {"blank": 0, "coin": 1},
+        "jackpot_values": {"grand": 1000},
+        "full_grid_jackpot": "grand",
+    }
+    result = HoldAndWinFeature().execute(ctx, config)
+
+    assert result.details["full_grid"] is True
+    assert result.details["full_grid_jackpot"] == "grand"
+    assert result.win_amount == (Decimal(4) + Decimal(1000)) * Decimal(2)
+
+
+def test_full_grid_jackpot_is_not_paid_on_a_partial_grid():
+    grid = _grid(["COIN", "x"], ["x", "x"])
+    ctx = FeatureContext(session_state={}, rng=FakeRNG([0] * 20), bet_amount=Decimal("3"), grid=grid)
+    config = {
+        "respin_count": 2,
+        "coin_value_weights": {"1": 1},
+        "respin_land_weights": {"blank": 1, "coin": 0},
+        "jackpot_values": {"grand": 1000},
+        "full_grid_jackpot": "grand",
+    }
+    result = HoldAndWinFeature().execute(ctx, config)
+
+    assert result.details["full_grid_jackpot"] is None
+    assert result.win_amount == Decimal(3)
