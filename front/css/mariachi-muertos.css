@@ -1,0 +1,880 @@
+/* Mariachi Muertos — Day of the Dead avalanche/cascade demo, a reskin of
+   css/uniqorn-bad-santa.css (same layout and timings; new art, colours, popups
+   for wide banner plates, and a particle layer in js/mariachi-muertos/fx.js).
+   The notes below are inherited from that file.
+
+   Two ancestors, deliberately:
+
+   - LAYOUT / cascade plumbing comes from css/sugar-galaxy.css: a fixed design
+     canvas (desktop 1932x940, mobile portrait 780x1416) whose every object is
+     absolutely positioned in design px inside #stage, and #stage is
+     contain-scaled to the viewport as one unit (--stage-scale, set by
+     slot.js:updateStageScale). Same grid model: absolutely-positioned cells
+     moved by `top`, clipped by .reel__grid's overflow.
+   - EVERY ANIMATION comes from css/mr-president-unicorn.css, because this
+     game's art is AI-generated flat PNGs, not Spine exports — there is no
+     skeleton, atlas or WebGL canvas anywhere in this theme. Win pulses,
+     landing bounces, explosions, popups and the free-spins/bonus transitions
+     are all DOM + CSS here. Timings are duplicated as constants in slot.js
+     (WIN_PULSE_MS, BOOM_MS, POPUP_ENTER_MS, ...) — change both together.
+
+   The reel frame (img/frame_desk.png / frame_mob.png) sits BEHIND the cells
+   and its own opening is exactly the grid rect, so the cells never overlap the
+   carved border; the frame art was 9-sliced to that aspect from the generated
+   source (see the session scratchpad), which is why the two device variants
+   are separate files rather than one stretched image. */
+
+:root {
+  --gold: #ffd35c;
+  --gold-dark: #c98a1f;
+  --ink: #2a0f14;
+  --wine: #6a1a5c;
+  --wine-dark: #2e0b2c;
+  --marigold: #ff9f1c;
+  --ui-border: rgba(255, 220, 150, 0.18);
+  --text-cream: #fff6df;
+
+  /* Grid geometry — 6 cols x 5 rows. Desktop: 153x124 cells, 10px gaps, which
+     is exactly the 968x660 opening 9-sliced into frame_desk.png. Mobile
+     overrides these below (and frame_mob.png matches that opening). slot.js
+     reads them back through readCellDims(), so these are the single source of
+     truth for both CSS and JS. */
+  --cell-w: 153px;
+  --cell-h: 124px;
+  --cell-gap-x: 10px;
+  --cell-gap-y: 10px;
+
+  --design-w: 1932px;
+  --design-h: 940px;
+  --stage-scale: 1;
+
+  /* Measured empty-panel bounds of each generated popup plaque, as
+     inset(top right bottom left) percentages of the art — the text is DOM on
+     top of the PNG, so re-measure these if a plate is ever regenerated. */
+  --popup-panel-base: 37% 23.5% 19% 23.5%;
+  --popup-panel-mega: 32.5% 26.5% 26.5% 26.5%;
+  --popup-panel-epic: 35% 27.2% 26.5% 27.2%;
+  --popup-panel-inset: var(--popup-panel-base);
+}
+
+* { box-sizing: border-box; }
+
+html, body { overflow-x: hidden; }
+
+body {
+  margin: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #0a0508;
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  color: var(--text-cream);
+}
+
+/* ---------- Back-to-catalog button ---------- */
+.to-catalog-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 110;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(20, 16, 8, 0.75);
+  border: 1px solid rgba(255, 207, 61, 0.5);
+  color: #ffcf3d;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(4px);
+}
+.to-catalog-btn:hover { background: rgba(20, 16, 8, 0.92); border-color: #ffcf3d; }
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+/* ---------- Dev panel ---------- */
+.dev-panel {
+  position: fixed;
+  top: 52px;
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 260px;
+  align-items: center;
+}
+.dev-btn {
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #222;
+  color: #ddd;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.dev-btn:hover { opacity: 1; }
+.dev-hint { font-size: 10px; color: #999; width: 100%; text-align: right; }
+
+/* ---------- Screen / stage ---------- */
+.screen {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  background: #0a0508;
+}
+.layer { position: absolute; }
+
+.bg {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+/* Particle canvases added by js/mariachi-muertos/fx.js: #fxAmbient (z 1, under
+   the stage: drifting marigold petals, rising candle embers) and #fxBurst
+   (z 31, over popups: win bursts, coin fountains, trumpet notes). */
+.fx-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--design-w);
+  height: var(--design-h);
+  transform: translate(-50%, -50%) scale(var(--stage-scale));
+  z-index: 2;
+}
+.stage .obj { position: absolute; }
+
+/* The logo art was generated glowing on a black plate and then cut out. It is
+   NOT screen-blended: #stage carries a transform, so it is its own stacking
+   context and a blend mode here would only mix with #stage's (empty) backdrop,
+   not with the room behind it — which is exactly what painted a black box
+   around the lettering. The lost halo is replaced by the drop-shadow below. */
+.logo {
+  left: 14px;
+  top: 18px;
+  width: 360px;
+  height: 222px;
+  object-fit: contain;
+  z-index: 4;
+  animation: logo-glow 4.5s ease-in-out infinite;
+}
+@keyframes logo-glow {
+  0%, 100% { filter: drop-shadow(0 0 12px rgba(255, 159, 28, 0.35)); }
+  50%      { filter: drop-shadow(0 0 26px rgba(255, 190, 60, 0.65)); }
+}
+
+/* ---------- Hero ----------
+   Sits in the left column, bottom-aligned with the reel frame and BEHIND it
+   (z-index 0 vs the frame's 1) so he reads as standing on the plaza
+   rather than pasted over the slot — same staging as mr-president-unicorn's
+   hero, and the same "static art + CSS moods" approach, since this theme ships
+   no Spine at all. */
+/* Right column, under the multiplier badge, mirrored so the trumpet points at
+   the reels (`scale` composes with the keyframed `transform`; fx.js reads it to
+   aim the music notes). */
+.hero {
+  left: 1556px;
+  top: 372px;
+  height: 566px;
+  scale: -1 1;
+  width: auto;
+  z-index: 0;
+  pointer-events: none;
+  transform-origin: 50% 100%;
+  animation: hero-idle 4.6s ease-in-out infinite;
+  filter: drop-shadow(0 14px 26px rgba(0, 0, 0, 0.6));
+}
+/* Idle: a slow breathe with a touch of sway — enough that he doesn't read as a
+   sticker, small enough not to pull the eye off the reels. */
+@keyframes hero-idle {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  25%      { transform: translateY(-0.8%) rotate(-1.2deg) scale(1.006); }
+  50%      { transform: translateY(0) rotate(0deg) scale(1); }
+  75%      { transform: translateY(-0.8%) rotate(1.2deg) scale(1.006); }
+}
+/* Cheer: a real jump with a squash on landing, played while a win is being
+   celebrated (slot.js setHeroMood). */
+/* Cheer: he blows the trumpet — leans back into each note with a knee bounce
+   (fx.js streams music notes from the bell meanwhile). */
+@keyframes hero-cheer {
+  0%   { transform: translateY(0) rotate(0deg) scaleY(1); }
+  20%  { transform: translateY(1.2%) rotate(2.5deg) scaleY(0.96); }
+  45%  { transform: translateY(-3.5%) rotate(-3deg) scaleY(1.03); }
+  70%  { transform: translateY(0.6%) rotate(1.5deg) scaleY(0.98); }
+  100% { transform: translateY(0) rotate(0deg) scaleY(1); }
+}
+.hero.is-cheer {
+  animation: hero-cheer 760ms cubic-bezier(0.3, 0.9, 0.4, 1) infinite;
+  filter: drop-shadow(0 14px 26px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 26px rgba(255, 205, 92, 0.45));
+}
+
+/* ---------- Reel frame + avalanche grid ---------- */
+/* frame_desk.png is 1206x919 with its opening at (119,130) sized 968x660 —
+   so left/top below are the grid rect minus that inset. */
+.frame {
+  left: 363px;
+  top: 10px;
+  width: 1206px;
+  height: 919px;
+  object-fit: fill;
+  pointer-events: none;
+  z-index: 1;
+}
+.reel__grid {
+  left: 482px;
+  top: 140px;
+  width: 968px;
+  height: 660px;
+  z-index: 2;
+  /* The frame's opening is see-through; a dusk-plum backing keeps the symbols
+     readable over the busy plaza. */
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(120, 40, 90, 0.55), rgba(40, 8, 36, 0.86) 75%),
+    rgba(30, 6, 28, 0.6);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.reel__grid-inner {
+  position: relative;
+  width: calc(6 * var(--cell-w) + 5 * var(--cell-gap-x));
+  height: calc(5 * var(--cell-h) + 4 * var(--cell-gap-y));
+}
+.reel__col {
+  position: absolute;
+  top: 0;
+  width: var(--cell-w);
+  height: 100%;
+}
+.reel__cell {
+  position: absolute;
+  left: 0;
+  width: var(--cell-w);
+  height: var(--cell-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* `top` duration must match slot.js's CASCADE_DROP_MS. */
+  transition: top 100ms cubic-bezier(0.36, 0.66, 0.32, 1), opacity 280ms ease;
+}
+.reel__cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+.reel__cell.is-dimmed img { opacity: 0.32; }
+.reel__cell.is-removing { opacity: 0; }
+img.is-missing { outline: 2px dashed rgba(255,255,255,0.35); background: rgba(0,0,0,0.25); }
+
+/* ---------- Symbol idle / landing / win (replaces every Spine clip) ------- */
+
+/* wild / scatter / bomb breathe so the special symbols read as "alive" on an
+   otherwise static grid. Paused while a cell is winning so the two never fight. */
+@keyframes symbol-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.05); }
+}
+.reel__cell.is-special img {
+  animation: symbol-breathe 2.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(255, 205, 92, 0.35));
+}
+
+@keyframes symbol-land {
+  0%   { transform: translateY(-8%) scaleY(1.08) scaleX(0.94); }
+  55%  { transform: translateY(0) scaleY(0.93) scaleX(1.06); }
+  100% { transform: translateY(0) scale(1); }
+}
+.reel__cell.is-landing img { animation: symbol-land 260ms cubic-bezier(0.22, 1, 0.36, 1); }
+
+@keyframes symbol-win {
+  0%   { transform: scale(1) rotate(0deg);    filter: drop-shadow(0 0 0 rgba(255, 226, 138, 0)); }
+  30%  { transform: scale(1.22) rotate(-3deg); filter: drop-shadow(0 0 24px rgba(255, 226, 138, 0.95)) brightness(1.2); }
+  55%  { transform: scale(1.1) rotate(3deg);  filter: drop-shadow(0 0 18px rgba(255, 226, 138, 0.8)) brightness(1.12); }
+  100% { transform: scale(1) rotate(0deg);    filter: drop-shadow(0 0 0 rgba(255, 226, 138, 0)); }
+}
+.reel__cell.is-winning img {
+  animation: symbol-win 700ms ease-in-out;
+  animation-fill-mode: both;
+}
+.reel__cell.is-winning { z-index: 3; }
+
+/* ---------- Explosions (stand-ins for boom_standart / boom_bomb) ---------- */
+
+.boom {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--cell-w) * 1.35);
+  height: calc(var(--cell-w) * 1.35);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 6;
+}
+.boom__flash,
+.boom__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+.boom__flash {
+  background: radial-gradient(circle,
+    rgba(255,255,255,0.95) 0%,
+    rgba(255,226,138,0.9) 26%,
+    rgba(255,140,60,0.55) 48%,
+    rgba(255,60,60,0) 70%);
+  animation: boom-flash 420ms ease-out forwards;
+}
+.boom__ring {
+  border: 4px solid rgba(255, 226, 138, 0.9);
+  animation: boom-ring 480ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+.boom__spark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border-radius: 50%;
+  background: #ffe6a6;
+  box-shadow: 0 0 10px rgba(255, 220, 150, 0.9);
+  animation: boom-spark 520ms ease-out forwards;
+}
+@keyframes boom-flash {
+  0%   { transform: scale(0.25); opacity: 1; }
+  60%  { transform: scale(1);    opacity: 0.9; }
+  100% { transform: scale(1.25); opacity: 0; }
+}
+@keyframes boom-ring {
+  0%   { transform: scale(0.15); opacity: 0.9; border-width: 8px; }
+  100% { transform: scale(1.1);  opacity: 0;   border-width: 1px; }
+}
+@keyframes boom-spark {
+  0%   { transform: rotate(var(--a)) translateX(6px)  scale(1);   opacity: 1; }
+  100% { transform: rotate(var(--a)) translateX(var(--d)) scale(0.3); opacity: 0; }
+}
+/* A bomb's own detonation: bigger, redder, longer. */
+.boom--bomb { width: calc(var(--cell-w) * 1.9); height: calc(var(--cell-w) * 1.9); }
+.boom--bomb .boom__flash {
+  background: radial-gradient(circle,
+    rgba(255,255,255,0.95) 0%,
+    rgba(255,190,90,0.92) 22%,
+    rgba(255,80,40,0.7) 46%,
+    rgba(180,20,20,0) 72%);
+  animation-duration: 560ms;
+}
+.boom--bomb .boom__ring { border-color: rgba(255, 130, 70, 0.9); animation-duration: 620ms; }
+.boom--bomb .boom__spark { background: #ffb066; animation-duration: 680ms; }
+
+/* The bomb's own wind-up, before the blast (slot.js BOMB_PRE_EXPLODE_MS). */
+@keyframes bomb-arm {
+  0%, 100% { transform: scale(1)    rotate(0deg);   filter: brightness(1); }
+  25%      { transform: scale(1.12) rotate(-6deg);  filter: brightness(1.35); }
+  50%      { transform: scale(1.05) rotate(5deg);   filter: brightness(1.1); }
+  75%      { transform: scale(1.16) rotate(-4deg);  filter: brightness(1.5); }
+}
+.reel__cell.is-arming img { animation: bomb-arm 620ms ease-in-out; }
+
+/* ---------- Per-cascade-step multiplier + win banner ---------- */
+.cascade-banner {
+  position: absolute;
+  left: 482px;
+  top: 140px;
+  width: 968px;
+  height: 660px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.cascade-banner.is-visible { opacity: 1; }
+.cascade-banner__mult {
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 68px;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 0 4px 0 var(--ink), 0 0 30px rgba(255, 211, 92, 0.8);
+  white-space: nowrap;
+}
+.cascade-banner__win {
+  font-weight: 800;
+  font-size: 24px;
+  color: var(--text-cream);
+  background: rgba(10, 4, 6, 0.6);
+  border-radius: 999px;
+  padding: 4px 18px;
+  white-space: nowrap;
+}
+
+/* ---------- Inline win amount (wins below the popup threshold) ---------- */
+.reel-win-amount-viewport {
+  position: absolute;
+  left: 482px;
+  top: 140px;
+  width: 968px;
+  height: 660px;
+  z-index: 3;
+  pointer-events: none;
+}
+.reel-win-amount {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.reel-win-amount.is-visible { opacity: 1; }
+.reel-win-amount::before {
+  content: attr(data-amount);
+  font-weight: 800;
+  font-size: 52px;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 0 4px 0 var(--ink), 0 0 26px rgba(255, 211, 92, 0.75);
+  white-space: nowrap;
+  padding: 6px 22px;
+  background: rgba(10, 4, 6, 0.55);
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(255, 211, 92, 0.25);
+}
+
+/* ---------- Buy Bonus sign (blank generated plaque + DOM label) ---------- */
+.sign-buy-bonus {
+  left: 26px;
+  top: 232px;
+  width: 320px;
+  height: 290px;
+  cursor: pointer;
+  z-index: 3;
+  transition: transform 150ms ease;
+}
+.sign-buy-bonus:hover { transform: scale(1.03); }
+.sign-buy-bonus__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.sign-buy-bonus__label {
+  position: absolute;
+  inset: 34% 18% 15% 18%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 38px;
+  line-height: 1.02;
+  text-align: center;
+  color: var(--text-cream);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.7), 0 0 16px rgba(255, 120, 90, 0.55);
+  pointer-events: none;
+}
+.screen[data-mode="freespins"] .sign-buy-bonus { display: none; }
+
+/* ---------- Multiplier counter (both modes) + free spins counter --------- */
+.multi-counter {
+  left: 1592px;
+  top: 120px;
+  width: 300px;
+  height: 232px;
+  z-index: 3;
+}
+.multi-counter__img,
+.fs-counter__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.multi-counter__value {
+  position: absolute;
+  left: 50%;
+  top: 60%;
+  transform: translate(-50%, -50%);
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 52px;
+  color: var(--gold);
+  text-shadow: 0 3px 0 var(--ink), 0 0 18px rgba(255, 211, 92, 0.6);
+  white-space: nowrap;
+}
+/* Bonus-only, and the Buy Bonus sign is hidden in the bonus — it takes that
+   slot so the right column stays free for the mariachi. */
+.fs-counter {
+  display: none;
+  left: 26px;
+  top: 250px;
+  width: 300px;
+  height: 232px;
+  z-index: 3;
+}
+.screen[data-mode="freespins"] .fs-counter { display: block; }
+.fs-counter__label {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  transform: translate(-50%, -50%);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #cfe9ff;
+  white-space: nowrap;
+}
+.fs-counter__value {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  transform: translate(-50%, -50%);
+  font-family: 'Luckiest Guy', cursive;
+  font-size: 46px;
+  color: #ffffff;
+  text-shadow: 0 3px 0 #123049, 0 0 18px rgba(150, 220, 255, 0.7);
+}
+
+/* A consumed multiplier medallion's flight to .multi-counter (slot.js
+   flyTokenToBadge) — viewport-space, since the badge sits outside the grid.
+   Duration must match TOKEN_FLIGHT_MS. */
+.token-flight {
+  position: fixed;
+  z-index: 60;
+  pointer-events: none;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(255, 211, 92, 0.85));
+  animation: token-flight-fly 1000ms linear forwards;
+}
+@keyframes token-flight-fly {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  50%  { transform: translate(var(--tf-mid-x), var(--tf-mid-y)) scale(1.12); }
+  100% { transform: translate(var(--tf-end-x), var(--tf-end-y)) scale(0.9); opacity: 0; }
+}
+@keyframes badge-pop {
+  0%, 100% { transform: scale(1); }
+  40%      { transform: scale(1.12); }
+}
+.multi-counter.is-hit { animation: badge-pop 320ms ease-out; }
+
+/* ---------- Screen dim ---------- */
+.screen-dim {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  z-index: 20;
+}
+.screen-dim.is-active { opacity: 1; }
+.screen-dim.is-opaque { background: #000; }
+
+/* ---------- Popups (DOM plaque + text, no Spine) ---------- */
+.game-popup {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%) scale(0.7);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 30;
+  transition: transform 420ms cubic-bezier(0.34, 1.5, 0.5, 1), opacity 420ms ease;
+  text-align: center;
+  container-type: inline-size;
+  width: min(900px, 70vw);
+}
+.game-popup.is-in  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.game-popup.is-out {
+  transform: translate(-50%, -50%) scale(0.86);
+  opacity: 0;
+  transition-duration: 260ms;
+}
+.game-popup.is-mobile { width: 96vw; }
+
+.game-popup__art {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 24px 60px rgba(0, 0, 0, 0.7));
+}
+.game-popup.is-plate-base { --popup-panel-inset: var(--popup-panel-base); }
+.game-popup.is-plate-mega { --popup-panel-inset: var(--popup-panel-mega); }
+.game-popup.is-plate-epic { --popup-panel-inset: var(--popup-panel-epic); }
+
+.game-popup__body {
+  position: absolute;
+  inset: var(--popup-panel-inset);
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6cqw;
+  text-align: center;
+}
+/* The plates are wide, low banners: only the amount fits inside the panel, so
+   the title (and the small sub line above it) stand over the banner. */
+.game-popup__sub,
+.game-popup__title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.game-popup__title { bottom: calc(100% + 26%); }
+.game-popup__sub { bottom: calc(100% + 26% + 15cqw); }
+.game-popup__sub {
+  white-space: nowrap;
+  font-size: 7cqw;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: rgba(255, 246, 226, 0.82);
+  text-shadow: 0 0.3cqw 1cqw rgba(0, 0, 0, 0.9);
+}
+.game-popup__title {
+  font-size: 16cqw;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: #ffe08a;
+  background: linear-gradient(180deg, #fff3b8 0%, #ffd35c 45%, #ff8a1c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0.5cqw 0 #7a2a08) drop-shadow(0 0.8cqw 1.6cqw rgba(0, 0, 0, 0.85));
+  animation: popup-title-pulse 1.4s ease-in-out infinite;
+}
+@keyframes popup-title-pulse {
+  0%, 100% { transform: translateX(-50%) scale(1); }
+  50%      { transform: translateX(-50%) scale(1.05); }
+}
+.game-popup__amount {
+  font-size: 14cqw;
+  font-weight: 800;
+  color: var(--gold);
+  text-shadow: 0 0.5cqw 1.5cqw rgba(0, 0, 0, 0.95), 0 0 3cqw rgba(255, 211, 92, 0.35);
+}
+
+/* ---------- Paytable info popup ---------- */
+.info-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 20px;
+}
+.info-popup[hidden] { display: none; }
+.info-popup__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(720px, 90vh);
+  overflow-y: auto;
+  background: var(--wine-dark);
+  border: 3px solid var(--gold-dark);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.info-popup__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-cream);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.info-popup__close:hover { background: rgba(0, 0, 0, 0.55); }
+.info-popup__title {
+  margin: 0 0 6px;
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 22px;
+  text-align: center;
+  text-shadow: 0 2px 0 var(--ink);
+}
+.info-popup__note { text-align: center; font-size: 12px; opacity: 0.75; margin: 0 0 16px; }
+.info-popup__list { display: flex; flex-direction: column; gap: 10px; }
+.info-popup__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.info-popup__row img { width: 48px; height: 48px; object-fit: contain; flex-shrink: 0; }
+.info-popup__row-name { flex: 1 1 auto; min-width: 90px; font-weight: 700; }
+.info-popup__row-pays { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; }
+.info-popup__row-pays span { white-space: nowrap; opacity: 0.9; }
+.info-popup__row-pays b { color: var(--gold); }
+
+/* ================================================================
+   Mobile (portrait) — the same design-space model on the 780x1416 canvas.
+   frame_mob.png is 825x711 with its opening at (82,89) sized 662x534.
+   ================================================================ */
+@media (orientation: portrait) {
+  :root {
+    --cell-w: 102px;
+    --cell-h: 102px;
+    --cell-gap-x: 10px;
+    --cell-gap-y: 6px;
+  }
+
+  /* The logo owns the strip above the frame outright — overlapping the top rail
+     read as clutter on a phone, so the frame starts below it. */
+  .logo { left: 200px; top: 4px; width: 380px; height: 196px; }
+
+  /* Portrait has no side column, so he moves into the bottom band next to the
+     Buy Bonus sign instead of being dropped entirely (mr-president-unicorn
+     hides him here; this game's bottom band has the room, and the whole point
+     of the character is that he's on screen). */
+  .hero { left: 500px; top: 900px; height: 380px; }
+
+  .frame { left: -22px; top: 200px; width: 825px; height: 711px; }
+  .reel__grid,
+  .cascade-banner,
+  .reel-win-amount-viewport { left: 60px; top: 289px; width: 662px; height: 534px; }
+
+  .cascade-banner__mult { font-size: 52px; }
+  .reel-win-amount::before { font-size: 40px; }
+
+  .sign-buy-bonus { left: 24px; top: 916px; width: 260px; height: 236px; }
+  .sign-buy-bonus__label { font-size: 34px; }
+  .multi-counter { left: 290px; top: 922px; width: 224px; height: 173px; }
+  /* Bonus-only, and the Buy Bonus sign is hidden in the bonus — so the counter
+     takes that same slot instead of stacking a third row that the bottom bar
+     would clip on a short phone. */
+  .fs-counter { left: 24px; top: 916px; width: 260px; height: 201px; }
+}
+
+/* ---------- Boot preloader theme (structure lives in css/preloader.css) --- */
+.preloader {
+  --pl-bg: #1a0a1c;
+  --pl-accent-a: #ff9f1c;
+  --pl-accent-b: #e83a7a;
+  --pl-glow-a: rgba(255, 159, 28, 0.35);
+  --pl-glow-b: rgba(232, 58, 122, 0.14);
+  --pl-border: rgba(255, 159, 28, 0.45);
+  --pl-shadow: rgba(255, 159, 28, 0.6);
+}
+
+/* ---------- Buy Bonus confirm dialog ----------
+   The win-popup banner (popup_plate.png) with the Buy Bonus disc art
+   (buy_bonus.png) reused as the BUY / CANCEL buttons under it. The overlay
+   catches backdrop taps; the dim itself is #screenDim (pushScreenDim). */
+.buy-dialog {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: auto;
+}
+.game-popup.buy-popup {
+  top: 40%;
+  width: min(820px, 64vw);
+  pointer-events: auto;
+}
+.game-popup.buy-popup.is-mobile { width: 96vw; }
+.buy-popup__actions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% - 3cqw);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5cqw 5cqw;
+}
+.buy-popup__note {
+  flex-basis: 100%;
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-size: 4.6cqw;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #fff6e2;
+  text-shadow: 0 0.4cqw 1.2cqw rgba(0, 0, 0, 0.95);
+  white-space: nowrap;
+}
+.buy-popup__btn {
+  position: relative;
+  width: 20cqw;
+  aspect-ratio: 394 / 349;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transition: transform 160ms ease, filter 160ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.buy-popup__btn img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 1cqw 2cqw rgba(0, 0, 0, 0.6));
+}
+.buy-popup__btn:hover { transform: scale(1.06); }
+.buy-popup__btn:active { transform: scale(0.95); }
+.buy-popup__btn:focus-visible { outline: none; }
+.buy-popup__btn:focus-visible img { filter: drop-shadow(0 0 2cqw rgba(255, 226, 138, 0.95)); }
+/* CANCEL / CLOSE = the same sign, drained of colour so BUY reads as the main action. */
+.buy-popup__btn.is-cancel img { filter: grayscale(0.85) brightness(0.75) drop-shadow(0 1cqw 2cqw rgba(0, 0, 0, 0.6)); }
+.buy-popup__btn-label {
+  position: absolute;
+  left: 50%;
+  top: 51%;
+  transform: translate(-50%, -50%);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-size: 4.2cqw;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: #fff6e2;
+  text-shadow: 0 0.4cqw 1cqw rgba(0, 0, 0, 0.95), 0 0 2cqw rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.buy-popup__btn.is-cancel .buy-popup__btn-label { font-size: 3.4cqw; }
