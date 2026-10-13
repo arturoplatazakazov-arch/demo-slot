@@ -233,7 +233,9 @@ function teardownCellInstances() {
   for (const info of cellInfos) {
     if (!info) continue;
     info.cell.classList.remove('is-dimmed');
-    clearCoinFace(info);
+    // Номинал НЕ снимаем: на старте спина монета уезжает вниз вместе со своим
+    // числом (иначе на долю секунды мелькала голая монета с молнией). Номинал
+    // снимает setCellSymbol, когда ячейку действительно подменяют.
     clearCellAnimation(info);
   }
 }
