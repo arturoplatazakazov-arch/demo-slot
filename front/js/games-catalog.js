@@ -27,6 +27,12 @@ const READY_CODES = new Set([
 ]);
 const ILLUMINATOR_CODES = new Set(['gold-of-baku', 'gold-of-baku-2', 'volt-coins']);
 const SPIN_FACTORY_CODES = new Set(['big-catch', 'caesars-fortune', 'ice-spin-deluxe', 'tesla-spins']);
+// Новинки: the ten Provider 2 slots (provider2/, app/seed/provider2.py), moved
+// out of the Secret Room into the Telegram mini-app (tg.html has the grid).
+const NEW_CODES = new Set([
+  'rad-raiders', 'jade-paws', 'ghoul-groove', 'gummy-gold-rush', 'whisker-noir',
+  'cogwork-skies', 'hex-hollow', 'bayou-bedlam', 'jaguar-eclipse', 'trident-vs-titan',
+]);
 
 const PLAY_ICON = '<svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4Z" fill="currentColor"/></svg>';
 const ADMIN_ICON = '<svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2-1.5-2-3.4-2.4 1a7.7 7.7 0 0 0-1.7-1L15 3h-4l-.3 2.5a7.7 7.7 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.5 7.5 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a7.7 7.7 0 0 0 1.7 1L11 21h4l.3-2.5a7.7 7.7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="13" cy="12" r="2.6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
@@ -78,15 +84,20 @@ async function renderCatalog() {
   const illuminatorGrid = document.getElementById('illuminatorGrid');
   const spinFactoryGrid = document.getElementById('spinFactoryGrid');
   const devGrid = document.getElementById('devGrid');
-  const grids = [readyGrid, illuminatorGrid, spinFactoryGrid, devGrid].filter(Boolean);
+  const newGrid = document.getElementById('newGrid');
+  const grids = [newGrid, readyGrid, illuminatorGrid, spinFactoryGrid, devGrid].filter(Boolean);
 
   try {
     const entries = (await apiGet('/catalog')).reverse();
     const ready = entries.filter((e) => READY_CODES.has(e.code));
     const illuminator = entries.filter((e) => ILLUMINATOR_CODES.has(e.code));
     const spinFactory = entries.filter((e) => SPIN_FACTORY_CODES.has(e.code));
+    const fresh = entries.filter((e) => NEW_CODES.has(e.code));
     const dev = entries.filter((e) => !READY_CODES.has(e.code)
-      && !ILLUMINATOR_CODES.has(e.code) && !SPIN_FACTORY_CODES.has(e.code));
+      && !ILLUMINATOR_CODES.has(e.code) && !SPIN_FACTORY_CODES.has(e.code)
+      && !NEW_CODES.has(e.code));
+
+    if (newGrid) for (const entry of fresh) appendCard(newGrid, entry);
 
     if (readyGrid) for (const entry of ready) appendCard(readyGrid, entry);
     if (illuminatorGrid) for (const entry of illuminator) appendCard(illuminatorGrid, entry);
@@ -98,6 +109,7 @@ async function renderCatalog() {
     grids[0].appendChild(li);
   }
 
+  if (newGrid) toggleSection('newSection', newGrid);
   if (readyGrid) toggleSection('readySection', readyGrid);
   if (illuminatorGrid) toggleSection('illuminatorSection', illuminatorGrid);
   if (spinFactoryGrid) toggleSection('spinFactorySection', spinFactoryGrid);

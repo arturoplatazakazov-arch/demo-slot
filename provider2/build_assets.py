@@ -62,6 +62,41 @@ def cover(im, w, h):
     return im.crop((x, y, x + w, y + h))
 
 
+def clean(im, keep=0.12, near=0.04):
+    """Drop stray bits a sheet cut picks up from its neighbours (the green
+    swirl under Hex Hollow's spellbook, edges of the next banner): alpha
+    blobs smaller than `keep` of the main blob that do not touch the main
+    blob's box (grown by `near` of its size) are erased."""
+    from build_mockups import components
+    k = 2
+    small = im.getchannel('A').resize((max(1, im.width // k), max(1, im.height // k)), Image.BOX)
+    mask = np.array(small) > 40
+    comps = components(mask)
+    if len(comps) < 2:
+        return im
+    main = max(comps)
+    _, mx0, my0, mx1, my1 = main
+    g = near * max(mx1 - mx0, my1 - my0)
+    drop = Image.new('L', small.size, 0)
+    d = ImageDraw.Draw(drop)
+    lab = None
+    for c in comps:
+        area, x0, y0, x1, y1 = c
+        if c is main or area >= main[0] * keep:
+            continue
+        touches = not (x1 < mx0 - g or x0 > mx1 + g or y1 < my0 - g or y0 > my1 + g)
+        if touches:
+            continue
+        d.rectangle([x0 - 1, y0 - 1, x1 + 1, y1 + 1], fill=255)
+    if not drop.getbbox():
+        return im
+    drop = drop.resize(im.size, Image.NEAREST)
+    a = ImageChops.subtract(im.getchannel('A'), drop)
+    out = im.copy()
+    out.putalpha(a)
+    return trim(out, 2)
+
+
 def drop_shadow(im, dy=0.035, blur=0.03, alpha=0.62):
     """`im` over a soft dark copy of its own silhouette shifted down — the
     symbols read as objects sitting on the reel, not stickers on it. Offsets
@@ -80,7 +115,7 @@ def drop_shadow(im, dy=0.035, blur=0.03, alpha=0.62):
 def tile(im, size, fill):
     """Centre `im` in a size x size transparent tile at `fill` of the box,
     with a drop shadow baked in (statics and Spine regions share the PNG)."""
-    im = fit(trim(im), size * fill, size * fill)
+    im = fit(clean(trim(im)), size * fill, size * fill)
     out = Image.new('RGBA', (size, size), (0, 0, 0, 0))
     out.alpha_composite(im, ((size - im.width) // 2, (size - im.height) // 2 - int(size * 0.015)))
     return drop_shadow(out)
@@ -235,7 +270,10 @@ def build(slug):
 
     # --- symbols ---------------------------------------------------------------
     hp_sheet, lp_sheet = load('symbols_hp'), load('symbols_lp')
-    hp = cut_sheet(hp_sheet)
+    if g.get('hp_boxes'):
+        hp = [trim(hp_sheet.crop(b)) for b in g['hp_boxes']]
+    else:
+        hp = cut_sheet(hp_sheet)
     if len(hp) < 7:
         hp = grid_cut(hp_sheet, [4, 3])
     lp = cut_sheet(lp_sheet)
@@ -250,13 +288,13 @@ def build(slug):
         tiles[code] = tile(im, 200, 0.82)
     for code, im in tiles.items():
         im.save(out / f'symbols/{code}.png', optimize=True)
-    bonus_art = trim(hp[6])
+    bonus_art = clean(trim(hp[6]))
 
     chars = cut_sheet(load('characters'), split_wide=False)
     # drop stray bits, keep the sheet's left-to-right order (the first figure
     # is the theme's lead character)
     biggest = max(c.width * c.height for c in chars)
-    heroes = [trim(c) for c in chars if c.width * c.height > biggest * 0.25][:4]
+    heroes = [clean(trim(c)) for c in chars if c.width * c.height > biggest * 0.25][:4]
     hero, hero2 = heroes[0], heroes[1] if len(heroes) > 1 else heroes[0]
     def grounded(h_im):
         h_im = fit(h_im, 700, 1000)
@@ -275,7 +313,7 @@ def build(slug):
 
     # wild on the whole reel: hero full height, the wild tile as a badge at his feet
     big = Image.new('RGBA', (250, 600), (0, 0, 0, 0))
-    badge = fit(trim(hp[4]), 230, 170)
+    badge = fit(clean(trim(hp[4])), 230, 170)
     feet = 600 - 6 - badge.height * 0.45          # hero stands behind the badge
     tall = max(heroes, key=lambda c: c.height / c.width)  # narrowest figure fits a reel best
     h_im = fit(tall, 250, feet - 8)
@@ -299,14 +337,14 @@ def build(slug):
     ui = load('ui_kit')
     kit = {}
     if ui is not None and g.get('ui_boxes'):
-        kit = {n: trim(ui.crop(b)) for n, b in g['ui_boxes'].items()}
+        kit = {n: clean(trim(ui.crop(b))) for n, b in g['ui_boxes'].items()}
     elif ui is not None:
         items = cut_sheet(ui, alpha_cut=160, split_wide=False, min_frac=0.008)
         names = ['big', 'mega', 'epic', 'fs', 'buy', 'plate', 'yes', 'no']
         override = g.get('ui_order')
         if override:
             names = override
-        kit = {n: trim(im) for n, im in zip(names, items)}
+        kit = {n: clean(trim(im)) for n, im in zip(names, items)}
     layout['ui_kit'] = bool(kit)
 
     def title(key, label):

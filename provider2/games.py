@@ -99,6 +99,10 @@ GAMES = {
         'accent': '#b6e83a', 'accent2': '#ffb03a', 'ink': '#1a1408', 'night': '#141a0c',
         'fx': 'fireflies', 'halo': (190, 255, 80),
         'desc': 'Мультяшное болото: самогон-вайлд и фриспины за хижину',
+        # the leech touches the possum's tail on the sheet: cut by hand (sheet px)
+        'hp_boxes': [(20, 60, 430, 556), (430, 60, 790, 556), (790, 110, 1068, 556),
+                     (1070, 100, 1432, 566), (60, 596, 492, 1066), (496, 596, 972, 1066),
+                     (974, 596, 1424, 1066)],
     },
     'jaguar-eclipse': {
         'music': 'golden-caravan',
