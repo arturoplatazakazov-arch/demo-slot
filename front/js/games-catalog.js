@@ -28,8 +28,8 @@ const READY_CODES = new Set([
 const ILLUMINATOR_CODES = new Set(['gold-of-baku', 'gold-of-baku-2', 'volt-coins']);
 const SPIN_FACTORY_CODES = new Set(['big-catch', 'caesars-fortune', 'ice-spin-deluxe', 'tesla-spins']);
 // Новинки: the ten Provider 2 slots (provider2/, app/seed/provider2.py), moved
-// out of the Secret Room into a top section of both catalogs (tg.html and
-// games.html — the bot's menu button may point at either).
+// into a top section of both catalogs (tg.html and games.html — the bot's
+// menu button may point at either); they stay in the Secret Room as well.
 const NEW_CODES = new Set([
   'rad-raiders', 'jade-paws', 'ghoul-groove', 'gummy-gold-rush', 'whisker-noir',
   'cogwork-skies', 'hex-hollow', 'bayou-bedlam', 'jaguar-eclipse', 'trident-vs-titan',
@@ -94,9 +94,9 @@ async function renderCatalog() {
     const illuminator = entries.filter((e) => ILLUMINATOR_CODES.has(e.code));
     const spinFactory = entries.filter((e) => SPIN_FACTORY_CODES.has(e.code));
     const fresh = entries.filter((e) => NEW_CODES.has(e.code));
+    // Новинки also stay listed in the Secret Room (product: both places).
     const dev = entries.filter((e) => !READY_CODES.has(e.code)
-      && !ILLUMINATOR_CODES.has(e.code) && !SPIN_FACTORY_CODES.has(e.code)
-      && !NEW_CODES.has(e.code));
+      && !ILLUMINATOR_CODES.has(e.code) && !SPIN_FACTORY_CODES.has(e.code));
 
     if (newGrid) for (const entry of fresh) appendCard(newGrid, entry);
 
