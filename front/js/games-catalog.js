@@ -9,7 +9,7 @@
 // in this order on the page:
 //   - Готовые игры: a fixed hand-picked list (READY_CODES).
 //   - Illuminator: a fixed hand-picked showcase (ILLUMINATOR_CODES).
-//   - Spin Factory Portfolio: a fixed hand-picked list (SPIN_FACTORY_CODES).
+//   - В работе (was Spin Factory Portfolio): a fixed hand-picked list (SPIN_FACTORY_CODES).
 //   - Игры в разработке: every other published game. These live only on
 //     secret-room.html (behind a password), not in the public catalog —
 //     each page renders just the sections it has grids for.
