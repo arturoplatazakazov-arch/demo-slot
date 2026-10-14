@@ -1,6 +1,7 @@
 <!doctype html>
 <!-- Портфолио-каталог для Telegram Mini App: тот же лобби-грид, что games.html,
-     но БЕЗ сервисных карточек (конструкторы, anim-lab) и без кнопок «Админка»
+     но БЕЗ сервисных карточек (конструкторы, anim-lab; есть только вход в
+     Secret Room) и без кнопок «Админка»
      на карточках (window.CATALOG_PORTFOLIO — см. games-catalog.js). Игры
      приходят из GET /catalog как обычно. -->
 <html lang="ru">
@@ -9,7 +10,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Каталог игр</title>
 <link rel="stylesheet" href="css/fonts.css">
-<link rel="stylesheet" href="css/games.css?v=3">
+<link rel="stylesheet" href="css/games.css?v=4">
 </head>
 <body>
 
@@ -18,6 +19,25 @@
       <h1 class="lobby__title">Каталог игр</h1>
       <p class="lobby__subtitle">Выберите слот, чтобы начать демо-игру</p>
     </div>
+
+    <ul class="game-grid">
+      <li class="static-card">
+        <a class="game-card secret-card" href="secret-room.html?from=tg">
+          <div class="game-card__media">
+            <span class="game-card__badge">Private</span>
+            <svg class="secret-card__lock" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="4.5" y="10" width="15" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="15.5" r="1.6" fill="currentColor"/></svg>
+          </div>
+          <div class="game-card__body">
+            <h2 class="game-card__name">Secret Room</h2>
+            <p class="game-card__desc">Игры в разработке — вход по паролю</p>
+            <span class="game-card__play">
+              <svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4Z" fill="currentColor"/></svg>
+              Войти
+            </span>
+          </div>
+        </a>
+      </li>
+    </ul>
 
     <section class="catalog-section" id="readySection">
       <h2 class="catalog-section__title">Готовые игры</h2>
@@ -33,11 +53,6 @@
       <h2 class="catalog-section__title">Spin Factory Portfolio</h2>
       <ul class="game-grid" id="spinFactoryGrid"></ul>
     </section>
-
-    <section class="catalog-section" id="devSection">
-      <h2 class="catalog-section__title">Игры в разработке</h2>
-      <ul class="game-grid" id="devGrid"></ul>
-    </section>
   </div>
 
   <script>window.CATALOG_PORTFOLIO = true;</script>
@@ -45,6 +60,6 @@
   <script src="js/telegram.js?v=2"></script>
   <script src="js/config.js?v=2"></script>
   <script src="js/api.js?v=2"></script>
-  <script src="js/games-catalog.js?v=7"></script>
+  <script src="js/games-catalog.js?v=8"></script>
 </body>
 </html>

@@ -193,3 +193,87 @@ body {
   height: 14px;
   flex-shrink: 0;
 }
+
+/* Secret Room: карточка-вход в каталоге (games.html / tg.html) и гейт с
+   паролем на secret-room.html, за которым живут игры в разработке. */
+.secret-card .game-card__media {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(255, 207, 61, 0.22), transparent 62%),
+    #120e18;
+}
+
+.secret-card__lock {
+  width: 64px;
+  height: 64px;
+  color: var(--gold);
+  filter: drop-shadow(0 0 18px rgba(255, 207, 61, 0.45));
+}
+
+.lobby__back {
+  display: inline-block;
+  margin-bottom: 16px;
+  color: rgba(255, 246, 223, 0.65);
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.lobby__back:hover { color: var(--gold); }
+
+.secret-gate {
+  max-width: 360px;
+  margin: 0 auto;
+  padding: 28px 24px;
+  border-radius: 16px;
+  border: 1px solid var(--card-border);
+  background: var(--panel-dark);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: center;
+}
+
+.secret-gate__lock {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 4px;
+  color: var(--gold);
+}
+
+.secret-gate__input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-cream);
+  font: inherit;
+  font-size: 16px;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.secret-gate__input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.secret-gate .game-card__play {
+  justify-content: center;
+  font-size: 15px;
+}
+
+.secret-gate__error {
+  min-height: 1.2em;
+  margin: 0;
+  font-size: 13px;
+  color: #ff7a6b;
+}
+
+.secret-gate--shake { animation: secret-shake 0.35s; }
+
+@keyframes secret-shake {
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}

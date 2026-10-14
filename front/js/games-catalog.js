@@ -10,10 +10,13 @@
 //   - Готовые игры: a fixed hand-picked list (READY_CODES).
 //   - Illuminator: a fixed hand-picked showcase (ILLUMINATOR_CODES).
 //   - Spin Factory Portfolio: a fixed hand-picked list (SPIN_FACTORY_CODES).
-//   - Игры в разработке: every other published game.
+//   - Игры в разработке: every other published game. These live only on
+//     secret-room.html (behind a password), not in the public catalog —
+//     each page renders just the sections it has grids for.
 // The lists are explicit codes rather than "first N by created_at", so a
 // newly seeded game lands in "в разработке" instead of shifting others
-// between sections. Within a section, cards keep catalog order. A game not
+// between sections. Within a section, cards go newest first (GET /catalog
+// lists by created_at ascending, so the order is reversed here). A game not
 // yet live on a given backend simply isn't in `entries` and is skipped.
 // A section with zero cards hides itself (including its heading) rather
 // than showing an empty title.
@@ -75,29 +78,31 @@ async function renderCatalog() {
   const illuminatorGrid = document.getElementById('illuminatorGrid');
   const spinFactoryGrid = document.getElementById('spinFactoryGrid');
   const devGrid = document.getElementById('devGrid');
+  const grids = [readyGrid, illuminatorGrid, spinFactoryGrid, devGrid].filter(Boolean);
 
   try {
-    const entries = await apiGet('/catalog');
+    const entries = (await apiGet('/catalog')).reverse();
     const ready = entries.filter((e) => READY_CODES.has(e.code));
     const illuminator = entries.filter((e) => ILLUMINATOR_CODES.has(e.code));
     const spinFactory = entries.filter((e) => SPIN_FACTORY_CODES.has(e.code));
     const dev = entries.filter((e) => !READY_CODES.has(e.code)
       && !ILLUMINATOR_CODES.has(e.code) && !SPIN_FACTORY_CODES.has(e.code));
 
-    for (const entry of ready) appendCard(readyGrid, entry);
-    for (const entry of illuminator) appendCard(illuminatorGrid, entry);
-    for (const entry of spinFactory) appendCard(spinFactoryGrid, entry);
-    for (const entry of dev) appendCard(devGrid, entry);
+    if (readyGrid) for (const entry of ready) appendCard(readyGrid, entry);
+    if (illuminatorGrid) for (const entry of illuminator) appendCard(illuminatorGrid, entry);
+    if (spinFactoryGrid) for (const entry of spinFactory) appendCard(spinFactoryGrid, entry);
+    if (devGrid) for (const entry of dev) appendCard(devGrid, entry);
   } catch (err) {
     const li = document.createElement('li');
     li.innerHTML = `<div class="game-card"><div class="game-card__body"><p class="game-card__desc">Не удалось загрузить каталог: ${err.message}</p></div></div>`;
-    readyGrid.appendChild(li);
+    grids[0].appendChild(li);
   }
 
-  toggleSection('readySection', readyGrid);
-  toggleSection('illuminatorSection', illuminatorGrid);
-  toggleSection('spinFactorySection', spinFactoryGrid);
-  toggleSection('devSection', devGrid);
+  if (readyGrid) toggleSection('readySection', readyGrid);
+  if (illuminatorGrid) toggleSection('illuminatorSection', illuminatorGrid);
+  if (spinFactoryGrid) toggleSection('spinFactorySection', spinFactoryGrid);
+  if (devGrid) toggleSection('devSection', devGrid);
 }
 
-renderCatalog();
+// secret-room.html calls renderCatalog() itself once the password is in.
+if (!window.CATALOG_SECRET_ROOM) renderCatalog();
