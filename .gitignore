@@ -17,3 +17,6 @@ assets_src_backup_20260728/
 # кадры до вырезания фона и фоны 1x до апскейла. В рантайме не нужны —
 # та же логика, что у assets_src_backup_* выше.
 front/img/*/src/
+
+provider2/art/
+provider2/mockups/

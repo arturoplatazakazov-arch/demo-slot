@@ -1,0 +1,16 @@
+animation.png
+size:856,512
+filter:Linear,Linear
+pma:true
+glow
+bounds:0,0,512,512
+bokeh
+bounds:514,0,128,128
+bokeh2
+bounds:644,0,117,117
+twinkle
+bounds:763,0,39,39
+p0
+bounds:804,0,24,24
+p1
+bounds:830,0,24,24
