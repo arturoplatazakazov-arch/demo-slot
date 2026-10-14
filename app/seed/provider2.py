@@ -10,6 +10,7 @@ from app.seed.ghoul_groove import get_or_seed_active_config as _seed_ghoul_groov
 from app.seed.gummy_gold_rush import get_or_seed_active_config as _seed_gummy_gold_rush
 from app.seed.whisker_noir import get_or_seed_active_config as _seed_whisker_noir
 from app.seed.cogwork_skies import get_or_seed_active_config as _seed_cogwork_skies
+from app.seed.hex_hollow import get_or_seed_active_config as _seed_hex_hollow
 from app.seed.bayou_bedlam import get_or_seed_active_config as _seed_bayou_bedlam
 from app.seed.jaguar_eclipse import get_or_seed_active_config as _seed_jaguar_eclipse
 from app.seed.trident_vs_titan import get_or_seed_active_config as _seed_trident_vs_titan
@@ -21,6 +22,7 @@ PROVIDER2_GAME_CODES = [
     "gummy-gold-rush",
     "whisker-noir",
     "cogwork-skies",
+    "hex-hollow",
     "bayou-bedlam",
     "jaguar-eclipse",
     "trident-vs-titan",
@@ -34,6 +36,7 @@ async def seed_provider2(db: AsyncSession) -> None:
     await _seed_gummy_gold_rush(db)
     await _seed_whisker_noir(db)
     await _seed_cogwork_skies(db)
+    await _seed_hex_hollow(db)
     await _seed_bayou_bedlam(db)
     await _seed_jaguar_eclipse(db)
     await _seed_trident_vs_titan(db)

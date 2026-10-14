@@ -19,6 +19,7 @@ GAMES = {
     "gummy-gold-rush": ["wild", "scatter", "sheriff", "cowgirl", "bandit", "minecart", "heart", "star", "worm", "bonbon", "crystal"],
     "whisker-noir": ["wild", "scatter", "owl", "cat", "raccoon", "bulldog", "ten", "jack", "queen", "king", "ace"],
     "cogwork-skies": ["wild", "scatter", "airship", "teslajar", "pocketwatch", "telescope", "ten", "jack", "queen", "king", "ace"],
+    "hex-hollow": ["wild", "scatter", "crystalball", "spellbook", "mandrake", "candle", "vial", "moth", "rune", "mushroom", "gem"],
     "bayou-bedlam": ["wild", "scatter", "catfish", "gator", "leech", "possum", "ten", "jack", "queen", "king", "ace"],
     "jaguar-eclipse": ["wild", "scatter", "toucan", "axolotl", "monkey", "serpent", "ten", "jack", "queen", "king", "ace"],
     "trident-vs-titan": ["wild", "scatter", "trident", "pegasus", "amphora", "lyre", "ten", "jack", "queen", "king", "ace"],

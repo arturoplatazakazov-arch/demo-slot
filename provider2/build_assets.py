@@ -62,12 +62,28 @@ def cover(im, w, h):
     return im.crop((x, y, x + w, y + h))
 
 
+def drop_shadow(im, dy=0.035, blur=0.03, alpha=0.62):
+    """`im` over a soft dark copy of its own silhouette shifted down — the
+    symbols read as objects sitting on the reel, not stickers on it. Offsets
+    are fractions of the image height; the canvas size is kept."""
+    h = im.height
+    a = im.getchannel('A').point(lambda v: int(v * alpha))
+    sh = Image.new('RGBA', im.size, (0, 0, 0, 0))
+    sh.putalpha(a)
+    sh = sh.filter(ImageFilter.GaussianBlur(max(1, h * blur)))
+    out = Image.new('RGBA', im.size, (0, 0, 0, 0))
+    out.alpha_composite(sh, (0, int(round(h * dy))))
+    out.alpha_composite(im)
+    return out
+
+
 def tile(im, size, fill):
-    """Centre `im` in a size x size transparent tile at `fill` of the box."""
+    """Centre `im` in a size x size transparent tile at `fill` of the box,
+    with a drop shadow baked in (statics and Spine regions share the PNG)."""
     im = fit(trim(im), size * fill, size * fill)
     out = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-    out.alpha_composite(im, ((size - im.width) // 2, (size - im.height) // 2))
-    return out
+    out.alpha_composite(im, ((size - im.width) // 2, (size - im.height) // 2 - int(size * 0.015)))
+    return drop_shadow(out)
 
 
 def portrait_fallback(desk: Image.Image, w=780, h=1416) -> Image.Image:
@@ -188,6 +204,16 @@ def build(slug):
     a = fr.getchannel('A')
     ImageDraw.Draw(a).rectangle((l + 1, t + 1, r - 2, b - 2), fill=0)
     fr.putalpha(a)
+    # inner shadow: the frame casts a soft dark band onto the reels under it
+    m = Image.new('L', fr.size, 255)
+    ImageDraw.Draw(m).rectangle((l + 18, t + 22, r - 18, b - 14), fill=0)
+    m = m.filter(ImageFilter.GaussianBlur(16))
+    hole = Image.new('L', fr.size, 0)
+    ImageDraw.Draw(hole).rectangle((l + 1, t + 1, r - 2, b - 2), fill=255)
+    inner = Image.new('RGBA', fr.size, (0, 0, 0, 0))
+    inner.putalpha(ImageChops.multiply(m, hole).point(lambda v: int(v * 0.7)))
+    inner.alpha_composite(fr)
+    fr = inner
     fr.save(out / 'img/reel_frame.png', optimize=True)
     layout['frame'] = {'w': fr.width, 'h': fr.height, 'l': l, 't': t,
                        'r': fr.width - r, 'b': fr.height - b}
@@ -217,9 +243,9 @@ def build(slug):
         lp = grid_cut(lp_sheet, [5])
     tiles = {}
     for code, im in zip(g['hp'], hp[:4]):
-        tiles[code] = tile(im, 200, 0.94)
-    tiles['wild'] = tile(hp[4], 200, 0.96)
-    tiles['scatter'] = tile(hp[5], 200, 0.96)
+        tiles[code] = tile(im, 200, 0.9)
+    tiles['wild'] = tile(hp[4], 200, 0.92)
+    tiles['scatter'] = tile(hp[5], 200, 0.92)
     for code, im in zip(g['lp'], lp[:5]):
         tiles[code] = tile(im, 200, 0.82)
     for code, im in tiles.items():
@@ -232,8 +258,20 @@ def build(slug):
     biggest = max(c.width * c.height for c in chars)
     heroes = [trim(c) for c in chars if c.width * c.height > biggest * 0.25][:4]
     hero, hero2 = heroes[0], heroes[1] if len(heroes) > 1 else heroes[0]
-    fit(hero, 700, 1000).save(out / 'img/hero.png', optimize=True)
-    fit(hero2, 700, 1000).save(out / 'img/hero2.png', optimize=True)
+    def grounded(h_im):
+        h_im = fit(h_im, 700, 1000)
+        pad = int(h_im.height * 0.05)
+        c = Image.new('RGBA', (h_im.width + 2 * pad, h_im.height + pad), (0, 0, 0, 0))
+        m = Image.new('L', c.size)
+        ImageDraw.Draw(m).ellipse([pad + h_im.width * 0.08, h_im.height - pad * 0.6,
+                                   pad + h_im.width * 0.92, h_im.height + pad * 0.7], fill=170)
+        sh = Image.new('RGBA', c.size, (0, 0, 0, 0))
+        sh.putalpha(m.filter(ImageFilter.GaussianBlur(pad * 0.55)))
+        c.alpha_composite(sh)
+        c.alpha_composite(drop_shadow(h_im, dy=0.0, blur=0.012, alpha=0.5), (pad, 0))
+        return c
+    grounded(hero).save(out / 'img/hero.png', optimize=True)
+    grounded(hero2).save(out / 'img/hero2.png', optimize=True)
 
     # wild on the whole reel: hero full height, the wild tile as a badge at his feet
     big = Image.new('RGBA', (250, 600), (0, 0, 0, 0))
@@ -251,6 +289,7 @@ def build(slug):
         col.alpha_composite(big)
         big = col
     big.alpha_composite(badge, ((250 - badge.width) // 2, 600 - badge.height - 6))
+    big = drop_shadow(big, dy=0.015, blur=0.012)
     big.save(out / 'symbols/wild_big.png', optimize=True)
 
     # --- buy bonus / free spins counter ------------------------------------
