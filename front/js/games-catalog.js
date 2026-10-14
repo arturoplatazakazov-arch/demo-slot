@@ -28,7 +28,8 @@ const READY_CODES = new Set([
 const ILLUMINATOR_CODES = new Set(['gold-of-baku', 'gold-of-baku-2', 'volt-coins']);
 const SPIN_FACTORY_CODES = new Set(['big-catch', 'caesars-fortune', 'ice-spin-deluxe', 'tesla-spins']);
 // Новинки: the ten Provider 2 slots (provider2/, app/seed/provider2.py), moved
-// out of the Secret Room into the Telegram mini-app (tg.html has the grid).
+// out of the Secret Room into a top section of both catalogs (tg.html and
+// games.html — the bot's menu button may point at either).
 const NEW_CODES = new Set([
   'rad-raiders', 'jade-paws', 'ghoul-groove', 'gummy-gold-rush', 'whisker-noir',
   'cogwork-skies', 'hex-hollow', 'bayou-bedlam', 'jaguar-eclipse', 'trident-vs-titan',
