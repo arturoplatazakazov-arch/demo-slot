@@ -18,7 +18,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
-from games import GAMES  # noqa: E402
+from pset import DIR, GAMES, NAME  # noqa: E402
 
 T = HERE / 'template'
 
@@ -119,7 +119,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 PROVIDER2_GAME_CODES = {codes}
 
 
-async def seed_provider2(db: AsyncSession) -> None:
+async def seed___SET__(db: AsyncSession) -> None:
 {calls}
 '''
 
@@ -144,12 +144,12 @@ BET_AMOUNT = 5500
 
 
 @pytest.fixture(autouse=True)
-async def _seed_provider2():
+async def _seed___SET__():
     from app.core.db import AsyncSessionLocal
-    from app.seed.provider2 import seed_provider2
+    from app.seed.__SET__ import seed___SET__
 
     async with AsyncSessionLocal() as db:
-        await seed_provider2(db)
+        await seed___SET__(db)
 
 
 def _filler(col):
@@ -210,10 +210,10 @@ def make_shared():
         f'from app.seed.{seed_name(s)} import get_or_seed_active_config as _seed_{seed_name(s)}' for s in slugs)
     calls = '\n'.join(f'    await _seed_{seed_name(s)}(db)' for s in slugs)
     codes = '[\n' + ''.join(f'    "{s}",\n' for s in slugs) + ']'
-    write(ROOT / 'app/seed/provider2.py', AGG.format(imports=imports, codes=codes, calls=calls))
+    write(ROOT / f'app/seed/{NAME}.py', AGG.format(imports=imports, codes=codes, calls=calls).replace('__SET__', NAME).replace('Provider 2 — the ten slots', f'{NAME} slots').replace('PROVIDER2_GAME_CODES', NAME.upper() + '_GAME_CODES'))
     games = '{\n' + ''.join(
         f'    "{s}": {json.dumps(GAMES[s]["codes"])},\n' for s in slugs) + '}'
-    write(ROOT / 'tests/test_api_spin_provider2.py', TEST.format(games=games))
+    write(ROOT / f'tests/test_api_spin_{NAME}.py', TEST.format(games=games).replace('__SET__', NAME))
 
 
 if __name__ == '__main__':

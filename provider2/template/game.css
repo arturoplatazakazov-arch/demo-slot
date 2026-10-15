@@ -695,7 +695,7 @@ body.layout-fit .ui-bar {
        ровно как в макете (у него окно занимает 22%..55% кадра). Считать надо
        от окна, а не от рамки: верхняя перекладина рамки (129 из 754) при
        такой ширине занимает ещё 13% ширины экрана сверху. */
-    --reel-mobile-top: 17%;
+    --reel-mobile-top: 25%;
     --reel-mobile-w: calc(100vw * var(--reel-mobile-mult));
     /* 1330x754 — это --reel-frame-w/h; трансформ масштабирует обе поровну. */
     --reel-mobile-h: calc(var(--reel-mobile-w) * __FH__ / __FW__);
@@ -742,9 +742,9 @@ body.layout-fit .ui-bar {
        шире экрана, и доля от неё вышла бы вдвое больше нужного. 48vw и
        нижний край впритык к верхней перекладине — снято с макета. */
     bottom: auto;
-    top: 3.8%;
+    top: 7%;
     transform: translateX(-50%);
-    width: 42vw;
+    width: 56vw;
     height: auto;
   }
 

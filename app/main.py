@@ -29,6 +29,7 @@ from app.seed.party_of_goods import get_or_seed_active_config as get_or_seed_par
 from app.seed.retired import purge_retired_games
 from app.seed.sugar_galaxy import get_or_seed_active_config as get_or_seed_sugar_galaxy
 from app.seed.provider2 import seed_provider2
+from app.seed.provider3 import seed_provider3
 from app.seed.mariachi_muertos import get_or_seed_active_config as get_or_seed_mariachi_muertos
 from app.seed.tesla_spins import get_or_seed_active_config as get_or_seed_tesla_spins
 from app.seed.uniqorn_bad_santa import get_or_seed_active_config as get_or_seed_uniqorn_bad_santa
@@ -84,6 +85,7 @@ async def lifespan(app: FastAPI):
         await get_or_seed_volt_coins(db)
         await get_or_seed_wild_western_story(db)
         await seed_provider2(db)
+        await seed_provider3(db)
     yield
 
 

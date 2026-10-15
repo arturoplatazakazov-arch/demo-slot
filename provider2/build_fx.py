@@ -50,7 +50,7 @@ from ice_spin_deluxe_fx import (  # noqa: E402
     Fx, glow_dot, highlight, in_cubic_ease, render, ring, star4, strips, sym_motion, tint,
 )
 import gold_of_baku_fx as baku  # noqa: E402
-from games import GAMES  # noqa: E402
+from pset import DIR, GAMES, NAME  # noqa: E402
 
 # frame/logo/burst/shower come from the Baku generator, whose atlases are
 # unquantised; ours ship with the same 256-colour pass as the rest of front/img.

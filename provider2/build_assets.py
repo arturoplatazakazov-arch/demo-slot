@@ -32,7 +32,7 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from build_mockups import cut_sheet, grid_cut, reframe  # noqa: E402
-from games import GAMES  # noqa: E402
+from pset import DIR, GAMES, NAME  # noqa: E402
 
 FRONT = HERE.parent / 'front' / 'img'
 WIN_W, WIN_H = 958, 573          # 5 x 191.6, 3 x 191
@@ -200,7 +200,7 @@ def popup_plate(title_img, accent, ink, w=1000, panel_h=230, panel_img=None):
 
 def build(slug):
     g = GAMES[slug]
-    src = HERE / 'art' / slug / 'src'
+    src = DIR / 'art' / slug / 'src'
     out = FRONT / slug
     (out / 'img').mkdir(parents=True, exist_ok=True)
     (out / 'symbols').mkdir(parents=True, exist_ok=True)

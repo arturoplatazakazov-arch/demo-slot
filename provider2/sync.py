@@ -9,11 +9,11 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
-from games import GAMES  # noqa: E402
+from pset import DIR, GAMES, NAME  # noqa: E402
 
 dest = Path(sys.argv[1])
 slugs = list(GAMES) if sys.argv[2:] == ['all'] else sys.argv[2:]
-files = ['front/js/provider2-fx.js', 'app/seed/provider2.py', 'tests/test_api_spin_provider2.py']
+files = ['front/js/provider2-fx.js', f'app/seed/{NAME}.py', f'tests/test_api_spin_{NAME}.py']
 for s in slugs:
     seed = s.replace('-', '_')
     files += [f'front/{s}.html', f'front/css/{s}.css', f'app/seed/{seed}.py']

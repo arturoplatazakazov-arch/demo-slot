@@ -1,0 +1,10 @@
+animation.png
+size:196,90
+filter:Linear,Linear
+pma:true
+coin
+bounds:0,0,90,90
+dot
+bounds:92,0,51,51
+star
+bounds:145,0,49,49
