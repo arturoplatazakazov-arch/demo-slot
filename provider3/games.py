@@ -137,3 +137,8 @@ UI_BOXES = {
 }
 for _slug, _b in UI_BOXES.items():
     GAMES[_slug]['ui_boxes'] = _b
+
+# the wild and scatter splashes touch on Pup Fishermen's sheet: hand boxes
+GAMES['pup-fishermen']['hp_boxes'] = [(40, 70, 395, 480), (400, 120, 745, 480), (740, 70, 1070, 480),
+                                      (1075, 115, 1430, 500), (30, 510, 512, 1015), (528, 520, 935, 1020),
+                                      (965, 515, 1425, 1015)]

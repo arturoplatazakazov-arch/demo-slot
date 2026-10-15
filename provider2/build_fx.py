@@ -299,7 +299,7 @@ def build_symbol(g, code, out):
     if code == 'wild':
         bim = Image.open(FRONT / g['slug'] / 'symbols' / 'wild_big.png').convert('RGBA')
         sk.image('wildbig', bim)
-        sk.res_of['wildbig'] = 1.0
+        sk.res_of['wildbig'] = 2.0
         blayers = add_symbol_layers(sk, 'wildbig', bim, 250, 600, col, 0, rnd, n_sparks=10)
         bfx, brb, bsb, bsweep, bsparks = blayers
         # the small wild never shows on the big clips and vice versa: big slot

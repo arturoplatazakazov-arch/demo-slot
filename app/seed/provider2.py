@@ -1,4 +1,4 @@
-"""Provider 2 — the ten slots generated from provider2/ (see
+"""provider2 slots generated from provider2/ (see
 provider2/make_game.py). One entry point for app/main.py so the startup list
 does not grow by ten lines."""
 

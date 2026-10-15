@@ -62,7 +62,7 @@ def cover(im, w, h):
     return im.crop((x, y, x + w, y + h))
 
 
-def clean(im, keep=0.12, near=0.04):
+def clean(im, keep=0.12, near=0.04, thr=40):
     """Drop stray bits a sheet cut picks up from its neighbours (the green
     swirl under Hex Hollow's spellbook, edges of the next banner): alpha
     blobs smaller than `keep` of the main blob that do not touch the main
@@ -70,7 +70,7 @@ def clean(im, keep=0.12, near=0.04):
     from build_mockups import components
     k = 2
     small = im.getchannel('A').resize((max(1, im.width // k), max(1, im.height // k)), Image.BOX)
-    mask = np.array(small) > 40
+    mask = np.array(small) > thr
     comps = components(mask)
     if len(comps) < 2:
         return im
@@ -97,6 +97,21 @@ def clean(im, keep=0.12, near=0.04):
     return trim(out, 2)
 
 
+def depth_shadow(im):
+    """Two shadows for volume: a tight dark contact shadow right under the
+    object and a long soft one further down — reads as lifted off the reel."""
+    h = im.height
+    a = im.getchannel('A')
+    out = Image.new('RGBA', im.size, (0, 0, 0, 0))
+    for dy, blur, alpha in ((0.075, 0.06, 0.5), (0.025, 0.018, 0.7)):
+        sh = Image.new('RGBA', im.size, (0, 0, 0, 0))
+        sh.putalpha(a.point(lambda v, k=alpha: int(v * k)))
+        sh = sh.filter(ImageFilter.GaussianBlur(max(1, h * blur)))
+        out.alpha_composite(sh, (0, int(round(h * dy))))
+    out.alpha_composite(im)
+    return out
+
+
 def drop_shadow(im, dy=0.035, blur=0.03, alpha=0.62):
     """`im` over a soft dark copy of its own silhouette shifted down — the
     symbols read as objects sitting on the reel, not stickers on it. Offsets
@@ -112,13 +127,119 @@ def drop_shadow(im, dy=0.035, blur=0.03, alpha=0.62):
     return out
 
 
+def hero_count(slug):
+    """How many characters the art sheet holds (from the set's concepts.py)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('set_concepts', DIR / 'concepts.py')
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    if hasattr(mod, 'G'):
+        for t in mod.G:
+            if t[0] == slug:
+                return len(t[6])
+    for c in getattr(mod, 'GAMES', []):
+        if c.get('slug') == slug:
+            return len(c['heroes'])
+    return 2
+
+
+def split_characters(sheet, n):
+    """Characters on a ChatGPT line-up often touch (hands, weapons), so the
+    alpha blobs merge. Cut at the emptiest column near each expected border,
+    then keep only the main figure of each slice."""
+    a = np.array(sheet.getchannel('A')) > 40
+    occ = a.sum(0).astype(float)
+    xs = np.nonzero(occ)[0]
+    x0, x1 = int(xs.min()), int(xs.max()) + 1
+    span = x1 - x0
+    cuts = [x0]
+    for k in range(1, n):
+        e = x0 + span * k / n
+        lo, hi = int(e - span / n * 0.35), int(e + span / n * 0.35)
+        cuts.append(lo + int(np.argmin(occ[lo:hi])))
+    cuts.append(x1)
+    out = []
+    for i in range(n):
+        piece = sheet.crop((cuts[i], 0, cuts[i + 1], sheet.height))
+        piece = clean(trim(piece), keep=0.3, near=0.0, thr=150)
+        out.append(piece)
+    return out
+
+
+def wild_card(hero, wild_tile, bg, frame, accent, ink):
+    """The whole-reel wild as a framed card (like Deep Fortune's): the bonus
+    scene behind, the hero large inside the game's own frame (re-sliced to
+    a slim border), WILD lettering on a plate across the bottom edge and a
+    deep shadow under the card. 2x art: 500x1200 for a 250x600 design box."""
+    W, H = 500, 1200
+    cw, ch = 392, 1160
+    cx0, cy0 = (W - cw) // 2, (H - ch) // 2
+    wall = 26
+    win_w, win_h = cw - 2 * wall, ch - 2 * wall
+    # scene: a tall slice of the bonus background, darkened at the edges
+    scene = cover(bg, win_w, win_h).convert('RGBA')
+    scene = Image.blend(scene, Image.new('RGBA', scene.size, ink + (255,)), 0.18)
+    v = Image.new('L', scene.size, 0)
+    ImageDraw.Draw(v).rectangle([0, 0, win_w - 1, win_h - 1], outline=255, width=70)
+    shade = Image.new('RGBA', scene.size, (0, 0, 0, 0))
+    shade.putalpha(v.filter(ImageFilter.GaussianBlur(45)).point(lambda x: int(x * 0.75)))
+    scene.alpha_composite(shade)
+    glow = Image.new('L', scene.size, 0)
+    ImageDraw.Draw(glow).ellipse([-win_w * 0.2, win_h * 0.15, win_w * 1.2, win_h * 0.85], fill=110)
+    gl = Image.new('RGBA', scene.size, accent + (0,))
+    gl.putalpha(glow.filter(ImageFilter.GaussianBlur(60)))
+    scene.alpha_composite(gl)
+    # hero, large, feet hidden behind the WILD plate
+    plate_h = int(win_h * 0.2)
+    h_im = fit(hero, win_w * 1.02, win_h - plate_h * 0.45)
+    hx, hy = (win_w - h_im.width) // 2, win_h - plate_h // 2 - h_im.height
+    scene.alpha_composite(drop_shadow(h_im, dy=0.012, blur=0.02, alpha=0.7), (hx, max(0, hy)))
+    # bottom band so the lettering reads
+    band = Image.new('L', scene.size, 0)
+    ImageDraw.Draw(band).rectangle([0, int(win_h * 0.72), win_w, win_h], fill=200)
+    bd = Image.new('RGBA', scene.size, (0, 0, 0, 0))
+    bd.putalpha(band.filter(ImageFilter.GaussianBlur(40)))
+    scene.alpha_composite(bd)
+    mask = Image.new('L', scene.size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, win_w - 1, win_h - 1], 18, fill=255)
+    scene.putalpha(ImageChops.multiply(scene.getchannel('A'), mask))
+
+    card = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    # deep drop shadow + soft accent aura under the whole card
+    sh = Image.new('L', (W, H), 0)
+    ImageDraw.Draw(sh).rounded_rectangle([cx0 + 8, cy0 + 18, cx0 + cw + 4, cy0 + ch + 10], 30, fill=210)
+    shl = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    shl.putalpha(sh.filter(ImageFilter.GaussianBlur(16)))
+    card.alpha_composite(shl)
+    card.alpha_composite(scene, (cx0 + wall, cy0 + wall))
+    if frame is not None:
+        fr, (l, t, r, b) = reframe(frame.convert('RGBA'), win_w, win_h, wall=wall)
+        fr = fr.resize((cw, ch), Image.LANCZOS) if fr.size != (cw, ch) else fr
+        a = fr.getchannel('A')
+        ImageDraw.Draw(a).rectangle((wall + 2, wall + 2, cw - wall - 3, ch - wall - 3), fill=0)
+        fr.putalpha(a)
+        # the border shades the scene it overhangs
+        inner = Image.new('L', (cw, ch), 255)
+        ImageDraw.Draw(inner).rounded_rectangle([wall + 14, wall + 18, cw - wall - 14, ch - wall - 10], 16, fill=0)
+        hole = Image.new('L', (cw, ch), 0)
+        ImageDraw.Draw(hole).rectangle([wall, wall, cw - wall, ch - wall], fill=255)
+        io = Image.new('RGBA', (cw, ch), (0, 0, 0, 0))
+        io.putalpha(ImageChops.multiply(inner.filter(ImageFilter.GaussianBlur(12)), hole).point(lambda x: int(x * 0.7)))
+        card.alpha_composite(io, (cx0, cy0))
+        card.alpha_composite(fr, (cx0, cy0))
+    plate = fit(wild_tile, cw * 1.04, plate_h * 1.7)
+    card.alpha_composite(drop_shadow(plate, dy=0.05, blur=0.05, alpha=0.75),
+                         ((W - plate.width) // 2, cy0 + ch - plate.height + int(plate_h * 0.25)))
+    return card
+
+
 def tile(im, size, fill):
     """Centre `im` in a size x size transparent tile at `fill` of the box,
     with a drop shadow baked in (statics and Spine regions share the PNG)."""
     im = fit(clean(trim(im)), size * fill, size * fill)
     out = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-    out.alpha_composite(im, ((size - im.width) // 2, (size - im.height) // 2 - int(size * 0.015)))
-    return drop_shadow(out)
+    out.alpha_composite(im, ((size - im.width) // 2, (size - im.height) // 2 - int(size * 0.04)))
+    return depth_shadow(out)
 
 
 def portrait_fallback(desk: Image.Image, w=780, h=1416) -> Image.Image:
@@ -259,13 +380,23 @@ def build(slug):
     for y in range(597):
         k = y / 596
         d.line([(0, y), (981, y)], fill=tuple(int(top[i] + (ink[i] * 0.6 - top[i]) * k) for i in range(3)))
+    # each reel a slightly convex drum: darker towards its edges, a groove
+    # (dark core + thin light lip) between reels, then the vignette
+    arr = np.asarray(bg).astype(float)
+    xs = np.arange(982)
+    pos = ((xs - 12) % 191.6) / 191.6
+    drum = 0.72 + 0.28 * np.sin(np.clip(pos, 0, 1) * np.pi) ** 0.6
+    arr *= drum[None, :, None]
+    bg = Image.fromarray(np.clip(arr, 0, 255).astype('uint8'))
+    d = ImageDraw.Draw(bg)
     for i in range(1, 5):
         x = 12 + i * 191.6
-        d.line([(x, 12), (x, 585)], fill=tuple(int(c * 0.35 + 18) for c in accent), width=2)
+        d.line([(x - 1, 8), (x - 1, 589)], fill=(0, 0, 0), width=4)
+        d.line([(x + 2, 8), (x + 2, 589)], fill=tuple(int(c * 0.45 + 40) for c in accent), width=1)
     vign = Image.new('L', bg.size, 0)
-    ImageDraw.Draw(vign).rounded_rectangle([0, 0, 981, 596], 30, outline=255, width=60)
+    ImageDraw.Draw(vign).rounded_rectangle([0, 0, 981, 596], 30, outline=255, width=70)
     bg = Image.composite(Image.new('RGB', bg.size, (0, 0, 0)), bg,
-                         vign.filter(ImageFilter.GaussianBlur(40)).point(lambda v: v * 0.6))
+                         vign.filter(ImageFilter.GaussianBlur(45)).point(lambda v: int(v * 0.75)))
     bg.save(out / 'img/reel_bg.jpg', quality=88)
 
     # --- symbols ---------------------------------------------------------------
@@ -281,54 +412,46 @@ def build(slug):
         lp = grid_cut(lp_sheet, [5])
     tiles = {}
     for code, im in zip(g['hp'], hp[:4]):
-        tiles[code] = tile(im, 200, 0.9)
-    tiles['wild'] = tile(hp[4], 200, 0.92)
-    tiles['scatter'] = tile(hp[5], 200, 0.92)
+        tiles[code] = tile(im, 200, 0.86)
+    tiles['wild'] = tile(hp[4], 200, 0.88)
+    tiles['scatter'] = tile(hp[5], 200, 0.88)
     for code, im in zip(g['lp'], lp[:5]):
-        tiles[code] = tile(im, 200, 0.82)
+        tiles[code] = tile(im, 200, 0.8)
     for code, im in tiles.items():
         im.save(out / f'symbols/{code}.png', optimize=True)
     bonus_art = clean(trim(hp[6]))
 
-    chars = cut_sheet(load('characters'), split_wide=False)
-    # drop stray bits, keep the sheet's left-to-right order (the first figure
-    # is the theme's lead character)
-    biggest = max(c.width * c.height for c in chars)
-    heroes = [clean(trim(c)) for c in chars if c.width * c.height > biggest * 0.25][:4]
+    heroes = split_characters(load('characters'), hero_count(slug))
     hero, hero2 = heroes[0], heroes[1] if len(heroes) > 1 else heroes[0]
+
     def grounded(h_im):
+        """Hero standing on the scene: a dark contact shadow at the feet, a
+        soft cast shadow falling back-right, the figure itself with a thin
+        dark outline glow so it separates from busy backgrounds."""
         h_im = fit(h_im, 700, 1000)
-        pad = int(h_im.height * 0.05)
+        pad = int(h_im.height * 0.08)
         c = Image.new('RGBA', (h_im.width + 2 * pad, h_im.height + pad), (0, 0, 0, 0))
+        # cast shadow: the silhouette squashed onto the ground, skewed back
+        sil = Image.new('RGBA', h_im.size, (0, 0, 0, 0))
+        sil.putalpha(h_im.getchannel('A').point(lambda v: int(v * 0.42)))
+        cast = sil.resize((h_im.width, max(1, int(h_im.height * 0.16))), Image.LANCZOS)
+        cast = cast.transform(cast.size, Image.AFFINE, (1, 0.9, -cast.height * 0.9 * 0.5, 0, 1, 0), Image.BICUBIC)
+        cast = cast.filter(ImageFilter.GaussianBlur(pad * 0.35))
+        c.alpha_composite(cast, (pad + int(h_im.width * 0.12), h_im.height - cast.height + int(pad * 0.4)))
         m = Image.new('L', c.size)
-        ImageDraw.Draw(m).ellipse([pad + h_im.width * 0.08, h_im.height - pad * 0.6,
-                                   pad + h_im.width * 0.92, h_im.height + pad * 0.7], fill=170)
-        sh = Image.new('RGBA', c.size, (0, 0, 0, 0))
-        sh.putalpha(m.filter(ImageFilter.GaussianBlur(pad * 0.55)))
-        c.alpha_composite(sh)
-        c.alpha_composite(drop_shadow(h_im, dy=0.0, blur=0.012, alpha=0.5), (pad, 0))
+        ImageDraw.Draw(m).ellipse([pad + h_im.width * 0.12, h_im.height - pad * 0.55,
+                                   pad + h_im.width * 0.88, h_im.height + pad * 0.55], fill=200)
+        contact = Image.new('RGBA', c.size, (0, 0, 0, 0))
+        contact.putalpha(m.filter(ImageFilter.GaussianBlur(pad * 0.4)))
+        c.alpha_composite(contact)
+        c.alpha_composite(drop_shadow(h_im, dy=0.004, blur=0.006, alpha=0.75), (pad, 0))
         return c
     grounded(hero).save(out / 'img/hero.png', optimize=True)
     grounded(hero2).save(out / 'img/hero2.png', optimize=True)
 
-    # wild on the whole reel: hero full height, the wild tile as a badge at his feet
-    big = Image.new('RGBA', (250, 600), (0, 0, 0, 0))
-    badge = fit(clean(trim(hp[4])), 230, 170)
-    feet = 600 - 6 - badge.height * 0.45          # hero stands behind the badge
     tall = max(heroes, key=lambda c: c.height / c.width)  # narrowest figure fits a reel best
-    h_im = fit(tall, 250, feet - 8)
-    # wide heroes come out short: lift them so the column reads as one figure
-    big.alpha_composite(h_im, ((250 - h_im.width) // 2, int(feet - h_im.height)))
-    if h_im.height < 380:  # a short (wide) hero leaves the top empty: glow column behind
-        col = Image.new('RGBA', (250, 600), hex_rgb(g['accent']) + (0,))
-        m = Image.new('L', (250, 600))
-        ImageDraw.Draw(m).ellipse([20, 20, 230, int(feet)], fill=90)
-        col.putalpha(m.filter(ImageFilter.GaussianBlur(40)))
-        col.alpha_composite(big)
-        big = col
-    big.alpha_composite(badge, ((250 - badge.width) // 2, 600 - badge.height - 6))
-    big = drop_shadow(big, dy=0.015, blur=0.012)
-    big.save(out / 'symbols/wild_big.png', optimize=True)
+    wild_card(tall, clean(trim(hp[4])), bgx, load('frame'), accent, ink).save(
+        out / 'symbols/wild_big.png', optimize=True)
 
     # --- buy bonus / free spins counter ------------------------------------
     fit(bonus_art, 260, 260).save(out / 'img/buy_bonus.png', optimize=True)
