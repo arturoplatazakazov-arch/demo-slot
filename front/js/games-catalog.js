@@ -18,6 +18,8 @@
 // between sections. Within a section, cards go newest first (GET /catalog
 // lists by created_at ascending, so the order is reversed here). A game not
 // yet live on a given backend simply isn't in `entries` and is skipped.
+// Exception: in «Игры в разработке» the unicorn games (uniqorn-*,
+// mr-president-unicorn) go after all the others, each group newest first.
 // A section with zero cards hides itself (including its heading) rather
 // than showing an empty title.
 const READY_CODES = new Set([
@@ -27,6 +29,8 @@ const READY_CODES = new Set([
 ]);
 const ILLUMINATOR_CODES = new Set(['gold-of-baku', 'gold-of-baku-2', 'volt-coins']);
 const SPIN_FACTORY_CODES = new Set(['big-catch', 'caesars-fortune', 'ice-spin-deluxe', 'tesla-spins']);
+
+const isUnicornGame = (code) => /uniqorn|unicorn/.test(code);
 
 const PLAY_ICON = '<svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4Z" fill="currentColor"/></svg>';
 const ADMIN_ICON = '<svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2-1.5-2-3.4-2.4 1a7.7 7.7 0 0 0-1.7-1L15 3h-4l-.3 2.5a7.7 7.7 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.5 7.5 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a7.7 7.7 0 0 0 1.7 1L11 21h4l.3-2.5a7.7 7.7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="13" cy="12" r="2.6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
@@ -87,6 +91,7 @@ async function renderCatalog() {
     const spinFactory = entries.filter((e) => SPIN_FACTORY_CODES.has(e.code));
     const dev = entries.filter((e) => !READY_CODES.has(e.code)
       && !ILLUMINATOR_CODES.has(e.code) && !SPIN_FACTORY_CODES.has(e.code));
+    dev.sort((a, b) => isUnicornGame(a.code) - isUnicornGame(b.code));
 
     if (readyGrid) for (const entry of ready) appendCard(readyGrid, entry);
     if (illuminatorGrid) for (const entry of illuminator) appendCard(illuminatorGrid, entry);
