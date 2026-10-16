@@ -371,77 +371,76 @@ function playMultiLineWinSequence(groups, allWinInfos) {
   step();
 }
 
-// --- Win lines (SVG neon, under the symbols) --------------------------------
+// --- Win lines (Spine, under the symbols) -----------------------------------
 //
-// Full payline across all five reels (shapes = the seed's PAYLINES, indexed
-// by the server's 1-based `payline`), drawn through the cell centres in grid
-// px. Three strokes: a wide blurred halo in the line's own neon colour, a gold
-// body and a white-hot core; it draws itself on (stroke-dashoffset), then a
-// bright comet keeps running along it, and the winning cells get pulsing
-// rings. Turn the whole thing off with WIN_LINES_ENABLED.
+// One generated skeleton (scripts/gangsta_casino_winlines.py) holds all 11
+// paylines (shapes = the seed's PAYLINES, indexed by the server's 1-based
+// `payline`): straight glow + core beams per segment with a round joint at
+// every bend, additive and tinted per line, clipped to the glass. `line{n}_in`
+// draws it on, `line{n}_loop` pulses it with a comet running along. It plays
+// on the BACK canvas (over the frame's glass, under the DOM symbols and the
+// win clips on the top canvas) — product: "за сыгравшими элементами". Each
+// shown line runs on its own track of one instance; nothing is drawn by the
+// lines while none are shown. Turn it off with WIN_LINES_ENABLED.
 const WIN_LINES_ENABLED = true;
-const PAYLINE_ROWS = [
-  [1, 1, 1, 1, 1], [0, 0, 0, 0, 0], [2, 2, 2, 2, 2], [0, 1, 2, 1, 0], [2, 1, 0, 1, 2],
-  [0, 0, 1, 0, 0], [2, 2, 1, 2, 2], [1, 0, 0, 0, 1], [1, 2, 2, 2, 1], [0, 1, 1, 1, 0],
-  [2, 1, 1, 1, 2], [1, 0, 1, 0, 1], [1, 2, 1, 2, 1], [0, 1, 0, 1, 0], [2, 1, 2, 1, 2],
-  [0, 2, 0, 2, 0], [2, 0, 2, 0, 2], [1, 1, 0, 1, 1], [1, 1, 2, 1, 1], [0, 2, 2, 2, 0],
-];
-const WIN_LINE_COLORS = ['#ff3fa4', '#39d5ff', '#ffc847', '#b45cff', '#4dff9a'];
-const SVG_NS = 'http://www.w3.org/2000/svg';
-let winLinesSvg = null;
+const WIN_LINES_CODE = 'winlines';
+const WIN_LINES_STAGGER_S = 0.09;
+let winLinesAnchor = null;
+let winLinesInst = null; // SpineInstance, on backStage only while lines show
+let winLinesShown = false;
 let currentLineWins = [];
 
 function createWinLinesLayer() {
-  const w = GRID_COLS * cellW, h = GRID_ROWS * cellH;
-  const svg = document.createElementNS(SVG_NS, 'svg');
-  svg.setAttribute('class', 'win-lines');
-  svg.setAttribute('viewBox', `-40 -20 ${w + 80} ${h + 40}`);
-  svg.innerHTML = `<defs><filter id="wlBlur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="9"/></filter>
-    <linearGradient id="wlGold" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffe9a3"/><stop offset=".5" stop-color="#ffc847"/><stop offset="1" stop-color="#ffe9a3"/></linearGradient></defs>`;
-  winLinesSvg = svg;
-  return svg;
+  const el = document.createElement('div');
+  el.className = 'win-lines';
+  winLinesAnchor = el;
+  return el;
+}
+
+function getWinLinesInstance() {
+  if (winLinesInst) return Promise.resolve(winLinesInst);
+  if (!backStage) return Promise.reject(new Error('no back stage'));
+  return loadSpineWithRetry(backStage.assetManager, `${SPINE_ROOT}/${WIN_LINES_CODE}`, { premultipliedAlpha: false })
+    .then((resource) => {
+      if (winLinesInst) return winLinesInst;
+      const inst = resource.createInstance();
+      const w = GRID_COLS * 197, h = GRID_ROWS * 200; // skeleton units = design grid px
+      inst.boundsOverride = { x: -w / 2, y: -h / 2, width: w, height: h };
+      inst.fit = 1;
+      winLinesInst = inst;
+      return inst;
+    });
 }
 
 function clearWinLines() {
-  if (!winLinesSvg) return;
-  for (const g of [...winLinesSvg.querySelectorAll('.win-line')]) g.remove();
-}
-
-function linePoints(win) {
-  const rows = PAYLINE_ROWS[(win.payline || 0) - 1];
-  const cx = (c) => c * cellW + cellW / 2, cy = (r) => r * cellH + cellH / 2;
-  if (!rows) return (win.positions || []).map(({ row, col }) => [cx(col), cy(row)]);
-  const pts = rows.map((r, c) => [cx(c), cy(r)]);
-  // Run a little past the outer reels so the line enters/leaves the glass.
-  pts.unshift([-30, pts[0][1]]);
-  pts.push([GRID_COLS * cellW + 30, pts[pts.length - 1][1]]);
-  return pts;
+  winLinesShown = false;
+  if (!winLinesInst) return;
+  winLinesInst.animationState.clearTracks();
+  winLinesInst.skeleton.setToSetupPose();
+  if (backStage) backStage.removeOverlay(winLinesInst);
 }
 
 function showWinLines(lineWins) {
   clearWinLines();
-  if (!WIN_LINES_ENABLED || !winLinesSvg) return;
-  lineWins.forEach((win, i) => {
-    const pts = linePoints(win);
-    if (pts.length < 2) return;
-    const d = 'M' + pts.map((p) => p.map((v) => v.toFixed(1)).join(' ')).join(' L');
-    const color = WIN_LINE_COLORS[((win.payline || i + 1) - 1) % WIN_LINE_COLORS.length];
-    const g = document.createElementNS(SVG_NS, 'g');
-    g.setAttribute('class', 'win-line');
-    g.style.setProperty('--wl-color', color);
-    g.style.setProperty('--wl-delay', `${i * 90}ms`);
-    const rings = (win.positions || []).map(({ row, col }) =>
-      `<circle class="win-line__ring" cx="${col * cellW + cellW / 2}" cy="${row * cellH + cellH / 2}" r="22"/>`).join('');
-    g.innerHTML = `
-      <path class="win-line__halo2" d="${d}" pathLength="1"/>
-      <path class="win-line__halo" d="${d}" pathLength="1"/>
-      <path class="win-line__body" d="${d}" pathLength="1"/>
-      <path class="win-line__core" d="${d}" pathLength="1"/>
-      <path class="win-line__comet-glow" d="${d}" pathLength="1"/>
-      <path class="win-line__comet" d="${d}" pathLength="1"/>
-      ${rings}`;
-    winLinesSvg.appendChild(g);
-  });
+  if (!WIN_LINES_ENABLED || !backStage || !winLinesAnchor) return;
+  const lines = (lineWins || []).map((w) => w.payline).filter((n) => n >= 1 && n <= 11);
+  if (!lines.length) return;
+  winLinesShown = true;
+  const epoch = winSequenceEpoch;
+  getWinLinesInstance().then((inst) => {
+    if (!winLinesShown || epoch !== winSequenceEpoch) return;
+    inst.anchorEl = winLinesAnchor;
+    // Lines run frame to frame: cut at this layout's chrome inner edge.
+    inst.skeleton.setAttachment('clip', isMobileLayout() ? 'clip_mob' : 'clip_desk');
+    const state = inst.animationState;
+    lines.forEach((n, i) => {
+      const entry = i ? state.addAnimation(i, `line${n}_in`, false, i * WIN_LINES_STAGGER_S) : state.setAnimation(i, `line${n}_in`, false);
+      entry.mixDuration = 0;
+      state.addAnimation(i, `line${n}_loop`, true, 0).mixDuration = 0;
+    });
+    backStage.removeOverlay(inst);
+    backStage.addOverlay(inst);
+  }).catch((err) => console.warn('win lines:', err));
 }
 
 function buildWinGroups(lineWins, countWins) {

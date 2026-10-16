@@ -13,7 +13,7 @@ _RAW_WOF = 3
 _RAW_COMMON_1 = 93
 _RAW_COMMON_3 = 71
 
-BET_AMOUNT = 100000
+BET_AMOUNT = 55000
 
 # Segment 0 is x2 (weight 15) -> raw 0. Segment 5 is the first free-spins slot:
 # cumulative 15+6+11+3+8 = 43 -> raw 43.
@@ -55,7 +55,7 @@ async def test_three_wheel_symbols_pay_a_multiplier_off_14_segments(api_client, 
     set_rng(_grid_draws_with_three_wof() + [_RAW_WHEEL_X2])
 
     response = await api_client.post("/api/v1/spin", json={"session_id": session_id, "bet_amount": BET_AMOUNT})
-    assert response.status_code == 200
+    assert response.status_code == 200, response.text
     body = response.json()
 
     wheel = body["wheel_of_fortune"]

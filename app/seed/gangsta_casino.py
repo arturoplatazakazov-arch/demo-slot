@@ -3,7 +3,7 @@
 Art: the designer's PSB "Desk_Gangsta_Slot_OUT" (Miami/Vice: pool terrace in
 the base game, neon strip club in the bonus) plus the "Элементы" symbol cuts.
 Mechanics are Dirty Money / MAFIA's, one to one (product: «механика как у игры
-Дёрти Мани») — app/seed/dirty_money_mafia.py: 5x3, 20 lines, expanding +
+Дёрти Мани») — app/seed/dirty_money_mafia.py: 5x3, expanding +
 walking wild, scatter free spins, 3x WOF -> wheel of fortune, bonus buy x100.
 The delivery is cut for exactly that mechanic set: 4 common (weapons), 4 rare
 (characters), wild (small tile + reel-height art), scatter, wof.
@@ -25,7 +25,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import FeatureConfig, Game, GameConfig, Payline, Symbol
 from app.models.enums import FeatureType, GameConfigStatus, SymbolType, WildSubtype
 from app.seed._runner import CatalogMeta, get_or_seed
-from app.seed.dirty_money_mafia import PAYLINES
+# Lines are Amy's Fruit Farm's 11 shapes, not Dirty Money's 20 (product,
+# 2026-10-16: «линии как в Эмми, тут всего 11 линий»).
+from app.seed.amys_fruit_farm import PAYLINES
 
 GAME_CODE = "gangsta-casino"
 CATALOG_BADGE = "Wheel of Fortune"
@@ -76,7 +78,7 @@ WHEEL_SEGMENTS: list[dict] = [
 NUM_REELS = 5
 NUM_ROWS = 3
 
-BET_STEPS = [10000, 25000, 50000, 100000, 250000, 500000]
+BET_STEPS = [5500, 13750, 27500, 55000, 137500, 275000]  # кратно 11 линиям (см. PAYLINES)
 
 
 def build_game_config() -> tuple[Game, GameConfig]:

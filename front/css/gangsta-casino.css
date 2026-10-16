@@ -331,44 +331,17 @@ body {
 
 /* Expanding wild: wild_big.png (210x600) over a column of the grid. Grows out
    of the middle row; slot.js hides the three tiles under it afterwards. */
-/* Neon win lines (slot.js showWinLines): under the reel columns, so every
-   symbol — and the Spine win clips on the canvas above — sits on top. */
+/* Win lines anchor (slot.js showWinLines): the grid box the Spine lines
+   skeleton is fitted to. The lines themselves draw on #spineBackCanvas —
+   under the DOM symbols and the win clips on the top canvas. */
 .win-lines {
   position: absolute;
-  left: -40px;
-  top: -20px;
-  width: calc(5 * var(--cell-w) + 80px);
-  height: calc(3 * var(--cell-h) + 40px);
-  overflow: visible;
+  left: 0;
+  top: 0;
+  width: calc(5 * var(--cell-w));
+  height: calc(3 * var(--cell-h));
   pointer-events: none;
 }
-.win-line path { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 1; stroke-dashoffset: 1; }
-.win-line__halo { stroke: var(--wl-color); stroke-width: 22; opacity: .45; }
-/* Wide faint outer halo instead of a blur filter (filters re-rasterise every
-   animated frame — too slow on phones). */
-.win-line__halo2 { stroke: var(--wl-color); stroke-width: 40; opacity: .18; }
-.win-line__body { stroke: url(#wlGold); stroke-width: 11; }
-.win-line__core { stroke: #fffaf0; stroke-width: 3.5; }
-.win-line__halo, .win-line__halo2, .win-line__body, .win-line__core {
-  animation: wl-draw 520ms cubic-bezier(.3,.7,.3,1) var(--wl-delay, 0ms) forwards,
-             wl-breathe 1.4s ease-in-out calc(var(--wl-delay, 0ms) + 520ms) infinite;
-}
-/* A bright comet running along the line after it has drawn on. */
-.win-line__comet {
-  stroke: #fff; stroke-width: 9; stroke-dasharray: .06 .94; opacity: 0;
-  animation: wl-comet 1.3s linear calc(var(--wl-delay, 0ms) + 420ms) infinite;
-}
-.win-line__comet-glow { stroke: var(--wl-color); stroke-width: 26; stroke-dasharray: .08 .92; opacity: 0; animation: wl-comet-glow 1.3s linear calc(var(--wl-delay, 0ms) + 420ms) infinite; }
-@keyframes wl-comet-glow { 0% { stroke-dashoffset: 1.07; opacity: .55; } 100% { stroke-dashoffset: .01; opacity: .55; } }
-.win-line__ring {
-  fill: none; stroke: var(--wl-color); stroke-width: 5; opacity: 0;
-  transform-box: fill-box; transform-origin: center;
-  animation: wl-ring 1.2s ease-out calc(var(--wl-delay, 0ms) + 300ms) infinite;
-}
-@keyframes wl-draw { to { stroke-dashoffset: 0; } }
-@keyframes wl-breathe { 50% { opacity: .55; } }
-@keyframes wl-comet { 0% { stroke-dashoffset: 1.06; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 1; } }
-@keyframes wl-ring { 0% { opacity: .9; transform: scale(.6); } 100% { opacity: 0; transform: scale(3.4); } }
 
 .big-wilds {
   left: 68px;
