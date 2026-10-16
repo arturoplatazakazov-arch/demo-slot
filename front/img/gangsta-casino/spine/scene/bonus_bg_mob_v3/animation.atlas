@@ -1,0 +1,13 @@
+animation.png
+size:280,900
+filter:Linear,Linear
+fx/beam
+bounds:0,0,150,900
+fx/glow_soft
+bounds:152,0,128,128
+
+photo1.jpg
+size:800,1463
+filter:Linear,Linear
+bg
+bounds:0,0,800,1463

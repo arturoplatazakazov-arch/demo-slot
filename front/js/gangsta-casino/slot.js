@@ -1146,7 +1146,13 @@ function preloadAssets() {
       .catch((err) => console.warn('preload:', err))
       .finally(() => { if (P) P.step(); });
   };
-  const tasks = [
+  // The feature screen goes FIRST: on a phone the whole spine set (~20 MB of
+  // atlas pages) loading at once made the screen's own page fail with the
+  // rest, so it never appeared. The bonus screen isn't needed before the
+  // first bonus — it loads after the feature screen (see init).
+  const tasks = [];
+  if (stage) tasks.push(track(getSymbolResource(screenCode(FEATURE_SCREEN_CODE))));
+  tasks.push(...[
     ...SYMBOL_CODES.map(symbolSrc),
     `${SYMBOL_ROOT}/wild_big.png`,
     bgSrcFor('base'),
@@ -1154,16 +1160,14 @@ function preloadAssets() {
     ...['frame.png', 'logo.png', 'buy_chest.png', 'buy_cone.png', 'buy_text.png', 'fs_counter.png', 'plate.png', 'chest.png',
       'buy_title.png', 'wof_wheel.png', 'wof_of_fortune.png', 'scene_people.png',
       ...(isMobileLayout() ? ['logo_mob.png', 'buy_chest_mob.png', 'buy_cone_mob.png', 'buy_text_mob.png', 'frame_mob.png'] : [])].map((f) => `${ASSET_ROOT}/ui/${f}`),
-  ].map((src) => track(preloadImage(src)));
+  ].map((src) => track(preloadImage(src))));
   if (stage) {
     // Skeletons up front so the first win doesn't wait on a fetch.
     for (const code of SYMBOL_CODES) tasks.push(track(getSymbolResource(code)));
-    tasks.push(track(getSymbolResource(screenCode(FEATURE_SCREEN_CODE))));
-    tasks.push(track(getSymbolResource(screenCode(BONUS_SCREEN_CODE))));
     if (LAND_ENABLED) for (const code of SYMBOL_CODES) tasks.push(track(getLandResource(code)));
   }
   if (backStage) {
-    for (const name of SCENE_NAMES) if (SCENE_ON.has(name)) tasks.push(track(getSceneResource(name)));
+    for (const name of SCENE_NAMES) if (sceneWanted(name)) tasks.push(track(getSceneResource(name)));
   }
   return Promise.all(tasks);
 }
@@ -1217,7 +1221,18 @@ const scene = {}; // name -> SpineInstance
 
 // Folders of skeletons re-cut for the 2026-10-16 mockup (versioned so a cached
 // old atlas page can't meet the new atlas text — see FEATURE_SCREEN_CODE).
-const SCENE_DIR = { logo: 'logo_v2', freespins: 'freespins_v2', hero_man_mob: 'hero_man', hero_woman_mob: 'hero_woman' };
+const SCENE_DIR = {
+  logo: 'logo_v2', freespins: 'freespins_v2', hero_man_mob: 'hero_man', hero_woman_mob: 'hero_woman',
+  // photo backgrounds moved to JPG atlas pages (2026-10-16 optimisation)
+  background: 'background_v2', background_mob: 'background_mob_v3', bonus_bg_mob: 'bonus_bg_mob_v3',
+};
+// Only the current layout's skeletons are loaded (desktop vs portrait sets).
+const SCENE_PORTRAIT_ONLY = new Set(['background_mob', 'bonus_bg_mob', 'hero_man_mob', 'hero_woman_mob', 'frame_mob', 'logo_mob']);
+const SCENE_DESKTOP_ONLY = new Set(['background', 'hero_man', 'hero_woman', 'frame', 'logo']);
+function sceneWanted(name) {
+  if (!SCENE_ON.has(name)) return false;
+  return isMobileLayout() ? !SCENE_DESKTOP_ONLY.has(name) : !SCENE_PORTRAIT_ONLY.has(name);
+}
 function getSceneResource(name) {
   if (!backStage) return Promise.reject(new Error('no back stage'));
   name = SCENE_DIR[name] || name;
@@ -1258,7 +1273,7 @@ async function setupScene() {
   if (!backStage) return;
   try {
     for (const name of SCENE_NAMES) {
-      if (!SCENE_ON.has(name)) continue;
+      if (!sceneWanted(name)) continue;
       const resource = await getSceneResource(name);
       resource.animationStateData.defaultMix = 0.2; // README recommendation
       const inst = resource.createInstance();
@@ -1266,6 +1281,11 @@ async function setupScene() {
       inst.boundsOverride = resource.bounds;
       inst.fit = 1;
       inst.play('idle', true);
+      // Product: the scene photo behind the slot 20% darker (FX stay bright).
+      if (/^(background|bonus_bg)/.test(name)) {
+        const bgSlot = inst.skeleton.findSlot('bg');
+        if (bgSlot) bgSlot.color.set(0.8, 0.8, 0.8, 1);
+      }
       // Desync the two heroes' breathing.
       if (name.startsWith('hero_woman')) inst.animationState.getCurrent(0).trackTime = 3.1;
       scene[name] = inst;
@@ -1344,7 +1364,7 @@ function playSceneClip(name, clip) {
 // atlas text under the same URL.
 const PRELOAD_TIMEOUT_MS = 12000;
 const FEATURE_SCREEN_CODE = 'feature_screen_v2';
-const BONUS_SCREEN_CODE = 'bonus_screen_v3'; // v3: spin-count digits inside the skeleton
+const BONUS_SCREEN_CODE = 'bonus_screen_v4'; // v3: digits inside the skeleton; v4: club photo as a JPG page
 // Both full-screen exports (pfs / bfs) are authored on the PSB canvas around
 // the skeleton origin, 1 unit = 1 design px.
 const FEATURE_BOX = { x: -966, y: -470, width: 1932, height: 940 };
@@ -1489,6 +1509,8 @@ function init() {
     if (window.Preloader) window.Preloader.done();
     // ?nofs — dev/screenshot convenience: straight into the game.
     const qs = new URLSearchParams(location.search);
+    // Warm the bonus screen now that the first screen is up.
+    if (stage) getSymbolResource(screenCode(BONUS_SCREEN_CODE)).catch((err) => console.warn('bonus screen:', err));
     if (qs.has('nofs') || qs.has('screen')) {
       document.getElementById('preloader')?.remove();
       // ?screen=feature|bonus — dev/screenshot: open that screen straight away.

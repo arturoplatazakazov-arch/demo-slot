@@ -1,9 +1,0 @@
-animation.png
-size:1084,1463
-filter:Linear,Linear
-bg
-bounds:0,0,800,1463
-fx/beam
-bounds:802,0,150,900
-fx/glow_soft
-bounds:954,0,128,128

@@ -1,0 +1,17 @@
+animation.png
+size:966,512
+filter:Linear,Linear
+sun_rays
+bounds:0,0,512,512
+shine
+bounds:514,0,128,512
+glow_radial
+bounds:644,0,256,256
+sparkle
+bounds:902,0,64,64
+
+photo1.jpg
+size:941,1672
+filter:Linear,Linear
+bg
+bounds:0,0,941,1672
