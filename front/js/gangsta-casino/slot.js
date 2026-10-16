@@ -1242,6 +1242,8 @@ const scene = {}; // name -> SpineInstance
 // old atlas page can't meet the new atlas text — see FEATURE_SCREEN_CODE).
 const SCENE_DIR = {
   logo: 'logo_v2', freespins: 'freespins_v2', hero_man_mob: 'hero_man', hero_woman_mob: 'hero_woman',
+  // glass inside the chrome = 70% black (product, 2026-10-16)
+  frame: 'frame_v2', frame_mob: 'frame_mob_v2',
   // photo backgrounds moved to JPG atlas pages (2026-10-16 optimisation)
   background: 'background_v2', background_mob: 'background_mob_v3', bonus_bg_mob: 'bonus_bg_mob_v3',
 };

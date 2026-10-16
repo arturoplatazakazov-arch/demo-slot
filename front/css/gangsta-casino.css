@@ -225,8 +225,7 @@ body {
   width: 1041px;
   height: 656px;
   background:
-    radial-gradient(120% 90% at 50% 0%, rgba(40, 60, 140, 0.25), transparent 60%),
-    rgba(0, 5, 20, 0.77);
+    rgba(0, 0, 0, 0.7); /* product: 70% black behind the reels */
   pointer-events: none;
 }
 
