@@ -56,10 +56,6 @@ const FILLER_CODES = SYMBOL_CODES.filter((c) => !TRIGGER_CODES.has(c));
 
 const WIN_PULSE_MS = 1100;
 const DIM_TRANSITION_MS = 320;
-const REEL_LOOP_STEP_MS = 420;
-const REEL_LAND_FILLER_COUNT = 14;
-const REEL_LAND_DURATION_MS = 750;
-const REEL_LAND_STAGGER_MS = 110;
 const WIN_LOOP_PAUSE_MS = 450;
 
 const GRID_COLS = 5;
@@ -502,26 +498,160 @@ function showInlineWinAmount(amount) {
 
 // --- Reel motion (SlotCore) -------------------------------------------------
 
-const ANTICIPATION_PREROLL_MS = 900;
-const ANTICIPATION_PREROLL_FILLER_COUNT = 16;
 
-const reelMotion = SlotCore.createReelMotion({
-  cols: GRID_COLS,
-  rows: GRID_ROWS,
-  getReelCols: () => reelCols,
-  getRowStep: () => rowStep,
-  createCellNode,
-  randomSymbolCode,
-  currentColumnCodes: (col) => ReelMath.currentColumnCodes(cellInfos, GRID_COLS, GRID_ROWS, col),
-  playSfx: (name) => Sound.playSfx(name),
-  sounds: { spinStart: 'spinStart', reelStop: 'reelStop', finalReelStop: 'finalReelStop' },
-  timings: {
-    loopStepMs: REEL_LOOP_STEP_MS,
-    landFillerCount: REEL_LAND_FILLER_COUNT,
-    landDurationMs: REEL_LAND_DURATION_MS,
+// Reel physics ported from the studio's own engine (Uniqorn Wild Western Story,
+// reels config): every reel starts together and accelerates by
+// STARTING_ACCELERATION px/frame each frame up to MAX_SPEED px/frame (60 fps
+// units, cell = 200 design px — the same units as ours); once the result is
+// in, reel i gets i * NEXT_REEL_DELAY_FIGURES extra random symbols before its
+// result (that's the stagger), decelerates linearly over the last cell
+// (STOPPING_DISTANCE) and stops dead on the result — no bounce. Vertical
+// motion blur scales with speed. An anticipation reel ("suspended
+// stopping") runs SUSPENDED_FIGURES extra symbols.
+const REEL_PHYS = {
+  MAX_SPEED: 55,
+  STARTING_ACCELERATION: 3,
+  NEXT_REEL_DELAY_FIGURES: 2,
+  SUSPENDED_FIGURES: 24,
+  STOPPING_DISTANCE: 200,
+};
+const reelState = []; // per column: { stripEl, y, speed, starting, stopAt, onStop, cells: [] }
+let reelRaf = 0;
+let reelLastTs = 0;
+
+function stripCellsAbove(st) {
+  // y = translateY of the strip; the window's top edge sits at -y in strip px.
+  return Math.floor(-st.y / rowStep);
+}
+
+function prependCells(st, codes) {
+  const frag = document.createDocumentFragment();
+  const made = codes.map((code) => createCellNode(code).cell);
+  for (const c of made) frag.appendChild(c);
+  st.stripEl.insertBefore(frag, st.stripEl.firstChild);
+  st.y -= codes.length * rowStep; // keep what's on screen where it was
+  return made;
+}
+
+function setStripBlur(st) {
+  const ratio = st.speed / REEL_PHYS.MAX_SPEED;
+  const level = ratio > 0.66 ? 2 : ratio > 0.25 ? 1 : 0;
+  if (st.blur !== level) {
+    st.blur = level;
+    st.stripEl.style.filter = level ? `url(#reelBlur${level})` : '';
+  }
+}
+
+function reelTick(ts) {
+  const dt = reelLastTs ? Math.min(50, ts - reelLastTs) : 16.7;
+  reelLastTs = ts;
+  let moving = false;
+  for (const st of reelState) {
+    if (!st || st.stopped) continue;
+    moving = true;
+    if (st.stopAt !== null) {
+      const left = st.stopAt - st.y;
+      st.speed = left > REEL_PHYS.STOPPING_DISTANCE ? REEL_PHYS.MAX_SPEED
+        : left <= 0 ? 0 : Math.min((left / REEL_PHYS.STOPPING_DISTANCE) * REEL_PHYS.MAX_SPEED + 1, REEL_PHYS.MAX_SPEED);
+    } else if (st.starting) {
+      st.speed = Math.min(st.speed + REEL_PHYS.STARTING_ACCELERATION, REEL_PHYS.MAX_SPEED);
+    }
+    st.y += (st.speed * dt) / (1000 / 60);
+    if (st.stopAt !== null && st.y >= st.stopAt) st.y = st.stopAt;
+    // keep symbols coming from above while it free-spins
+    if (st.stopAt === null && stripCellsAbove(st) < 2) prependCells(st, Array.from({ length: 6 }, randomSymbolCode));
+    // drop what has left the window at the bottom
+    const kids = st.stripEl.children;
+    while (kids.length > 4 && (kids.length - 1) * rowStep + st.y > 4 * rowStep) st.stripEl.lastChild.remove();
+    st.stripEl.style.transform = `translateY(${st.y}px)`;
+    setStripBlur(st);
+    if (st.stopAt !== null && st.y === st.stopAt) {
+      st.stopped = true;
+      st.speed = 0;
+      setStripBlur(st);
+      const done = st.onStop;
+      st.onStop = null;
+      if (done) done();
+    }
+  }
+  reelRaf = moving ? requestAnimationFrame(reelTick) : 0;
+}
+
+function ensureReelTicker() {
+  if (!reelRaf) {
+    reelLastTs = 0;
+    reelRaf = requestAnimationFrame(reelTick);
+  }
+}
+
+const reelMotion = {
+  startLoop() {
+    Sound.playSfx('spinStart');
+    for (let col = 0; col < GRID_COLS; col++) {
+      const { stripEl } = reelCols[col];
+      stripEl.style.transition = 'none';
+      stripEl.classList.remove('is-looping');
+      const current = ReelMath.currentColumnCodes(cellInfos, GRID_COLS, GRID_ROWS, col).map((c) => c || randomSymbolCode());
+      stripEl.innerHTML = '';
+      for (const code of current) stripEl.appendChild(createCellNode(code).cell);
+      const st = { stripEl, y: 0, speed: 0, starting: true, stopAt: null, onStop: null, stopped: false, blur: 0 };
+      prependCells(st, Array.from({ length: 6 }, randomSymbolCode));
+      stripEl.style.transform = `translateY(${st.y}px)`;
+      reelState[col] = st;
+    }
+    ensureReelTicker();
   },
-  anticipation: { prerollMs: ANTICIPATION_PREROLL_MS, fillerCount: ANTICIPATION_PREROLL_FILLER_COUNT },
-});
+  stopLoop() {
+    // Error path: put the last known grid cells back, no motion.
+    for (let col = 0; col < GRID_COLS; col++) {
+      const st = reelState[col];
+      if (st) { st.stopped = true; st.onStop = null; }
+      const { stripEl } = reelCols[col];
+      stripEl.style.filter = '';
+      stripEl.style.transform = 'translateY(0px)';
+      stripEl.innerHTML = '';
+      for (let row = 0; row < GRID_ROWS; row++) {
+        const info = cellInfos[row * GRID_COLS + col];
+        if (info) stripEl.appendChild(info.cell);
+      }
+    }
+  },
+  // Resolves with the 3 result cells once the reel has stopped on them.
+  landReel(col, finalCodes, extraFigures = 0, isAnticipating = false) {
+    const st = reelState[col];
+    return new Promise((resolve) => {
+      // Trim the queued fillers above the window to one, so every reel's run
+      // to its result is exactly (its extra figures) long — that keeps the
+      // left-to-right stop order deterministic.
+      while (stripCellsAbove(st) > 1) {
+        st.stripEl.firstChild.remove();
+        st.y += rowStep;
+      }
+      const extra = Array.from({ length: extraFigures + (isAnticipating ? REEL_PHYS.SUSPENDED_FIGURES : 0) }, randomSymbolCode);
+      // top -> bottom: 1 filler above the result, the result, then the
+      // extra run that scrolls past before it.
+      const made = prependCells(st, [randomSymbolCode(), ...finalCodes, ...extra]);
+      const resultCells = made.slice(1, 4);
+      st.stopAt = -1 * rowStep; // result row 0 at the window top
+      st.starting = false;
+      if (st.speed < 8) st.speed = 8;
+      st.stopped = false;
+      st.onStop = () => {
+        Sound.playSfx(col === GRID_COLS - 1 ? 'finalReelStop' : 'reelStop');
+        if (isAnticipating) reelCols[col].colEl.classList.remove('is-anticipating');
+        st.stripEl.innerHTML = '';
+        for (const c of resultCells) st.stripEl.appendChild(c);
+        st.y = 0;
+        st.stripEl.style.transform = 'translateY(0px)';
+        resolve(resultCells);
+      };
+      ensureReelTicker();
+      // A hidden tab freezes rAF — never strand the spin on it.
+      const ms = ((extra.length + 6) * rowStep) / (REEL_PHYS.MAX_SPEED * 60) * 1000 + 1500;
+      setTimeout(() => { if (st.onStop) { st.y = st.stopAt; const f = st.onStop; st.onStop = null; st.stopped = true; f(); } }, ms);
+    });
+  },
+};
 
 function startReelLoop() {
   reelsBusy = true;
@@ -739,7 +869,7 @@ async function landReelsInner(grid, anticipationColumns, wildEvents, lineWins, c
   for (let col = 0; col < firstAnticipationCol; col++) {
     const finalCodes = [grid[0][col], grid[1][col], grid[2][col]];
     leadTasks.push(
-      landReel(col, finalCodes, col * REEL_LAND_STAGGER_MS, false)
+      landReel(col, finalCodes, col * REEL_PHYS.NEXT_REEL_DELAY_FIGURES, false)
         .then((cellEls) => settleColumnCells(cellEls, col, finalCodes))
         .then(() => celebrateExpandedWild(col, wildEvents, winningCols)),
     );
@@ -748,17 +878,12 @@ async function landReelsInner(grid, anticipationColumns, wildEvents, lineWins, c
   if (firstAnticipationCol === GRID_COLS) return;
 
   Sound.playSfx('anticipation');
-  for (let col = firstAnticipationCol; col < GRID_COLS; col++) {
-    const { stripEl } = reelCols[col];
-    stripEl.classList.remove('is-looping');
-    stripEl.style.transition = 'none';
-    stripEl.style.transform = 'translateY(0px)';
-  }
+  // The remaining reels keep spinning; they stop one at a time.
   for (let col = firstAnticipationCol; col < GRID_COLS; col++) {
     const finalCodes = [grid[0][col], grid[1][col], grid[2][col]];
     const isAnticipating = anticipationSet.has(col);
     if (isAnticipating) reelCols[col].colEl.classList.add('is-anticipating');
-    const cellEls = await landReel(col, finalCodes, 0, isAnticipating);
+    const cellEls = await landReel(col, finalCodes, REEL_PHYS.NEXT_REEL_DELAY_FIGURES, isAnticipating);
     settleColumnCells(cellEls, col, finalCodes);
     await celebrateExpandedWild(col, wildEvents, winningCols);
   }
@@ -1537,6 +1662,8 @@ function init() {
       // ?screen=feature|bonus — dev/screenshot: open that screen straight away.
       if (qs.get('screen') === 'feature') return showFeatureScreen();
       if (qs.get('screen') === 'bonus') return showBonusScreen(Number(qs.get('spins')) || 10);
+      // ?demospin — dev/screenshot: reels spinning at full speed, never land.
+      if (qs.has('demospin')) startReelLoop();
       // ?demowin — dev/screenshot: a two-line win on a fixed grid.
       if (qs.has('demowin')) {
         applyGrid([['common_1', 'common_2', 'common_2', 'rare_blue', 'common_3'], ['common_2', 'common_2', 'common_3', 'common_4', 'common_1'], ['rare_green', 'common_4', 'common_2', 'common_1', 'scatter']]);
