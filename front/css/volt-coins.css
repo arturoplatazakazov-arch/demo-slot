@@ -830,25 +830,25 @@ img.is-missing { outline: 2px dashed rgba(57, 216, 255, 0.5); }
   .stage { top: 0; transform: translate(-50%, 0) scale(var(--stage-scale)); transform-origin: 50% 0; }
 
   /* Две маленькие катушки по сторонам логотипа (по бокам автомата места нет). */
-  .coil { top: 100px; width: 135px; height: 258px; }
+  .coil { top: 50px; width: 135px; height: 258px; }
   .coil--left { left: 10px; }
   .coil--right { left: 655px; }
 
   /* Лого — между катушками. */
-  .logo { left: 130px; top: 136px; width: 540px; height: 162px; }
+  .logo { left: 130px; top: 86px; width: 540px; height: 162px; }
 
-  .jp-row { left: 16px; top: 300px; width: 768px; height: 110px; gap: 8px; }
+  .jp-row { left: 16px; top: 250px; width: 768px; height: 110px; gap: 8px; }
   .jp { flex-basis: 172px; height: 92px; }
   .jp--grand { flex-basis: 228px; height: 110px; }
   .jp__name { font-size: 15px; }
   .jp__value { font-size: 34px; inset: 18px 12px 4px; }
   .jp--grand .jp__value { font-size: 42px; }
 
-  .cabinet { left: 4.75px; top: 428px; }
-  .reel-win-amount-viewport { left: 49.25px; top: 471.6px; }
+  .cabinet { left: 4.75px; top: 378px; }
+  .reel-win-amount-viewport { left: 49.25px; top: 421.6px; }
 
   .sign-buy-bonus,
-  .respin-counter { left: 20px; top: 1080px; width: 250px; height: 112px; }
+  .respin-counter { left: 20px; top: 1030px; width: 250px; height: 112px; }
   .sign-buy-bonus { flex-direction: row; gap: 14px; }
   .sign-buy-bonus__label { font-size: 28px; }
   .sign-buy-bonus__price { font-size: 16px; }
@@ -856,6 +856,9 @@ img.is-missing { outline: 2px dashed rgba(57, 216, 255, 0.5); }
   .respin-counter__value { font-size: 58px; }
 
   .game-popup { width: min(700px, 90%); padding: 26px 24px 30px; }
+
+  /* Продукт: автомат, джекпоты, катушки, лого и BUY BONUS подняты на 50px
+     (выше по коду), а кнопки бара опущены на 50px от общих 91px. */
   .game-popup__title { font-size: 58px; }
   .game-popup__amount { font-size: 44px; }
   .buy-dialog { width: min(720px, 94%); }
@@ -969,6 +972,9 @@ img.is-missing { outline: 2px dashed rgba(57, 216, 255, 0.5); }
 body.is-feature-screen .dev-panel,
 body.is-feature-screen .to-catalog-btn,
 body.is-feature-screen .v3-bar { visibility: hidden; }
+@media (max-width: 559px) {
+  #v3Bar { --v3-row-bottom: 41px; }
+}
 .fscreen-count {
   position: fixed;
   left: 0;
