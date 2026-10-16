@@ -695,12 +695,14 @@ async function enterBonusMode() {
   Sound.playSfx('anticipation');
   const charge = fx('holdWinStart');
   await wait(charge ? 1300 : 200);
-  pushScreenDim(false);
+  pushScreenDim(true);
   await wait(DIM_TRANSITION_MS);
-  await playPopupSequence('holdWinIntro', 0, BONUS_INTRO_HOLD_MS, { ownDim: false });
+  // Бонус-экран (Spine) на тёмном; если не смог запуститься — старая карточка.
   applyModeScreen('bonus');
+  const shown = await showBonusScreen(RESPIN_COUNT);
+  if (!shown) await playPopupSequence('holdWinIntro', 0, BONUS_INTRO_HOLD_MS, { ownDim: false });
   await wait(DIM_TRANSITION_MS);
-  popScreenDim(false);
+  popScreenDim(true);
 }
 
 function leaveBonusMode() {
@@ -722,8 +724,49 @@ const POPUP_CONFIG = {
   holdWinTotal: { title: 'TOTAL WIN', sub: 'HOLD & WIN' },
 };
 
+// Баннеры попапов нарисованы в ChatGPT (scripts/volt_coins_popups.py режет
+// листы): заголовок впечатан, а сумма печатается в пустую синюю панель
+// баннера — её доли (panel) замерены нарезкой, из них CSS ставит число.
+const POPUP_ART = {"big_win":{"w":632,"h":316,"panel":{"l":0.0585,"t":0.6171,"w":0.8797,"h":0.2848}},
+  "mega_win":{"w":947,"h":387,"panel":{"l":0.0665,"t":0.6072,"w":0.8712,"h":0.2894}},
+  "epic_win":{"w":1155,"h":478,"panel":{"l":0.0823,"t":0.6464,"w":0.8424,"h":0.2531}},
+  "hold_and_win":{"w":1074,"h":358,"panel":{"l":0.2067,"t":0.6536,"w":0.5857,"h":0.2486}},
+  "total_win":{"w":996,"h":387,"panel":{"l":0.0693,"t":0.6227,"w":0.8635,"h":0.2868}},
+  "buy_bonus":{"w":952,"h":451,"panel":{"l":0.0746,"t":0.4124,"w":0.8508,"h":0.4789}},
+  "jp_mini":{"w":585,"h":440,"panel":{"l":0.1043,"t":0.6886,"w":0.7949,"h":0.2114}},
+  "jp_minor":{"w":598,"h":437,"panel":{"l":0.1037,"t":0.6934,"w":0.786,"h":0.222}},
+  "jp_major":{"w":612,"h":504,"panel":{"l":0.0997,"t":0.7063,"w":0.8203,"h":0.2063}},
+  "jp_grand":{"w":632,"h":563,"panel":{"l":0.106,"t":0.7247,"w":0.7959,"h":0.1812}}};
+const POPUP_ART_KEY = {
+  bigWin: 'big_win', megaWin: 'mega_win', epicWin: 'epic_win',
+  holdWinIntro: 'hold_and_win', holdWinTotal: 'total_win',
+};
+
+function artPopupNode(artKey, text, extraClass = '') {
+  const a = POPUP_ART[artKey];
+  const root = document.createElement('div');
+  root.className = `game-popup is-art ${extraClass}`.trim();
+  root.style.setProperty('--art-ar', `${a.w} / ${a.h}`);
+  root.style.setProperty('--art-w', `${a.w}`);
+  // Не выше ~66% экрана: высокие баннеры (джекпоты) иначе наезжают на бар.
+  root.style.width = `min(900px, ${isMobileLayout() ? 94 : 86}vw, ${((66 * a.w) / a.h).toFixed(1)}vh)`;
+  const p = a.panel;
+  root.innerHTML = `
+    <img class="game-popup__art" src="${ASSET_ROOT}/popups/${artKey}.webp" alt="">
+    <div class="game-popup__panel" style="left:${p.l * 100}%;top:${p.t * 100}%;width:${p.w * 100}%;height:${p.h * 100}%">
+      <span class="game-popup__value"></span>
+    </div>`;
+  root.querySelector('.game-popup__value').textContent = text;
+  return root;
+}
+
 function buildPopupNode(key, amount) {
   const cfg = POPUP_CONFIG[key] || { title: key };
+  const artKey = POPUP_ART_KEY[key];
+  if (artKey && POPUP_ART[artKey]) {
+    return artPopupNode(artKey, cfg.hideAmount ? (cfg.sub || '') : formatAmount(amount),
+      cfg.hideAmount ? 'is-caption' : '');
+  }
   const root = document.createElement('div');
   root.className = 'game-popup';
   if (cfg.coin) {
@@ -833,17 +876,22 @@ function playJackpotAward(tier) {
       if (tier === 'grand') fx('grandDischarge');
       pushScreenDim(false);
       await wait(DIM_TRANSITION_MS);
-      node = document.createElement('div');
-      node.className = 'game-popup is-jackpot';
-      const [c, lt] = TIER_COLORS[tier];
-      node.style.setProperty('--tier-color', c);
-      node.style.setProperty('--tier-lt', lt);
-      node.innerHTML = `
-        <img class="game-popup__coin" src="${symbolSrc(tier === 'grand' ? 'coin' : `coin_${tier}`)}" alt="">
-        <div class="game-popup__sub">${tier === 'grand' ? '9 / 9 — JACKPOT' : 'JACKPOT'}</div>
-        <div class="game-popup__title">${tier.toUpperCase()}</div>
-        <div class="game-popup__amount">${formatAmount(value * jackpotBet)}</div>
-      `;
+      if (POPUP_ART[`jp_${tier}`]) {
+        // Баннер тира из ChatGPT (JACKPOT + имя тира впечатаны), сумма — в панели.
+        node = artPopupNode(`jp_${tier}`, formatAmount(value * jackpotBet), 'is-jackpot');
+      } else {
+        node = document.createElement('div');
+        node.className = 'game-popup is-jackpot';
+        const [c, lt] = TIER_COLORS[tier];
+        node.style.setProperty('--tier-color', c);
+        node.style.setProperty('--tier-lt', lt);
+        node.innerHTML = `
+          <img class="game-popup__coin" src="${symbolSrc(tier === 'grand' ? 'coin' : `coin_${tier}`)}" alt="">
+          <div class="game-popup__sub">${tier === 'grand' ? '9 / 9 — JACKPOT' : 'JACKPOT'}</div>
+          <div class="game-popup__title">${tier.toUpperCase()}</div>
+          <div class="game-popup__amount">${formatAmount(value * jackpotBet)}</div>
+        `;
+      }
       document.getElementById('screen').appendChild(node);
       void node.offsetWidth;
       node.classList.add('is-in');
@@ -871,8 +919,26 @@ function showBuyBonusDialog({ betSteps, betIndex, costMultiplier, currency, bala
     pushScreenDim(false);
     Sound.playSfx('popupOpen');
     const node = document.createElement('div');
-    node.className = 'buy-dialog';
-    node.innerHTML = `
+    node.className = POPUP_ART.buy_bonus ? 'buy-dialog is-art' : 'buy-dialog';
+    const bp = POPUP_ART.buy_bonus && POPUP_ART.buy_bonus.panel;
+    node.innerHTML = bp ? `
+      <div class="buy-dialog__banner" style="--art-ar:${POPUP_ART.buy_bonus.w} / ${POPUP_ART.buy_bonus.h}">
+        <img class="game-popup__art" src="${ASSET_ROOT}/popups/buy_bonus.webp" alt="">
+        <div class="buy-dialog__panel" style="left:${bp.l * 100}%;top:${bp.t * 100}%;width:${bp.w * 100}%;height:${bp.h * 100}%">
+          <div class="buy-dialog__note" data-note></div>
+          <div class="buy-dialog__price" data-price></div>
+          <div class="buy-dialog__bet">
+            <button class="buy-dialog__step" data-step="-1" type="button" aria-label="Уменьшить ставку">−</button>
+            <span class="buy-dialog__bet-value" data-bet></span>
+            <button class="buy-dialog__step" data-step="1" type="button" aria-label="Увеличить ставку">+</button>
+          </div>
+        </div>
+      </div>
+      <div class="buy-dialog__actions">
+        <button class="buy-dialog__answer buy-dialog__answer--no" data-answer="0" type="button" aria-label="Отмена">✕</button>
+        <button class="buy-dialog__answer buy-dialog__answer--yes" data-answer="1" type="button" aria-label="Купить раунд">✓</button>
+      </div>
+    ` : `
       <div class="buy-dialog__title">BUY HOLD &amp; WIN</div>
       <div class="buy-dialog__note" data-note></div>
       <div class="buy-dialog__price" data-price></div>
@@ -1152,6 +1218,8 @@ function setupDevPanel() {
       })));
     });
   }
+  document.getElementById('devFeatureScreen')?.addEventListener('click', () => showFeatureScreen());
+  document.getElementById('devBonusScreen')?.addEventListener('click', () => showBonusScreen(RESPIN_COUNT));
   const light = document.getElementById('devLight');
   if (light) {
     light.addEventListener('click', () => {
@@ -1268,6 +1336,190 @@ async function init() {
   await preloadAssets();
   if (window.Preloader) window.Preloader.done();
   window.__slot = { cellInfos };
+  showFeatureScreen();
+}
+
+// --- Превью фич / бонус-экран --------------------------------------------------
+//
+// Spine-скелеты из scripts/volt_coins_screens.py: `intro` (3 с) -> `idle`
+// (петля) до тапа, затем 500 мс затухания. Нарисованы на дизайн-канвасе игры
+// (1 ед. = 1 px канваса, центр в нуле) и привязаны к #stage его дизайн-боксом,
+// так что ложатся ровно на раскладку. Свой SpineStage на #screenCanvas поверх
+// всего — FX-канвасы игры остаются под ним. Атласы кита — premultiplied.
+
+const SCREEN_ROOT = `${ASSET_ROOT}/screens`;
+const SCREEN_BOX = {
+  desk: { x: -960, y: -520, width: 1920, height: 1040 },
+  mob: { x: -400, y: -725, width: 800, height: 1450 },
+};
+const SCREEN_FADE_MS = 500;
+const SCREEN_COUNT_UNITS = 74;      // размер цифры счётчика в единицах скелета
+const BONUS_SCREEN_AUTOCLOSE_MS = 10000;
+let screenStage = null;
+let screenOpen = false;
+const screenResourceCache = {};
+
+function screenVariant() {
+  return isMobileLayout() ? 'mob' : 'desk';
+}
+
+function getScreenStage() {
+  if (screenStage) return screenStage;
+  if (!window.spine || !window.SpineEngine) return null;
+  try {
+    screenStage = new SpineEngine.SpineStage(document.getElementById('screenCanvas'));
+  } catch (err) {
+    console.warn('[volt] screens: no WebGL', err);
+    return null;
+  }
+  return screenStage;
+}
+
+function getScreenResource(kind, variant = screenVariant()) {
+  const key = `${kind}_${variant}`;
+  if (!screenResourceCache[key]) {
+    screenResourceCache[key] = SpineEngine.SpineResource.load(screenStage.assetManager, `${SCREEN_ROOT}/${key}`, {
+      premultipliedAlpha: true,
+    });
+    screenResourceCache[key].catch(() => { delete screenResourceCache[key]; });
+  }
+  return screenResourceCache[key];
+}
+
+function showSpineScreen(kind, { dark = false, onFrame = null, autoCloseMs = 0 } = {}) {
+  const root = document.getElementById('featureScreen');
+  const stage = getScreenStage();
+  if (!stage || !root || screenOpen) return Promise.resolve(false);
+  screenOpen = true;
+  return getScreenResource(kind).then((resource) => new Promise((resolve) => {
+    let variant = screenVariant();
+    let inst = null;
+    let alpha = 1;
+    let done = false;
+    let closing = false;
+    let autoTimer = null;
+
+    const mount = (res, fromEntry) => {
+      const next = res.createInstance();
+      next.anchorEl = document.getElementById('stage');
+      next.fit = 1;
+      next.boundsOverride = SCREEN_BOX[variant];
+      if (fromEntry && fromEntry.animation) {
+        const entry = next.animationState.setAnimation(0, fromEntry.animation.name, fromEntry.loop);
+        entry.trackTime = fromEntry.trackTime;
+        if (!fromEntry.loop) next.queue('idle', true);
+      } else {
+        next.play('intro', false);
+        next.queue('idle', true);
+      }
+      next.skeleton.color.a = alpha;
+      if (inst) stage.removeOverlay(inst);
+      inst = next;
+      stage.addOverlay(inst);
+    };
+    root.classList.toggle('is-dark', dark);
+    const setBg = () => {
+      const src = `${ASSET_ROOT}/img/${isMobileLayout() ? 'bg_mob' : 'bg_desk'}.jpg`;
+      root.style.setProperty('--fs-bg', `url("${new URL(src, location.href).href}")`);
+    };
+    const onResize = () => {
+      setBg();
+      const v = screenVariant();
+      if (v === variant || closing) return;
+      variant = v;
+      const entry = inst.animationState.getCurrent(0);
+      getScreenResource(kind, v).then((res) => { if (!done) mount(res, entry); }).catch(() => {});
+    };
+
+    setBg();
+    mount(resource, null);
+    window.addEventListener('resize', onResize);
+    document.body.classList.add('is-feature-screen');
+    root.hidden = false;
+    void root.offsetWidth;
+    root.classList.add('is-open');
+
+    const frame = () => {
+      if (done) return;
+      if (onFrame) onFrame(inst, alpha);
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(autoTimer);
+      stage.removeOverlay(inst);
+      window.removeEventListener('resize', onResize);
+      root.hidden = true;
+      root.classList.remove('is-open');
+      root.style.transition = '';
+      document.body.classList.remove('is-feature-screen');
+      screenOpen = false;
+      resolve(true);
+    };
+    const close = () => {
+      if (closing) return;
+      closing = true;
+      clearTimeout(autoTimer);
+      root.removeEventListener('click', close);
+      Sound.playSfx('click');
+      root.style.transition = `opacity ${SCREEN_FADE_MS}ms ease-out`;
+      root.classList.remove('is-open');
+      const start = performance.now();
+      const tick = (now) => {
+        if (done) return;
+        const t = Math.min(1, (now - start) / SCREEN_FADE_MS);
+        alpha = 1 - t;
+        inst.skeleton.color.a = alpha;
+        if (t < 1) requestAnimationFrame(tick);
+        else finish();
+      };
+      requestAnimationFrame(tick);
+      setTimeout(finish, SCREEN_FADE_MS + 200); // скрытая вкладка: rAF стоит
+    };
+    root.addEventListener('click', close);
+    if (autoCloseMs) autoTimer = setTimeout(close, autoCloseMs);
+  })).catch((err) => {
+    console.warn(`[volt] ${kind} screen failed:`, err);
+    screenOpen = false;
+    document.body.classList.remove('is-feature-screen');
+    root.hidden = true;
+    return false;
+  });
+}
+
+function showFeatureScreen() {
+  return showSpineScreen('feature');
+}
+
+// Счётчик респинов — живой DOM над костью `count` (в пустой панели баннера
+// HOLD & WIN), появляется, когда баннер уже раскрылся.
+function showBonusScreen(respins) {
+  const el = document.getElementById('fscreenCount');
+  const canvasEl = document.getElementById('screenCanvas');
+  if (!el) return Promise.resolve(false);
+  el.textContent = String(respins);
+  el.style.opacity = '0';
+  el.hidden = false;
+  return showSpineScreen('bonus', {
+    dark: true,
+    autoCloseMs: BONUS_SCREEN_AUTOCLOSE_MS,
+    onFrame: (inst, alpha) => {
+      const bone = inst.skeleton.findBone('count');
+      if (!bone) return;
+      const dpr = window.devicePixelRatio || 1;
+      const r = canvasEl.getBoundingClientRect();
+      el.style.left = `${r.left + (bone.worldX + canvasEl.width / 2) / dpr}px`;
+      el.style.top = `${r.top + (canvasEl.height / 2 - bone.worldY) / dpr}px`;
+      el.style.fontSize = `${(SCREEN_COUNT_UNITS * Math.hypot(bone.b, bone.d)) / dpr}px`;
+      const entry = inst.animationState.getCurrent(0);
+      const inIntro = entry && entry.animation && entry.animation.name === 'intro';
+      const t = inIntro ? entry.trackTime : Infinity;
+      el.style.opacity = String(Math.min(1, Math.max(0, (t - 1.2) / 0.3)) * alpha);
+    },
+  }).finally(() => { el.hidden = true; });
 }
 
 init();

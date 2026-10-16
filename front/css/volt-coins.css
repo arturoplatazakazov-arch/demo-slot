@@ -841,3 +841,115 @@ img.is-missing { outline: 2px dashed rgba(57, 216, 255, 0.5); }
   --pl-border: rgba(57, 216, 255, 0.45);
   --pl-shadow: rgba(57, 216, 255, 0.6);
 }
+
+/* ---------- Попапы на баннерах из ChatGPT ----------
+   Заголовок впечатан в баннер, сумма — DOM в его пустой синей панели
+   (доли панели замерены scripts/volt_coins_popups.py -> POPUP_ART в slot.js). */
+.game-popup.is-art {
+  width: min(900px, 86%);
+  padding: 0;
+  clip-path: none;
+  border: 0;
+  background: none;
+  aspect-ratio: var(--art-ar);
+  filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.6));
+}
+.game-popup.is-art::before { display: none; }
+.game-popup__art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.game-popup__panel,
+.buy-dialog__panel {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  container-type: size;
+}
+.game-popup__value {
+  font-family: 'Roboto Mono', ui-monospace, monospace;
+  font-weight: 700;
+  font-size: 62cqh;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: #fff;
+  text-shadow: 0 0 14px rgba(57, 216, 255, 0.9), 0 3px 0 #000;
+  white-space: nowrap;
+}
+.game-popup.is-caption .game-popup__value {
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 52cqh;
+  letter-spacing: 0.14em;
+  color: #bff0ff;
+}
+/* Счётчик выигрыша растёт вместе с попапом — без лишнего «пружинящего» текста. */
+.game-popup.is-art.is-in { transform: translate(-50%, -50%) scale(1); }
+
+.buy-dialog.is-art {
+  width: min(820px, 90%);
+  padding: 0;
+  clip-path: none;
+  border: 0;
+  background: none;
+}
+.buy-dialog__banner { position: relative; width: 100%; aspect-ratio: var(--art-ar); }
+.buy-dialog.is-art .buy-dialog__panel { gap: 2cqh; }
+.buy-dialog.is-art .buy-dialog__note { font-size: 9cqh; color: #bff0ff; }
+.buy-dialog.is-art .buy-dialog__price { margin: 0; font-size: 26cqh; line-height: 1; }
+.buy-dialog.is-art .buy-dialog__bet { margin: 0; }
+.buy-dialog.is-art .buy-dialog__bet-value { font-size: 12cqh; min-width: 0; padding: 0 3cqw; }
+.buy-dialog.is-art .buy-dialog__step { width: 16cqh; height: 16cqh; font-size: 11cqh; }
+.buy-dialog.is-art .buy-dialog__actions { margin-top: 10px; }
+@media (orientation: portrait) {
+  .game-popup.is-art { width: 94%; }
+  .buy-dialog.is-art { width: 96%; }
+}
+
+/* ---------- Превью фич / бонус-экран (Spine поверх всего) ---------- */
+.fscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 58;
+  background: #050818;
+  opacity: 0;
+  transition: opacity 420ms ease;
+  cursor: pointer;
+  overflow: hidden;
+}
+.fscreen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--fs-bg) center / cover no-repeat;
+}
+.fscreen.is-open::before { animation: fscreen-zoom 1.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes fscreen-zoom { from { transform: scale(1.12); } }
+.fscreen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 45%, rgba(5, 8, 30, 0.15) 0%, rgba(5, 8, 30, 0.55) 62%, rgba(2, 3, 12, 0.92) 100%);
+}
+.fscreen.is-dark { background: #000; }
+.fscreen.is-dark::before { display: none; }
+.fscreen.is-dark::after { background: radial-gradient(ellipse at 50% 40%, rgba(40, 110, 255, 0.28) 0%, rgba(0, 0, 0, 0) 65%); }
+.fscreen[hidden] { display: none; }
+.fscreen.is-open { opacity: 1; }
+.fscreen__canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+body.is-feature-screen .dev-panel,
+body.is-feature-screen .to-catalog-btn,
+body.is-feature-screen .v3-bar { visibility: hidden; }
+.fscreen-count {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 60;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  font-family: 'Roboto Mono', ui-monospace, monospace;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 14px rgba(57, 216, 255, 0.95), 0 3px 0 #000;
+}
+.fscreen-count[hidden] { display: none; }

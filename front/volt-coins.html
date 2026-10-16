@@ -6,7 +6,7 @@
 <title>Volt Coins — demo</title>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/preloader.css?v=1">
-<link rel="stylesheet" href="css/volt-coins.css?v=3">
+<link rel="stylesheet" href="css/volt-coins.css?v=5">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 </head>
 <body>
@@ -32,6 +32,8 @@
     <button class="dev-btn" id="devJackpot" type="button">Jackpots</button>
     <button class="dev-btn" id="devLines" type="button">Win lines</button>
     <button class="dev-btn" id="devLight" type="button" aria-pressed="false">Turn off light</button>
+    <button class="dev-btn" id="devFeatureScreen" type="button">Feature screen</button>
+    <button class="dev-btn" id="devBonusScreen" type="button">Bonus screen</button>
     <span class="dev-hint">клик по символу — его win-анимация</span>
   </details>
 
@@ -92,6 +94,13 @@
     <div class="layer screen-dim" id="screenDim"></div>
 
   </div>
+
+  <!-- Превью фич (после прелоадера) и бонус-экран Hold & Win — Spine-скелеты
+       scripts/volt_coins_screens.py на своём канвасе поверх всего. -->
+  <div class="fscreen" id="featureScreen" hidden>
+    <canvas class="fscreen__canvas" id="screenCanvas"></canvas>
+  </div>
+  <div class="fscreen-count" id="fscreenCount" hidden></div>
 
   <div class="info-popup" id="infoPopup" hidden>
     <div class="info-popup__panel">
@@ -203,7 +212,7 @@
   <script src="js/spine-engine.js?v=8"></script>
   <script src="js/volt-coins/fx.js?v=3"></script>
   <script src="js/volt-coins/sound.js?v=1"></script>
-  <script src="js/volt-coins/slot.js?v=5"></script>
+  <script src="js/volt-coins/slot.js?v=9"></script>
   <script src="js/volt-coins/app.js?v=3"></script>
   <script src="js/ui-bar-v3.js?v=4"></script>
 </body>
