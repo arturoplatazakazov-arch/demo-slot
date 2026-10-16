@@ -342,12 +342,74 @@ let multiLineToken = 0;
 
 // Линии крутятся по одной: луч линии (Spine) + удар каждой её ячейки, всё
 // остальное притушено. Одна линия — то же самое, просто по кругу.
+// --- Табло выигрыша ------------------------------------------------------------
+//
+// Отдельный слой в #screen ПОВЕРХ сцены и обоих Spine-канвасов (лучи линий и
+// вспышки символов иначе перекрывали число): сумма текущей линии — на середине
+// линии, пока она подсвечена; общий выигрыш спина — крупно внизу окна
+// барабанов и держится до следующего спина. Слой привязан к прямоугольнику
+// #reelWindow, пересчитывается на каждый показ и ресайз.
+
+let winHud = null;
+function getWinHud() {
+  if (winHud) return winHud;
+  winHud = document.createElement('div');
+  winHud.className = 'win-hud';
+  winHud.innerHTML = '<div class="win-hud__line"></div><div class="win-hud__total"><span class="win-hud__label">WIN</span><span class="win-hud__value"></span></div>';
+  document.getElementById('screen').appendChild(winHud);
+  window.addEventListener('resize', placeWinHud);
+  return winHud;
+}
+
+function placeWinHud() {
+  if (!winHud) return;
+  const scr = document.getElementById('screen').getBoundingClientRect();
+  const r = document.getElementById('reelWindow').getBoundingClientRect();
+  Object.assign(winHud.style, {
+    left: `${r.left - scr.left}px`, top: `${r.top - scr.top}px`, width: `${r.width}px`, height: `${r.height}px`,
+  });
+  winHud.style.setProperty('--hud-h', `${r.height}px`);
+}
+
+function showTotalWin(amount) {
+  if (!(Number(amount) > 0)) return;
+  const hud = getWinHud();
+  placeWinHud();
+  hud.querySelector('.win-hud__value').textContent = formatAmount(amount);
+  hud.classList.remove('has-total');
+  void hud.offsetWidth;
+  hud.classList.add('has-total');
+}
+
+function showLineWin(infos, amount) {
+  const hud = getWinHud();
+  placeWinHud();
+  const el = hud.querySelector('.win-hud__line');
+  if (!(Number(amount) > 0) || !infos.length) {
+    hud.classList.remove('has-line');
+    return;
+  }
+  // середина линии = средняя ячейка (на 3x3 линия всегда из трёх)
+  const mid = infos[Math.floor(infos.length / 2)].cell.getBoundingClientRect();
+  const box = hud.getBoundingClientRect();
+  el.style.left = `${mid.left + mid.width / 2 - box.left}px`;
+  el.style.top = `${mid.top + mid.height / 2 - box.top}px`;
+  el.textContent = `+${formatAmount(amount)}`;
+  hud.classList.remove('has-line');
+  void el.offsetWidth;
+  hud.classList.add('has-line');
+}
+
+function hideWinHud() {
+  if (winHud) winHud.classList.remove('has-total', 'has-line');
+}
+
 function playLineSequence(lines) {
   const token = ++multiLineToken;
   let index = 0;
   const step = () => {
     if (token !== multiLineToken) return;
-    const { payline, infos } = lines[index];
+    const { payline, infos, amount } = lines[index];
     const active = new Set(infos);
     for (const info of cellInfos) {
       if (!info) continue;
@@ -355,6 +417,7 @@ function playLineSequence(lines) {
       info.cell.classList.toggle('is-win-active', active.has(info));
     }
     fx('showLine', payline);
+    showLineWin(infos, amount);
     Promise.all(infos.map((info) => playWinAnimationOnce(info))).then(() => {
       if (token !== multiLineToken) return;
       multiLineSequenceTimeout = setTimeout(() => {
@@ -377,6 +440,7 @@ function playWinCells(lineWins) {
     .filter((w) => w && w.positions && w.positions.length)
     .map((w) => ({
       payline: w.payline,
+      amount: w.amount,
       infos: w.positions.map(({ row, col }) => cellInfos[row * GRID_COLS + col]).filter(Boolean),
     }));
   if (!lines.length) return;
@@ -418,6 +482,7 @@ let reelClearDone = Promise.resolve();
 function startReelLoop() {
   Sound.playSfx('spinStart');
   reelsBusy = true;
+  hideWinHud();
   teardownCellInstances();
   fx('spinStart');
   const gen = ++reelLoopGeneration;
@@ -1176,6 +1241,7 @@ async function runHoldAndWinSequence(result, locked, baseGrid = null) {
     paintBaseFaces();
   }
   await leaveBonusMode();
+  showTotalWin(result.total_win);
 }
 
 // --- Dev ---------------------------------------------------------------------

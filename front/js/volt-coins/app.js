@@ -90,13 +90,15 @@ async function applySpinResult(data, betAmount) {
   }
 
   playWinCells(data.line_wins);
+  // Общий выигрыш спина — на табло над барабанами до следующего спина
+  // (поверх линий и Spine), и в попапе, если он крупный.
+  showTotalWin(data.total_win);
   const popupType = popupForWin(data.total_win, betAmount);
   if (popupType) {
     Sound.playSfx({ bigWin: 'bigWin', megaWin: 'megaWin', epicWin: 'epicWin' }[popupType]);
     playPopup(popupType, data.total_win);
   } else if (data.total_win > 0) {
     Sound.playSfx('smallWin');
-    showInlineWinAmount(data.total_win);
   }
 }
 
