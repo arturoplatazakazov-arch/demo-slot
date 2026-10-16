@@ -22,6 +22,8 @@ Usage:
 """
 
 import math
+
+import numpy as np
 import os
 import random
 import sys
@@ -91,7 +93,7 @@ def lines(rows, size, fill=CREAM, gap=0.12):
 
 
 GLYPH_DIR = os.path.join(ART_DIR, 'glyphs')
-USE_GLYPHS = False  # glyph faces rejected by the client (too glossy) — text faces, as in game
+USE_GLYPHS = True  # the game prints faces with the (cleaned) ChatGPT glyphs on a dark enamel
 
 
 def glyph_label(label, core_h):
@@ -122,16 +124,27 @@ def glyph_label(label, core_h):
     return trim(out)
 
 
+def enamel_disc(size, d):
+    """Dark enamel under the number, as .coin-face.has-glyphs::before in CSS:
+    solid #0a1236 to 82% of the radius, fading out at the edge."""
+    w, h = size
+    yy, xx = np.mgrid[0:h, 0:w]
+    r = np.hypot(xx - w / 2, yy - h / 2) / (d / 2)
+    a = np.clip((1 - r) / 0.18, 0, 1) * 255
+    im = Image.new('RGBA', size, (10, 18, 54, 0))
+    im.putalpha(Image.fromarray(a.astype(np.uint8)))
+    return im
+
+
 def coin_with(art_name, label, tier=False):
     """A blank coin state with its face on top — the game's own glyph sprites
     when present (what the reels show), else text drawn here."""
     coin = art(f'symbols/{art_name}.png')
     if USE_GLYPHS and os.path.exists(os.path.join(GLYPH_DIR, 'glyphs.json')):
-        t = glyph_label(label, coin.height * (0.3 if tier else 0.36))
-        k = min(1.0, coin.width * (0.8 if tier else 0.66) / t.width)
-        t = t.resize((round(t.width * k), round(t.height * k)), Image.LANCZOS)
+        # точь-в-точь вёрстка slot.js (scripts/volt_coins_face.py)
+        from volt_coins_face import face_layer
         out = coin.copy()
-        out.alpha_composite(t, ((out.width - t.width) // 2, (out.height - t.height) // 2))
+        out.alpha_composite(face_layer(coin.size, label.lower()))
         return out
     size = int(coin.height * (0.15 if tier else (0.27 if len(label) <= 2 else 0.22)))
     fnt = font('baloo', size, 800) if tier else font('robotomono', size)
@@ -570,9 +583,27 @@ def build_bonus(variant):
     return sk
 
 
+def version_atlas_pages(root):
+    """Page names in every atlas get ?v=<hash of the PNG>: Telegram keeps the
+    old PNG under the same URL, the rebuilt screen would show stale art."""
+    import hashlib
+    for d in os.listdir(root):
+        ap = os.path.join(root, d, 'animation.atlas')
+        if not os.path.exists(ap):
+            continue
+        lines = open(ap).read().split('\n')
+        for i, ln in enumerate(lines):
+            name = ln.split('?')[0]
+            if name.endswith('.png') and ':' not in name:
+                ver = hashlib.md5(open(os.path.join(root, d, name), 'rb').read()).hexdigest()[:8]
+                lines[i] = f'{name}?v={ver}'
+        open(ap, 'w').write('\n'.join(lines))
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
     for v in ('desk', 'mob'):
         build_feature(v)
         build_bonus(v)
+    version_atlas_pages(OUT)
     print('screens ->', OUT)

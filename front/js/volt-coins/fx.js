@@ -18,6 +18,9 @@
 
 (function () {
   const ROOT = 'img/volt-coins/fx';
+  // Версия atlas/json скелетов — поднимать при каждой пересборке fx
+  // (PNG-страницы версионируются хешем в самом атласе).
+  const FX_V = 4;
   const BOX = {
     bg_desk: { x: -899, y: -437.5, width: 1798, height: 875 },
     bg_mob: { x: -465.5, y: -845, width: 931, height: 1690 },
@@ -52,7 +55,7 @@
   const isMobile = () => window.matchMedia('(orientation: portrait)').matches;
 
   function load(stage, name) {
-    return SpineEngine.SpineResource.load(stage.assetManager, `${ROOT}/${name}`, { premultipliedAlpha: true })
+    return SpineEngine.SpineResource.load(stage.assetManager, `${ROOT}/${name}`, { premultipliedAlpha: true, version: FX_V })
       .then((r) => { res[name] = r; return r; });
   }
 

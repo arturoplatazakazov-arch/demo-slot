@@ -42,8 +42,8 @@ const FILLER_CODES = SYMBOL_CODES.filter((code) => code !== 'coin');
 // Монеты с молнией (symbols/coin.png) в игре нет (продукт): монета всегда
 // показывается пустой эмалью с номиналом поверх, поэтому код 'coin' ведёт
 // на coin_value.
-// Версия картинок символов: поднимать при замене арта (новый уайлд — 2).
-const SYM_V = 2;
+// Версия картинок символов: поднимать при замене арта (новый уайлд — 2, слиток — 3, 4, бриллиант — 5).
+const SYM_V = 5;
 function symbolSrc(code) {
   return `${ASSET_ROOT}/symbols/${code === 'coin' ? 'coin_value' : code}.png?v=${SYM_V}`;
 }
@@ -550,17 +550,19 @@ function showCoinFace(info, face) {
   const el = makeCoinFace(face);
   info.cell.appendChild(el);
   info.coinFace = el;
+  info.faceKey = face.word || face.digits;
 }
 
 // --- Показ выигрыша ----------------------------------------------------------
 
 // Один «удар» выигрыша по ячейке: Spine-копия символа, если есть, иначе CSS-пульс.
 function playWinAnimationOnce(info) {
-  // Монета с номиналом: Spine-копия нарисовала бы голую монету без числа,
-  // поэтому у неё CSS-пульс (число едет вместе с картинкой).
-  if (info.symbol !== 'blank' && !info.coinFace) {
+  // Монета с номиналом играет свою Spine-копию с запечённым номиналом
+  // (coin_x5, coin_mini … — scripts/volt_coins_fx.py); нет такой — CSS-пульс.
+  if (info.symbol !== 'blank') {
     dropSymbolFx(info);
-    const inst = fx('symbol', info.cell, info.symbol);
+    const clip = info.coinFace ? `coin_${info.faceKey}` : info.symbol;
+    const inst = fx('symbol', info.cell, clip);
     if (inst) {
       info.fxInst = inst;
       info.cell.classList.add('is-fx');
@@ -1703,11 +1705,13 @@ function getScreenStage() {
   return screenStage;
 }
 
+const SCREEN_V = 2;
 function getScreenResource(kind, variant = screenVariant()) {
   const key = `${kind}_${variant}`;
   if (!screenResourceCache[key]) {
     screenResourceCache[key] = SpineEngine.SpineResource.load(screenStage.assetManager, `${SCREEN_ROOT}/${key}`, {
       premultipliedAlpha: true,
+      version: SCREEN_V,  // поднимать при пересборке screens
     });
     screenResourceCache[key].catch(() => { delete screenResourceCache[key]; });
   }

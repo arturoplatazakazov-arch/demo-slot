@@ -38,6 +38,7 @@ nothing until a clip plays.
     .venv/bin/python scripts/volt_coins_fx.py [names...] [--preview DIR]
 """
 
+import hashlib
 import json
 import math
 import os
@@ -113,7 +114,11 @@ class Fx(Skel):
         for pi, (page, placed) in enumerate(pages):
             fname = 'animation.png' if pi == 0 else f'animation{pi + 1}.png'
             premultiply(page).save(os.path.join(out, fname), optimize=True)
-            atlas += [fname, f'size:{page.width},{page.height}', 'filter:Linear,Linear', 'pma:true']
+            # страница с хешем содержимого: Telegram/браузер держат старый PNG
+            # по тому же адресу, и после пересборки играл бы прежний арт
+            with open(os.path.join(out, fname), 'rb') as pf:
+                ver = hashlib.md5(pf.read()).hexdigest()[:8]
+            atlas += [f'{fname}?v={ver}', f'size:{page.width},{page.height}', 'filter:Linear,Linear', 'pma:true']
             for r, (x, y, w, h) in placed.items():
                 atlas += [r, f'bounds:{x},{y},{w},{h}']
             atlas.append('')
@@ -966,8 +971,16 @@ SYMBOLS = {
     'diamond': ((90, 230, 255), 'jiggle', False),
     'seven': ((255, 70, 60), 'slam', False),
     'wild': ((90, 190, 255), 'slam', True),
-    'coin': ((110, 200, 255), 'flip', True),
+    'coin': ((110, 200, 255), 'zap', True),
 }
+# Монеты с номиналом (раунд / база с лицом): своя копия с запечённым номиналом
+# (volt_coins_face.py = вёрстка slot.js), иначе Spine нарисовал бы пустую монету.
+# slot.js играет 'coin_<key>': coin_x5, coin_mini ...
+sys.path.insert(0, os.path.dirname(__file__))
+from volt_coins_face import FACES, css_glow, faced_coin  # noqa: E402
+for _k in FACES:
+    SYMBOLS[f'coin_{_k}'] = ((110, 200, 255), 'zap', True)
+COIN_SCALE = 1.1  # .reel__cell.is-coin img { scale: 1.1 }
 SYM_DUR = 1.1
 
 
@@ -1019,6 +1032,26 @@ def sym_motion(kind, t):
         shake = 4 * math.exp(-6 * (t - 0.18)) * math.sin(70 * t)
         base = 1 + 0.1 - 0.1 * clamp((t - 0.18) / 0.5)
         return base + e, base + e, shake, 0
+    if kind == 'zap':
+        # бодро, без поворота (номинал не качаем): присел -> прыжок с ростом ->
+        # удар-приземление -> подскок -> пружинка в покой (последний кадр = статика)
+        if t < 0.07:
+            k = out_cubic(t / 0.07)
+            return 1 + 0.1 * k, 1 - 0.12 * k, 0, -5 * k
+        if t < 0.32:
+            u = (t - 0.07) / 0.25
+            h = math.sin(math.pi * u)
+            s = 1 + 0.3 * h
+            return s * (1.1 - 0.1 * u) - 0.04 * h, s * (0.88 + 0.12 * u) + 0.06 * h, 0, -5 * (1 - u) + 40 * h
+        if t < 0.42:
+            k = math.sin(math.pi * (t - 0.32) / 0.1)
+            return 1 + 0.24 * k, 1 - 0.18 * k, 0, 0
+        if t < 0.6:
+            h = math.sin(math.pi * (t - 0.42) / 0.18)
+            return 1 + 0.06 * h, 1 + 0.08 * h, 0, 12 * h
+        u = t - 0.6
+        e = 0.07 * math.exp(-7 * u) * math.sin(22 * u)
+        return 1 + e, 1 - e, 0, 0
     if kind == 'flip':
         # the coin turns over twice on its vertical axis, rising a little
         u = in_out_sine(clamp(t / 0.8))
@@ -1040,11 +1073,20 @@ def build_symbols():
         sk.image(f'zz{j}', bolt(256, 64, 301 + j * 9, forks=2, rough=0.9, width=3))
     rnd = random.Random(21)
     for code, (col, kind, electric) in SYMBOLS.items():
-        im = Image.open(os.path.join(SYM, f'{code}.png')).convert('RGBA')
+        # монеты: как в DOM — CSS-свечение запечено (иначе первый/последний
+        # кадр расходятся со статикой); база показывает пустую эмаль coin_value
+        if code.startswith('coin_'):
+            im = faced_coin(code[5:], SYM, glow=True)
+        elif code == 'coin':
+            im = css_glow(Image.open(os.path.join(SYM, 'coin_value.png')).convert('RGBA'))
+        else:
+            im = Image.open(os.path.join(SYM, f'{code}.png')).convert('RGBA')
         w, h = SW, SH
+        if kind == 'zap':
+            w, h = SW * COIN_SCALE, SH * COIN_SCALE
         hexcol = '%02x%02x%02x' % col
         sk.image(code, im)
-        sk.res_of[code] = 1.5  # v2 symbol PNGs are 1.5x the cell units
+        sk.res_of[code] = 1.5  # v2 symbol PNGs are 1.5x the cell units (как DOM — та же резкость)
         flash = Image.new('RGBA', im.size, (255, 255, 255, 0))
         flash.putalpha(im.getchannel('A'))
         sk.image(f'{code}_flash', flash)
@@ -1061,12 +1103,13 @@ def build_symbols():
         sk.hidden_slot(f'{C}_img', sb, code, w=w, y=-piv)
         hl = highlight(im, gamma=1.2, gain=1.5)
         sweep = []
+        kpx = w / im.width  # image px -> skeleton units (раньше блик был в px и ехал в 1.5 раза шире символа)
         for i, (sim, x0, x1) in enumerate(strips(hl, 14)):
             r = f'{C}_sw{i}'
             sk.image(r, sim)
             sk.res_of[r] = 0.4
-            sk.hidden_slot(r, sb, r, w=x1 - x0, x=(x0 + x1) / 2 - im.width / 2, y=-piv, blend='additive')
-            sweep.append((r, (x0 + x1) / 2))
+            sk.hidden_slot(r, sb, r, w=(x1 - x0) * kpx, x=((x0 + x1) / 2 - im.width / 2) * kpx, y=-piv, blend='additive')
+            sweep.append((r, (x0 + x1) / 2 * kpx))
         sk.hidden_slot(f'{C}_flash', sb, f'{C}_flash', w=w, y=-piv, blend='additive')
         sparks = []
         for i in range(7):
@@ -1094,12 +1137,12 @@ def build_symbols():
         for r, cx in sweep:
             sk.anim(C, r, 'alpha', lambda t, cx=cx: 0.0 if not 0.12 <= t <= 0.62 else
                     0.85 * math.exp(-((cx - lerp(-60, w + 60, in_out_sine((t - 0.12) / 0.5))) / 60) ** 2))
-        big = 1.25 if kind == 'slam' else 1.0
+        big = 1.25 if kind in ('slam', 'zap') else 1.0
         sk.anim(C, f'{C}_halo', 'alpha', lambda t, big=big: seg(t, 0, 0.1, 0, 0.8 * big) if t < 0.1 else seg(t, 0.1, SYM_DUR, 0.8 * big, 0, in_out_sine))
         sk.anim(C, fxb, 'scale', lambda t: (seg(t, 0, 0.2, 0.5, 1.1, out_back) if t < 0.2 else seg(t, 0.2, SYM_DUR, 1.1, 0.9),) * 2)
         sk.anim(C, f'{C}_rays', 'alpha', lambda t, big=big: seg(t, 0, 0.12, 0, 0.6 * big) if t < 0.12 else seg(t, 0.12, SYM_DUR, 0.6 * big, 0, in_out_sine))
         sk.anim(C, fxb, 'rotate', lambda t: -50 * t / SYM_DUR)
-        t0 = 0.18 if kind == 'slam' else 0.04
+        t0 = 0.18 if kind == 'slam' else 0.33 if kind == 'zap' else 0.04
         sk.anim(C, f'{C}_ring', 'alpha', lambda t, t0=t0: 0.0 if t < t0 else seg(t, t0, t0 + 0.45, 1, 0))
         sk.anim(C, rb, 'scale', lambda t, t0=t0, big=big: (seg(t, t0, t0 + 0.45, 0.3, 1.8 * big),) * 2)
         for b, sl, a, dist, delay in sparks:

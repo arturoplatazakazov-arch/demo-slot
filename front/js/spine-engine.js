@@ -54,12 +54,15 @@ class SpineResource {
     };
   }
 
-  static load(assetManager, folderPath, { premultipliedAlpha = true } = {}) {
+  // version (опционально): ?v= к atlas/json, чтобы пересобранный скелет не
+  // брался из кэша браузера/Telegram. Без него — как раньше.
+  static load(assetManager, folderPath, { premultipliedAlpha = true, version = '' } = {}) {
     if (spineResourceCache.has(folderPath)) return spineResourceCache.get(folderPath);
+    const q = version ? `?v=${version}` : '';
     const promise = (async () => {
       const [atlas, json] = await Promise.all([
-        spineLoadTextureAtlas(assetManager, `${folderPath}/animation.atlas`),
-        spineLoadJson(assetManager, `${folderPath}/animation.json`),
+        spineLoadTextureAtlas(assetManager, `${folderPath}/animation.atlas${q}`),
+        spineLoadJson(assetManager, `${folderPath}/animation.json${q}`),
       ]);
       const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
       const skeletonJson = new spine.SkeletonJson(atlasLoader);

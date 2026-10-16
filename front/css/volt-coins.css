@@ -403,7 +403,8 @@ body.lights-off .logo__img { visibility: visible; }
 .reel__cell.is-dimmed img { opacity: 0.28; }
 .reel__cell.is-dimmed .coin-face { opacity: 0.35; }
 /* Пока символ играет Spine-копию, DOM-картинка спрятана (fx.js). */
-.reel__cell.is-fx img { visibility: hidden; }
+.reel__cell.is-fx > img,
+.reel__cell.is-fx .coin-face { visibility: hidden; }
 
 /* Посадка символа без подпрыгивания (продукт): лента просто встаёт. */
 
@@ -413,7 +414,7 @@ body.lights-off .logo__img { visibility: visible; }
   35%  { transform: scale(1.14); filter: drop-shadow(0 0 18px rgba(143, 232, 255, 0.95)); }
   100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(143, 232, 255, 0)); }
 }
-.reel__cell.is-winning img { animation: cell-win 620ms ease-in-out; }
+.reel__cell.is-winning > img { animation: cell-win 620ms ease-in-out; }
 /* Номинал монеты растёт вместе с ней (вперёд, к игроку). Раньше росла только
    картинка монеты, а цифры стояли — казалось, что номинал стягивается к центру. */
 @keyframes cell-win-face {
@@ -444,7 +445,7 @@ body.lights-off .logo__img { visibility: visible; }
   84%  { transform: scale(1.02); }
   100% { transform: scale(1); }
 }
-.reel__cell.is-coin.is-winning img { animation: coin-win 900ms ease-in-out; }
+.reel__cell.is-coin.is-winning > img { animation: coin-win 900ms ease-in-out; }
 .reel__cell.is-coin.is-winning .coin-face { animation: coin-win-face 900ms ease-in-out; }
 /* Номинал масштабируется одним слоем: иначе глифы округлялись к пикселю
    каждый по-своему и цифры «покачивались» друг относительно друга. */
@@ -452,10 +453,15 @@ body.lights-off .logo__img { visibility: visible; }
 .reel__cell.is-win-active { z-index: 3; }
 
 /* Свечение монеты статичное (продукт: без пульсации за номиналом). */
-.reel__cell.is-coin img { filter: drop-shadow(0 0 10px rgba(90, 190, 255, 0.7)); }
+.reel__cell.is-coin > img { filter: drop-shadow(0 0 10px rgba(90, 190, 255, 0.7)); }
+/* Цифры номинала: раньше правило монеты (`.is-coin img`) задевало и их —
+   свечение, +10% и покачивание coin-win. Вид оставлен (утверждён), но
+   задан явно, а анимация монеты их больше не трогает. Тот же вид запечён
+   в Spine-копиях (scripts/volt_coins_face.py, dom_glyph_look). */
+.reel__cell.is-coin .coin-face__glyphs img { filter: drop-shadow(0 0 10px rgba(90, 190, 255, 0.7)); scale: 1.1; }
 /* Монета на 10% крупнее остальных символов, номинал растёт вместе с ней.
    Свойство scale, а не transform — transform у img занят калибровкой сдвига. */
-.reel__cell.is-coin img,
+.reel__cell.is-coin > img,
 .reel__cell.is-coin .coin-face { scale: 1.1; }
 
 /* ---------- Номинал монеты ----------
