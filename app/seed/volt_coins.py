@@ -65,10 +65,13 @@ JACKPOT_VALUES = {"mini": 20, "minor": 50, "major": 250, "grand": 1000}
 #
 # Measured over 300k spins per seed (7 / 21 / 42 / 99), real spin_reels +
 # evaluate_spin + coin_multiplier (faces) + hold_and_win on every drawn grid:
-#   line pay        0.540 - 0.543
-#   Hold & Win      0.403 - 0.417   (1 spin in ~100, average round ~41x,
-#                                    GRAND 9/9 in ~2% of rounds)
-#   TOTAL RTP       0.953 / 0.952 / 0.947 / 0.959  -> ~0.953, hit 16.7%
+#   line pay        0.540 - 0.549
+#   Hold & Win      0.389 - 0.435   (1 spin in ~100, average round ~41x,
+#                                    GRAND 9/9 in ~2.5% of rounds)
+#   TOTAL RTP       0.958 / 0.938 / 0.974 / 0.941  -> ~0.953, hit 16.8%
+# Jackpot coins doubled (product, 2026-10-16): a jackpot lands in ~24% of
+# rounds (MINI 15.6%, MINOR 6.7%, MAJOR 1.5%); paid for with fewer x10/x15
+# faces and a slightly busier respin (coin 71 / 1000).
 # The round is the knife edge: respin_land_weights coin 6 / 7 / 8 moved it
 # 0.24 / 0.36 / 0.51 under the old anywhere-trigger. Re-measure after
 # touching any weight (COIN_WEIGHT drives both the trigger and line pay).
@@ -94,8 +97,8 @@ COIN_WEIGHT = 20
 # Coin faces, base game AND round (the base face is the one the coin locks
 # with). GRAND is never a face — it is only the 9/9 prize.
 COIN_FACE_WEIGHTS = {
-    "1": 300, "2": 230, "3": 150, "5": 90, "10": 40, "15": 20,
-    "mini": 14, "minor": 5, "major": 1,
+    "1": 330, "2": 240, "3": 150, "5": 80, "10": 30, "15": 12,
+    "mini": 28, "minor": 10, "major": 3,
 }
 
 # code -> (display name, symbol type, tier, weight per reel)
@@ -114,11 +117,11 @@ _SYMBOLS: list[tuple[str, str, str, str, int]] = [
 
 # What a bought Hold & Win costs, in bets. The purchase spin lands its own
 # coin line in the middle row (buy_coin_line) plus whatever other coins it
-# draws, so a bought round is worth ~39x the bet including that spin's line
-# pay (60k bought rounds x2 seeds: 39.7 / 38.3) — sold at the game's own RTP
-# -> 40x. Mirrors BUY_BONUS_COST_MULTIPLIER
+# draws, so a bought round is worth ~45x the bet including that spin's line
+# pay (60k bought rounds x4 seeds: 45.0 / 45.6 / 43.9 / 44.9) — sold at the
+# game's own RTP -> 46x. Mirrors BUY_BONUS_COST_MULTIPLIER
 # in front/js/volt-coins/app.js (display only; the server charges this).
-BONUS_BUY_COST_MULTIPLIER = 40
+BONUS_BUY_COST_MULTIPLIER = 46
 
 
 def build_game_config() -> tuple[Game, GameConfig]:
@@ -196,7 +199,7 @@ def build_game_config() -> tuple[Game, GameConfig]:
             # Bought round: the purchase spin lands three coins in the middle
             # row (payline 1) and the round opens from that line.
             "buy_coin_line": [1, 1, 1],
-            "respin_land_weights": {"blank": 93, "coin": 7},
+            "respin_land_weights": {"blank": 929, "coin": 71},
             # GRAND is absent on purpose: it is only the 9/9 prize below.
             "coin_value_weights": COIN_FACE_WEIGHTS,
             "jackpot_values": JACKPOT_VALUES,

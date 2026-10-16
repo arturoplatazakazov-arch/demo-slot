@@ -119,19 +119,39 @@ function formatAmount(n) {
   return Math.round(Number(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 
+// Плашки джекпотов из ChatGPT (img/volt-coins/jackpots, нарезка с замером
+// пустой панели): имя тира впечатано, сумму печатает игра в панель.
+// Выключены (продукт вернул CSS-плашки); посмотреть картинки: ?plates=art.
+const JP_PLATES = new URLSearchParams(location.search).get('plates') !== 'art' ? null
+  : {"mini":{"w":452,"h":197,"panel":{"l":0.0996,"t":0.533,"w":0.8031,"h":0.3655}},"minor":{"w":425,"h":196,"panel":{"l":0.0565,"t":0.5051,"w":0.8871,"h":0.4031}},"major":{"w":452,"h":204,"panel":{"l":0.0642,"t":0.5245,"w":0.8761,"h":0.3775}},"grand":{"w":583,"h":275,"panel":{"l":0.0669,"t":0.6,"w":0.8696,"h":0.3164}}};
+
 function buildJackpotRow() {
   const row = document.getElementById('jpRow');
   if (!row) return;
   row.innerHTML = '';
+  row.classList.toggle('is-art', !!JP_PLATES);
   for (const { tier, name } of JACKPOT_LADDER) {
     const plate = document.createElement('div');
     plate.className = `jp jp--${tier}`;
     plate.dataset.tier = tier;
-    plate.innerHTML = `
-      <span class="jp__plate"></span>
-      <span class="jp__name">${name}</span>
-      <span class="jp__value" data-jp-value></span>
-    `;
+    const art = JP_PLATES && JP_PLATES[tier];
+    if (art) {
+      const p = art.panel;
+      plate.classList.add('is-art');
+      plate.style.aspectRatio = `${art.w} / ${art.h}`;
+      plate.innerHTML = `
+        <img class="jp__art" src="${ASSET_ROOT}/jackpots/${tier}.webp" alt="${name}">
+        <span class="jp__panel" style="left:${p.l * 100}%;top:${p.t * 100}%;width:${p.w * 100}%;height:${p.h * 100}%">
+          <span class="jp__value" data-jp-value></span>
+        </span>
+      `;
+    } else {
+      plate.innerHTML = `
+        <span class="jp__plate"></span>
+        <span class="jp__name">${name}</span>
+        <span class="jp__value" data-jp-value></span>
+      `;
+    }
     row.appendChild(plate);
   }
 }
@@ -311,6 +331,8 @@ const DIGIT_CORE_PX = (() => {
   const d = '0123456789'.split('').map((c) => GLYPHS[c]).filter(Boolean);
   return d.length ? d.reduce((a, g) => a + (g.cb - g.ct) * g.h, 0) / d.length : 0;
 })();
+const GLYPH_GAP = 0.06; // зазор между символами номинала, em (доля высоты цифры)
+
 function glyphEm(ch) {
   const g = GLYPHS[ch];
   return ch.length === 1 ? g.h / DIGIT_CORE_PX : 1 / (g.cb - g.ct);
@@ -329,8 +351,10 @@ function glyphRow(chars) {
     img.style.height = `${h.toFixed(4)}em`;
     img.style.width = `${w.toFixed(4)}em`;
     img.style.marginBottom = `${(-(1 - g.cb) * h).toFixed(4)}em`;
-    img.style.marginLeft = `${(-g.cl * w * 0.85).toFixed(4)}em`;
-    img.style.marginRight = `${(-(1 - g.cr) * w * 0.85).toFixed(4)}em`;
+    // Прозрачные поля картинки срезаются целиком, между ядрами — зазор
+    // GLYPH_GAP (раньше поля резались на 85% и «x» наезжал на цифру).
+    img.style.marginLeft = `${(-g.cl * w + GLYPH_GAP / 2).toFixed(4)}em`;
+    img.style.marginRight = `${(-(1 - g.cr) * w + GLYPH_GAP / 2).toFixed(4)}em`;
     row.appendChild(img);
   }
   return row;
@@ -342,7 +366,7 @@ function glyphRowWidth(chars) {
   for (const ch of chars) {
     const g = GLYPHS[ch];
     const h = glyphEm(ch);
-    sum += (g.cr - g.cl) * (g.w / g.h) * h * 0.85 + (g.w / g.h) * h * 0.15;
+    sum += (g.cr - g.cl) * (g.w / g.h) * h + GLYPH_GAP;
   }
   return sum;
 }
@@ -354,7 +378,7 @@ function makeCoinFace(face) {
   if (chars && chars.every((ch) => GLYPHS[ch])) {
     // Высота ядра: цифры ~36% ячейки, слова ~20%, строка не шире ~2/3-3/4 ячейки.
     const target = (face.word ? 0.3 : 0.36) * cellH;
-    const maxW = (face.word ? 0.8 : 0.66) * cellW;
+    const maxW = (face.word ? 0.8 : 0.56) * cellW;
     const size = Math.min(target, maxW / glyphRowWidth(chars));
     const row = glyphRow(chars);
     row.style.fontSize = `${size.toFixed(1)}px`;

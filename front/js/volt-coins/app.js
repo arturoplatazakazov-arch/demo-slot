@@ -22,7 +22,7 @@ const gameState = {
 };
 
 // = BONUS_BUY_COST_MULTIPLIER в app/seed/volt_coins.py (только для показа).
-const BUY_BONUS_COST_MULTIPLIER = 40;
+const BUY_BONUS_COST_MULTIPLIER = 46;
 
 function formatNumber(n) {
   return Number(n).toLocaleString('en-US');
