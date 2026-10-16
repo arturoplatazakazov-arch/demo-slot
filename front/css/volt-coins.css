@@ -458,7 +458,14 @@ body.lights-off .logo__img { visibility: visible; }
    свечение, +10% и покачивание coin-win. Вид оставлен (утверждён), но
    задан явно, а анимация монеты их больше не трогает. Тот же вид запечён
    в Spine-копиях (scripts/volt_coins_face.py, dom_glyph_look). */
-.reel__cell.is-coin .coin-face__glyphs img { filter: drop-shadow(0 0 10px rgba(90, 190, 255, 0.7)); scale: 1.1; }
+/* Лёгкая тёмная обводка (продукт): 4 сдвига по 1.5px, затем голубой ореол. */
+.reel__cell.is-coin .coin-face__glyphs img {
+  filter:
+    drop-shadow(1.5px 0 0 rgba(6, 10, 36, 0.85)) drop-shadow(-1.5px 0 0 rgba(6, 10, 36, 0.85))
+    drop-shadow(0 1.5px 0 rgba(6, 10, 36, 0.85)) drop-shadow(0 -1.5px 0 rgba(6, 10, 36, 0.85))
+    drop-shadow(0 0 10px rgba(90, 190, 255, 0.7));
+  scale: 1.1;
+}
 /* Монета на 10% крупнее остальных символов, номинал растёт вместе с ней.
    Свойство scale, а не transform — transform у img занят калибровкой сдвига. */
 .reel__cell.is-coin > img,
@@ -1086,6 +1093,12 @@ body.is-feature-screen .v3-bar { visibility: hidden; }
   background: radial-gradient(closest-side, #0a1236 0%, #0a1236 82%, rgba(10, 18, 54, 0) 100%);
   box-shadow: inset 0 calc(var(--cell-h) * 0.01) calc(var(--cell-h) * 0.03) rgba(0, 0, 0, 0.6);
 }
+/* Монета v2: отверстие под номинал крупнее (≈0.525 высоты ячейки) — эмаль
+   по его размеру. У тиров джекпота арт старый, там остаётся 0.5. */
+.coin-face.has-glyphs:not(.is-tier)::before {
+  width: calc(var(--cell-h) * 0.53);
+  height: calc(var(--cell-h) * 0.53);
+}
 .coin-face__glyphs { position: relative; }
 
 /* Разряды по синей обводке уайлда и ободу монеты, совсем приглушённые. */
@@ -1183,9 +1196,9 @@ body.is-feature-screen .v3-bar { visibility: hidden; }
   height: 100%;
   overflow: visible;
   animation: coin-bolts-turn 14s linear infinite;
-  filter: drop-shadow(0 0 1.5px #bfeeff) drop-shadow(0 0 4px #39a8ff);
+  filter: drop-shadow(0 0 1px #bfeeff) drop-shadow(0 0 2.5px #39a8ff);
 }
-.coin-bolts--major svg { animation-duration: 9s; filter: drop-shadow(0 0 2px #e6f8ff) drop-shadow(0 0 6px #39a8ff); }
+.coin-bolts--major svg { animation-duration: 9s; filter: drop-shadow(0 0 1.2px #e6f8ff) drop-shadow(0 0 3.5px #39a8ff); }
 @keyframes coin-bolts-turn { to { transform: rotate(360deg); } }
 .coin-bolt { opacity: 0; animation: coin-bolt-on 1.4s steps(1, end) infinite; }
 @keyframes coin-bolt-on {
@@ -1198,7 +1211,7 @@ body.is-feature-screen .v3-bar { visibility: hidden; }
 .coin-bolt__v {
   fill: none;
   stroke: #f2fbff;
-  stroke-width: 1.3;
+  stroke-width: 0.6;   /* продукт: тоньше (было 1.3) */
   stroke-linecap: round;
   stroke-linejoin: round;
   visibility: hidden;
