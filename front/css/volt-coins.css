@@ -416,12 +416,8 @@ body.lights-off .logo__img { visibility: visible; }
 .reel__cell.is-winning img { animation: cell-win 620ms ease-in-out; }
 .reel__cell.is-win-active { z-index: 3; }
 
-/* Монета — единственный «живой» символ в покое: еле заметно дышит током. */
-@keyframes coin-idle {
-  0%, 100% { filter: drop-shadow(0 0 6px rgba(80, 180, 255, 0.5)); }
-  50%      { filter: drop-shadow(0 0 16px rgba(120, 210, 255, 0.95)); }
-}
-.reel__cell.is-coin img { animation: coin-idle 2.2s ease-in-out infinite; }
+/* Свечение монеты статичное (продукт: без пульсации за номиналом). */
+.reel__cell.is-coin img { filter: drop-shadow(0 0 10px rgba(90, 190, 255, 0.7)); }
 
 /* ---------- Номинал монеты ----------
    На базе монета без номинала (с молнией). В раунде ячейка показывает арт
@@ -1023,3 +1019,11 @@ body.is-feature-screen .v3-bar { visibility: hidden; }
   height: 1em;
 }
 .coin-face__glyphs img { display: block; flex: 0 0 auto; pointer-events: none; }
+/* Тень за номиналом: цифры из металла монеты иначе сливаются с ней. Тесная
+   тёмная обводка + мягкий ореол + сдвиг вниз — читается как рельеф. */
+.coin-face__glyphs {
+  filter:
+    drop-shadow(0 0 0.01em rgba(20, 10, 0, 0.55))
+    drop-shadow(0 0.015em 0.0125em rgba(0, 0, 0, 0.45))
+    drop-shadow(0 0 0.045em rgba(10, 6, 30, 0.35));
+}
