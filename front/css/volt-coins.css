@@ -885,7 +885,7 @@ img.is-missing { outline: 2px dashed rgba(57, 216, 255, 0.5); }
    Заголовок впечатан в баннер, сумма — DOM в его пустой синей панели
    (доли панели замерены scripts/volt_coins_popups.py -> POPUP_ART в slot.js). */
 .game-popup.is-art {
-  width: min(900px, 86%);
+  width: min(630px, 60%);   /* продукт: на 30% меньше (было min(900px, 86%)) */
   padding: 0;
   clip-path: none;
   border: 0;
@@ -940,7 +940,7 @@ img.is-missing { outline: 2px dashed rgba(57, 216, 255, 0.5); }
 .buy-dialog.is-art .buy-dialog__step { width: 16cqh; height: 16cqh; font-size: 11cqh; }
 .buy-dialog.is-art .buy-dialog__actions { margin-top: 10px; }
 @media (orientation: portrait) {
-  .game-popup.is-art { width: 94%; }
+  .game-popup.is-art { width: 66%; }   /* на 30% меньше (было 94%) */
   .buy-dialog.is-art { width: 96%; }
 }
 
