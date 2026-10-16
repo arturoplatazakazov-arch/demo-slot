@@ -355,7 +355,7 @@ function getWinHud() {
   if (winHud) return winHud;
   winHud = document.createElement('div');
   winHud.className = 'win-hud';
-  winHud.innerHTML = '<div class="win-hud__line"></div><div class="win-hud__total"><span class="win-hud__label">WIN</span><span class="win-hud__value"></span></div>';
+  winHud.innerHTML = '<div class="win-hud__line"></div><div class="win-hud__total"><span class="win-hud__label">WIN</span><span class="win-hud__value"></span><span class="win-hud__cur"></span></div>';
   document.getElementById('screen').appendChild(winHud);
   window.addEventListener('resize', placeWinHud);
   return winHud;
@@ -371,11 +371,17 @@ function placeWinHud() {
   winHud.style.setProperty('--hud-h', `${r.height}px`);
 }
 
+// Валюта сессии (gameState из app.js), как в балансе; FUN — до старта сессии.
+function winCurrency() {
+  return (typeof gameState !== 'undefined' && gameState.currency) || 'FUN';
+}
+
 function showTotalWin(amount) {
   if (!(Number(amount) > 0)) return;
   const hud = getWinHud();
   placeWinHud();
   hud.querySelector('.win-hud__value').textContent = formatAmount(amount);
+  hud.querySelector('.win-hud__cur').textContent = winCurrency();
   hud.classList.remove('has-total');
   void hud.offsetWidth;
   hud.classList.add('has-total');
@@ -394,7 +400,7 @@ function showLineWin(infos, amount) {
   const box = hud.getBoundingClientRect();
   el.style.left = `${mid.left + mid.width / 2 - box.left}px`;
   el.style.top = `${mid.top + mid.height / 2 - box.top}px`;
-  el.textContent = `+${formatAmount(amount)}`;
+  el.textContent = `${formatAmount(amount)} ${winCurrency()}`;
   hud.classList.remove('has-line');
   void el.offsetWidth;
   hud.classList.add('has-line');
