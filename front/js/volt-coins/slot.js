@@ -67,7 +67,6 @@ const SYMBOL_LAYOUT = [
 
 const WIN_PULSE_MS = 620;
 const FX_SYMBOL_MS = 1100;   // длина клипа символа в fx/symbols
-const LAND_BOUNCE_MS = 260;
 const POPUP_ENTER_MS = 420;
 const POPUP_EXIT_MS = 260;
 const DIM_TRANSITION_MS = 320;
@@ -219,7 +218,7 @@ function clearCellAnimation(info) {
     info.winLoopTimeout = null;
   }
   dropSymbolFx(info);
-  info.cell.classList.remove('is-winning', 'is-win-active', 'is-landing');
+  info.cell.classList.remove('is-winning', 'is-win-active');
 }
 
 function teardownCellInstances() {
@@ -332,14 +331,6 @@ function previewSymbolWin(info) {
     });
   };
   playOnce();
-}
-
-function playLandBounce(info) {
-  if (!info) return;
-  info.cell.classList.remove('is-landing');
-  void info.cell.offsetWidth;
-  info.cell.classList.add('is-landing');
-  setTimeout(() => info.cell.classList.remove('is-landing'), LAND_BOUNCE_MS);
 }
 
 function setCellDimmed(info, dimmed) {
@@ -541,7 +532,6 @@ function settleColumnCells(cellEls, col, finalCodes) {
     };
     cell.addEventListener('click', () => previewSymbolWin(info));
     cellInfos[row * GRID_COLS + col] = info;
-    playLandBounce(info);
     // Приземлилась монета — короткая дуга от катушки (GDD: «приземление монеты»).
     if (code === 'coin') {
       fx('coinLanded', cell);
@@ -1076,7 +1066,6 @@ function spinCellTo(info, code, delayMs, face = null) {
         spinner.remove();
         setCellSymbol(info, code).then(() => {
           if (face) showCoinFace(info, face);
-          if (code !== 'blank') playLandBounce(info);
           resolve();
         });
       };
