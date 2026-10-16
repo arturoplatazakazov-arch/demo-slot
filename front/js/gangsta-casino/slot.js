@@ -359,8 +359,7 @@ function playWinCells(winningCells, lineWins, countWins) {
     if (info) setCellDimmed(info, allWinInfos.length > 0 && !winSet.has(info));
   }
   if (allWinInfos.length) {
-    playSceneClip('frame', 'win');
-    playSceneClip('logo', 'win');
+    for (const name of ['frame', 'frame_mob', 'logo', 'logo_mob']) playSceneClip(name, 'win');
   }
   // A grown wild column celebrates along with its line.
   for (const el of bigWildEls) {
@@ -1073,14 +1072,15 @@ function preloadAssets() {
     `${SYMBOL_ROOT}/wild_big.png`,
     bgSrcFor('base'),
     bgSrcFor('bonus'),
-    ...['frame.png', 'logo.png', 'buy_bonus.png', 'fs_counter.png', 'fs_shadow.png', 'plate.png', 'chest.png',
-      'buy_title.png', 'wof_wheel.png', 'wof_of_fortune.png', 'scene_people.png'].map((f) => `${ASSET_ROOT}/ui/${f}`),
+    ...['frame.png', 'logo.png', 'buy_chest.png', 'buy_cone.png', 'buy_text.png', 'fs_counter.png', 'plate.png', 'chest.png',
+      'buy_title.png', 'wof_wheel.png', 'wof_of_fortune.png', 'scene_people.png',
+      ...(isMobileLayout() ? ['logo_mob.png', 'buy_chest_mob.png', 'buy_cone_mob.png', 'buy_text_mob.png', 'frame_mob.png'] : [])].map((f) => `${ASSET_ROOT}/ui/${f}`),
   ].map((src) => track(preloadImage(src)));
   if (stage) {
     // Skeletons up front so the first win doesn't wait on a fetch.
     for (const code of SYMBOL_CODES) tasks.push(track(getSymbolResource(code)));
-    tasks.push(track(getSymbolResource(FEATURE_SCREEN_CODE)));
-    tasks.push(track(getSymbolResource(BONUS_SCREEN_CODE)));
+    tasks.push(track(getSymbolResource(screenCode(FEATURE_SCREEN_CODE))));
+    tasks.push(track(getSymbolResource(screenCode(BONUS_SCREEN_CODE))));
     if (LAND_ENABLED) for (const code of SYMBOL_CODES) tasks.push(track(getLandResource(code)));
   }
   if (backStage) {
@@ -1107,12 +1107,14 @@ function preloadAssets() {
 
 const SCENE_ROOT = `${SPINE_ROOT}/scene`;
 const LAND_ROOT = `${SPINE_ROOT}/land`;
-const SCENE_NAMES = ['background', 'hero_man', 'hero_woman', 'frame', 'freespins', 'logo'];
+// *_mob = the portrait mockup's own frame / logo (Mob_Mafia_Slot.psb), the
+// same skeletons retargeted onto that art (2026-10-16 redesign).
+const SCENE_NAMES = ['background', 'hero_man', 'hero_woman', 'frame', 'frame_mob', 'freespins', 'logo', 'logo_mob'];
 // What actually runs (product, 2026-10-10: background, frame, logo and the
 // redrawn heroes live; the counter and the sym_* land bounce stay off until
 // asked for). Drop a hero from here and the PSB's still people
 // (.scene-people) stand in for it automatically.
-const SCENE_ON = new Set(['background', 'hero_man', 'hero_woman', 'frame', 'logo']);
+const SCENE_ON = new Set(['background', 'hero_man', 'hero_woman', 'frame', 'frame_mob', 'logo', 'logo_mob']);
 const LAND_ENABLED = false;
 // root_scene_x/y from layout.json (PSB px, y down).
 const SCENE_ROOTS = {
@@ -1123,8 +1125,12 @@ const SCENE_ROOTS = {
 let backStage = null;
 const scene = {}; // name -> SpineInstance
 
+// Folders of skeletons re-cut for the 2026-10-16 mockup (versioned so a cached
+// old atlas page can't meet the new atlas text — see FEATURE_SCREEN_CODE).
+const SCENE_DIR = { logo: 'logo_v2', freespins: 'freespins_v2' };
 function getSceneResource(name) {
   if (!backStage) return Promise.reject(new Error('no back stage'));
+  name = SCENE_DIR[name] || name;
   // README: "без premultiplied alpha" — and no pma line in the atlases.
   return SpineEngine.SpineResource.load(backStage.assetManager, `${SCENE_ROOT}/${name}`, { premultipliedAlpha: false });
 }
@@ -1145,9 +1151,11 @@ function sceneAnchorAt(name, resource) {
 function sceneAnchorFor(name, resource) {
   if (SCENE_ROOTS[name]) return sceneAnchorAt(name, resource);
   if (name === 'frame') return document.getElementById('reelRig');
-  if (name === 'logo') return document.querySelector('.stage--front .logo');
-  // freespins: the counter skeleton's box is the PSB "Free Spins" group, i.e.
-  // the jukebox plus its shadow — 68px left of .fs-counter, 384x311.
+  if (name === 'frame_mob') return document.querySelector('.frame-mob');
+  if (name === 'logo') return document.querySelector('.stage--front .logo--desk');
+  if (name === 'logo_mob') return document.querySelector('.stage--front .logo--mob');
+  // freespins: the counter skeleton's box is the counter art itself (jukebox
+  // plus its shadow), i.e. the whole .fs-counter box.
   const el = document.createElement('div');
   el.className = 'fs-counter__anchor';
   document.getElementById('freeSpinsCounter').prepend(el);
@@ -1192,9 +1200,11 @@ function syncScene() {
     background: !portrait && !bonus,
     hero_man: !portrait && !bonus,
     hero_woman: !portrait && !bonus,
-    frame: true,
+    frame: !portrait,
+    frame_mob: portrait,
     freespins: bonus,
-    logo: true,
+    logo: !portrait,
+    logo_mob: portrait,
   };
   document.getElementById('screen').classList.toggle('has-spine-terrace', want.background && !!scene.background);
   // Still people over the live terrace while the hero skeletons are off.
@@ -1233,11 +1243,21 @@ function playSceneClip(name, clip) {
 // where the background's do). Portrait just contain-fits that box to the
 // screen. Closed by a click: the whole screen fades out to transparent.
 
-const FEATURE_SCREEN_CODE = 'feature_screen';
-const BONUS_SCREEN_CODE = 'bonus_screen';
+// _v2: re-cut for the 2026-10-16 mockup. New folder names on purpose — Spine
+// assets load without a ?v=, so a cached old atlas page must never meet the new
+// atlas text under the same URL.
+const PRELOAD_TIMEOUT_MS = 12000;
+const FEATURE_SCREEN_CODE = 'feature_screen_v2';
+const BONUS_SCREEN_CODE = 'bonus_screen_v2';
 // Both full-screen exports (pfs / bfs) are authored on the PSB canvas around
 // the skeleton origin, 1 unit = 1 design px.
 const FEATURE_BOX = { x: -966, y: -470, width: 1932, height: 940 };
+// Portrait builds (<code>_mob): the same skeletons re-laid out on the mobile
+// canvas 780x1416 (Mob_Mafia_Slot.psb), origin = its centre.
+const FEATURE_BOX_MOB = { x: -390, y: -708, width: 780, height: 1416 };
+function screenCode(code) {
+  return isMobileLayout() ? `${code}_mob` : code;
+}
 const FEATURE_FADE_MS = 500;
 
 // Bonus screen (bfs): the "Free spins" jukebox rolls three digit strips in
@@ -1248,7 +1268,7 @@ const FEATURE_FADE_MS = 500;
 // to the strip bone every frame so it rides the machine's bounce/breathing.
 const BFS_STRIP_BONES = ['strip1', 'strip2', 'strip3'];
 const BFS_STRIP_HIDE_AT = [1.8, 1.9333, 2.0667]; // intro times the strips fade
-const BFS_WINDOW_UNITS = 60;
+const BFS_WINDOW_UNITS = 96.47; // window height of the 2026-10-16 jukebox (mach units)
 
 function boneScreenBox(inst, bone) {
   const canvasEl = document.getElementById('spineCanvas');
@@ -1263,18 +1283,21 @@ function boneScreenBox(inst, bone) {
 // Shared lifecycle of the two full-screen Spine screens: 90% dim, intro ->
 // idle loop, click anywhere -> fade out. `onFrame(inst)` runs every frame
 // while the screen is up (the bonus screen's live digits).
-function showSpineScreen(code, { onFrame = null, onClose = null } = {}) {
+function showSpineScreen(baseCode, { onFrame = null, onClose = null } = {}) {
   const root = document.getElementById('featureScreen');
   if (!stage || !root) return Promise.resolve(false);
+  const portrait = isMobileLayout(); // the layout is fixed for the screen's lifetime
+  const code = portrait ? `${baseCode}_mob` : baseCode;
   return getSymbolResource(code).then((resource) => new Promise((resolve) => {
     const inst = resource.createInstance();
+    // Both layouts pin the skeleton's canvas box onto #stage, which is that
+    // same design canvas (1932x940 / 780x1416) contain-scaled to the screen.
     const place = () => {
-      const portrait = isMobileLayout();
-      inst.anchorEl = portrait ? root : document.getElementById('stage');
+      inst.anchorEl = document.getElementById('stage');
       inst.fit = 1;
     };
     place();
-    inst.boundsOverride = FEATURE_BOX;
+    inst.boundsOverride = portrait ? FEATURE_BOX_MOB : FEATURE_BOX;
     window.addEventListener('resize', place);
 
     document.body.classList.add('is-feature-screen');
@@ -1284,6 +1307,9 @@ function showSpineScreen(code, { onFrame = null, onClose = null } = {}) {
     stage.addOverlay(inst);
     inst.play('intro', false);
     inst.queue('idle', true);
+    // ?seek=<s> — dev/screenshot: jump the intro to that moment.
+    const seek = Number(new URLSearchParams(location.search).get('seek'));
+    if (seek > 0) inst.animationState.getCurrent(0).trackTime = seek;
 
     let done = false;
     let alpha = 1;
@@ -1391,12 +1417,19 @@ function init() {
     backStage = null;
   }
   setupDevPanel();
-  preloadAssets().then(() => {
+  // Bounded like the other games' preloaders: on a slow phone link one heavy
+  // atlas (the screens are 2-4 MB) must not hold the game behind the bar — the
+  // feature screen still waits for its own skeleton when it opens.
+  Promise.race([preloadAssets(), wait(PRELOAD_TIMEOUT_MS)]).then(() => {
     setupScene();
     if (window.Preloader) window.Preloader.done();
     // ?nofs — dev/screenshot convenience: straight into the game.
-    if (new URLSearchParams(location.search).has('nofs')) {
+    const qs = new URLSearchParams(location.search);
+    if (qs.has('nofs') || qs.has('screen')) {
       document.getElementById('preloader')?.remove();
+      // ?screen=feature|bonus — dev/screenshot: open that screen straight away.
+      if (qs.get('screen') === 'feature') return showFeatureScreen();
+      if (qs.get('screen') === 'bonus') return showBonusScreen(Number(qs.get('spins')) || 10);
       return null;
     }
     return showFeatureScreen();

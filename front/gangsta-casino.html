@@ -6,7 +6,7 @@
 <title>Gangsta Casino — demo</title>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/preloader.css?v=1">
-<link rel="stylesheet" href="css/gangsta-casino.css?v=12">
+<link rel="stylesheet" href="css/gangsta-casino.css?v=17">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 </head>
 <body>
@@ -14,7 +14,7 @@
   <!-- Boot preloader: статичная разметка (видна с первого кадра), прогресс
        ведёт js/preloader.js, задачи считает preloadAssets в slot.js. -->
   <div class="preloader" id="preloader">
-    <div class="preloader__logo" id="preloaderLogo"><img src="img/gangsta-casino/ui/logo.png" alt="" onerror="this.remove()"></div>
+    <div class="preloader__logo" id="preloaderLogo"><img src="img/gangsta-casino/ui/logo_preloader.png" alt="" onerror="this.remove()"></div>
     <div class="preloader__bar"><div class="preloader__fill" id="preloaderFill"></div></div>
     <div class="preloader__pct" id="preloaderPct">0%</div>
   </div>
@@ -47,6 +47,14 @@
 
     <!-- Spine-сцена ПОД барабанами: фон-терраса, герои, рамка (хром + стекло
          проёма), логотип, счётчик фриспинов — см. setupScene в slot.js. -->
+    <!-- Портретный фон (Mob_Mafia_Slot.psb, 780x1416) с людьми, в координатах
+         сцены, рендер с запасом за край холста. Отдельный stage ПОД
+         #spineBackCanvas: иначе непрозрачный фон закрыл бы живые рамку и лого. -->
+    <div class="stage stage--back" id="stageBack">
+      <img class="obj bg-mob bg-mob--base" src="img/gangsta-casino/bg_base_mob.jpg" alt="">
+      <img class="obj bg-mob bg-mob--bonus" src="img/gangsta-casino/bg_bonus_mob.jpg" alt="">
+    </div>
+
     <canvas class="layer spine-canvas spine-canvas--back" id="spineBackCanvas"></canvas>
 
     <!-- Design-space stage 1932x940 (десктоп) / 780x1416 (портрет):
@@ -55,6 +63,10 @@
 
       <!-- Статичные люди из PSB поверх живого фона, пока героев-скелетов нет. -->
       <img class="obj scene-people" src="img/gangsta-casino/ui/scene_people.png" alt="">
+
+      <!-- Портрет: своя рамка макета Mob_Mafia_Slot.psb (стекло проёма + хром)
+           под барабанами; живая версия — скелет frame_mob на #spineBackCanvas. -->
+      <img class="obj frame-mob" src="img/gangsta-casino/ui/frame_mob.png" alt="">
 
       <!-- Барабаны как единый «риг» в координатах рамки (PSB slot/frame,
            1139x795 от (406,44)); в портрете риг целиком масштабируется. -->
@@ -66,14 +78,23 @@
 
       <!-- Buy Bonus — только в базе; сундук + плашка из группы buy_bonus. -->
       <button class="obj sign-buy-bonus" id="buyBonusBtn" type="button" aria-label="Купить бонус">
-        <img class="sign-buy-bonus__img" src="img/gangsta-casino/ui/buy_bonus.png" alt="">
-        <span class="sign-buy-bonus__price" id="buyBonusPrice">10,000,000</span>
+        <!-- Слои PSB buy_bonus по отдельности: сундук, красный луч (пульсирует),
+             надпись BUY FREE SPINS — в порядке макета. -->
+        <span class="sign-buy-bonus__art sign-buy-bonus__art--desk">
+          <img class="sign-buy-bonus__img" src="img/gangsta-casino/ui/buy_chest.png" alt="">
+          <img class="sign-buy-bonus__img sign-buy-bonus__cone" src="img/gangsta-casino/ui/buy_cone.png" alt="">
+          <img class="sign-buy-bonus__img" src="img/gangsta-casino/ui/buy_text.png" alt="">
+        </span>
+        <span class="sign-buy-bonus__art sign-buy-bonus__art--mob">
+          <img class="sign-buy-bonus__img" src="img/gangsta-casino/ui/buy_chest_mob.png" alt="">
+          <img class="sign-buy-bonus__img sign-buy-bonus__cone sign-buy-bonus__cone--mob" src="img/gangsta-casino/ui/buy_cone_mob.png" alt="">
+          <img class="sign-buy-bonus__img" src="img/gangsta-casino/ui/buy_text_mob.png" alt="">
+        </span>
       </button>
 
       <!-- Счётчик фриспинов — только в бонусе. Цифры в трёх окнах живые
            (впечатанные «319» стёрты из арта). -->
       <div class="obj fs-counter" id="freeSpinsCounter">
-        <img class="fs-counter__shadow" src="img/gangsta-casino/ui/fs_shadow.png" alt="">
         <img class="fs-counter__img" src="img/gangsta-casino/ui/fs_counter.png" alt="">
         <span class="fs-counter__digit" style="--d:0"></span>
         <span class="fs-counter__digit" style="--d:1"></span>
@@ -93,7 +114,8 @@
         <img class="frame" src="img/gangsta-casino/ui/frame.png" alt="">
         <div class="reel-win-amount" id="reelWinAmount"></div>
       </div>
-      <img class="obj logo" src="img/gangsta-casino/ui/logo.png" alt="Gangsta Casino">
+      <img class="obj logo logo--desk" src="img/gangsta-casino/ui/logo.png" alt="Gangsta Casino">
+      <img class="obj logo logo--mob" src="img/gangsta-casino/ui/logo_mob.png" alt="">
     </div>
 
     <div class="layer screen-dim" id="screenDim"></div>
@@ -290,7 +312,7 @@
   <script src="js/slot-core.js?v=1"></script>
   <script src="js/preloader.js?v=1"></script>
   <script src="js/gangsta-casino/sound.js?v=1"></script>
-  <script src="js/gangsta-casino/slot.js?v=14"></script>
+  <script src="js/gangsta-casino/slot.js?v=17"></script>
   <script src="js/buy-bonus.js?v=1"></script>
   <script src="js/gangsta-casino/app.js?v=2"></script>
   <script src="js/ui-bar-v3.js?v=4"></script>

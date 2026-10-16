@@ -140,6 +140,8 @@ body {
 .stage .obj { position: absolute; }
 /* Front stage: frame + logo above the Spine canvas, clicks fall through. */
 .stage--front { z-index: 3; pointer-events: none; }
+/* Under #spineBackCanvas (same z, earlier in the DOM): portrait background. */
+.stage--back { z-index: 1; pointer-events: none; }
 
 .spine-canvas {
   inset: 0;
@@ -156,10 +158,7 @@ body {
 .stage .scene-anchor { position: absolute; pointer-events: none; }
 .fs-counter__anchor {
   position: absolute;
-  left: -68px;   /* 127 - 195 */
-  top: 0;
-  width: 384px;
-  height: 311px;
+  inset: 0; /* the counter skeleton's box == the counter art (jukebox + shadow) */
   pointer-events: none;
 }
 /* Statics the Spine scene replaces (kept as the fallback), one flag per part.
@@ -167,9 +166,19 @@ body {
    skeletons' anchors. */
 .screen.has-spine-frame .reel-bg,
 .screen.has-spine-frame .frame,
-.screen.has-spine-logo .logo,
+.screen.has-spine-logo .logo--desk,
+.screen.has-spine-logo_mob .logo--mob,
+.screen.has-spine-frame_mob .frame-mob,
 .screen.has-spine-freespins .fs-counter__img,
 .screen.has-spine-freespins .fs-counter__shadow { visibility: hidden; }
+
+/* Portrait-only layers (shown in the portrait media block). */
+.logo--mob, .sign-buy-bonus__art--mob, .bg-mob, .frame-mob { display: none; }
+.bg-mob { pointer-events: none; z-index: 0; }
+.bg-mob--base { left: -80px; top: -128px; width: 941px; height: 1672px; }
+.bg-mob--bonus { left: -10px; top: -5px; width: 800px; height: 1463px; }
+/* Mobile frame (glass + chrome) sits UNDER the reels, like the PSB. */
+.frame-mob { left: -26px; top: 182px; /* PSB 232, up 50 with the reels */ width: 843px; height: 598px; z-index: 1; pointer-events: none; }
 
 /* PSB people_normal (both armchairs, table, shadows) at their PSB spot —
    stands in for the hero skeletons over the live terrace, which has no
@@ -388,22 +397,26 @@ body {
 }
 
 /* ---------- Logo ---------- */
+/* PSB Logo group (new mockup): plate hung on gold chains, (727,-66) 475x201 —
+   the chains run off the top of the canvas. */
 .logo {
-  left: 778px;
-  top: 7px;
-  width: 376px;
-  height: 128px;
+  left: 727px;
+  top: -66px;
+  width: 475px;
+  height: 201px;
   z-index: 4;
   pointer-events: none;
   filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
 }
 
 /* ---------- Buy bonus (base only) ---------- */
+/* PSB buy_bonus (new): chest under a red light cone with BUY FREE SPINS,
+   (154,555) 306x270. */
 .sign-buy-bonus {
   left: 154px;
-  top: 592px;
+  top: 555px;
   width: 306px;
-  height: 233px;
+  height: 270px;
   padding: 0;
   border: 0;
   background: none;
@@ -426,12 +439,25 @@ body {
   0%, 100% { filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.5)); }
   50% { filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 18px rgba(176, 90, 255, 0.75)); }
 }
+.sign-buy-bonus__art { position: absolute; inset: 0; }
+/* The red light cone behind the label breathes: grows and shrinks from its
+   apex at the top (cone bbox x 62..259 of 306 -> apex at 52.5%). */
+.sign-buy-bonus__cone {
+  transform-origin: 52.5% 0;
+  animation: buy-cone-pulse 1.8s ease-in-out infinite;
+  filter: none;
+}
+.sign-buy-bonus__cone--mob { transform-origin: 57.2% 0; } /* 41..238 of 244 */
+@keyframes buy-cone-pulse {
+  0%, 100% { transform: scale(0.9); opacity: 0.7; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
 .sign-buy-bonus:hover { transform: scale(1.04); }
 .sign-buy-bonus:active { transform: scale(0.97); }
 .sign-buy-bonus__price {
   position: absolute;
   left: 50%;
-  top: -14px;
+  bottom: -10px; /* under the chest: the cone + BUY FREE SPINS own the top */
   transform: translateX(-50%);
   padding: 5px 18px 2px;
   border-radius: 999px;
@@ -447,12 +473,14 @@ body {
 .screen[data-mode="freespins"] .sign-buy-bonus { display: none; }
 
 /* ---------- Free spins counter (bonus only) ---------- */
+/* PSB Free Spins (new jukebox + its shadow), (98,554) 384x256; the painted
+   "319" is erased from the art. */
 .fs-counter {
   display: none;
-  left: 195px;
-  top: 498px;
-  width: 214px;
-  height: 288px;
+  left: 98px;
+  top: 554px;
+  width: 384px;
+  height: 256px;
   z-index: 3;
   pointer-events: none;
 }
@@ -463,23 +491,16 @@ body {
   width: 100%;
   height: 100%;
 }
-.fs-counter__shadow {
-  position: absolute;
-  left: -68px;   /* 127 - 195 */
-  top: 257px;    /* 755 - 498 */
-  width: 384px;
-  height: 54px;
-}
-/* Odometer windows measured off the art: centres at 28.5 / 50.6 / 72.0 % of
-   the width, 65.6 % down; each ~18 % wide. */
+/* Odometer windows measured off the new art: centres at 37.6 / 52.9 / 67.6 %
+   of the width, 46.2 % down; windows ~27.5 % of the height. */
 .fs-counter__digit {
   position: absolute;
-  top: 65.6%;
-  left: calc(28.5% + var(--d) * 21.75%);
+  top: 46.2%;
+  left: calc(37.6% + var(--d) * 15%);
   transform: translate(-50%, -50%);
   font-family: 'Cinzel', Georgia, serif;
   font-weight: 700;
-  font-size: 46px;
+  font-size: 54px;
   line-height: 1;
   color: #fff3d6;
   text-shadow: 0 0 6px rgba(255, 170, 60, 0.95), 0 0 16px rgba(255, 120, 20, 0.8);
@@ -1051,18 +1072,36 @@ body.is-feature-screen .to-catalog-btn { visibility: hidden; }
    edges), buy chest / counter centred under them, clear of the V3 bar.
    ================================================================ */
 @media (orientation: portrait) {
+  /* Mob_Mafia_Slot.psb: the grid pitch there is 147.75 x ~150 = the desktop
+     197 x 200 at 0.75, first column centred on x 95.5, middle row on y 538. */
   :root {
-    --rig-scale: 0.68;
-    --rig-x: 2.7px;    /* (780 - 1139*0.68) / 2 */
-    --rig-y: 188px;
+    --rig-scale: 0.75;
+    --rig-x: -29.4px;   /* 95.5 - 0.75 * (68 + 98.5) */
+    --rig-y: 190.25px;  /* 538 - 0.75 * (97 + 300), then up 50 (product) */
   }
-  /* Logo keeps the desktop overlap with the frame top (91px * 0.68 ≈ 62). */
-  .logo { left: 110px; top: 60px; width: 560px; height: 190.6px; }
+  /* Scroll clip = the mobile glass (PSB Shape 1, 5..776 x 284..778), in rig
+     units; the grid itself stays at rig (68,97). */
+  .reel__grid { left: 45.9px; top: 58.3px; width: 1028px; height: 658.7px; }
+  .reel__grid-inner { left: 22.1px; top: 38.7px; }
+  .reel-bg { display: none; }
+  .stage--front .frame { display: none; }
 
-  .sign-buy-bonus { left: 214px; top: 750px; width: 352px; height: 268px; }
-  .sign-buy-bonus__price { font-size: 30px; top: -10px; }
+  .logo--desk { display: none; }
+  .logo--mob { display: block; left: 52px; top: -110px; width: 687px; height: 357px; } /* PSB -60, up 50 */
 
-  .fs-counter { left: 283px; top: 742px; width: 214px; height: 288px; }
+  .sign-buy-bonus { left: 43px; top: 941px; width: 244px; height: 240px; }
+  .sign-buy-bonus__art--desk { display: none; }
+  .sign-buy-bonus__art--mob { display: block; }
+  .sign-buy-bonus__price { font-size: 26px; bottom: -6px; }
+
+  /* Same jukebox art, scaled so its body matches the PSB's (44,940) 230 wide. */
+  .fs-counter { left: -14.8px; top: 940px; width: 332px; height: 221.4px; }
+  .fs-counter__digit { font-size: 46px; }
+
+  .bg-mob--base { display: block; }
+  .screen[data-mode="freespins"] .bg-mob--base { display: none; }
+  .screen[data-mode="freespins"] .bg-mob--bonus { display: block; }
+  .frame-mob { display: block; }
 
   .gpop__card { width: min(560px, 92vw); }
 }
