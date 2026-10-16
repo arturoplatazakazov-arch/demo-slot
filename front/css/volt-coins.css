@@ -414,6 +414,14 @@ body.lights-off .logo__img { visibility: visible; }
   100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(143, 232, 255, 0)); }
 }
 .reel__cell.is-winning img { animation: cell-win 620ms ease-in-out; }
+/* Номинал монеты растёт вместе с ней (вперёд, к игроку). Раньше росла только
+   картинка монеты, а цифры стояли — казалось, что номинал стягивается к центру. */
+@keyframes cell-win-face {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.14); }
+  100% { transform: scale(1); }
+}
+.reel__cell.is-winning .coin-face { animation: cell-win-face 620ms ease-in-out; }
 .reel__cell.is-win-active { z-index: 3; }
 
 /* Свечение монеты статичное (продукт: без пульсации за номиналом). */
