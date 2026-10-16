@@ -42,8 +42,10 @@ const FILLER_CODES = SYMBOL_CODES.filter((code) => code !== 'coin');
 // Монеты с молнией (symbols/coin.png) в игре нет (продукт): монета всегда
 // показывается пустой эмалью с номиналом поверх, поэтому код 'coin' ведёт
 // на coin_value.
+// Версия картинок символов: поднимать при замене арта (новый уайлд — 2).
+const SYM_V = 2;
 function symbolSrc(code) {
-  return `${ASSET_ROOT}/symbols/${code === 'coin' ? 'coin_value' : code}.png`;
+  return `${ASSET_ROOT}/symbols/${code === 'coin' ? 'coin_value' : code}.png?v=${SYM_V}`;
 }
 
 // Fx-хук: без WebGL/ассетов window.VoltFx нет или он не ready — тогда молча
@@ -69,6 +71,7 @@ const SYMBOL_LAYOUT = [
 ];
 
 const WIN_PULSE_MS = 620;
+const COIN_WIN_MS = 900;   // = coin-win в CSS
 const FX_SYMBOL_MS = 1100;   // длина клипа символа в fx/symbols
 const POPUP_ENTER_MS = 420;
 const POPUP_EXIT_MS = 260;
@@ -176,6 +179,72 @@ function applyStaticContentOffset(img, code) {
 function applyCellFlags(cell, code) {
   cell.classList.toggle('is-coin', code === 'coin');
   cell.classList.toggle('is-blank', code === 'blank');
+  cell.classList.toggle('is-wild', code === 'wild');
+  // Разряды по краю: у уайлда по эллипсу вокруг буквы, у монеты по кругу
+  // чуть за ободом (монета на 10% крупнее, см. scale в CSS).
+  const arcs = cell.querySelector(':scope > .wild-arcs');
+  const want = code === 'wild' ? 'wild' : code === 'coin' ? 'coin' : null;
+  if (arcs && arcs.dataset.kind !== want) arcs.remove();
+  if (want && !(arcs && arcs.dataset.kind === want)) {
+    cell.prepend(edgeArcs(want));
+  }
+}
+
+// Еле заметные разряды по краям уайлда и монет (продукт): короткие ломаные по
+// эллипсу вокруг буквы, за картинкой, вспыхивают редко и по очереди.
+// Контур, по которому идут разряды, в единицах viewBox (ячейка = 100x80, 0 в
+// центре): радиус на каждые 5° (0° — вправо, по часовой). Уайлд — синяя
+// обводка буквы (снято с альфы symbols/wild.png), монета — синий обод
+// (r≈28.6 на тайле × scale 1.1). Пересчитать при замене арта.
+const EDGE_RADII = {
+  wild: [34.5, 33.6, 33.9, 34.7, 36.6, 35.6, 34.1, 34.0, 35.2, 35.8, 35.1, 34.2, 34.3, 35.1, 35.1, 26.1, 20.4, 17.2,
+    15.8, 17.8, 20.4, 25.3, 35.3, 35.1, 34.4, 34.2, 35.6, 35.8, 35.4, 34.7, 35.3, 36.1, 37.0, 35.3, 34.3, 33.9,
+    34.8, 36.4, 37.8, 37.6, 38.3, 38.6, 40.9, 43.3, 45.5, 43.6, 33.2, 18.5, 14.8, 15.6, 16.0, 17.1, 18.5, 20.1,
+    20.5, 20.3, 18.5, 17.1, 15.8, 15.3, 14.8, 18.5, 34.0, 43.6, 45.5, 43.3, 40.9, 38.6, 38.3, 37.9, 37.6, 35.9],
+  coin: 31.5,
+};
+
+function edgeRadius(kind, a) {
+  const r = EDGE_RADII[kind];
+  if (typeof r === 'number') return r;
+  const f = ((a / (Math.PI * 2)) % 1 + 1) % 1 * r.length;
+  const i = Math.floor(f);
+  return r[i] + (r[(i + 1) % r.length] - r[i]) * (f - i);
+}
+
+function edgeArcs(kind) {
+  const wrap = document.createElement('span');
+  wrap.className = 'wild-arcs';
+  wrap.dataset.kind = kind;
+  let paths = '';
+  const count = 4;
+  for (let b = 0; b < count; b++) {
+    const a0 = (b / count) * Math.PI * 2 + Math.random() * 0.9;
+    const span = 0.35 + Math.random() * 0.35;
+    const delay = (b * 0.9 + Math.random() * 0.7).toFixed(2);
+    const dur = (2.6 + Math.random() * 1.4).toFixed(2);
+    paths += `<g class="coin-arc" style="animation-delay:-${delay}s;animation-duration:${dur}s">`;
+    for (let v = 0; v < 3; v++) {
+      paths += `<path class="coin-arc__v coin-arc__v${v}" d="${edgeBolt(kind, a0, a0 + span, b * 5 + v * 2 + Math.random())}"/>`;
+    }
+    paths += '</g>';
+  }
+  wrap.innerHTML = `<svg viewBox="-50 -40 100 80" preserveAspectRatio="none" aria-hidden="true">${paths}</svg>`;
+  return wrap;
+}
+
+function edgeBolt(kind, a0, a1, seed) {
+  let x = Math.sin(seed * 12.9898) * 43758.5453;
+  const rnd = () => { x = Math.sin(x) * 10000; return x - Math.floor(x); };
+  const n = 7;
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const a = a0 + (a1 - a0) * t;
+    const r = edgeRadius(kind, a) * (1 + (i === 0 || i === n ? 0 : (rnd() - 0.5) * 0.08 * Math.sin(Math.PI * t)));
+    pts.push(`${(r * Math.cos(a)).toFixed(2)},${(r * Math.sin(a)).toFixed(2)}`);
+  }
+  return `M${pts.join('L')}`;
 }
 
 function createCellNode(code) {
@@ -371,9 +440,92 @@ function glyphRowWidth(chars) {
   return sum;
 }
 
+// Молнии по ободу джекпот-монет — всегда, чем старше джекпот, тем больше
+// дуг (продукт). Чистый SVG+CSS внутри ячейки: едет с барабаном сам. Каждая
+// дуга — 3 заранее сгенерённые ломаные, CSS перещёлкивает их (дрожь разряда),
+// у каждой своя задержка, весь венец медленно проворачивается.
+const JACKPOT_BOLTS = { mini: 2, minor: 3, major: 5 };
+
+function boltPath(a0, a1, r, seed) {
+  let x = Math.sin(seed * 12.9898) * 43758.5453;
+  const rnd = () => { x = Math.sin(x) * 10000; return x - Math.floor(x); };
+  const n = 9;
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const a = a0 + (a1 - a0) * t;
+    const j = i === 0 || i === n ? 0 : (rnd() - 0.5) * 7 * Math.sin(Math.PI * t);
+    pts.push(`${((r + j) * Math.cos(a)).toFixed(2)},${((r + j) * Math.sin(a)).toFixed(2)}`);
+  }
+  return `M${pts.join('L')}`;
+}
+
+function jackpotBolts(tier) {
+  const count = JACKPOT_BOLTS[tier] || 0;
+  if (!count) return null;
+  const wrap = document.createElement('span');
+  wrap.className = `coin-bolts coin-bolts--${tier}`;
+  let paths = '';
+  for (let b = 0; b < count; b++) {
+    const a0 = (b / count) * Math.PI * 2 + Math.random() * 0.6;
+    const span = 0.55 + Math.random() * 0.45;
+    const delay = (Math.random() * 1.6).toFixed(2);
+    const dur = (1.1 + Math.random() * 0.9).toFixed(2);
+    paths += `<g class="coin-bolt" style="animation-delay:-${delay}s;animation-duration:${dur}s">`;
+    for (let v = 0; v < 3; v++) {
+      paths += `<path class="coin-bolt__v coin-bolt__v${v}" d="${boltPath(a0, a0 + span, 44, b * 7 + v * 3 + Math.random())}"/>`;
+    }
+    paths += '</g>';
+  }
+  wrap.innerHTML = `<svg viewBox="-50 -50 100 100" aria-hidden="true">${paths}</svg>`;
+  return wrap;
+}
+
+// Лёгкие разряды внутри тёмной эмали за номиналом (продукт): 2 тонкие
+// ломаные через центр, вспыхивают по очереди и почти гаснут — фон, не шум.
+function jaggedChord(a0, a1, r, seed) {
+  let x = Math.sin(seed * 78.233) * 43758.5453;
+  const rnd = () => { x = Math.sin(x) * 10000; return x - Math.floor(x); };
+  const ax = r * Math.cos(a0), ay = r * Math.sin(a0);
+  const bx = r * Math.cos(a1), by = r * Math.sin(a1);
+  const nx = -(by - ay), ny = bx - ax;
+  const len = Math.hypot(nx, ny) || 1;
+  const n = 7;
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const j = i === 0 || i === n ? 0 : (rnd() - 0.5) * 16 * Math.sin(Math.PI * t);
+    pts.push(`${(ax + (bx - ax) * t + (nx / len) * j).toFixed(2)},${(ay + (by - ay) * t + (ny / len) * j).toFixed(2)}`);
+  }
+  return `M${pts.join('L')}`;
+}
+
+function enamelArcs() {
+  const wrap = document.createElement('span');
+  wrap.className = 'coin-arcs';
+  let paths = '';
+  for (let b = 0; b < 2; b++) {
+    const a0 = Math.random() * Math.PI * 2;
+    const a1 = a0 + Math.PI * (0.7 + Math.random() * 0.6);
+    const delay = (b * 1.3 + Math.random() * 0.8).toFixed(2);
+    const dur = (2.2 + Math.random() * 1.2).toFixed(2);
+    paths += `<g class="coin-arc" style="animation-delay:-${delay}s;animation-duration:${dur}s">`;
+    for (let v = 0; v < 3; v++) {
+      paths += `<path class="coin-arc__v coin-arc__v${v}" d="${jaggedChord(a0, a1, 46, b * 5 + v * 2 + Math.random())}"/>`;
+    }
+    paths += '</g>';
+  }
+  wrap.innerHTML = `<svg viewBox="-50 -50 100 100" aria-hidden="true">${paths}</svg>`;
+  return wrap;
+}
+
 function makeCoinFace(face) {
   const el = document.createElement('span');
   el.className = face.cls ? `coin-face ${face.cls}` : 'coin-face';
+  if (face.word) {
+    const bolts = jackpotBolts(face.word);
+    if (bolts) el.appendChild(bolts);
+  }
   const chars = face.word ? [face.word] : (face.digits ? [...face.digits] : null);
   if (chars && chars.every((ch) => GLYPHS[ch])) {
     // Высота ядра: цифры ~36% ячейки, слова ~20%, строка не шире ~2/3-3/4 ячейки.
@@ -383,6 +535,7 @@ function makeCoinFace(face) {
     const row = glyphRow(chars);
     row.style.fontSize = `${size.toFixed(1)}px`;
     el.classList.add('has-glyphs');
+    el.appendChild(enamelArcs());
     el.appendChild(row);
     return el;
   }
@@ -421,7 +574,8 @@ function playWinAnimationOnce(info) {
   info.cell.classList.remove('is-winning');
   void info.cell.offsetWidth;
   info.cell.classList.add('is-winning');
-  return wait(WIN_PULSE_MS).then(() => info.cell.classList.remove('is-winning'));
+  // у монеты своя, длиннее (рост + покачивание: coin-win в CSS)
+  return wait(info.symbol === 'coin' ? COIN_WIN_MS : WIN_PULSE_MS).then(() => info.cell.classList.remove('is-winning'));
 }
 
 function previewSymbolWin(info) {
