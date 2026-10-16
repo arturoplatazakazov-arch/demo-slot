@@ -119,6 +119,9 @@ function buildReelGrid() {
   const inner = document.createElement('div');
   inner.className = 'reel__grid-inner';
   gridEl.appendChild(inner);
+  // Win lines live UNDER the columns (first child, columns paint over it) —
+  // behind the symbols, product: "за сыгравшими элементами".
+  inner.appendChild(createWinLinesLayer());
 
   readCellDims();
   cellInfos = [];
@@ -165,6 +168,7 @@ function dropCellInstance(info) {
 
 function teardownCellInstances() {
   winSequenceEpoch += 1;
+  clearWinLines();
   if (multiLineSequenceTimeout) {
     clearTimeout(multiLineSequenceTimeout);
     multiLineSequenceTimeout = null;
@@ -325,6 +329,8 @@ function playMultiLineWinSequence(groups, allWinInfos) {
     if (epoch !== winSequenceEpoch) return;
     const activeInfos = groupIndex === -1 ? allWinInfos : groups[groupIndex];
     const activeSet = new Set(activeInfos);
+    if (groupIndex === -1) showWinLines(currentLineWins);
+    else showWinLines(currentLineWins[groupIndex] ? [currentLineWins[groupIndex]] : []);
     for (const info of cellInfos) {
       if (info) setCellDimmed(info, !activeSet.has(info));
     }
@@ -338,6 +344,77 @@ function playMultiLineWinSequence(groups, allWinInfos) {
     });
   };
   step();
+}
+
+// --- Win lines (SVG neon, under the symbols) --------------------------------
+//
+// Full payline across all five reels (shapes = the seed's PAYLINES, indexed
+// by the server's 1-based `payline`), drawn through the cell centres in grid
+// px. Three strokes: a wide blurred halo in the line's own neon colour, a gold
+// body and a white-hot core; it draws itself on (stroke-dashoffset), then a
+// bright comet keeps running along it, and the winning cells get pulsing
+// rings. Turn the whole thing off with WIN_LINES_ENABLED.
+const WIN_LINES_ENABLED = true;
+const PAYLINE_ROWS = [
+  [1, 1, 1, 1, 1], [0, 0, 0, 0, 0], [2, 2, 2, 2, 2], [0, 1, 2, 1, 0], [2, 1, 0, 1, 2],
+  [0, 0, 1, 0, 0], [2, 2, 1, 2, 2], [1, 0, 0, 0, 1], [1, 2, 2, 2, 1], [0, 1, 1, 1, 0],
+  [2, 1, 1, 1, 2], [1, 0, 1, 0, 1], [1, 2, 1, 2, 1], [0, 1, 0, 1, 0], [2, 1, 2, 1, 2],
+  [0, 2, 0, 2, 0], [2, 0, 2, 0, 2], [1, 1, 0, 1, 1], [1, 1, 2, 1, 1], [0, 2, 2, 2, 0],
+];
+const WIN_LINE_COLORS = ['#ff3fa4', '#39d5ff', '#ffc847', '#b45cff', '#4dff9a'];
+const SVG_NS = 'http://www.w3.org/2000/svg';
+let winLinesSvg = null;
+let currentLineWins = [];
+
+function createWinLinesLayer() {
+  const w = GRID_COLS * cellW, h = GRID_ROWS * cellH;
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('class', 'win-lines');
+  svg.setAttribute('viewBox', `-40 -20 ${w + 80} ${h + 40}`);
+  svg.innerHTML = `<defs><filter id="wlBlur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="9"/></filter>
+    <linearGradient id="wlGold" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffe9a3"/><stop offset=".5" stop-color="#ffc847"/><stop offset="1" stop-color="#ffe9a3"/></linearGradient></defs>`;
+  winLinesSvg = svg;
+  return svg;
+}
+
+function clearWinLines() {
+  if (!winLinesSvg) return;
+  for (const g of [...winLinesSvg.querySelectorAll('.win-line')]) g.remove();
+}
+
+function linePoints(win) {
+  const rows = PAYLINE_ROWS[(win.payline || 0) - 1];
+  const cx = (c) => c * cellW + cellW / 2, cy = (r) => r * cellH + cellH / 2;
+  if (!rows) return (win.positions || []).map(({ row, col }) => [cx(col), cy(row)]);
+  const pts = rows.map((r, c) => [cx(c), cy(r)]);
+  // Run a little past the outer reels so the line enters/leaves the glass.
+  pts.unshift([-30, pts[0][1]]);
+  pts.push([GRID_COLS * cellW + 30, pts[pts.length - 1][1]]);
+  return pts;
+}
+
+function showWinLines(lineWins) {
+  clearWinLines();
+  if (!WIN_LINES_ENABLED || !winLinesSvg) return;
+  lineWins.forEach((win, i) => {
+    const pts = linePoints(win);
+    if (pts.length < 2) return;
+    const d = 'M' + pts.map((p) => p.map((v) => v.toFixed(1)).join(' ')).join(' L');
+    const color = WIN_LINE_COLORS[((win.payline || i + 1) - 1) % WIN_LINE_COLORS.length];
+    const g = document.createElementNS(SVG_NS, 'g');
+    g.setAttribute('class', 'win-line');
+    g.style.setProperty('--wl-color', color);
+    g.style.setProperty('--wl-delay', `${i * 90}ms`);
+    const rings = (win.positions || []).map(({ row, col }) =>
+      `<circle class="win-line__ring" cx="${col * cellW + cellW / 2}" cy="${row * cellH + cellH / 2}" r="22"/>`).join('');
+    g.innerHTML = `
+      <path class="win-line__halo" d="${d}" pathLength="1"/>
+      <path class="win-line__body" d="${d}" pathLength="1"/>
+      <path class="win-line__core" d="${d}" pathLength="1"/>
+      <path class="win-line__comet" d="${d}" pathLength="1"/>
+      ${rings}`;
+    winLinesSvg.appendChild(g);
+  });
 }
 
 function buildWinGroups(lineWins, countWins) {
@@ -370,6 +447,9 @@ function playWinCells(winningCells, lineWins, countWins) {
   }
 
   const groups = buildWinGroups(lineWins, countWins);
+  // Line i of the sequence == lineWins[i] (count wins come after them).
+  currentLineWins = lineWins || [];
+  showWinLines(currentLineWins);
   if (groups.length > 1) {
     playMultiLineWinSequence(groups, allWinInfos);
   } else {
@@ -911,8 +991,7 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = false } = 
     root.dataset.tier = content.tier;
     amountEl.textContent = '0';
     // Big moments: the two heroes in the armchairs celebrate too.
-    playSceneClip('hero_man', 'win');
-    playSceneClip('hero_woman', 'win');
+    for (const name of ['hero_man', 'hero_woman', 'hero_man_mob', 'hero_woman_mob']) playSceneClip(name, 'win');
     if (content.tier === 'spins') playSceneClip('freespins', 'win');
     if (content.tier === 'mega' || content.tier === 'epic' || content.tier === 'total') {
       spawnBills(document.getElementById('gpopBills'));
@@ -1109,25 +1188,36 @@ const SCENE_ROOT = `${SPINE_ROOT}/scene`;
 const LAND_ROOT = `${SPINE_ROOT}/land`;
 // *_mob = the portrait mockup's own frame / logo (Mob_Mafia_Slot.psb), the
 // same skeletons retargeted onto that art (2026-10-16 redesign).
-const SCENE_NAMES = ['background', 'hero_man', 'hero_woman', 'frame', 'frame_mob', 'freespins', 'logo', 'logo_mob'];
+// Draw order (= this order): backgrounds, heroes, frames, counter, logos.
+// Portrait (2026-10-16): background_mob (mobile terrace without people: palm
+// sway mesh, sun, rays, water glints), the same hero skeletons placed on the
+// mobile mockup's armchairs (hero_*_mob), bonus_bg_mob (club spotlights).
+const SCENE_NAMES = ['background', 'background_mob', 'bonus_bg_mob', 'hero_man', 'hero_woman', 'hero_man_mob', 'hero_woman_mob',
+  'frame', 'frame_mob', 'freespins', 'logo', 'logo_mob'];
 // What actually runs (product, 2026-10-10: background, frame, logo and the
 // redrawn heroes live; the counter and the sym_* land bounce stay off until
 // asked for). Drop a hero from here and the PSB's still people
 // (.scene-people) stand in for it automatically.
-const SCENE_ON = new Set(['background', 'hero_man', 'hero_woman', 'frame', 'frame_mob', 'logo', 'logo_mob']);
+const SCENE_ON = new Set(['background', 'background_mob', 'bonus_bg_mob', 'hero_man', 'hero_woman', 'hero_man_mob', 'hero_woman_mob',
+  'frame', 'frame_mob', 'logo', 'logo_mob']);
 const LAND_ENABLED = false;
 // root_scene_x/y from layout.json (PSB px, y down).
 const SCENE_ROOTS = {
   background: [966, 470.5],
   hero_man: [279.5, 955],
   hero_woman: [1614.5, 954],
+  // Mob_Mafia_Slot.psb people_normal: same art, scaled (man 'Layer 127'
+  // 464 wide = 0.8375 of 554, woman 'Layer 94' 398 = 0.77 of 517), root =
+  // bottom-centre of each layer.
+  hero_man_mob: [159, 1305, 0.8375],
+  hero_woman_mob: [634, 1271, 0.77],
 };
 let backStage = null;
 const scene = {}; // name -> SpineInstance
 
 // Folders of skeletons re-cut for the 2026-10-16 mockup (versioned so a cached
 // old atlas page can't meet the new atlas text — see FEATURE_SCREEN_CODE).
-const SCENE_DIR = { logo: 'logo_v2', freespins: 'freespins_v2' };
+const SCENE_DIR = { logo: 'logo_v2', freespins: 'freespins_v2', hero_man_mob: 'hero_man', hero_woman_mob: 'hero_woman' };
 function getSceneResource(name) {
   if (!backStage) return Promise.reject(new Error('no back stage'));
   name = SCENE_DIR[name] || name;
@@ -1137,19 +1227,21 @@ function getSceneResource(name) {
 
 function sceneAnchorAt(name, resource) {
   const { x, y, width, height } = resource.bounds;
-  const [rx, ry] = SCENE_ROOTS[name];
+  const [rx, ry, k = 1] = SCENE_ROOTS[name];
   const el = document.createElement('div');
   el.className = 'scene-anchor';
-  el.style.left = `${rx + x}px`;
-  el.style.top = `${ry - (y + height)}px`;
-  el.style.width = `${width}px`;
-  el.style.height = `${height}px`;
+  el.style.left = `${rx + x * k}px`;
+  el.style.top = `${ry - (y + height) * k}px`;
+  el.style.width = `${width * k}px`;
+  el.style.height = `${height * k}px`;
   document.getElementById('stage').appendChild(el);
   return el;
 }
 
 function sceneAnchorFor(name, resource) {
   if (SCENE_ROOTS[name]) return sceneAnchorAt(name, resource);
+  if (name === 'background_mob') return document.querySelector('.bg-mob--base');
+  if (name === 'bonus_bg_mob') return document.querySelector('.bg-mob--bonus');
   if (name === 'frame') return document.getElementById('reelRig');
   if (name === 'frame_mob') return document.querySelector('.frame-mob');
   if (name === 'logo') return document.querySelector('.stage--front .logo--desk');
@@ -1175,7 +1267,7 @@ async function setupScene() {
       inst.fit = 1;
       inst.play('idle', true);
       // Desync the two heroes' breathing.
-      if (name === 'hero_woman') inst.animationState.getCurrent(0).trackTime = 3.1;
+      if (name.startsWith('hero_woman')) inst.animationState.getCurrent(0).trackTime = 3.1;
       scene[name] = inst;
     }
   } catch (err) {
@@ -1200,6 +1292,10 @@ function syncScene() {
     background: !portrait && !bonus,
     hero_man: !portrait && !bonus,
     hero_woman: !portrait && !bonus,
+    background_mob: portrait && !bonus,
+    hero_man_mob: portrait && !bonus,
+    hero_woman_mob: portrait && !bonus,
+    bonus_bg_mob: portrait && bonus,
     frame: !portrait,
     frame_mob: portrait,
     freespins: bonus,
@@ -1220,7 +1316,7 @@ function syncScene() {
 function playSceneClip(name, clip) {
   const inst = scene[name];
   if (!inst || !inst.resource.skeletonData.findAnimation(clip)) return;
-  if (name === 'hero_man' || name === 'hero_woman') {
+  if (name.startsWith('hero_')) {
     const state = inst.animationState;
     const cur = state.getCurrent(1);
     if (cur && cur.animation && cur.animation.name === clip && !cur.isComplete()) return; // already celebrating
@@ -1248,7 +1344,7 @@ function playSceneClip(name, clip) {
 // atlas text under the same URL.
 const PRELOAD_TIMEOUT_MS = 12000;
 const FEATURE_SCREEN_CODE = 'feature_screen_v2';
-const BONUS_SCREEN_CODE = 'bonus_screen_v2';
+const BONUS_SCREEN_CODE = 'bonus_screen_v3'; // v3: spin-count digits inside the skeleton
 // Both full-screen exports (pfs / bfs) are authored on the PSB canvas around
 // the skeleton origin, 1 unit = 1 design px.
 const FEATURE_BOX = { x: -966, y: -470, width: 1932, height: 940 };
@@ -1261,35 +1357,21 @@ function screenCode(code) {
 const FEATURE_FADE_MS = 500;
 
 // Bonus screen (bfs): the "Free spins" jukebox rolls three digit strips in
-// clipped windows (bones strip1..3, windows 60 units tall in machine space)
-// and hides each strip once it lands — leaving the machine art, which had
-// "010" painted in. That paint is erased from the atlas; the REAL spin count
-// is drawn in the DOM over each window from the moment its strip hides, glued
-// to the strip bone every frame so it rides the machine's bounce/breathing.
-const BFS_STRIP_BONES = ['strip1', 'strip2', 'strip3'];
-const BFS_STRIP_HIDE_AT = [1.8, 1.9333, 2.0667]; // intro times the strips fade
-const BFS_WINDOW_UNITS = 96.47; // window height of the 2026-10-16 jukebox (mach units)
-
-function boneScreenBox(inst, bone) {
-  const canvasEl = document.getElementById('spineCanvas');
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvasEl.getBoundingClientRect();
-  const left = rect.left + (bone.worldX + canvasEl.width / 2) / dpr;
-  const top = rect.top + (canvasEl.height / 2 - bone.worldY) / dpr;
-  const scaleY = Math.sqrt(bone.b * bone.b + bone.d * bone.d);
-  return { left, top, height: (BFS_WINDOW_UNITS * scaleY) / dpr };
-}
+// clipped windows and hides each strip once it lands — the painted "010" is
+// erased from the machine art and the real count is a glyph slot per window
+// (see showBonusScreen).
 
 // Shared lifecycle of the two full-screen Spine screens: 90% dim, intro ->
 // idle loop, click anywhere -> fade out. `onFrame(inst)` runs every frame
 // while the screen is up (the bonus screen's live digits).
-function showSpineScreen(baseCode, { onFrame = null, onClose = null } = {}) {
+function showSpineScreen(baseCode, { onFrame = null, onClose = null, onCreate = null } = {}) {
   const root = document.getElementById('featureScreen');
   if (!stage || !root) return Promise.resolve(false);
   const portrait = isMobileLayout(); // the layout is fixed for the screen's lifetime
   const code = portrait ? `${baseCode}_mob` : baseCode;
   return getSymbolResource(code).then((resource) => new Promise((resolve) => {
     const inst = resource.createInstance();
+    if (onCreate) onCreate(inst);
     // Both layouts pin the skeleton's canvas box onto #stage, which is that
     // same design canvas (1932x940 / 780x1416) contain-scaled to the screen.
     const place = () => {
@@ -1367,34 +1449,16 @@ function showFeatureScreen() {
 // Resolves true if the Spine bonus screen ran, false if it couldn't (no
 // WebGL / export missing) so the caller falls back to the CSS popup.
 function showBonusScreen(spins) {
-  const box = document.getElementById('bfsDigits');
-  const spans = box ? [...box.children] : [];
+  // The spin count is drawn INSIDE the skeleton (slots dig1..3 on the window
+  // bones, glyph regions d0..d9, faded in by the intro as each strip stops) —
+  // a DOM overlay chasing bone positions lagged a frame behind the bounce.
   const digits = String(Math.max(0, Math.min(999, spins))).padStart(3, '0');
-  spans.forEach((el, i) => {
-    el.textContent = digits[i];
-    el.classList.remove('is-on');
-  });
-  if (box) box.hidden = false;
   return showSpineScreen(BONUS_SCREEN_CODE, {
-    onFrame: (inst, alpha) => {
-      const entry = inst.animationState.getCurrent(0);
-      const inIntro = entry && entry.animation && entry.animation.name === 'intro';
-      const t = inIntro ? entry.trackTime : Infinity;
-      BFS_STRIP_BONES.forEach((name, i) => {
-        const bone = inst.skeleton.findBone(name);
-        const el = spans[i];
-        if (!bone || !el) return;
-        const { left, top, height } = boneScreenBox(inst, bone);
-        el.style.left = `${left}px`;
-        el.style.top = `${top}px`;
-        el.style.fontSize = `${height * 0.8}px`;
-        el.style.opacity = String(alpha);
-        el.classList.toggle('is-on', t >= BFS_STRIP_HIDE_AT[i]);
+    onCreate: (inst) => {
+      [...digits].forEach((ch, i) => {
+        try { inst.skeleton.setAttachment(`dig${i + 1}`, `d${ch}`); } catch (err) { /* old export */ }
       });
     },
-  }).then((ran) => {
-    if (box) box.hidden = true;
-    return ran;
   });
 }
 
@@ -1430,6 +1494,15 @@ function init() {
       // ?screen=feature|bonus — dev/screenshot: open that screen straight away.
       if (qs.get('screen') === 'feature') return showFeatureScreen();
       if (qs.get('screen') === 'bonus') return showBonusScreen(Number(qs.get('spins')) || 10);
+      // ?demowin — dev/screenshot: a two-line win on a fixed grid.
+      if (qs.has('demowin')) {
+        applyGrid([['common_1', 'common_2', 'common_2', 'rare_blue', 'common_3'], ['common_2', 'common_2', 'common_3', 'common_4', 'common_1'], ['rare_green', 'common_4', 'common_2', 'common_1', 'scatter']]);
+        const lw = [
+          { payline: 4, positions: [{ row: 0, col: 0 }, { row: 1, col: 1 }, { row: 2, col: 2 }] },
+          { payline: 1, positions: [{ row: 1, col: 0 }, { row: 1, col: 1 }, { row: 1, col: 2 }] },
+        ];
+        playWinCells(lw.flatMap((w) => w.positions), lw, []);
+      }
       return null;
     }
     return showFeatureScreen();

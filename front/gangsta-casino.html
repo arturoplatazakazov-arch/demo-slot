@@ -6,7 +6,7 @@
 <title>Gangsta Casino — demo</title>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/preloader.css?v=1">
-<link rel="stylesheet" href="css/gangsta-casino.css?v=17">
+<link rel="stylesheet" href="css/gangsta-casino.css?v=22">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 </head>
 <body>
@@ -88,7 +88,7 @@
         <span class="sign-buy-bonus__art sign-buy-bonus__art--mob">
           <img class="sign-buy-bonus__img" src="img/gangsta-casino/ui/buy_chest_mob.png" alt="">
           <img class="sign-buy-bonus__img sign-buy-bonus__cone sign-buy-bonus__cone--mob" src="img/gangsta-casino/ui/buy_cone_mob.png" alt="">
-          <img class="sign-buy-bonus__img" src="img/gangsta-casino/ui/buy_text_mob.png" alt="">
+          <img class="sign-buy-bonus__img sign-buy-bonus__text--mob" src="img/gangsta-casino/ui/buy_text_mob.png" alt="">
         </span>
       </button>
 
@@ -125,9 +125,6 @@
          поднимается над баром (body.is-feature-screen). Уходит по клику —
          растворением в прозрачность. -->
     <div class="fscreen" id="featureScreen" hidden></div>
-    <!-- Живые цифры бонус-скрина: три окна автомата, позиции ведёт slot.js
-         (showBonusScreen) по костям strip1..3. -->
-    <div class="bfs-digits" id="bfsDigits" hidden><span></span><span></span><span></span></div>
 
     <!-- ================= Попапы выигрыша (CSS, свои) ================= -->
     <div class="gpop" id="gpop" hidden>
@@ -312,7 +309,7 @@
   <script src="js/slot-core.js?v=1"></script>
   <script src="js/preloader.js?v=1"></script>
   <script src="js/gangsta-casino/sound.js?v=1"></script>
-  <script src="js/gangsta-casino/slot.js?v=17"></script>
+  <script src="js/gangsta-casino/slot.js?v=20"></script>
   <script src="js/buy-bonus.js?v=1"></script>
   <script src="js/gangsta-casino/app.js?v=2"></script>
   <script src="js/ui-bar-v3.js?v=4"></script>

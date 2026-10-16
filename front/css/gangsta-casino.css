@@ -36,7 +36,7 @@
 
   /* Rig placement — overridden in portrait. */
   --rig-x: 406px;
-  --rig-y: 44px;
+  --rig-y: 54px; /* PSB 44, down 10 (product) */
   --rig-scale: 1;
 }
 
@@ -169,6 +169,8 @@ body {
 .screen.has-spine-logo .logo--desk,
 .screen.has-spine-logo_mob .logo--mob,
 .screen.has-spine-frame_mob .frame-mob,
+.screen.has-spine-background_mob .bg-mob--base,
+.screen.has-spine-bonus_bg_mob .bg-mob--bonus,
 .screen.has-spine-freespins .fs-counter__img,
 .screen.has-spine-freespins .fs-counter__shadow { visibility: hidden; }
 
@@ -229,16 +231,19 @@ body {
 /* Scroll clip = the frame's opening, so spinning strips vanish under the
    chrome instead of past it. */
 .reel__grid {
-  left: 43px;
-  top: 71px;
-  width: 1041px;
-  height: 656px;
+  /* Clip = the chrome's INNER edge (alpha of ui/frame.png: hole x 50..1077,
+     y 79..715), not the glass under it: the live frame is drawn below the
+     symbols, so anything past this edge would fall over the chrome. */
+  left: 51px;
+  top: 80px;
+  width: 1025px;
+  height: 634px;
   overflow: hidden;
 }
 .reel__grid-inner {
   position: absolute;
-  left: 25px;   /* 474 - 449 */
-  top: 26px;    /* 141 - 115 */
+  left: 17px;   /* grid at rig 68 */
+  top: 17px;    /* grid at rig 97 */
   width: calc(5 * var(--cell-w));
   height: calc(3 * var(--cell-h));
 }
@@ -321,6 +326,41 @@ body {
 
 /* Expanding wild: wild_big.png (210x600) over a column of the grid. Grows out
    of the middle row; slot.js hides the three tiles under it afterwards. */
+/* Neon win lines (slot.js showWinLines): under the reel columns, so every
+   symbol — and the Spine win clips on the canvas above — sits on top. */
+.win-lines {
+  position: absolute;
+  left: -40px;
+  top: -20px;
+  width: calc(5 * var(--cell-w) + 80px);
+  height: calc(3 * var(--cell-h) + 40px);
+  overflow: visible;
+  pointer-events: none;
+}
+.win-line path { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 1; stroke-dashoffset: 1; }
+.win-line__halo { stroke: var(--wl-color); stroke-width: 34; opacity: .75; filter: url(#wlBlur); }
+.win-line__body { stroke: url(#wlGold); stroke-width: 11; }
+.win-line__core { stroke: #fffaf0; stroke-width: 3.5; }
+.win-line__halo, .win-line__body, .win-line__core {
+  animation: wl-draw 520ms cubic-bezier(.3,.7,.3,1) var(--wl-delay, 0ms) forwards,
+             wl-breathe 1.4s ease-in-out calc(var(--wl-delay, 0ms) + 520ms) infinite;
+}
+/* A bright comet running along the line after it has drawn on. */
+.win-line__comet {
+  stroke: #fff; stroke-width: 9; stroke-dasharray: .06 .94; opacity: 0;
+  filter: drop-shadow(0 0 6px var(--wl-color)) drop-shadow(0 0 14px var(--wl-color));
+  animation: wl-comet 1.3s linear calc(var(--wl-delay, 0ms) + 420ms) infinite;
+}
+.win-line__ring {
+  fill: none; stroke: var(--wl-color); stroke-width: 5; opacity: 0;
+  transform-box: fill-box; transform-origin: center;
+  animation: wl-ring 1.2s ease-out calc(var(--wl-delay, 0ms) + 300ms) infinite;
+}
+@keyframes wl-draw { to { stroke-dashoffset: 0; } }
+@keyframes wl-breathe { 50% { opacity: .55; } }
+@keyframes wl-comet { 0% { stroke-dashoffset: 1.06; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 1; } }
+@keyframes wl-ring { 0% { opacity: .9; transform: scale(.6); } 100% { opacity: 0; transform: scale(3.4); } }
+
 .big-wilds {
   left: 68px;
   top: 97px;
@@ -401,7 +441,7 @@ body {
    the chains run off the top of the canvas. */
 .logo {
   left: 727px;
-  top: -66px;
+  top: -76px; /* PSB -66, up 10 (product) */
   width: 475px;
   height: 201px;
   z-index: 4;
@@ -447,7 +487,13 @@ body {
   animation: buy-cone-pulse 1.8s ease-in-out infinite;
   filter: none;
 }
-.sign-buy-bonus__cone--mob { transform-origin: 57.2% 0; } /* 41..238 of 244 */
+/* Mobile (product): glow and BUY FREE SPINS 1.5x. */
+.sign-buy-bonus__cone--mob { transform-origin: 57.2% 0; animation-name: buy-cone-pulse-mob; } /* 41..238 of 244 */
+.sign-buy-bonus__text--mob { transform: scale(1.5); transform-origin: 56% 32%; } /* text bbox 96..181 x 21..133 */
+@keyframes buy-cone-pulse-mob {
+  0%, 100% { transform: scale(1.35); opacity: 0.7; }
+  50% { transform: scale(1.65); opacity: 1; }
+}
 @keyframes buy-cone-pulse {
   0%, 100% { transform: scale(0.9); opacity: 0.7; }
   50% { transform: scale(1.1); opacity: 1; }
@@ -1081,15 +1127,17 @@ body.is-feature-screen .to-catalog-btn { visibility: hidden; }
   }
   /* Scroll clip = the mobile glass (PSB Shape 1, 5..776 x 284..778), in rig
      units; the grid itself stays at rig (68,97). */
-  .reel__grid { left: 45.9px; top: 58.3px; width: 1028px; height: 658.7px; }
-  .reel__grid-inner { left: 22.1px; top: 38.7px; }
+  /* Mobile chrome inner edge (Layer 120 alpha: PSB x 12..770, y 291..770)
+     in rig units — clip there so falling symbols go UNDER the chrome. */
+  .reel__grid { left: 55.2px; top: 67.7px; width: 1010.7px; height: 638.6px; }
+  .reel__grid-inner { left: 12.8px; top: 29.3px; }
   .reel-bg { display: none; }
   .stage--front .frame { display: none; }
 
   .logo--desk { display: none; }
   .logo--mob { display: block; left: 52px; top: -110px; width: 687px; height: 357px; } /* PSB -60, up 50 */
 
-  .sign-buy-bonus { left: 43px; top: 941px; width: 244px; height: 240px; }
+  .sign-buy-bonus { left: 43px; top: 901px; width: 244px; height: 240px; } /* PSB 941, up 40 (product) */
   .sign-buy-bonus__art--desk { display: none; }
   .sign-buy-bonus__art--mob { display: block; }
   .sign-buy-bonus__price { font-size: 26px; bottom: -6px; }
