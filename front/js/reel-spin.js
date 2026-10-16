@@ -35,7 +35,10 @@
     const style = document.createElement('style');
     style.textContent = [
       '.reel__strip { will-change: transform; }',
-      '.reel__strip.is-fast .reel__cell img[data-reel-blur] { content: var(--reel-blur); }',
+      '.reel__strip.is-fast .reel__cell > img[data-reel-blur] { content: var(--reel-blur); visibility: visible !important; }',
+      // Layered "living" symbols (deep-fortune's .rig) hide their flat static
+      // at rest; mid-spin the blurred static stands in for the layers.
+      '.reel__strip.is-fast .reel__cell > .rig { visibility: hidden; }',
     ].join('\n');
     document.head.appendChild(style);
   }
@@ -57,7 +60,7 @@
     img.src = url;
   }
   function tagBlur(cell) {
-    for (const img of cell.querySelectorAll('img')) {
+    for (const img of cell.querySelectorAll(':scope > img')) {
       const src = img.getAttribute('src');
       const url = blurUrlFor(src);
       if (!url) continue;

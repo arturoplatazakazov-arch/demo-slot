@@ -6,7 +6,10 @@ sigma ~3.3% of the image height — Gangsta's own twins are sigma 7 on a ~210px
 tile. Alpha is premultiplied before blurring so edges don't go dark.
 
 Symbol folders are read straight from each game's slot.js (SYMBOL_FOLDERS +
-SYMBOL_STATIC_OVERRIDE), so a new symbol only needs a re-run.
+SYMBOL_STATIC_OVERRIDE), so a new symbol only needs a re-run. Games on the
+flat `img/<slug>/symbols/<code>.png` layout (provider2 template, uniqorn-*,
+deep-fortune) are picked up automatically from SYMBOL_CODES once their slot.js
+uses ReelSpin — re-run after generating a new provider2 game.
 
     .venv/bin/python scripts/make_reel_blur.py
 """
@@ -61,8 +64,37 @@ def blur_vertical(img, sigma):
     return Image.fromarray((res * 255 + 0.5).astype(np.uint8), 'RGBA')
 
 
+def flat_symbol_games():
+    """slot.js files on ReelSpin with symbols at img/<slug>/symbols/<code>.png."""
+    for js in sorted(FRONT.glob('js/*/slot.js')):
+        src = js.read_text()
+        if 'ReelSpin.create' not in src or '/symbols/${code}.png' not in src:
+            continue
+        m = re.search(r"const SYMBOL_CODES = \[([^\]]*)\]", src)
+        if m:
+            yield js.parent.name, re.findall(r"'([^']+)'", m.group(1))
+
+
+def write_blur(path):
+    out = path.with_name(path.stem + '_blur.png')
+    img = Image.open(path)
+    blurred = blur_vertical(img, max(1.0, SIGMA_FRAC * img.height))
+    # A blurred tile has no hard detail: 256 colours are plenty and
+    # cut the files ~3x (it's only on screen mid-spin).
+    blurred.quantize(256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(out, optimize=True)
+    print(f'{out.relative_to(FRONT)}  {img.size[0]}x{img.size[1]}  {out.stat().st_size // 1024} KB')
+    return out.stat().st_size
+
+
 def main():
     total = 0
+    for slug, codes in flat_symbol_games():
+        for code in codes:
+            path = FRONT / f'img/{slug}/symbols/{code}.png'
+            if path.exists():
+                total += write_blur(path)
+            else:
+                print('  missing', path.relative_to(FRONT), file=sys.stderr)
     for js, tmpl in GAMES.items():
         src = (FRONT / js).read_text()
         folders = js_dict(src, 'SYMBOL_FOLDERS')
@@ -72,14 +104,7 @@ def main():
             if not path.exists():
                 print('  missing', path.relative_to(FRONT), file=sys.stderr)
                 continue
-            out = path.with_name(path.stem + '_blur.png')
-            img = Image.open(path)
-            blurred = blur_vertical(img, max(1.0, SIGMA_FRAC * img.height))
-            # A blurred tile has no hard detail: 256 colours are plenty and
-            # cut the files ~3x (it's only on screen mid-spin).
-            blurred.quantize(256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(out, optimize=True)
-            total += out.stat().st_size
-            print(f'{out.relative_to(FRONT)}  {img.size[0]}x{img.size[1]}  {out.stat().st_size // 1024} KB')
+            total += write_blur(path)
     print(f'total {total // 1024} KB')
 
 

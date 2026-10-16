@@ -565,138 +565,56 @@ function showInlineWinAmount(amount) {
   }, INLINE_WIN_AMOUNT_HOLD_MS);
 }
 
-// --- Reel motion (механика общая для всех тем — подробный разбор техники с
-// маскированной колонкой см. в других играх) ---------------------------------
+// --- Reel motion ------------------------------------------------------------
+//
+// Gangsta Casino's spin, shared via js/reel-spin.js: every reel accelerates
+// into a seamless loop while the server answers; once the result is in, reel
+// i runs i * REEL_STAGGER_FIGURES extra symbols before its result and brakes
+// dead on it (no bounce); pre-blurred symbol twins while it runs fast. All
+// Web Animations on transform — nothing moves on the main thread.
 
-// Фазы бесконечной прокрутки нет (перенесено из neon-reels, там продукт это
-// одобрил: «по ощущениям даже лучше чем у нас на демо»): по нажатию спина
-// лежащие символы уезжают вниз с ускорением (их скрывает собственный overflow
-// колонки), барабан стоит пустым, пока отвечает сервер, а финалы падают сверху
-// обычным приземлением landReel. landReel ждёт reelClearDone, чтобы ни одна
-// колонка не начала приземляться, пока старые символы ещё летят вниз.
-const REEL_CLEAR_MS = 260;
+const REEL_STAGGER_FIGURES = ReelSpin.PHYS.STAGGER_FIGURES;
+let reelSpin = null;
 
-let reelLoopGeneration = 0; // обесценивает висящий clear, если пришёл новый спин
-let reelClearDone = Promise.resolve();
+function getReelSpin() {
+  if (!reelSpin) {
+    reelSpin = ReelSpin.create({
+      cols: () => reelCols,
+      rows: GRID_ROWS,
+      rowStep: () => ReelMath.ROW_STEP,
+      makeCell: (code) => createCellNode(code).cell,
+      loopFiller: randomSymbolCode,
+      codes: SYMBOL_CODES,
+      onReelStop: (col, isLast) => Sound.playSfx(isLast ? 'finalReelStop' : 'reelStop'),
+    });
+  }
+  return reelSpin;
+}
+// Built on load so the blurred twins are already decoded by the first spin.
+window.addEventListener('load', () => getReelSpin());
 
 function startReelLoop() {
   Sound.playSfx('spinStart');
   teardownCellInstances();
-  const gen = ++reelLoopGeneration;
-  for (const { stripEl } of reelCols) {
-    stripEl.classList.remove('is-looping');
-    stripEl.style.transition = 'none';
-    stripEl.style.transform = 'translateY(0px)';
-  }
-  reelClearDone = new Promise((resolve) => {
-    // Два rAF: целый кадр, чтобы transition:none + сброс трансформа применились
-    // до старта падения (одинкадровый старт роняет кадры на мобилке и открывает
-    // движение видимым «ползком»).
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      if (gen !== reelLoopGeneration) return resolve();
-      for (const { stripEl } of reelCols) {
-        stripEl.style.transition = `transform ${REEL_CLEAR_MS}ms cubic-bezier(0.5, 0, 0.9, 0.4)`;
-        stripEl.style.transform = `translateY(${ReelMath.ROW_STEP * (GRID_ROWS + 1)}px)`;
-      }
-      setTimeout(resolve, REEL_CLEAR_MS + 40);
-    }));
-  });
+  getReelSpin().startLoop();
 }
 
 function stopReelLoop() {
-  // Уборка на пути ошибки (см. catch в runSpin): падение-очистка могло оставить
-  // ленты уехавшими ниже окна — вернуть их на место, прежде чем вызывающий
-  // заново применит последнюю известную сетку.
-  for (const { stripEl } of reelCols) {
-    stripEl.classList.remove('is-looping');
-    stripEl.style.transition = 'none';
-    stripEl.style.transform = 'translateY(0px)';
-  }
+  // Error path (see runSpin's catch): the resting cells go back in place.
+  getReelSpin().stopLoop();
 }
 
-// Саспенс для колонки, помеченной ReelMath.collectAnticipationColumns: вместо
-// перезапуска бесконечного CSS-лупа на меньшей скорости — линейный пре-ролл
-// (без easing, поэтому без «плато» посередине), а следом РОВНО то же короткое
-// приземление, что и у обычных колонок. Подробный разбор, почему не одна
-// растянутая кривая, — в mr-president-unicorn/slot.js.
-const ANTICIPATION_PREROLL_MS = 900;
-const ANTICIPATION_PREROLL_FILLER_COUNT = 16;
-
-function landReel(colIndex, finalCodes, delayMs, isAnticipating = false, fillerCodeFn = randomSymbolCode) {
-  const { stripEl } = reelCols[colIndex];
-  const stopSound = colIndex === GRID_COLS - 1 ? 'finalReelStop' : 'reelStop';
-  const prerollCount = isAnticipating ? ANTICIPATION_PREROLL_FILLER_COUNT : 0;
-
-  return new Promise((resolve) => {
-    (async () => {
-      // Падение-очистка должно закончиться первым, и пер-колоночный стаггер
-      // считается от КОНЦА очистки, а не от нажатия спина. Отсчёт от нажатия
-      // означал, что все колонки с задержкой короче очистки просыпались
-      // одновременно, и первые барабаны приземлялись разом.
-      await reelClearDone;
-      await wait(delayMs);
-      stripEl.classList.remove('is-looping');
-      stripEl.style.transition = 'none';
-      stripEl.innerHTML = '';
-
-      const sequence = [
-        ...finalCodes,
-        ...Array.from({ length: REEL_LAND_FILLER_COUNT }, fillerCodeFn),
-        ...Array.from({ length: prerollCount }, fillerCodeFn),
-      ];
-      const cellEls = sequence.map((code) => {
-        const { cell } = createCellNode(code);
-        stripEl.appendChild(cell);
-        return cell;
-      });
-
-      const landStartY = -(REEL_LAND_FILLER_COUNT * ReelMath.ROW_STEP);
-
-      const beginLanding = () => {
-        stripEl.style.transition = `transform ${REEL_LAND_DURATION_MS}ms cubic-bezier(0.19, 0.79, 0.24, 1)`;
-        stripEl.style.transform = 'translateY(0px)';
-
-        setTimeout(() => Sound.playSfx(stopSound), Math.max(0, REEL_LAND_DURATION_MS - 200));
-
-        let settled = false;
-        const finish = () => {
-          if (settled) return;
-          settled = true;
-          if (isAnticipating) reelCols[colIndex].colEl.classList.remove('is-anticipating');
-          stripEl.removeEventListener('transitionend', onTransitionEnd);
-          for (const cell of cellEls.slice(3)) cell.remove();
-          stripEl.style.transition = 'none';
-          stripEl.style.transform = 'translateY(0px)';
-          resolve(cellEls.slice(0, 3));
-        };
-        const onTransitionEnd = (event) => {
-          if (event.target === stripEl && event.propertyName === 'transform') finish();
-        };
-        stripEl.addEventListener('transitionend', onTransitionEnd);
-        setTimeout(finish, REEL_LAND_DURATION_MS + 200);
-      };
-
-      if (isAnticipating) {
-        const prerollStartY = -((REEL_LAND_FILLER_COUNT + prerollCount) * ReelMath.ROW_STEP);
-        stripEl.style.transform = `translateY(${prerollStartY}px)`;
-        void stripEl.offsetHeight;
-        stripEl.style.transition = `transform ${ANTICIPATION_PREROLL_MS}ms linear`;
-        stripEl.style.transform = `translateY(${landStartY}px)`;
-
-        setTimeout(() => {
-          stripEl.style.transition = 'none';
-          stripEl.style.transform = `translateY(${landStartY}px)`;
-          void stripEl.offsetHeight;
-          beginLanding();
-        }, ANTICIPATION_PREROLL_MS);
-        return;
-      }
-
-      stripEl.style.transform = `translateY(${landStartY}px)`;
-      void stripEl.offsetHeight;
-      beginLanding();
-    })();
-  });
+// `extraFigures` — symbols the reel runs past before its result (the stagger:
+// col * REEL_STAGGER_FIGURES when the reels stop together). Resolves with the
+// result cells once the reel has stopped on them.
+function landReel(colIndex, finalCodes, extraFigures = 0, isAnticipating = false, fillerFn = undefined) {
+  const onBuilt = null;
+  return getReelSpin()
+    .landReel(colIndex, finalCodes, { extra: extraFigures, anticipating: isAnticipating, filler: fillerFn, onBuilt })
+    .then((cells) => {
+      if (isAnticipating) reelCols[colIndex].colEl.classList.remove('is-anticipating');
+      return cells;
+    });
 }
 
 function settleColumnCells(cellEls, col, finalCodes) {
@@ -728,9 +646,9 @@ async function landReels(grid, anticipationColumns = [], coinMultiplier = null, 
   const leadTasks = [];
   for (let col = 0; col < firstAnticipationCol; col++) {
     const finalCodes = [grid[0][col], grid[1][col], grid[2][col]];
-    const delay = col * REEL_LAND_STAGGER_MS;
+    const extra = col * REEL_STAGGER_FIGURES;
     leadTasks.push(
-      landReel(col, finalCodes, delay, false)
+      landReel(col, finalCodes, extra, false)
         .then((cellEls) => settleColumnCells(cellEls, col, finalCodes))
         .then(() => maybeShowCoinMultiplierLabels(col, coinMultiplier)),
     );
@@ -742,22 +660,12 @@ async function landReels(grid, anticipationColumns = [], coinMultiplier = null, 
   Sound.playSfx('anticipation');
   setHeroMood('tense');
 
-  // Заморозить все оставшиеся барабаны сразу: приземления по одному (выше) мало,
-  // если те, что ждут очереди, всё это время продолжают крутиться на фоне.
-  // Каждый замороженный всё равно полностью пересобирается landReel'ом, когда
-  // доходит его очередь, так что состояние заморозки роли не играет.
-  for (let col = firstAnticipationCol; col < GRID_COLS; col++) {
-    const { stripEl } = reelCols[col];
-    stripEl.classList.remove('is-looping');
-    stripEl.style.transition = 'none';
-    stripEl.style.transform = 'translateY(0px)';
-  }
 
   for (let col = firstAnticipationCol; col < GRID_COLS; col++) {
     const finalCodes = [grid[0][col], grid[1][col], grid[2][col]];
     const isAnticipating = anticipationSet.has(col);
     if (isAnticipating) reelCols[col].colEl.classList.add('is-anticipating');
-    const cellEls = await landReel(col, finalCodes, 0, isAnticipating);
+    const cellEls = await landReel(col, finalCodes, REEL_STAGGER_FIGURES, isAnticipating);
     await settleColumnCells(cellEls, col, finalCodes);
     maybeShowCoinMultiplierLabels(col, coinMultiplier);
   }
