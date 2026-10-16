@@ -523,177 +523,56 @@ function showInlineWinAmount(amount) {
   }, INLINE_WIN_AMOUNT_HOLD_MS);
 }
 
-// --- Reel motion -----------------------------------------------------------
+// --- Reel motion ------------------------------------------------------------
 //
-// No symbol asset ships a "spinning" clip, so motion is built from plain
-// static images sliding through a masked column (overflow: hidden), moving
-// top to bottom: new symbols slide in from under the top of the frame, old
-// ones slide out under the bottom. Two phases:
-//   1. startReelLoop(): an open-ended seamless CSS loop while the network
-//      request is in flight (we don't know the final symbols yet).
-//   2. landReels(grid): once the result is known, a decelerating scroll
-//      that ends exactly on the real symbols, staggered reel by reel.
-//
-// Cells are fixed-size with a fixed gap (--cell-size/--cell-gap in CSS), so
-// the scroll "step" between consecutive cell positions is ReelMath.ROW_STEP
-// (cell + gap) — no runtime measurement needed anymore.
+// Gangsta Casino's spin, shared via js/reel-spin.js: every reel accelerates
+// into a seamless loop while the server answers; once the result is in, reel
+// i runs i * REEL_STAGGER_FIGURES extra symbols before its result and brakes
+// dead on it (no bounce); pre-blurred symbol twins while it runs fast. All
+// Web Animations on transform — nothing moves on the main thread.
 
-// No spinning-loop phase (ported from neon-reels, product-approved there:
-// "по ощущениям даже лучше чем у нас на демо"): on spin press the resting
-// symbols drop out of view downward (accelerating, hidden by the column's
-// own overflow clip), the reel stands empty while the server answers, and
-// the finals fall in from the top via landReel's usual eased landing.
-// landReel awaits reelClearDone so no column starts landing while the old
-// symbols are still mid-drop.
-const REEL_CLEAR_MS = 260;
+const REEL_STAGGER_FIGURES = ReelSpin.PHYS.STAGGER_FIGURES;
+let reelSpin = null;
 
-let reelLoopGeneration = 0; // invalidates a pending clear when a newer spin supersedes it
-let reelClearDone = Promise.resolve();
+function getReelSpin() {
+  if (!reelSpin) {
+    reelSpin = ReelSpin.create({
+      cols: () => reelCols,
+      rows: GRID_ROWS,
+      rowStep: () => ReelMath.ROW_STEP,
+      makeCell: (code) => createCellNode(code).cell,
+      loopFiller: randomSymbolCode,
+      codes: SYMBOL_CODES,
+      onReelStop: (col, isLast) => Sound.playSfx(isLast ? 'finalReelStop' : 'reelStop'),
+    });
+  }
+  return reelSpin;
+}
+// Built on load so the blurred twins are already decoded by the first spin.
+window.addEventListener('load', () => getReelSpin());
 
 function startReelLoop() {
   Sound.playSfx('spinStart');
   teardownCellInstances();
-  const gen = ++reelLoopGeneration;
-  for (const { stripEl } of reelCols) {
-    stripEl.classList.remove('is-looping');
-    stripEl.style.transition = 'none';
-    stripEl.style.transform = 'translateY(0px)';
-  }
-  reelClearDone = new Promise((resolve) => {
-    // Two rAFs: one full frame so transition:none + the transform reset
-    // apply before the drop transition starts (a same-frame kickoff drops
-    // frames on mobile and opens the move at a visible crawl).
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      if (gen !== reelLoopGeneration) return resolve();
-      for (const { stripEl } of reelCols) {
-        stripEl.style.transition = `transform ${REEL_CLEAR_MS}ms cubic-bezier(0.5, 0, 0.9, 0.4)`;
-        stripEl.style.transform = `translateY(${ReelMath.ROW_STEP * (GRID_ROWS + 1)}px)`;
-      }
-      setTimeout(resolve, REEL_CLEAR_MS + 40);
-    }));
-  });
+  getReelSpin().startLoop();
 }
 
 function stopReelLoop() {
-  // Error-path cleanup (see runSpin's catch): the clear-out drop may have
-  // left the strips translated below the hole — put them back before the
-  // caller re-applies the last known grid.
-  for (const { stripEl } of reelCols) {
-    stripEl.classList.remove('is-looping');
-    stripEl.style.transition = 'none';
-    stripEl.style.transform = 'translateY(0px)';
-  }
+  // Error path (see runSpin's catch): the resting cells go back in place.
+  getReelSpin().stopLoop();
 }
 
-// Suspense treatment for a column flagged by ReelMath.collectAnticipationColumns
-// — instead of restarting the infinite CSS loop at a slower speed (which
-// requires forcing the strip back to translateY(0); since the loop isn't
-// phase-synced to that moment, the strip is essentially never actually AT 0
-// when this fires, so the reset itself was a visible snap — the "jumps up
-// then falls down" glitch persisted even after switching to a clean restart).
-//
-// Replacing that with one long eased scroll (same curve as a normal landing,
-// just stretched over ~2x the distance/duration) traded that bug for a
-// different one: cubic-bezier(0.19, 0.79, 0.24, 1) decelerates so hard near
-// the end that, stretched over ANTICIPATION_LAND_DURATION_MS, there's a long
-// near-motionless stretch partway through — reads as "it landed", followed
-// by one final small creep into the true resting spot, i.e. "falls, then
-// falls again" (reported live). Fix: two separate phases instead of one
-// stretched curve — a plain LINEAR pre-roll (no easing, so no plateau,
-// just a steady "still spinning" scroll) for the wait, followed by the
-// *exact* same short eased landing normal columns already use (proven fine,
-// never stretched).
-const ANTICIPATION_PREROLL_MS = 900;
-const ANTICIPATION_PREROLL_FILLER_COUNT = 16;
-
-function landReel(colIndex, finalCodes, delayMs, isAnticipating = false) {
-  const { stripEl } = reelCols[colIndex];
-  const stopSound = colIndex === GRID_COLS - 1 ? 'finalReelStop' : 'reelStop';
-  const prerollCount = isAnticipating ? ANTICIPATION_PREROLL_FILLER_COUNT : 0;
-
-  return new Promise((resolve) => {
-    (async () => {
-      // The clear-out drop must finish first, and the per-column stagger
-      // counts from the END of the clear — not from the spin press. Counting
-      // from the press meant every column whose delay was shorter than the
-      // clear duration woke up at the same instant, so the first few reels
-      // landed simultaneously (reported live — see neon-reels/slot.js, fixed
-      // there first).
-      await reelClearDone;
-      await wait(delayMs);
-      stripEl.classList.remove('is-looping');
-      stripEl.style.transition = 'none';
-      stripEl.innerHTML = '';
-
-      // Cell 0..2 (the real result) sit at the top of the strip; the window
-      // starts showing the filler cells at the bottom and scrolls up-index
-      // (== moving the strip *down* on screen) until the real result settles
-      // at translateY(0) — its natural resting position. The pre-roll filler
-      // (anticipating columns only) sits *below* the normal landing filler,
-      // i.e. further from the result, so it's scrolled through first.
-      const sequence = [
-        ...finalCodes,
-        ...Array.from({ length: REEL_LAND_FILLER_COUNT }, randomSymbolCode),
-        ...Array.from({ length: prerollCount }, randomSymbolCode),
-      ];
-      const cellEls = sequence.map((code) => {
-        const { cell } = createCellNode(code);
-        stripEl.appendChild(cell);
-        return cell;
-      });
-
-      const landStartY = -(REEL_LAND_FILLER_COUNT * ReelMath.ROW_STEP);
-
-      const beginLanding = () => {
-        stripEl.style.transition = `transform ${REEL_LAND_DURATION_MS}ms cubic-bezier(0.19, 0.79, 0.24, 1)`;
-        stripEl.style.transform = 'translateY(0px)';
-
-        // Fired on its own timer (0.2s ahead of the landing transition's own
-        // end/finish() below) rather than from finish() itself — the visual
-        // landing timing is untouched, only the sound cue moved earlier.
-        setTimeout(() => Sound.playSfx(stopSound), Math.max(0, REEL_LAND_DURATION_MS - 200));
-
-        let settled = false;
-        const finish = () => {
-          if (settled) return;
-          settled = true;
-          if (isAnticipating) reelCols[colIndex].colEl.classList.remove('is-anticipating');
-          stripEl.removeEventListener('transitionend', onTransitionEnd);
-          for (const cell of cellEls.slice(3)) cell.remove();
-          stripEl.style.transition = 'none';
-          stripEl.style.transform = 'translateY(0px)';
-          resolve(cellEls.slice(0, 3));
-        };
-        const onTransitionEnd = (event) => {
-          if (event.target === stripEl && event.propertyName === 'transform') finish();
-        };
-        stripEl.addEventListener('transitionend', onTransitionEnd);
-        setTimeout(finish, REEL_LAND_DURATION_MS + 200); // safety net (e.g. backgrounded tab)
-      };
-
-      if (isAnticipating) {
-        const prerollStartY = -((REEL_LAND_FILLER_COUNT + prerollCount) * ReelMath.ROW_STEP);
-        stripEl.style.transform = `translateY(${prerollStartY}px)`;
-        void stripEl.offsetHeight; // force reflow before enabling the transition
-        stripEl.style.transition = `transform ${ANTICIPATION_PREROLL_MS}ms linear`;
-        stripEl.style.transform = `translateY(${landStartY}px)`;
-
-        setTimeout(() => {
-          // Commit exactly (rather than trusting the transition arrived
-          // precisely on time) before starting the landing phase, same
-          // "clean handoff" reasoning as the loop-restart fix above.
-          stripEl.style.transition = 'none';
-          stripEl.style.transform = `translateY(${landStartY}px)`;
-          void stripEl.offsetHeight;
-          beginLanding();
-        }, ANTICIPATION_PREROLL_MS);
-      } else {
-        stripEl.style.transform = `translateY(${landStartY}px)`;
-        void stripEl.offsetHeight; // force reflow before enabling the transition
-        beginLanding();
-      }
-    })();
-  });
+// `extraFigures` — symbols the reel runs past before its result (the stagger:
+// col * REEL_STAGGER_FIGURES when the reels stop together). Resolves with the
+// result cells once the reel has stopped on them.
+function landReel(colIndex, finalCodes, extraFigures = 0, isAnticipating = false, fillerFn = undefined) {
+  const onBuilt = null;
+  return getReelSpin()
+    .landReel(colIndex, finalCodes, { extra: extraFigures, anticipating: isAnticipating, filler: fillerFn, onBuilt })
+    .then((cells) => {
+      if (isAnticipating) reelCols[colIndex].colEl.classList.remove('is-anticipating');
+      return cells;
+    });
 }
 
 function settleColumnCells(cellEls, col, finalCodes) {
@@ -738,9 +617,9 @@ async function landReels(grid, anticipationColumns = []) {
   const leadTasks = [];
   for (let col = 0; col < firstAnticipationCol; col++) {
     const finalCodes = [grid[0][col], grid[1][col], grid[2][col]];
-    const delay = col * REEL_LAND_STAGGER_MS;
+    const extra = col * REEL_STAGGER_FIGURES;
     leadTasks.push(
-      landReel(col, finalCodes, delay, false).then((cellEls) => settleColumnCells(cellEls, col, finalCodes)),
+      landReel(col, finalCodes, extra, false).then((cellEls) => settleColumnCells(cellEls, col, finalCodes)),
     );
   }
   await Promise.all(leadTasks);
@@ -749,25 +628,12 @@ async function landReels(grid, anticipationColumns = []) {
 
   Sound.playSfx('anticipation');
 
-  // Freeze every remaining reel right away — landing one at a time (above)
-  // isn't enough on its own if the ones still waiting their turn keep
-  // spinning in the background the whole time (reported live: looked like
-  // their own falling-into-place kept looping). Only the reel currently
-  // being processed should ever visibly be in motion; each frozen one gets
-  // fully rebuilt by landReel() anyway once its own turn comes up, so
-  // freezing here doesn't need to leave them in any particular state.
-  for (let col = firstAnticipationCol; col < GRID_COLS; col++) {
-    const { stripEl } = reelCols[col];
-    stripEl.classList.remove('is-looping');
-    stripEl.style.transition = 'none';
-    stripEl.style.transform = 'translateY(0px)';
-  }
 
   for (let col = firstAnticipationCol; col < GRID_COLS; col++) {
     const finalCodes = [grid[0][col], grid[1][col], grid[2][col]];
     const isAnticipating = anticipationSet.has(col);
     if (isAnticipating) reelCols[col].colEl.classList.add('is-anticipating');
-    const cellEls = await landReel(col, finalCodes, 0, isAnticipating);
+    const cellEls = await landReel(col, finalCodes, REEL_STAGGER_FIGURES, isAnticipating);
     await settleColumnCells(cellEls, col, finalCodes);
   }
 }

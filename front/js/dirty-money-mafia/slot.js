@@ -618,135 +618,56 @@ function showInlineWinAmount(amount) {
 
 // --- Reel motion ------------------------------------------------------------
 //
-// A reel = a .reel__col holding a taller .reel__strip that scrolls vertically;
-// .reel__grid clips the whole block at the frame's opening, so a strip in
-// motion disappears behind the golden border rather than past the frame.
-//
-// The looping strip is 6 cells — 3 fresh random ones stacked ABOVE the 3
-// currently on screen — and rests shifted up by one screenful so the visible
-// window shows the current symbols. The keyframe then scrolls it back down to
-// 0, i.e. the random trio falls into view. (The donor games instead start the
-// loop at translateY(0) and scroll down from there, which leaves the top of the
-// window with nothing above row 0 to scroll in — a blank flash on every cycle.)
+// Gangsta Casino's spin, shared via js/reel-spin.js: every reel accelerates
+// into a seamless loop while the server answers; once the result is in, reel
+// i runs i * REEL_STAGGER_FIGURES extra symbols before its result and brakes
+// dead on it (no bounce); pre-blurred symbol twins while it runs fast. All
+// Web Animations on transform — nothing moves on the main thread.
+
+const REEL_STAGGER_FIGURES = ReelSpin.PHYS.STAGGER_FIGURES;
+let reelSpin = null;
+
+function getReelSpin() {
+  if (!reelSpin) {
+    reelSpin = ReelSpin.create({
+      cols: () => reelCols,
+      rows: GRID_ROWS,
+      rowStep: () => rowStep,
+      makeCell: (code) => createCellNode(code).cell,
+      loopFiller: randomSymbolCode,
+      codes: SYMBOL_CODES,
+      onReelStop: (col, isLast) => Sound.playSfx(isLast ? 'finalReelStop' : 'reelStop'),
+    });
+  }
+  return reelSpin;
+}
+// Built on load so the blurred twins are already decoded by the first spin.
+window.addEventListener('load', () => getReelSpin());
 
 function startReelLoop() {
   Sound.playSfx('spinStart');
   reelsBusy = true;
   teardownCellInstances();
-  for (let col = 0; col < GRID_COLS; col++) {
-    const { stripEl } = reelCols[col];
-    stripEl.style.transition = 'none';
-    stripEl.classList.remove('is-looping');
-
-    const currentCodes = ReelMath.currentColumnCodes(cellInfos, GRID_COLS, GRID_ROWS, col).map(
-      (code) => code || randomSymbolCode(),
-    );
-
-    stripEl.innerHTML = '';
-    const randomTrio = [randomSymbolCode(), randomSymbolCode(), randomSymbolCode()];
-    // Random trio first (above), current symbols below — the reverse of
-    // ReelMath.buildLoopSequence's order, which is written for the
-    // scroll-down-from-zero variant described above.
-    for (const code of [...randomTrio, ...currentCodes]) {
-      const { cell } = createCellNode(code);
-      stripEl.appendChild(cell);
-    }
-
-    const screenful = rowStep * GRID_ROWS;
-    stripEl.style.setProperty('--reel-loop-distance', `${screenful}px`);
-    stripEl.style.setProperty('--reel-loop-duration', `${REEL_LOOP_STEP_MS}ms`);
-    stripEl.style.transform = `translateY(${-screenful}px)`;
-    void stripEl.offsetHeight;
-    stripEl.classList.add('is-looping');
-  }
+  getReelSpin().startLoop();
 }
 
 function stopReelLoop() {
+  // Error path (see runSpin's catch): the resting cells go back in place.
   reelsBusy = false;
-  for (const { stripEl } of reelCols) {
-    stripEl.classList.remove('is-looping');
-  }
+  getReelSpin().stopLoop();
 }
 
-// Suspense treatment for a column flagged by ReelMath.collectAnticipationColumns:
-// a plain LINEAR pre-roll (steady "still spinning" scroll, no easing so there's
-// no mid-way plateau that reads as a false landing), followed by the exact same
-// short eased landing every normal column uses.
-const ANTICIPATION_PREROLL_MS = 900;
-const ANTICIPATION_PREROLL_FILLER_COUNT = 16;
-
-function landReel(colIndex, finalCodes, delayMs, isAnticipating = false) {
-  const { stripEl } = reelCols[colIndex];
-  const stopSound = colIndex === GRID_COLS - 1 ? 'finalReelStop' : 'reelStop';
-  const prerollCount = isAnticipating ? ANTICIPATION_PREROLL_FILLER_COUNT : 0;
-
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      stripEl.classList.remove('is-looping');
-      stripEl.style.transition = 'none';
-      stripEl.innerHTML = '';
-
-      // Final symbols at the top, filler stacked below them: the strip starts
-      // shifted up so the filler is what's visible, then slides back down to 0
-      // to reveal the result.
-      const sequence = [
-        ...finalCodes,
-        ...Array.from({ length: REEL_LAND_FILLER_COUNT }, randomSymbolCode),
-        ...Array.from({ length: prerollCount }, randomSymbolCode),
-      ];
-      const cellEls = sequence.map((code) => {
-        const { cell } = createCellNode(code);
-        stripEl.appendChild(cell);
-        return cell;
-      });
-
-      const landStartY = -(REEL_LAND_FILLER_COUNT * rowStep);
-
-      const beginLanding = () => {
-        stripEl.style.transition = `transform ${REEL_LAND_DURATION_MS}ms cubic-bezier(0.19, 0.79, 0.24, 1)`;
-        stripEl.style.transform = 'translateY(0px)';
-
-        setTimeout(() => Sound.playSfx(stopSound), Math.max(0, REEL_LAND_DURATION_MS - 200));
-
-        let settled = false;
-        const finish = () => {
-          if (settled) return;
-          settled = true;
-          if (isAnticipating) reelCols[colIndex].colEl.classList.remove('is-anticipating');
-          stripEl.removeEventListener('transitionend', onTransitionEnd);
-          for (const cell of cellEls.slice(GRID_ROWS)) cell.remove();
-          stripEl.style.transition = 'none';
-          stripEl.style.transform = 'translateY(0px)';
-          resolve(cellEls.slice(0, GRID_ROWS));
-        };
-        const onTransitionEnd = (event) => {
-          if (event.target === stripEl && event.propertyName === 'transform') finish();
-        };
-        stripEl.addEventListener('transitionend', onTransitionEnd);
-        setTimeout(finish, REEL_LAND_DURATION_MS + 200);
-      };
-
-      if (isAnticipating) {
-        const prerollStartY = -((REEL_LAND_FILLER_COUNT + prerollCount) * rowStep);
-        stripEl.style.transform = `translateY(${prerollStartY}px)`;
-        void stripEl.offsetHeight;
-        stripEl.style.transition = `transform ${ANTICIPATION_PREROLL_MS}ms linear`;
-        stripEl.style.transform = `translateY(${landStartY}px)`;
-
-        setTimeout(() => {
-          stripEl.style.transition = 'none';
-          stripEl.style.transform = `translateY(${landStartY}px)`;
-          void stripEl.offsetHeight;
-          beginLanding();
-        }, ANTICIPATION_PREROLL_MS);
-        return;
-      }
-
-      stripEl.style.transform = `translateY(${landStartY}px)`;
-      void stripEl.offsetHeight;
-      beginLanding();
-    }, delayMs);
-  });
+// `extraFigures` — symbols the reel runs past before its result (the stagger:
+// col * REEL_STAGGER_FIGURES when the reels stop together). Resolves with the
+// result cells once the reel has stopped on them.
+function landReel(colIndex, finalCodes, extraFigures = 0, isAnticipating = false, fillerFn = undefined) {
+  const onBuilt = null;
+  return getReelSpin()
+    .landReel(colIndex, finalCodes, { extra: extraFigures, anticipating: isAnticipating, filler: fillerFn, onBuilt })
+    .then((cells) => {
+      if (isAnticipating) reelCols[colIndex].colEl.classList.remove('is-anticipating');
+      return cells;
+    });
 }
 
 function settleColumnCells(cellEls, col, finalCodes) {
@@ -942,9 +863,9 @@ async function landReelsInner(grid, anticipationColumns, wildEvents, lineWins, c
   const leadTasks = [];
   for (let col = 0; col < firstAnticipationCol; col++) {
     const finalCodes = [grid[0][col], grid[1][col], grid[2][col]];
-    const delay = col * REEL_LAND_STAGGER_MS;
+    const extra = col * REEL_STAGGER_FIGURES;
     leadTasks.push(
-      landReel(col, finalCodes, delay, false)
+      landReel(col, finalCodes, extra, false)
         .then((cellEls) => settleColumnCells(cellEls, col, finalCodes))
         .then(() => celebrateExpandedWild(col, wildEvents, winningCols)),
     );
@@ -955,22 +876,12 @@ async function landReelsInner(grid, anticipationColumns, wildEvents, lineWins, c
 
   Sound.playSfx('anticipation');
 
-  // Freeze every remaining reel right away — landing one at a time isn't enough
-  // on its own if the ones still waiting their turn keep spinning in the
-  // background. landReel() rebuilds each column from scratch when its turn
-  // comes, so freezing here doesn't need to leave them in any given state.
-  for (let col = firstAnticipationCol; col < GRID_COLS; col++) {
-    const { stripEl } = reelCols[col];
-    stripEl.classList.remove('is-looping');
-    stripEl.style.transition = 'none';
-    stripEl.style.transform = 'translateY(0px)';
-  }
 
   for (let col = firstAnticipationCol; col < GRID_COLS; col++) {
     const finalCodes = [grid[0][col], grid[1][col], grid[2][col]];
     const isAnticipating = anticipationSet.has(col);
     if (isAnticipating) reelCols[col].colEl.classList.add('is-anticipating');
-    const cellEls = await landReel(col, finalCodes, 0, isAnticipating);
+    const cellEls = await landReel(col, finalCodes, REEL_STAGGER_FIGURES, isAnticipating);
     await settleColumnCells(cellEls, col, finalCodes);
     await celebrateExpandedWild(col, wildEvents, winningCols);
   }
