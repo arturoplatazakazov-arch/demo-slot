@@ -39,8 +39,11 @@ const PAYLINES = [[1, 1, 1], [0, 0, 0], [2, 2, 2], [0, 1, 2], [2, 1, 0]];
 // В прокрутке не мелькают монеты: мелькнувший триггер читается как обман.
 const FILLER_CODES = SYMBOL_CODES.filter((code) => code !== 'coin');
 
+// Монеты с молнией (symbols/coin.png) в игре нет (продукт): монета всегда
+// показывается пустой эмалью с номиналом поверх, поэтому код 'coin' ведёт
+// на coin_value.
 function symbolSrc(code) {
-  return `${ASSET_ROOT}/symbols/${code}.png`;
+  return `${ASSET_ROOT}/symbols/${code === 'coin' ? 'coin_value' : code}.png`;
 }
 
 // Fx-хук: без WebGL/ассетов window.VoltFx нет или он не ready — тогда молча
@@ -269,14 +272,95 @@ function clearCoinFace(info) {
 // Арт монеты в раунде: золото с пустой эмалью под номинал, у тиров джекпота —
 // свой металл (MINI бронза, MINOR серебро, MAJOR золото с камнями). Подпись
 // печатает клиент, чтобы суммы не разъезжались с математикой сида.
+// Монета переиспользуется (пустая эмаль: coin_value, у тиров — свой металл),
+// номинал/тир кладётся поверх — глиф-спрайтами из ChatGPT (cut:
+// scripts/volt_coins_popups.py -> img/volt-coins/glyphs), пока их нет — текстом.
 function coinFaceFor(kind, value) {
-  if (JACKPOT_TIERS.includes(kind)) return { text: kind.toUpperCase(), cls: `is-tier is-${kind}`, art: `coin_${kind}` };
-  return { text: `x${value}`, cls: '', art: 'coin_value' };
+  if (JACKPOT_TIERS.includes(kind)) return { text: kind.toUpperCase(), cls: `is-tier is-${kind}`, art: `coin_${kind}`, word: kind };
+  return { text: `x${value}`, cls: '', art: 'coin_value', digits: `x${value}` };
+}
+
+// Метрики глифов (scripts/volt_coins_popups.py -> glyphs/glyphs.json):
+// w/h картинки и доли её непрозрачного «ядра» (cl/ct/cr/cb) — по ядру
+// выравниваются линия шрифта и межбуквенные отступы (свечение перекрывается).
+const GLYPHS = {"0":{"w":227,"h":283,"cl":0.0176,"ct":0.0141,"cr":1.0,"cb":0.9823},
+  "1":{"w":146,"h":281,"cl":0.0,"ct":0.0178,"cr":1.0,"cb":0.9822},
+  "2":{"w":211,"h":282,"cl":0.0,"ct":0.0177,"cr":1.0,"cb":0.9752},
+  "3":{"w":208,"h":285,"cl":0.0,"ct":0.0175,"cr":1.0,"cb":0.9825},
+  "4":{"w":199,"h":280,"cl":0.0,"ct":0.0214,"cr":1.0,"cb":0.975},
+  "5":{"w":217,"h":286,"cl":0.0,"ct":0.014,"cr":0.9724,"cb":0.9825},
+  "6":{"w":241,"h":295,"cl":0.0207,"ct":0.0203,"cr":0.9834,"cb":0.9831},
+  "7":{"w":207,"h":286,"cl":0.0193,"ct":0.0175,"cr":1.0,"cb":0.9825},
+  "8":{"w":238,"h":299,"cl":0.0,"ct":0.0201,"cr":1.0,"cb":0.9833},
+  "9":{"w":237,"h":298,"cl":0.0,"ct":0.0168,"cr":0.9789,"cb":0.9799},
+  "x":{"w":217,"h":204,"cl":0.023,"ct":0.0196,"cr":0.9816,"cb":0.9755},
+  "mini":{"w":360,"h":199,"cl":0.0111,"ct":0.0101,"cr":1.0,"cb":0.9698},
+  "minor":{"w":425,"h":200,"cl":0.0,"ct":0.02,"cr":1.0,"cb":0.98},
+  "major":{"w":459,"h":200,"cl":0.0,"ct":0.02,"cr":0.9869,"cb":0.975}};
+// Откат на номинал текстом без перезаливки: ?faces=text в адресе игры.
+if (new URLSearchParams(location.search).get('faces') === 'text') {
+  for (const k of Object.keys(GLYPHS)) delete GLYPHS[k];
+}
+
+// Строка из глиф-картинок. Размеры — в em от font-size .coin-face__glyphs,
+// который равен высоте ядра цифры: так строка масштабируется одним числом.
+// Цифры и «x» с одного листа — один масштаб (em = средняя высота ядра цифры),
+// поэтому «x» остаётся меньше цифр, как нарисован. Слово — по своему ядру.
+const DIGIT_CORE_PX = (() => {
+  const d = '0123456789'.split('').map((c) => GLYPHS[c]).filter(Boolean);
+  return d.length ? d.reduce((a, g) => a + (g.cb - g.ct) * g.h, 0) / d.length : 0;
+})();
+function glyphEm(ch) {
+  const g = GLYPHS[ch];
+  return ch.length === 1 ? g.h / DIGIT_CORE_PX : 1 / (g.cb - g.ct);
+}
+
+function glyphRow(chars) {
+  const row = document.createElement('span');
+  row.className = 'coin-face__glyphs';
+  for (const ch of chars) {
+    const g = GLYPHS[ch];
+    const img = document.createElement('img');
+    img.src = `${ASSET_ROOT}/glyphs/${ch}.webp`;
+    img.alt = '';
+    const h = glyphEm(ch);                    // высота картинки в em
+    const w = (g.w / g.h) * h;
+    img.style.height = `${h.toFixed(4)}em`;
+    img.style.width = `${w.toFixed(4)}em`;
+    img.style.marginBottom = `${(-(1 - g.cb) * h).toFixed(4)}em`;
+    img.style.marginLeft = `${(-g.cl * w * 0.85).toFixed(4)}em`;
+    img.style.marginRight = `${(-(1 - g.cr) * w * 0.85).toFixed(4)}em`;
+    row.appendChild(img);
+  }
+  return row;
+}
+
+// Ширина строки в em (по ядрам) — чтобы длинные номиналы не вылезали за монету.
+function glyphRowWidth(chars) {
+  let sum = 0;
+  for (const ch of chars) {
+    const g = GLYPHS[ch];
+    const h = glyphEm(ch);
+    sum += (g.cr - g.cl) * (g.w / g.h) * h * 0.85 + (g.w / g.h) * h * 0.15;
+  }
+  return sum;
 }
 
 function makeCoinFace(face) {
   const el = document.createElement('span');
   el.className = face.cls ? `coin-face ${face.cls}` : 'coin-face';
+  const chars = face.word ? [face.word] : (face.digits ? [...face.digits] : null);
+  if (chars && chars.every((ch) => GLYPHS[ch])) {
+    // Высота ядра: цифры ~36% ячейки, слова ~20%, строка не шире ~2/3-3/4 ячейки.
+    const target = (face.word ? 0.3 : 0.36) * cellH;
+    const maxW = (face.word ? 0.8 : 0.66) * cellW;
+    const size = Math.min(target, maxW / glyphRowWidth(chars));
+    const row = glyphRow(chars);
+    row.style.fontSize = `${size.toFixed(1)}px`;
+    el.classList.add('has-glyphs');
+    el.appendChild(row);
+    return el;
+  }
   el.innerHTML = `<span class="coin-face__text"></span>`;
   el.firstChild.textContent = face.text;
   return el;
@@ -1392,6 +1476,10 @@ async function init() {
   buildJackpotRow();
   setJackpotBet(jackpotBet);
   buildReelGrid();
+  // стартовая раскладка: у монеты тоже номинал, как у любой монеты в игре
+  lastBaseFaces = baseFacesFor(SYMBOL_LAYOUT, { positions: SYMBOL_LAYOUT.flatMap((row, r) =>
+    row.map((code, c) => (code === 'coin' ? { row: r, col: c, value: 5, kind: '5' } : null)).filter(Boolean)) });
+  paintBaseFaces();
   setBackground();
   setupDevPanel();
   await preloadAssets();

@@ -230,7 +230,7 @@ function renderInfoPopupContent() {
       ? `<span>×3: <b>${formatNumber(symbol.paytable['3'])}</b> × ставка на линию</span>`
       : '<span>3 в линию запускают Hold &amp; Win</span>';
     row.innerHTML = `
-      <img src="img/volt-coins/symbols/${symbol.code}.png" alt="">
+      <img src="img/volt-coins/symbols/${symbol.code === 'coin' ? 'coin_value' : symbol.code}.png" alt="">
       <span class="info-popup__row-name"></span>
       <span class="info-popup__row-pays">${pays}</span>
     `;

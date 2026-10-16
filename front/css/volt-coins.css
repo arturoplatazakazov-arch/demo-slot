@@ -1014,3 +1014,12 @@ body.is-feature-screen .v3-bar { visibility: hidden; }
 }
 /* старый всплывающий счётчик больше не нужен — его заменило табло */
 .reel-win-amount-viewport { display: none; }
+
+/* Номинал из глиф-картинок ChatGPT поверх переиспользуемой монеты. */
+.coin-face__glyphs {
+  display: inline-flex;
+  align-items: flex-end;
+  line-height: 0;
+  height: 1em;
+}
+.coin-face__glyphs img { display: block; flex: 0 0 auto; pointer-events: none; }

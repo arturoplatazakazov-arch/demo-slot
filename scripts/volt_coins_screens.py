@@ -90,9 +90,48 @@ def lines(rows, size, fill=CREAM, gap=0.12):
     return out
 
 
+GLYPH_DIR = os.path.join(ART_DIR, 'glyphs')
+
+
+def glyph_label(label, core_h):
+    """The face composed from the ChatGPT glyph sprites, same metrics as
+    slot.js glyphRow (core-aligned baseline, glows overlapping)."""
+    import json
+    meta = json.load(open(os.path.join(GLYPH_DIR, 'glyphs.json')))
+    chars = [label.lower()] if label.lower() in meta else list(label.lower())
+    digits = [meta[c] for c in '0123456789' if c in meta]
+    digit_core = sum((g['cb'] - g['ct']) * g['h'] for g in digits) / len(digits)
+    parts = []
+    for ch in chars:
+        g = meta[ch]
+        # digits and x share one scale (x stays smaller, as drawn); a word by its own core
+        h = core_h * g['h'] / digit_core if len(ch) == 1 else core_h / (g['cb'] - g['ct'])
+        w = h * g['w'] / g['h']
+        im = Image.open(os.path.join(GLYPH_DIR, ch + '.webp')).convert('RGBA').resize((round(w), round(h)), Image.LANCZOS)
+        parts.append((im, g, w, h))
+    total = sum((g['cr'] - g['cl']) * w * 0.85 + w * 0.15 for _, g, w, _ in parts)
+    H = max(h for _, _, _, h in parts)
+    out = Image.new('RGBA', (int(total + max(w for _, _, w, _ in parts)), int(H * 1.6)))
+    x = out.width / 2 - total / 2
+    base = out.height / 2 + core_h / 2
+    for im, g, w, h in parts:
+        x -= g['cl'] * w * 0.85
+        out.alpha_composite(im, (round(x), round(base - g['cb'] * h)))
+        x += w - (1 - g['cr']) * w * 0.85
+    return trim(out)
+
+
 def coin_with(art_name, label, tier=False):
-    """A round coin state with its face printed the way the game prints it."""
+    """A blank coin state with its face on top — the game's own glyph sprites
+    when present (what the reels show), else text drawn here."""
     coin = art(f'symbols/{art_name}.png')
+    if os.path.exists(os.path.join(GLYPH_DIR, 'glyphs.json')):
+        t = glyph_label(label, coin.height * (0.3 if tier else 0.36))
+        k = min(1.0, coin.width * (0.8 if tier else 0.66) / t.width)
+        t = t.resize((round(t.width * k), round(t.height * k)), Image.LANCZOS)
+        out = coin.copy()
+        out.alpha_composite(t, ((out.width - t.width) // 2, (out.height - t.height) // 2))
+        return out
     size = int(coin.height * (0.15 if tier else (0.27 if len(label) <= 2 else 0.22)))
     fnt = font('baloo', size, 800) if tier else font('robotomono', size)
     t = text_img(label, fnt, [(0, hexc('fffbe0')), (1, hexc('ffd76a'))], stroke=INK,
@@ -197,7 +236,6 @@ ART = {
     'wild': art('symbols/wild.png'),
     'seven': art('symbols/seven.png'),
     'diamond': art('symbols/diamond.png'),
-    'coin': art('symbols/coin.png'),
     'c_x5': coin_with('coin_value', 'x5'),
     'c_x15': coin_with('coin_value', 'x15'),
     'c_x2': coin_with('coin_value', 'x2'),

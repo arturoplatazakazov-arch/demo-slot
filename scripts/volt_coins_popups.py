@@ -32,6 +32,12 @@ SHEETS = {
     'popups_round.png': ('rows', ['hold_and_win', 'total_win', 'buy_bonus']),
     'popups_jackpots.png': ('grid', ['jp_mini', 'jp_minor', 'jp_major', 'jp_grand']),
 }
+# Glyphs for the coin faces (ChatGPT sheet): row 1 digits 0-5, row 2 digits
+# 6-9 + "x", row 3 the words MINI / MINOR / MAJOR. The game composes any face
+# from them over the reused blank coin (slot.js GLYPHS); glyphs.json keeps each
+# glyph's size and its opaque-core box (fractions) for baseline/spacing.
+GLYPH_SHEET = ('glyphs.png', [list('012345'), list('6789') + ['x'], ['mini', 'minor', 'major']])
+GLYPH_DIR = os.path.join(ROOT, 'front', 'img', 'volt-coins', 'glyphs')
 BG_MAX = 22  # a pixel this dark (max channel) can be background
 
 
@@ -128,6 +134,55 @@ def panel_box(rgba):
     return {'l': round(x0 / w, 4), 't': round(y0 / h, 4), 'w': round((x1 - x0) / w, 4), 'h': round((y1 - y0) / h, 4)}
 
 
+def split_cols(alpha, n):
+    """n glyph spans in a row. Glyphs on the sheet sit close and their glows
+    touch, so there is no empty column between them: cut at the n-1 deepest
+    valleys of the (smoothed) column alpha profile, each valley at least a
+    third of an average glyph away from the others and from the row ends."""
+    prof = alpha.astype(np.float32).sum(0)
+    k = max(3, alpha.shape[1] // 120)
+    prof = np.convolve(prof, np.ones(k) / k, mode='same')
+    xs = np.nonzero(prof > prof.max() * 0.02)[0]
+    lo, hi = xs.min(), xs.max()
+    min_gap = (hi - lo) / n / 3
+    cand = [x for x in range(lo + 1, hi) if prof[x] <= prof[x - 1] and prof[x] <= prof[x + 1]]
+    cand.sort(key=lambda x: prof[x])
+    cuts = []
+    for x in cand:
+        if all(abs(x - c) >= min_gap for c in cuts) and x - lo >= min_gap and hi - x >= min_gap:
+            cuts.append(x)
+        if len(cuts) == n - 1:
+            break
+    edges = [0] + sorted(cuts) + [alpha.shape[1]]
+    return [(edges[i], edges[i + 1]) for i in range(n)]
+
+
+def build_glyphs():
+    p = os.path.join(SRC, GLYPH_SHEET[0])
+    if not os.path.exists(p):
+        print('skip (not delivered yet):', GLYPH_SHEET[0])
+        return
+    os.makedirs(GLYPH_DIR, exist_ok=True)
+    keyed = key(Image.open(p))
+    al = np.asarray(keyed.getchannel('A'))
+    rows = split_rows(al, len(GLYPH_SHEET[1]))
+    meta = {}
+    for (y0, y1), names in zip(rows, GLYPH_SHEET[1]):
+        band = keyed.crop((0, y0, keyed.width, y1))
+        cols = split_cols(np.asarray(band.getchannel('A')), len(names))
+        for name, (x0, x1) in zip(names, cols):
+            g = band.crop((x0, 0, x1, band.height))
+            g = g.crop(trim_box(np.asarray(g.getchannel('A')), 6))
+            ga = np.asarray(g.getchannel('A'))
+            c0, c1, c2, c3 = trim_box(ga, 200)
+            g.save(os.path.join(GLYPH_DIR, name + '.webp'), quality=90, method=6)
+            meta[name] = {'w': g.width, 'h': g.height,
+                          'cl': round(c0 / g.width, 4), 'ct': round(c1 / g.height, 4),
+                          'cr': round(c2 / g.width, 4), 'cb': round(c3 / g.height, 4)}
+            print('glyph', name, g.size)
+    json.dump(meta, open(os.path.join(GLYPH_DIR, 'glyphs.json'), 'w'), indent=1)
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     meta = {}
@@ -152,6 +207,7 @@ def main():
             part.save(os.path.join(OUT, name + '.webp'), quality=88, method=6)
             meta[name] = {'size': part.size, 'panel': panel_box(part)}
             print(name, part.size, meta[name]['panel'])
+    build_glyphs()
     old = {}
     mp = os.path.join(OUT, 'popups.json')
     if os.path.exists(mp):
