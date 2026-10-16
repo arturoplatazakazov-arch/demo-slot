@@ -203,10 +203,29 @@ function setCellSymbol(info, code) {
 
 let stage = null; // SpineEngine.SpineStage, null if WebGL/Spine is unavailable
 
+// On a phone link a page image sometimes just fails (connection reset while
+// ~20 MB is in flight) — and both the engine's resource cache and the asset
+// manager remember the failure under that path for good. Retry under an
+// equivalent path ("<dir>/." is the same folder, but a fresh cache key), with
+// a short pause, a couple of times.
+const spineRetryCache = new Map();
+function loadSpineWithRetry(assetManager, folder, opts, tries = 3) {
+  const key = `${folder}|${opts.premultipliedAlpha}`;
+  if (spineRetryCache.has(key)) return spineRetryCache.get(key);
+  const attempt = (n, path) => SpineEngine.SpineResource.load(assetManager, path, opts).catch((err) => {
+    if (n + 1 >= tries) throw err;
+    console.warn(`spine retry ${n + 1} for ${folder}:`, err && err.message);
+    return wait(700 * (n + 1)).then(() => attempt(n + 1, `${path}/.`));
+  });
+  const promise = attempt(0, folder);
+  spineRetryCache.set(key, promise);
+  return promise;
+}
+
 function getSymbolResource(code) {
   if (!stage) return Promise.reject(new Error('no spine stage'));
   // Atlases are true premultiplied alpha (pma:true, RGB <= A in every pixel).
-  return SpineEngine.SpineResource.load(stage.assetManager, `${SPINE_ROOT}/${code}`, { premultipliedAlpha: true });
+  return loadSpineWithRetry(stage.assetManager, `${SPINE_ROOT}/${code}`, { premultipliedAlpha: true });
 }
 
 // Plays `clip` once and resolves when it ends — or after the clip's own length
@@ -1237,7 +1256,7 @@ function getSceneResource(name) {
   if (!backStage) return Promise.reject(new Error('no back stage'));
   name = SCENE_DIR[name] || name;
   // README: "без premultiplied alpha" — and no pma line in the atlases.
-  return SpineEngine.SpineResource.load(backStage.assetManager, `${SCENE_ROOT}/${name}`, { premultipliedAlpha: false });
+  return loadSpineWithRetry(backStage.assetManager, `${SCENE_ROOT}/${name}`, { premultipliedAlpha: false });
 }
 
 function sceneAnchorAt(name, resource) {
