@@ -297,8 +297,9 @@ const GLYPHS = {"0":{"w":227,"h":283,"cl":0.0176,"ct":0.0141,"cr":1.0,"cb":0.982
   "mini":{"w":360,"h":199,"cl":0.0111,"ct":0.0101,"cr":1.0,"cb":0.9698},
   "minor":{"w":425,"h":200,"cl":0.0,"ct":0.02,"cr":1.0,"cb":0.98},
   "major":{"w":459,"h":200,"cl":0.0,"ct":0.02,"cr":0.9869,"cb":0.975}};
-// Откат на номинал текстом без перезаливки: ?faces=text в адресе игры.
-if (new URLSearchParams(location.search).get('faces') === 'text') {
+// Глиф-номиналы из ChatGPT выключены (продукт: «слишком глянцевые, не та
+// рисовка») — по умолчанию номинал текстом; посмотреть глифы: ?faces=glyphs.
+if (new URLSearchParams(location.search).get('faces') !== 'glyphs') {
   for (const k of Object.keys(GLYPHS)) delete GLYPHS[k];
 }
 

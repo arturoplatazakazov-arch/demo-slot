@@ -91,6 +91,7 @@ def lines(rows, size, fill=CREAM, gap=0.12):
 
 
 GLYPH_DIR = os.path.join(ART_DIR, 'glyphs')
+USE_GLYPHS = False  # glyph faces rejected by the client (too glossy) — text faces, as in game
 
 
 def glyph_label(label, core_h):
@@ -125,7 +126,7 @@ def coin_with(art_name, label, tier=False):
     """A blank coin state with its face on top — the game's own glyph sprites
     when present (what the reels show), else text drawn here."""
     coin = art(f'symbols/{art_name}.png')
-    if os.path.exists(os.path.join(GLYPH_DIR, 'glyphs.json')):
+    if USE_GLYPHS and os.path.exists(os.path.join(GLYPH_DIR, 'glyphs.json')):
         t = glyph_label(label, coin.height * (0.3 if tier else 0.36))
         k = min(1.0, coin.width * (0.8 if tier else 0.66) / t.width)
         t = t.resize((round(t.width * k), round(t.height * k)), Image.LANCZOS)
