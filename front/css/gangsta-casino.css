@@ -178,7 +178,7 @@ body {
 /* Portrait-only layers (shown in the portrait media block). */
 .logo--mob, .sign-buy-bonus__art--mob, .bg-mob, .frame-mob { display: none; }
 .bg-mob { pointer-events: none; z-index: 0; filter: brightness(0.8); } /* product: background 20% darker */
-.bonus-table-mob { display: none; left: -100px; top: 980px; width: 620px; height: 240px; z-index: 2; pointer-events: none; } /* PSB render (-100,1060), up 80 */
+.bonus-table-mob { display: none; left: -100px; top: 940px; width: 620px; height: 240px; z-index: 2; pointer-events: none; } /* PSB render (-100,1060), up 120 */
 .bg-mob--base { left: -80px; top: -128px; width: 941px; height: 1672px; }
 .bg-mob--bonus { left: -10px; top: -5px; width: 800px; height: 1463px; }
 /* Mobile frame (glass + chrome) sits UNDER the reels, like the PSB. */
@@ -1145,7 +1145,7 @@ body.is-feature-screen .to-catalog-btn { visibility: hidden; }
   .sign-buy-bonus__price { font-size: 26px; bottom: -6px; }
 
   /* Same jukebox art, scaled so its body matches the PSB's (44,940) 230 wide. */
-  .fs-counter { left: -14.8px; top: 860px; width: 332px; height: 221.4px; } /* PSB 940, up 80 with its table */
+  .fs-counter { left: -14.8px; top: 820px; width: 332px; height: 221.4px; } /* PSB 940, up 120 with its table */
   .screen[data-mode="freespins"] .bonus-table-mob { display: block; }
   .fs-counter__digit { font-size: 46px; }
 
