@@ -270,7 +270,11 @@ body {
 .reel__strip.is-looping {
   animation: reel-loop var(--reel-loop-duration, 420ms) linear infinite;
 }
-.reel__strip.is-looping .reel__cell img { filter: blur(1.2px); }
+.reel__strip { will-change: transform; }
+/* Fast spin: swap each tile for its pre-blurred twin (no runtime filter). */
+.reel__strip .reel__cell img.reel__cell-blur { display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); opacity: 1; animation: none; }
+.reel__strip.is-fast .reel__cell img { visibility: hidden; }
+.reel__strip.is-fast .reel__cell img.reel__cell-blur { display: block; visibility: visible; }
 @keyframes reel-loop {
   from { transform: translateY(0); }
   to { transform: translateY(var(--reel-loop-distance, 0)); }
@@ -293,8 +297,8 @@ body {
   object-fit: contain;
   pointer-events: none;
   user-select: none;
-  transition: opacity 200ms ease, filter 200ms ease;
 }
+.reel__strip:not(.is-fast) .reel__cell img { transition: opacity 200ms ease; }
 /* Rare (character) and wild statics come on a 220x220 canvas: the gold frame is the
    same 187px as in the Spine atlas, centred, heads breaking out above it.
    Drawn 1:1 like everything else (TILE_FIT = 1, PSB pixels). */
@@ -339,19 +343,23 @@ body {
   pointer-events: none;
 }
 .win-line path { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 1; stroke-dashoffset: 1; }
-.win-line__halo { stroke: var(--wl-color); stroke-width: 34; opacity: .75; filter: url(#wlBlur); }
+.win-line__halo { stroke: var(--wl-color); stroke-width: 22; opacity: .45; }
+/* Wide faint outer halo instead of a blur filter (filters re-rasterise every
+   animated frame — too slow on phones). */
+.win-line__halo2 { stroke: var(--wl-color); stroke-width: 40; opacity: .18; }
 .win-line__body { stroke: url(#wlGold); stroke-width: 11; }
 .win-line__core { stroke: #fffaf0; stroke-width: 3.5; }
-.win-line__halo, .win-line__body, .win-line__core {
+.win-line__halo, .win-line__halo2, .win-line__body, .win-line__core {
   animation: wl-draw 520ms cubic-bezier(.3,.7,.3,1) var(--wl-delay, 0ms) forwards,
              wl-breathe 1.4s ease-in-out calc(var(--wl-delay, 0ms) + 520ms) infinite;
 }
 /* A bright comet running along the line after it has drawn on. */
 .win-line__comet {
   stroke: #fff; stroke-width: 9; stroke-dasharray: .06 .94; opacity: 0;
-  filter: drop-shadow(0 0 6px var(--wl-color)) drop-shadow(0 0 14px var(--wl-color));
   animation: wl-comet 1.3s linear calc(var(--wl-delay, 0ms) + 420ms) infinite;
 }
+.win-line__comet-glow { stroke: var(--wl-color); stroke-width: 26; stroke-dasharray: .08 .92; opacity: 0; animation: wl-comet-glow 1.3s linear calc(var(--wl-delay, 0ms) + 420ms) infinite; }
+@keyframes wl-comet-glow { 0% { stroke-dashoffset: 1.07; opacity: .55; } 100% { stroke-dashoffset: .01; opacity: .55; } }
 .win-line__ring {
   fill: none; stroke: var(--wl-color); stroke-width: 5; opacity: 0;
   transform-box: fill-box; transform-origin: center;
@@ -472,9 +480,8 @@ body {
   height: 100%;
   object-fit: contain;
   pointer-events: none;
-  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.5));
-  transition: filter 200ms ease;
-  animation: buy-breathe 2.6s ease-in-out infinite;
+  /* No animated filter here (re-rasterised every frame on phones); the
+     red cone's pulse is a transform/opacity animation only. */
 }
 @keyframes buy-breathe {
   0%, 100% { filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.5)); }
@@ -484,6 +491,7 @@ body {
 /* The red light cone behind the label breathes: grows and shrinks from its
    apex at the top (cone bbox x 62..259 of 306 -> apex at 52.5%). */
 .sign-buy-bonus__cone {
+  will-change: transform, opacity;
   transform-origin: 52.5% 0;
   animation: buy-cone-pulse 1.8s ease-in-out infinite;
   filter: none;

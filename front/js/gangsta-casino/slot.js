@@ -103,6 +103,16 @@ function createCellNode(code) {
   img.src = symbolSrc(code);
   img.draggable = false;
   cell.appendChild(img);
+  // Pre-blurred twin shown while the reel runs fast (.reel__strip.is-fast):
+  // a per-frame SVG/CSS blur filter on the whole strip was the main cost of
+  // a spin on phones. Lazy — only decoded when it's actually shown.
+  const blur = document.createElement('img');
+  blur.className = 'reel__cell-blur';
+  blur.alt = '';
+  blur.decoding = 'async';
+  blur.src = `${SYMBOL_ROOT}/blur/${SYMBOL_ART[code]}`;
+  blur.draggable = false;
+  cell.appendChild(blur);
   const anchor = document.createElement('div');
   anchor.className = 'reel__cell-anchor';
   cell.appendChild(anchor);
@@ -423,9 +433,11 @@ function showWinLines(lineWins) {
     const rings = (win.positions || []).map(({ row, col }) =>
       `<circle class="win-line__ring" cx="${col * cellW + cellW / 2}" cy="${row * cellH + cellH / 2}" r="22"/>`).join('');
     g.innerHTML = `
+      <path class="win-line__halo2" d="${d}" pathLength="1"/>
       <path class="win-line__halo" d="${d}" pathLength="1"/>
       <path class="win-line__body" d="${d}" pathLength="1"/>
       <path class="win-line__core" d="${d}" pathLength="1"/>
+      <path class="win-line__comet-glow" d="${d}" pathLength="1"/>
       <path class="win-line__comet" d="${d}" pathLength="1"/>
       ${rings}`;
     winLinesSvg.appendChild(g);
@@ -534,11 +546,10 @@ function prependCells(st, codes) {
 }
 
 function setStripBlur(st) {
-  const ratio = st.speed / REEL_PHYS.MAX_SPEED;
-  const level = ratio > 0.66 ? 2 : ratio > 0.25 ? 1 : 0;
-  if (st.blur !== level) {
-    st.blur = level;
-    st.stripEl.style.filter = level ? `url(#reelBlur${level})` : '';
+  const fast = st.speed / REEL_PHYS.MAX_SPEED > 0.45;
+  if (st.blur !== fast) {
+    st.blur = fast;
+    st.stripEl.classList.toggle('is-fast', fast);
   }
 }
 
@@ -594,7 +605,7 @@ const reelMotion = {
       const current = ReelMath.currentColumnCodes(cellInfos, GRID_COLS, GRID_ROWS, col).map((c) => c || randomSymbolCode());
       stripEl.innerHTML = '';
       for (const code of current) stripEl.appendChild(createCellNode(code).cell);
-      const st = { stripEl, y: 0, speed: 0, starting: true, stopAt: null, onStop: null, stopped: false, blur: 0 };
+      const st = { stripEl, y: 0, speed: 0, starting: true, stopAt: null, onStop: null, stopped: false, blur: false };
       prependCells(st, Array.from({ length: 6 }, randomSymbolCode));
       stripEl.style.transform = `translateY(${st.y}px)`;
       reelState[col] = st;
@@ -607,7 +618,7 @@ const reelMotion = {
       const st = reelState[col];
       if (st) { st.stopped = true; st.onStop = null; }
       const { stripEl } = reelCols[col];
-      stripEl.style.filter = '';
+      stripEl.classList.remove('is-fast');
       stripEl.style.transform = 'translateY(0px)';
       stripEl.innerHTML = '';
       for (let row = 0; row < GRID_ROWS; row++) {
@@ -1298,6 +1309,7 @@ function preloadAssets() {
   if (stage) tasks.push(track(getSymbolResource(screenCode(FEATURE_SCREEN_CODE))));
   tasks.push(...[
     ...SYMBOL_CODES.map(symbolSrc),
+    ...SYMBOL_CODES.map((c) => `${SYMBOL_ROOT}/blur/${SYMBOL_ART[c]}`),
     `${SYMBOL_ROOT}/wild_big.png`,
     bgSrcFor('base'),
     bgSrcFor('bonus'),
