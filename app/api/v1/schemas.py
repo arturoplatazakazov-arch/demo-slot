@@ -197,6 +197,9 @@ class HoldAndWinOut(BaseModel):
     # Tier awarded on top of the coins for filling the grid (Volt Coins'
     # "Grand 9/9"); None for every game without full_grid_jackpot.
     full_grid_jackpot: str | None = None
+    # Neon Joker Spins: sum of every collector's locked value (x bet), for the
+    # round summary; None for games without respin_collector.
+    collector_total: int | None = None
 
 
 class WheelSegmentOut(BaseModel):
@@ -289,6 +292,9 @@ class SpinResponse(BaseModel):
     hold_and_win: HoldAndWinOut | None = None
     wheel_of_fortune: WheelOfFortuneOut | None = None
     avalanche: AvalancheOut | None = None
+    # The round hit free_spins.round_max_win_multiplier: total_win is the cap
+    # and any free-spins round it belonged to is over.
+    max_win_reached: bool = False
 
 
 class SymbolArtOut(BaseModel):

@@ -125,6 +125,10 @@ const Api = {
   devForceHoldAndWin(sessionId, betAmount) {
     return apiPost('/dev/force-hold-and-win', { session_id: sessionId, bet_amount: betAmount });
   },
+  // Dev/test-only — see app/api/v1/spin.py's dev_force_free_spins.
+  devForceFreeSpins(sessionId, betAmount) {
+    return apiPost('/dev/force-free-spins', { session_id: sessionId, bet_amount: betAmount });
+  },
   getSessionState(sessionId) {
     return apiGet(`/session/${sessionId}/state`);
   },

@@ -1,0 +1,559 @@
+/* Neon Joker Spins — 3x3, 5 линий, Free Spins + Hold & Win с Коллектором.
+ *
+ * Весь арт — ChatGPT-генерации от одного утверждённого стиль-фрейма,
+ * нарезанные scripts/neon_joker_spins_build.py (WebP с альфой). Ничего не
+ * запечено «вариантами»: номиналы монет и все суммы набираются битмап-шрифтом
+ * (img/neon-joker-spins/glyphs/, slot.js setGlyphs) поверх пустой монеты /
+ * пустого окна плашки.
+ *
+ * Дизайн-канвас: десктоп 1600x900, портрет 720x1280 — целиком масштабируется
+ * (slot.js updateStageScale). Геометрия окна барабанов — из рамы
+ * (frame.webp 1122x1402, проём 0.1889/0.2817/0.5820/0.4586 — печатает
+ * build-скрипт).
+ */
+
+:root {
+  --bg-1: #12081f;
+  --bg-2: #1e0f3a;
+  --pink: #ff3cac;
+  --cyan: #2ce8ff;
+  --gold: #f5b400;
+  --gold-hi: #ffd75a;
+  --text: #f4ecff;
+  --ui-border: rgba(44, 232, 255, 0.35);
+
+  --design-w: 1600px;
+  --design-h: 900px;
+  --stage-scale: 1;
+
+  /* Рама и её проём (десктоп). Доли проёма — от build-скрипта
+     (frame.webp 1122x1159: 0.1889 / 0.2364 / 0.5820 / 0.5548). */
+  /* по центру сцены стоят БАРАБАНЫ (центр окна = x 800), а не рама: рычаг
+     справа сдвигает центр картинки. Низ окна ~735 — над баром V3. */
+  --frame-h: 955px;
+  --frame-x: calc(800px - var(--frame-h) * 1122 / 1159 * (0.1889 + 0.5820 / 2));
+  --frame-y: -21px;
+  --frame-w: calc(var(--frame-h) * 1122 / 1159);
+  --fw-l: 0.1889; --fw-t: 0.2364; --fw-w: 0.5820; --fw-h: 0.5548;
+  --win-x: calc(var(--frame-x) + var(--frame-w) * var(--fw-l));
+  --win-y: calc(var(--frame-y) + var(--frame-h) * var(--fw-t));
+  --win-w: calc(var(--frame-w) * var(--fw-w));
+  --win-h: calc(var(--frame-h) * var(--fw-h));
+
+  --sym: 0.9;
+}
+
+* { box-sizing: border-box; }
+html, body { overflow: hidden; }
+body {
+  margin: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-1);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  color: var(--text);
+}
+
+.to-catalog-btn {
+  position: fixed; top: 10px; right: 10px; z-index: 110;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 999px;
+  background: rgba(18, 8, 31, 0.78); border: 1px solid rgba(255, 60, 172, 0.55);
+  color: #ffd2ef; font-family: inherit; font-size: 13px; font-weight: 700;
+  text-decoration: none; backdrop-filter: blur(4px);
+}
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+.dev-panel {
+  position: fixed; top: 52px; right: 10px; z-index: 100;
+  display: flex; flex-wrap: wrap; gap: 6px; max-width: 260px; justify-content: flex-end;
+}
+.dev-btn {
+  padding: 6px 12px; font-family: inherit; font-size: 12px; border-radius: 6px;
+  border: 1px solid #444; background: #222; color: #ddd; cursor: pointer; opacity: 0.75;
+}
+.dev-btn:hover { opacity: 1; }
+
+/* ---------- Screen / stage ---------- */
+.screen {
+  position: relative; flex: 1 1 auto; min-height: 0; width: 100%;
+  overflow: hidden; background: var(--bg-1);
+}
+.layer { position: absolute; }
+
+.bg { inset: 0; z-index: 0; }
+.bg__img {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  transition: opacity 900ms ease;
+  /* фон чуть в расфокусе и приглушён — резкость и яркость только у слота */
+  filter: blur(3px) brightness(0.82) saturate(0.92);
+  transform: scale(1.03);
+}
+.bg__img--base { background-image: url('../img/neon-joker-spins/img/bg_base.jpg?v=1'); }
+.bg__img--fs { background-image: url('../img/neon-joker-spins/img/bg_fs.jpg?v=1'); opacity: 0; }
+.screen.is-fs .bg__img--fs { opacity: 1; }
+/* Затемнение к центру: под слотом фон уходит в тень, неон живёт по краям. */
+.bg::after {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(38% 52% at 50% 46%, rgba(10, 4, 20, 0.78), rgba(10, 4, 20, 0.45) 60%, transparent 100%),
+    linear-gradient(180deg, transparent 70%, rgba(10, 4, 20, 0.55));
+}
+
+.stage {
+  position: absolute; left: 50%; top: 50%;
+  width: var(--design-w); height: var(--design-h);
+  transform: translate(-50%, -50%) scale(var(--stage-scale));
+  z-index: 1;
+}
+.stage .obj { position: absolute; }
+.stage { z-index: 2; }
+
+/* ---------- Spine-канвасы (fx.js) ---------- */
+.fx-canvas { inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.fx-back { z-index: 1; }
+.fx-front { z-index: 3; }
+.fx-mid { z-index: 8; }
+.fx-top { z-index: 10; }
+/* маскот рисует Spine (с дыханием и щелчком) — DOM-картинка остаётся якорем */
+body.fx-mascot .mascot { opacity: 0; animation: none; }
+/* логотип из слоёв рисует Spine (включение по буквам) */
+body.fx-ready .logo img { opacity: 0; animation: none; }
+/* символ, который сейчас играет Spine-клип, — статика прячется */
+.reel__cell.is-animating > img.sym { visibility: hidden; }
+/* вывеску попапа зажигает Spine: DOM-картинка — только якорь */
+.game-popup__title-img.is-spine { opacity: 0; }
+/* с Spine вывеска «включается» сама — попап не масштабируется CSS-ом, иначе
+   якорь вывески ехал бы вместе с ним и пружина удвоилась */
+body.fx-ready .game-popup,
+body.fx-ready .game-popup.is-in { transform: translate(-50%, -50%); }
+
+/* ---------- Mascot ---------- */
+.mascot {
+  left: -10px; top: 80px; height: 820px; width: auto;
+  pointer-events: none;
+  transform-origin: 50% 100%;
+  animation: mascot-idle 4.2s ease-in-out infinite;
+  filter: drop-shadow(0 0 18px rgba(255, 60, 172, 0.25));
+}
+@keyframes mascot-idle {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-8px) rotate(-0.6deg); }
+}
+.mascot.is-cheer { animation: mascot-cheer 900ms cubic-bezier(0.3, 1.6, 0.5, 1); }
+@keyframes mascot-cheer {
+  0% { transform: scale(1); filter: drop-shadow(0 0 18px rgba(255, 60, 172, 0.25)); }
+  35% { transform: scale(1.05) rotate(-2deg); filter: drop-shadow(0 0 40px rgba(255, 215, 90, 0.8)) brightness(1.15); }
+  100% { transform: scale(1); }
+}
+
+/* ---------- Cabinet & reels ---------- */
+.cabinet {
+  left: var(--frame-x); top: var(--frame-y); height: var(--frame-h); width: var(--frame-w);
+  z-index: 3; pointer-events: none;
+  background: url('../img/neon-joker-spins/img/frame.webp?v=2') center / 100% 100% no-repeat;
+}
+.reel {
+  left: var(--win-x); top: var(--win-y); width: var(--win-w); height: var(--win-h);
+  z-index: 2; overflow: hidden;
+  background: radial-gradient(80% 80% at 50% 45%, #1d0d38, #0b0414 80%);
+}
+.reel__col {
+  position: absolute; top: 0; height: 100%; width: calc(100% / 3);
+  overflow: hidden;
+}
+.reel__col:nth-child(1) { left: 0; }
+.reel__col:nth-child(2) { left: calc(100% / 3); }
+.reel__col:nth-child(3) { left: calc(200% / 3); }
+.reel__col.is-anticipating::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  box-shadow: inset 0 0 26px 6px rgba(255, 60, 172, 0.85), inset 0 0 60px rgba(44, 232, 255, 0.45);
+  animation: anticipate 520ms ease-in-out infinite alternate;
+}
+@keyframes anticipate { from { opacity: 0.45; } to { opacity: 1; } }
+.reel__strip { position: absolute; left: 0; top: 0; width: 100%; will-change: transform; }
+.reel__cell {
+  position: relative; width: 100%; height: calc(var(--win-h) / 3);
+  display: flex; align-items: center; justify-content: center;
+}
+.reel__cell > img.sym {
+  width: calc(100% * var(--sym)); height: calc(100% * var(--sym));
+  object-fit: contain; pointer-events: none;
+  transition: opacity 200ms ease, filter 200ms ease;
+}
+.reel__cell.is-dimmed > img.sym { opacity: 0.3; filter: saturate(0.6); }
+.reel__cell.is-win-active { z-index: 3; }
+.reel__cell.is-winning > img.sym { animation: cell-win 620ms ease-in-out; }
+@keyframes cell-win {
+  0%, 100% { transform: scale(1); filter: none; }
+  45% { transform: scale(1.12); filter: brightness(1.35) drop-shadow(0 0 14px rgba(255, 215, 90, 0.9)); }
+}
+.reel__cell.is-landing > img.sym { animation: cell-land 260ms ease-out; }
+@keyframes cell-land { 0% { transform: scaleY(0.94) translateY(3%); } 100% { transform: none; } }
+
+/* idle-моргание Джокера (P0) */
+.reel__cell[data-symbol="scatter"] > img.sym { animation: joker-idle 3.6s ease-in-out infinite; }
+@keyframes joker-idle {
+  0%, 86%, 100% { filter: none; }
+  90% { filter: brightness(1.4) drop-shadow(0 0 12px rgba(255, 60, 172, 0.9)); }
+}
+.reel__cell[data-symbol="scatter"].is-winning > img.sym { animation: joker-laugh 620ms ease-in-out; }
+@keyframes joker-laugh {
+  0%, 100% { transform: rotate(0) scale(1); }
+  25% { transform: rotate(-8deg) scale(1.14); filter: brightness(1.4) drop-shadow(0 0 18px #ff3cac); }
+  60% { transform: rotate(7deg) scale(1.1); }
+}
+
+/* Win line: SVG-полилиния через центры ячеек, неон в два штриха. */
+.win-line { position: absolute; pointer-events: none; overflow: visible; z-index: 4; }
+.win-line path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.win-line__glow { stroke: rgba(255, 60, 172, 0.55); stroke-width: 18; filter: blur(4px); }
+.win-line__core { stroke: #bff8ff; stroke-width: 5; stroke-dasharray: 1400; stroke-dashoffset: 1400; }
+.win-line.is-playing .win-line__core { animation: line-draw 520ms ease-out forwards; }
+@keyframes line-draw { to { stroke-dashoffset: 0; } }
+
+/* ---------- Glyph font ---------- */
+.glyphs {
+  display: inline-flex; align-items: flex-end; justify-content: center;
+  line-height: 1; white-space: nowrap;
+}
+.glyphs img { display: block; height: auto; margin: 0 -0.02em; }
+.glyphs img.g-comma { transform: translateY(30%); }
+
+/* ---------- Logo ---------- */
+.logo { left: 590px; top: -8px; width: 420px; z-index: 5; pointer-events: none; }
+.logo img { width: 100%; display: block; animation: logo-flicker 7s linear infinite; }
+@keyframes logo-flicker {
+  0%, 93%, 96%, 100% { filter: none; }
+  94%, 95% { filter: brightness(0.75); }
+}
+
+/* ---------- Jackpot plates ----------
+ * Имя тира запечено в арт, сумма — шрифтом в пустом окне (доли окна
+ * печатает build-скрипт). */
+.jackpots { left: 0; top: 0; width: 100%; height: 0; z-index: 5; pointer-events: none; }
+.jp {
+  position: absolute;
+  background: center / 100% 100% no-repeat;
+  --win-l: 0.137; --win-t: 0.41; --win-ww: 0.726; --win-hh: 0.40;
+}
+.jp__name { display: none; }
+.jp__value {
+  position: absolute;
+  left: calc(var(--win-l) * 100%); top: calc(var(--win-t) * 100%);
+  width: calc(var(--win-ww) * 100%); height: calc(var(--win-hh) * 100%);
+  font-size: 0; align-items: center;
+}
+.jp__value img { max-height: 72%; }
+.jp--mini { background-image: url('../img/neon-joker-spins/img/jp_mini.webp?v=1'); --win-t: 0.424; --win-hh: 0.401; }
+.jp--minor { background-image: url('../img/neon-joker-spins/img/jp_minor.webp?v=1'); --win-t: 0.417; --win-hh: 0.417; }
+.jp--major { background-image: url('../img/neon-joker-spins/img/jp_major.webp?v=1'); --win-t: 0.415; --win-hh: 0.410; }
+.jp--grand { background-image: url('../img/neon-joker-spins/img/jp_grand.webp?v=1'); --win-l: 0.132; --win-t: 0.492; --win-ww: 0.736; --win-hh: 0.356; }
+
+/* десктоп: колонкой справа от слота, сверху вниз GRAND → MINI */
+.jp { left: 1300px; width: 266px; height: 96px; }
+.jp--grand { left: 1290px; top: 118px; width: 286px; height: 120px; animation: jp-idle 2.6s ease-in-out infinite; }
+.jp--major { top: 248px; }
+.jp--minor { top: 352px; }
+.jp--mini { top: 456px; }
+@keyframes jp-idle { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.16) drop-shadow(0 0 12px rgba(255, 215, 90, 0.6)); } }
+.jp.is-hit { animation: jp-hit 1.2s ease-out; z-index: 2; }
+@keyframes jp-hit {
+  0% { transform: scale(1); }
+  20% { transform: scale(1.18); filter: brightness(1.8) drop-shadow(0 0 30px #ffd75a); }
+  100% { transform: scale(1); }
+}
+
+/* ---------- Side panels (FS / H&W) ---------- */
+.side-panel {
+  left: 1308px; top: 572px; width: 250px; padding: 18px 16px 20px;
+  border-radius: 22px; text-align: center; z-index: 5;
+  background: linear-gradient(180deg, rgba(30, 12, 58, 0.92), rgba(12, 4, 24, 0.94));
+  box-shadow:
+    0 0 0 3px #b98a1f, 0 0 0 6px rgba(255, 60, 172, 0.85),
+    0 0 26px rgba(255, 60, 172, 0.6), inset 0 0 26px rgba(44, 232, 255, 0.18);
+  opacity: 0; transform: translateX(30px) scale(0.96); pointer-events: none;
+  transition: opacity 400ms ease, transform 400ms cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+.side-panel.is-on { opacity: 1; transform: none; }
+.side-panel__label {
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif; font-size: 24px;
+  letter-spacing: 0.06em; color: var(--cyan);
+  text-shadow: 0 0 10px rgba(44, 232, 255, 0.9), 0 0 22px rgba(44, 232, 255, 0.5);
+}
+.side-panel__label--sub { margin-top: 12px; font-size: 18px; color: #ff9bd6; text-shadow: 0 0 10px rgba(255, 60, 172, 0.9); }
+.side-panel__value { display: flex; height: 70px; margin-top: 6px; }
+.side-panel__value img { height: 100%; width: auto; }
+.side-panel__value--sm { height: 40px; }
+.fs-panel__plus {
+  position: absolute; right: -24px; top: -18px;
+  font-family: 'Luckiest Guy', system-ui, sans-serif; font-size: 48px; color: var(--gold-hi);
+  text-shadow: 0 0 14px #ff3cac, 0 3px 0 #5a2a00; opacity: 0; pointer-events: none;
+}
+.fs-panel__plus.is-on { animation: plus-pop 1.5s ease-out; }
+@keyframes plus-pop {
+  0% { opacity: 0; transform: scale(0.3); }
+  20% { opacity: 1; transform: scale(1.3); }
+  70% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: translateY(-20px); }
+}
+.side-panel.is-pulse { animation: panel-pulse 520ms ease-out; }
+@keyframes panel-pulse { 40% { filter: brightness(1.5); } }
+
+.hw-lamps { display: flex; gap: 14px; justify-content: center; margin: 10px 0 4px; }
+.hw-lamp {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: #2a1838; box-shadow: inset 0 0 0 3px #6b4b18;
+  transition: background 200ms ease, box-shadow 200ms ease;
+}
+.hw-lamp.is-lit { background: radial-gradient(circle at 40% 35%, #fff6c8, var(--gold) 55%, #a86a00); box-shadow: 0 0 14px var(--gold-hi), inset 0 0 0 3px #ffe9a0; }
+.hw-lamps.is-reset { animation: panel-pulse 600ms ease-out; }
+
+/* ---------- Buy button ----------
+ * Арт — неоновая вывеска (buy_on / buy_off для неактивной), окно цены по
+ * замеру build-скрипта: left 0.140 top 0.655 w 0.719 h 0.183. */
+.buy-btn {
+  left: 1300px; top: 590px; width: 250px; height: 158px; z-index: 5;
+  border: 0; padding: 0; cursor: pointer;
+  background: url('../img/neon-joker-spins/img/buy_on.webp?v=1') center / 100% 100% no-repeat;
+  transition: transform 150ms ease, filter 150ms ease, opacity 300ms ease;
+}
+.buy-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+.buy-btn:active { transform: translateY(2px) scale(0.98); }
+.buy-btn__price {
+  position: absolute; left: 14%; top: 65.5%; width: 71.9%; height: 18.3%;
+  font-size: 0; align-items: center;
+}
+.buy-btn__price img { max-height: 62%; }
+.buy-btn[disabled] {
+  background-image: url('../img/neon-joker-spins/img/buy_off.webp?v=1');
+  pointer-events: none;
+}
+.buy-btn[disabled] .buy-btn__price { opacity: 0.45; }
+.screen.is-fs .buy-btn, .screen.is-hw .buy-btn { opacity: 0; pointer-events: none; }
+.screen.is-buy-off .buy-btn { display: none; }
+
+/* ---------- Coins / Hold & Win cells ---------- */
+.reel__cell .coin-val {
+  position: absolute; left: 18%; right: 18%; top: 33%; height: 30%;
+  font-size: 0; pointer-events: none; z-index: 2;
+}
+.reel__cell .coin-val img { max-height: 100%; }
+.reel__cell[data-symbol="collector"] .coin-val { top: 25%; height: 26%; left: 24%; right: 24%; }
+.reel__cell .cell-back {
+  position: absolute; inset: 2%; width: 96%; height: 96%; pointer-events: none; z-index: 0;
+}
+.reel__cell > img.sym { position: relative; z-index: 1; }
+.screen.is-hw .reel__cell.is-empty > img.sym { visibility: hidden; }
+.reel__cell.is-empty .cell-back--empty { opacity: 0.75; }
+.reel__cell.is-hw-spin::after {
+  content: ''; position: absolute; inset: 14%; border-radius: 18%;
+  background: repeating-linear-gradient(180deg, rgba(255, 215, 90, 0.0) 0 10px, rgba(255, 215, 90, 0.35) 10px 14px);
+  animation: hw-spin 140ms linear infinite; filter: blur(1px);
+}
+@keyframes hw-spin { from { background-position: 0 0; } to { background-position: 0 28px; } }
+.reel__cell.is-slam > img.sym { animation: coin-slam 420ms cubic-bezier(0.3, 1.5, 0.5, 1); }
+@keyframes coin-slam {
+  0% { transform: scale(1.6); opacity: 0; }
+  55% { transform: scale(0.92); opacity: 1; filter: brightness(1.7); }
+  100% { transform: scale(1); }
+}
+.reel__cell.is-collect > img.sym, .reel__cell.is-collect .coin-val { animation: coin-collect 420ms ease-out; }
+@keyframes coin-collect { 40% { transform: scale(1.18); filter: brightness(1.6) drop-shadow(0 0 16px #ffd75a); } }
+.reel__cell.is-charging > img.sym { animation: coin-charge 900ms ease-in-out; }
+@keyframes coin-charge {
+  0%, 100% { transform: scale(1); }
+  30%, 70% { transform: scale(1.1); filter: brightness(1.5) drop-shadow(0 0 20px #2ce8ff); }
+}
+.screen.is-hw .reel { background: radial-gradient(80% 80% at 50% 45%, #2a0f4a, #0b0414 80%); }
+
+/* FX: искры, кольца, лучи — абсолютные спрайты в координатах сцены. */
+.fx-layer { left: 0; top: 0; width: 100%; height: 100%; z-index: 6; pointer-events: none; overflow: visible; }
+.fx-sprite {
+  position: absolute; left: 0; top: 0; pointer-events: none;
+  mix-blend-mode: screen; will-change: transform, opacity;
+}
+
+/* Сумма выигрыша под окном */
+.reel-win {
+  left: var(--win-x); width: var(--win-w); top: calc(var(--win-y) + var(--win-h) - 76px);
+  height: 64px; z-index: 6; display: flex; justify-content: center; pointer-events: none;
+  opacity: 0; transform: translateY(10px); transition: opacity 250ms ease, transform 250ms ease;
+}
+.reel-win.is-on { opacity: 1; transform: none; }
+.reel-win .glyphs { height: 100%; padding: 4px 18px; border-radius: 16px; background: rgba(12, 4, 24, 0.72); box-shadow: 0 0 0 2px rgba(255, 215, 90, 0.6), 0 0 22px rgba(255, 60, 172, 0.55); }
+.reel-win .glyphs img { height: 86%; }
+
+/* ---------- Dim + popups ---------- */
+.screen-dim {
+  inset: 0; z-index: 7; background: rgba(8, 2, 16, 0.72);
+  opacity: 0; pointer-events: none; transition: opacity 320ms ease;
+}
+.screen-dim.is-active { opacity: 1; }
+.popup-host { inset: 0; z-index: 9; pointer-events: none; }
+.game-popup {
+  position: absolute; left: 50%; top: 50%;
+  width: min(760px, 86%); transform: translate(-50%, -50%) scale(0.6); opacity: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 2%;
+  transition: transform 420ms cubic-bezier(0.3, 1.5, 0.5, 1), opacity 300ms ease;
+  container-type: inline-size;
+}
+.game-popup.is-in { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.game-popup.is-out { transform: translate(-50%, -50%) scale(1.15); opacity: 0; transition-duration: 260ms; }
+.game-popup__title-img { width: 100%; height: auto; filter: drop-shadow(0 0 24px rgba(255, 60, 172, 0.5)); }
+.game-popup__title {
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif; font-size: 13cqw; line-height: 1;
+  color: var(--gold-hi); -webkit-text-stroke: 0.4cqw #5a1f4a; paint-order: stroke fill;
+  text-shadow: 0 0 2cqw var(--pink), 0 0 5cqw rgba(255, 60, 172, 0.6), 0 0.6cqw 0 #3a0a2a;
+  white-space: nowrap;
+}
+.game-popup__panel {
+  position: relative; width: 78%; aspect-ratio: 900 / 264;
+  background: center / 100% 100% no-repeat;
+  display: flex; align-items: center; justify-content: center;
+}
+.game-popup__panel:not(.has-art) {
+  border-radius: 3cqw; background: rgba(14, 4, 28, 0.9);
+  box-shadow: 0 0 0 0.6cqw var(--gold), 0 0 0 1.2cqw var(--cyan), 0 0 6cqw rgba(44, 232, 255, 0.5);
+}
+.game-popup__panel .glyphs { height: 58%; }
+.game-popup__panel .glyphs img { height: 100%; width: auto; }
+.game-popup__sub {
+  font-family: 'Luckiest Guy', system-ui, sans-serif; font-size: 5cqw; color: var(--cyan);
+  text-shadow: 0 0 2cqw rgba(44, 232, 255, 0.8);
+}
+.game-popup__breakdown {
+  display: grid; grid-template-columns: auto auto; gap: 0.6cqw 4cqw;
+  font-weight: 800; font-size: 3.4cqw; color: #ffd2ef;
+}
+.game-popup__breakdown b { color: var(--gold-hi); text-align: right; }
+
+/* ---------- Buy dialog ---------- */
+.buy-dialog {
+  position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+  background: rgba(8, 2, 16, 0.72); padding: 20px;
+}
+.buy-dialog[hidden] { display: none; }
+.buy-dialog__card {
+  width: min(380px, 100%); padding: 26px 24px 22px; border-radius: 24px; text-align: center;
+  background: linear-gradient(180deg, #2a1050, #12081f);
+  box-shadow: 0 0 0 3px var(--gold), 0 0 0 6px var(--pink), 0 0 40px rgba(255, 60, 172, 0.6);
+  animation: dialog-in 360ms cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+@keyframes dialog-in { from { transform: scale(0.7); opacity: 0; } }
+.buy-dialog__title {
+  font-family: 'Luckiest Guy', system-ui, sans-serif; font-size: 30px; color: var(--gold-hi);
+  text-shadow: 0 0 12px var(--pink);
+}
+.buy-dialog__coin { width: 120px; height: 120px; margin: 10px auto 4px; display: block; animation: jp-idle 2s ease-in-out infinite; }
+.buy-dialog__text { font-size: 14px; opacity: 0.85; margin: 6px 0 14px; }
+.buy-dialog__price { font-family: 'Luckiest Guy', system-ui, sans-serif; font-size: 40px; color: #fff; text-shadow: 0 0 14px var(--cyan); }
+.buy-dialog__cur { font-size: 22px; color: var(--cyan); }
+.buy-dialog__actions { display: flex; gap: 12px; margin-top: 18px; }
+.buy-dialog__btn {
+  flex: 1; height: 54px; border-radius: 16px; border: 0; cursor: pointer;
+  font-family: 'Luckiest Guy', system-ui, sans-serif; font-size: 22px; letter-spacing: 0.04em;
+}
+.buy-dialog__btn--no { background: #2a1838; color: #cdb8e8; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.15); }
+.buy-dialog__btn--yes { background: linear-gradient(180deg, #ffe58a, var(--gold) 50%, #c47f00); color: #3a1d00; box-shadow: 0 0 18px rgba(255, 215, 90, 0.6); }
+
+/* ---------- Info popup ---------- */
+.info-popup {
+  position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.65); padding: 20px;
+}
+.info-popup[hidden] { display: none; }
+.info-popup__panel {
+  position: relative; width: min(580px, 100%); max-height: min(760px, 90vh); overflow-y: auto;
+  background: linear-gradient(180deg, #2a1050, #12081f);
+  border: 3px solid var(--gold); border-radius: 18px; padding: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 30px rgba(255, 60, 172, 0.35);
+}
+.info-popup__close {
+  position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid var(--ui-border); background: rgba(0, 0, 0, 0.35); color: var(--text);
+  font-size: 20px; line-height: 1; cursor: pointer;
+}
+.info-popup__title {
+  margin: 0 0 10px; color: var(--gold-hi); font-family: 'Luckiest Guy', system-ui, sans-serif;
+  font-weight: 400; font-size: 26px; text-align: center; text-shadow: 0 0 14px var(--pink);
+}
+.info-popup__rules p { font-size: 13px; line-height: 1.45; margin: 0 0 8px; opacity: 0.92; }
+.info-popup__rules b { color: var(--cyan); }
+.info-popup__list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.info-popup__row {
+  display: flex; align-items: center; gap: 10px; background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--ui-border); border-radius: 10px; padding: 6px 10px;
+}
+.info-popup__row img { width: 46px; height: 46px; object-fit: contain; flex-shrink: 0; }
+.info-popup__row-name { flex: 1 1 auto; font-weight: 700; font-size: 13px; }
+.info-popup__row-pays { font-size: 13px; text-align: right; }
+.info-popup__row-pays b { color: var(--gold-hi); }
+
+/* ================================================================
+   Портрет 720x1280 — фокус на слот: своя тонкая рама (frame_mob.webp, без
+   рычага и «рогов»), проём почти на всю ширину; сверху компактный логотип,
+   GRAND отдельной крупной плашкой, под ним MINI/MINOR/MAJOR в ряд. Кнопка
+   покупки и панели раунда — по бокам логотипа. Маскот в портрете скрыт.
+   Сцена прижата к верху: снизу экран занимает бар V3.
+   ================================================================ */
+@media (orientation: portrait) {
+  :root {
+    --design-w: 720px;
+    --design-h: 1280px;
+    /* рама чуть шире экрана (по 20px наружных неоновых трубок за край) —
+       проём ~580px, ячейка ~193px */
+    --frame-x: -10px;
+    --frame-y: 404px;
+    --frame-w: 740px;
+    --frame-h: calc(740px * 1130 / 1173);
+    /* доли проёма frame_mob.webp (1173x1130) — от build-скрипта */
+    --fw-l: 0.1176; --fw-t: 0.1124; --fw-w: 0.7630; --fw-h: 0.7743;
+  }
+  .stage { top: 0; transform: translate(-50%, 0) scale(var(--stage-scale)); transform-origin: 50% 0; }
+  .bg__img--base { background-image: url('../img/neon-joker-spins/img/bg_base_mob.jpg?v=1'); }
+  .bg__img--fs { background-image: url('../img/neon-joker-spins/img/bg_fs_mob.jpg?v=1'); }
+  .cabinet { background-image: url('../img/neon-joker-spins/img/frame_mob.webp?v=1'); }
+
+  .mascot { display: none; }
+  .dev-panel { display: none; }
+  /* «В каталог» есть в меню бара (data-action home) — в портрете кнопка
+     сверху закрывала бы GRAND */
+  .to-catalog-btn { display: none; }
+
+  /* крупный логотип по центру, под ним джекпоты 2x2:
+     сверху MAJOR | GRAND, снизу MINI | MINOR; покупка и панели раунда —
+     по бокам логотипа */
+  .logo { left: 150px; top: 0; width: 420px; z-index: 6; }
+  .jp { width: 262px; height: 95px; }
+  .jp--major { left: 90px; top: 206px; }
+  .jp--grand { left: 362px; top: 192px; width: 272px; height: 113px; }
+  .jp--mini { left: 90px; top: 304px; }
+  .jp--minor { left: 368px; top: 304px; }
+
+  .buy-btn { left: 4px; top: 40px; width: 146px; height: 92px; }
+
+  .side-panel { left: 572px; top: 26px; width: 142px; padding: 8px 6px 10px; border-radius: 18px; }
+  .side-panel__label { font-size: 16px; }
+  .side-panel__label--sub { margin-top: 4px; font-size: 13px; }
+  .side-panel__value { height: 44px; margin-top: 2px; }
+  .side-panel__value--sm { height: 28px; }
+  .fs-panel__plus { right: -4px; top: -16px; font-size: 36px; }
+  .hw-lamp { width: 20px; height: 20px; }
+  .hw-lamps { gap: 8px; margin: 6px 0 2px; }
+}
+
+/* ---------- Boot preloader theme ---------- */
+.preloader {
+  --pl-bg: #12081f;
+  --pl-accent-a: #ff3cac;
+  --pl-accent-b: #2ce8ff;
+  --pl-glow-a: rgba(255, 60, 172, 0.45);
+  --pl-glow-b: rgba(44, 232, 255, 0.2);
+  --pl-border: rgba(255, 60, 172, 0.45);
+  --pl-shadow: rgba(255, 60, 172, 0.5);
+}

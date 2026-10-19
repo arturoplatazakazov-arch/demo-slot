@@ -1,0 +1,16 @@
+animation.png?v=60b143d2
+size:291,264
+filter:Linear,Linear
+pma:true
+beam
+bounds:0,0,33,264
+band
+bounds:35,0,142,71
+bc
+bounds:179,0,33,33
+bp
+bounds:214,0,32,32
+bg
+bounds:248,0,31,31
+conf
+bounds:281,0,8,8

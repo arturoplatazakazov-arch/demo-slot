@@ -27,7 +27,7 @@ const READY_CODES = new Set([
   'neon-reels', 'party-of-goods', 'sugar-galaxy', 'wild-western-story',
   'multi-fruits-story', 'lucky-joker-3h3', 'gangsta-casino',
 ]);
-const ILLUMINATOR_CODES = new Set(['gold-of-baku', 'gold-of-baku-2', 'volt-coins']);
+const ILLUMINATOR_CODES = new Set(['gold-of-baku', 'gold-of-baku-2', 'volt-coins', 'neon-joker-spins']);
 const SPIN_FACTORY_CODES = new Set(['big-catch', 'caesars-fortune', 'ice-spin-deluxe', 'tesla-spins']);
 
 const isUnicornGame = (code) => /uniqorn|unicorn/.test(code);

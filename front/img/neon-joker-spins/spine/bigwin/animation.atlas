@@ -1,0 +1,16 @@
+animation.png?v=3d2bf09d
+size:1788,792
+filter:Linear,Linear
+pma:true
+rays
+bounds:0,0,792,792
+rays2
+bounds:794,0,600,600
+glow
+bounds:1396,0,256,256
+star
+bounds:1654,0,72,72
+edge
+bounds:1728,0,36,57
+coin
+bounds:1766,0,20,20

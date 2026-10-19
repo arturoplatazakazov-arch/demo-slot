@@ -44,9 +44,12 @@
   }
 
   const blurOk = new Map(); // blur url -> true (loaded) | false (missing) | Promise
+  // `<static>.png` -> `<static>_blur.png`; WebP statics (neon-joker-spins)
+  // get a WebP twin the same way. The ?v= cache-buster is kept.
   function blurUrlFor(src) {
-    if (!src || !/\.png(\?|$)/i.test(src) || /_blur\.png/i.test(src)) return null;
-    return src.replace(/\.png(\?.*)?$/i, '_blur.png');
+    const m = src && src.match(/^(.*)\.(png|webp)(\?.*)?$/i);
+    if (!m || /_blur$/i.test(m[1])) return null;
+    return `${m[1]}_blur.${m[2]}${m[3] || ''}`;
   }
   function preloadBlur(url) {
     if (blurOk.has(url)) return;

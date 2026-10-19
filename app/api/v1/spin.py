@@ -69,3 +69,28 @@ async def dev_force_hold_and_win(
             }
 
     return await run_spin(db, session, body.bet_amount, rng, force_positions=force_positions)
+
+
+@router.post("/dev/force-free-spins", response_model=schemas.SpinResponse)
+async def dev_force_free_spins(
+    body: schemas.SpinRequest,
+    db: AsyncSession = Depends(get_db),
+    rng: RNGProvider = Depends(get_rng),
+) -> schemas.SpinResponse:
+    """Dev/test-only twin of dev_force_hold_and_win for the free-spins
+    trigger: a real spin with `trigger_count` scatters forced onto the top
+    row (one per reel, wrapping), so the round opens through free_spins'
+    own is_triggered()/execute() path. Neon Joker Spins' dev panel."""
+    session = await load_session(db, body.session_id)
+    game_config = await load_active_config(db, session.game_id)
+    free_spins_config = find_feature_config(game_config, "free_spins")
+    force_positions = None
+    if free_spins_config is not None:
+        params = free_spins_config.params
+        count = min(int(params.get("trigger_count", 3)), game_config.num_reels * game_config.num_rows)
+        force_positions = {
+            params.get("trigger_symbol_code", "scatter"): [
+                (index % game_config.num_reels, index // game_config.num_reels) for index in range(count)
+            ]
+        }
+    return await run_spin(db, session, body.bet_amount, rng, force_positions=force_positions)

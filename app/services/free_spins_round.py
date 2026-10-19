@@ -12,6 +12,8 @@ STATE_KEYS = (
     "free_spins_multiplier",
     "free_spins_total_win",
     "free_spins_bet_amount",
+    # Neon Joker Spins: what is left of round_max_win_multiplier x bet.
+    "free_spins_cap_left",
 )
 
 
@@ -66,3 +68,30 @@ def settle(state: dict, spin_win: Decimal, was_in_free_spins: bool) -> RoundStat
             state.pop(key, None)
 
     return RoundStatus(remaining_after=remaining_after, round_total_win=round_total_win)
+
+
+def apply_cap(
+    state: dict, spin_win: Decimal, bet_amount: int, cap_multiplier: int | None,
+    was_in_free_spins: bool, entered_now: bool,
+) -> tuple[Decimal, bool]:
+    """Max win per round (GDD-02 §1): the paid spin plus every feature it
+    started never pays more than cap_multiplier x bet. Returns the (possibly
+    clipped) spin win and whether the cap was hit. Hitting it inside a round
+    ends the round (one spin left, which settle() consumes); hitting it on
+    the entry spin cancels the round it would have opened."""
+    if not cap_multiplier:
+        return spin_win, False
+    if was_in_free_spins:
+        cap_left = Decimal(str(state.get("free_spins_cap_left", Decimal(cap_multiplier) * bet_amount)))
+    else:
+        cap_left = Decimal(cap_multiplier) * bet_amount
+    if spin_win >= cap_left:
+        if was_in_free_spins:
+            state["free_spins_remaining"] = 1
+        elif entered_now:
+            for key in STATE_KEYS:
+                state.pop(key, None)
+        return cap_left, True
+    if was_in_free_spins or entered_now:
+        state["free_spins_cap_left"] = str(cap_left - spin_win)
+    return spin_win, False

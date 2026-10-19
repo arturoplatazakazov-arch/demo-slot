@@ -126,8 +126,10 @@ class HoldAndWinFeature(BonusFeature):
                             kind = face.get("kind") or str(face["value"])
                             value = Decimal(str(face["value"]))
                         else:
+                            drawn_kinds = {(c["reel"], c["row"]): c["kind"] for c in initial}
                             kind, value = self._draw_coin_value(
-                                value_weights, grand_multiplier, game_state.rng, jackpot_values
+                                self._value_table(value_weights, jackpot_values, drawn_kinds, config),
+                                grand_multiplier, game_state.rng, jackpot_values,
                             )
                         locked[(reel_index, row_index)] = value
                         initial.append(
@@ -159,21 +161,55 @@ class HoldAndWinFeature(BonusFeature):
                     )
                 respins.append({"landed": landed_this_round})
         else:
+            # Neon Joker Spins (GDD-02 §5.1): a COLLECTOR can land on a respin
+            # instead of a coin — inside the same land roll (share q), so the
+            # fill rate and the 9/9 GRAND odds don't move. It locks the sum of
+            # every plain coin's value on the grid at the moment it lands
+            # (coins of the same respin first; never jackpot tiers, never
+            # another collector). Unset (every other game) changes nothing.
+            collector_cfg: dict | None = config.get("respin_collector")
+            collector_kind = (collector_cfg or {}).get("symbol_code", "collector")
+            collectors_landed = 0
+            kinds = {(c["reel"], c["row"]): c["kind"] for c in initial}
             respins_left = respin_count
             while respins_left > 0 and len(locked) < total_positions:
                 landed_this_round = []
+                new_collectors: list[tuple[int, int]] = []
                 for reel_index in range(num_reels):
                     for row_index in range(num_rows):
                         if (reel_index, row_index) in locked:
                             continue
                         if self._coin_lands(land_weights, game_state.rng):
+                            if (
+                                collector_cfg
+                                and collectors_landed + len(new_collectors) < int(collector_cfg.get("max_per_round", 2))
+                                and self._is_collector(collector_cfg, game_state.rng)
+                            ):
+                                new_collectors.append((reel_index, row_index))
+                                locked[(reel_index, row_index)] = Decimal(0)
+                                kinds[(reel_index, row_index)] = collector_kind
+                                continue
                             kind, value = self._draw_coin_value(
-                                value_weights, grand_multiplier, game_state.rng, jackpot_values
+                                self._value_table(value_weights, jackpot_values, kinds, config),
+                                grand_multiplier, game_state.rng, jackpot_values,
                             )
                             locked[(reel_index, row_index)] = value
+                            kinds[(reel_index, row_index)] = kind
                             landed_this_round.append(
                                 {"reel": reel_index, "row": row_index, "value": str(value), "kind": kind}
                             )
+                if new_collectors:
+                    collected = sum(
+                        (v for pos, v in locked.items()
+                         if kinds.get(pos) != collector_kind and kinds.get(pos) not in jackpot_values),
+                        Decimal(0),
+                    )
+                    for reel_index, row_index in new_collectors:
+                        locked[(reel_index, row_index)] = collected
+                        landed_this_round.append(
+                            {"reel": reel_index, "row": row_index, "value": str(collected), "kind": collector_kind}
+                        )
+                    collectors_landed += len(new_collectors)
                 respins.append({"landed": landed_this_round})
                 respins_left -= 1
                 if landed_this_round:
@@ -199,6 +235,10 @@ class HoldAndWinFeature(BonusFeature):
         }
         if full_grid_jackpot:
             details["full_grid_jackpot"] = awarded_jackpot
+        if config.get("respin_collector") and not coin_count_weights:
+            details["collector_total"] = str(sum(
+                (locked[pos] for pos, kind in kinds.items() if kind == collector_kind), Decimal(0)
+            ))
         return FeatureResult(
             feature_id=self.feature_id,
             triggered=True,
@@ -330,6 +370,28 @@ class HoldAndWinFeature(BonusFeature):
         if key == "grand":
             return key, grand_multiplier
         return key, Decimal(key)
+
+    @staticmethod
+    def _value_table(
+        value_weights: dict[str, int], jackpot_values: dict[str, int], kinds: dict, config: dict
+    ) -> dict[str, int]:
+        """`one_jackpot_per_round` (Neon Joker Spins, GDD-01 "один тир за
+        раунд"): once a jackpot-tier coin is on the grid, later coins draw
+        from the plain numeric faces only. Off (default): the table as is."""
+        if not config.get("one_jackpot_per_round") or not jackpot_values:
+            return value_weights
+        if not any(kind in jackpot_values for kind in kinds.values()):
+            return value_weights
+        return {k: w for k, w in value_weights.items() if k not in jackpot_values}
+
+    @staticmethod
+    def _is_collector(collector_cfg: dict, rng) -> bool:
+        """Given that a symbol landed on a respin cell: collector or coin,
+        by `share_weights` ({"coin": a, "collector": b} — q = b / (a + b))."""
+        share = collector_cfg.get("share_weights", {"coin": 6, "collector": 1})
+        keys = list(share.keys())
+        index, _, _ = weighted_pick([int(share[k]) for k in keys], rng)
+        return keys[index] == "collector"
 
     @staticmethod
     def _coin_lands(land_weights: dict[str, int], rng) -> bool:

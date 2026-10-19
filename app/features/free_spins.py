@@ -30,9 +30,15 @@ class FreeSpinsFeature(BonusFeature):
         return True
 
     def execute(self, game_state: FeatureContext, config: dict) -> FeatureResult:
-        spins_awarded = self._spins_awarded(game_state, config)
-        win_multiplier = Decimal(str(config.get("win_multiplier", 1)))
         remaining = game_state.session_state.get("free_spins_remaining", 0)
+        # Neon Joker Spins (GDD-02 §6.2): a retrigger inside the round awards
+        # its own flat count (+5), not the entry table (10). Unset: the same
+        # table for both, as before.
+        if remaining > 0 and config.get("retrigger_spins"):
+            spins_awarded = int(config["retrigger_spins"])
+        else:
+            spins_awarded = self._spins_awarded(game_state, config)
+        win_multiplier = Decimal(str(config.get("win_multiplier", 1)))
         total_remaining = remaining + spins_awarded
 
         return FeatureResult(
@@ -74,6 +80,23 @@ class FreeSpinsFeature(BonusFeature):
                     "description": "Optional: match-count -> spins awarded, overrides spins_awarded when set.",
                 },
                 "retrigger_enabled": {"type": "boolean", "default": True},
+                "retrigger_spins": {
+                    "type": "integer", "minimum": 1, "default": None,
+                    "description": "Optional: spins a retrigger inside the round awards (overrides the entry table).",
+                },
+                "reel_weight_overrides": {
+                    "type": "object",
+                    "additionalProperties": {"type": "integer", "minimum": 0},
+                    "default": None,
+                    "description": "Optional: symbol code -> weight (every reel) used instead of the base weight during the round.",
+                },
+                "round_max_win_multiplier": {
+                    "type": "integer", "minimum": 1, "default": None,
+                    "description": (
+                        "Optional cap per round (x bet): the paid spin plus every feature it started. "
+                        "Reaching it ends the round and pays the cap."
+                    ),
+                },
                 "win_multiplier": {"type": "integer", "minimum": 1, "default": 1},
             },
             "required": ["trigger_symbol_code", "trigger_count", "spins_awarded"],

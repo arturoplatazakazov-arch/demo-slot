@@ -11,6 +11,7 @@ shares live next door: loaders.py (session/config/bet), bonus_buy.py
 spin_persistence.py (settlement write-back) and
 app/services/free_spins_round.py (round state lifecycle)."""
 
+import dataclasses
 from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,6 +32,7 @@ from app.api.v1.spin_avalanche import run_avalanche_feature_buy, run_avalanche_s
 from app.api.v1.spin_persistence import commit_spin
 from app.engine.reels import spin_reels
 from app.engine.rng import RNGProvider
+from app.engine.types import ReelSetConfig
 from app.engine.wins import evaluate_spin
 from app.features import default_registry
 from app.features.base import FeatureContext
@@ -68,6 +70,12 @@ async def run_spin(
 
     free_spins_feature = default_registry.get("free_spins")
     free_spins_config = find_feature_config(game_config, "free_spins")
+    fs_params = free_spins_config.params if free_spins_config is not None else {}
+
+    # Neon Joker Spins (GDD-02 §4.1): the round spins its own weight set —
+    # only the symbols named in reel_weight_overrides change.
+    if was_in_free_spins and fs_params.get("reel_weight_overrides"):
+        reel_set = with_weight_overrides(reel_set, fs_params["reel_weight_overrides"])
 
     grid = spin_reels(reel_set, rng)
     grid = apply_reel_caps(grid, reel_set, rng)
@@ -189,6 +197,14 @@ async def run_spin(
         hold_and_win_result = hold_and_win_feature.execute(ctx, hold_and_win_config.params)
         spin_win += hold_and_win_result.win_amount
 
+    spin_win, max_win_reached = free_spins_round.apply_cap(
+        state, spin_win, bet_amount, fs_params.get("round_max_win_multiplier"),
+        was_in_free_spins, triggered_now and not was_in_free_spins,
+    )
+    if max_win_reached and not was_in_free_spins:
+        triggered_now = False
+        trigger_result = None
+
     round_status = free_spins_round.settle(state, spin_win, was_in_free_spins)
 
     popup = select_popup(
@@ -274,6 +290,20 @@ async def run_spin(
         multiplier_wilds=multiplier_wilds_out(wild_multiplier_details),
         hold_and_win=hold_and_win_out(hold_and_win_result),
         wheel_of_fortune=wheel_of_fortune_out(wheel_result),
+        max_win_reached=max_win_reached,
+    )
+
+
+def with_weight_overrides(reel_set: ReelSetConfig, overrides: dict[str, int]) -> ReelSetConfig:
+    """The same reel set with the named symbols re-weighted (one weight for
+    every reel) — free-spins weight sets and the bought Hold & Win spin."""
+    return dataclasses.replace(
+        reel_set,
+        symbols=[
+            dataclasses.replace(sym, weights=[int(overrides[sym.code])] * reel_set.num_reels)
+            if sym.code in overrides else sym
+            for sym in reel_set.symbols
+        ],
     )
 
 
@@ -301,13 +331,24 @@ async def run_feature_buy(
     # The purchase still spins real reels (TZ: server-authoritative, no fake
     # results) — the player can win on this spin in addition to the
     # guaranteed feature entry, matching the "response как у /spin" contract.
-    grid = spin_reels(reel_set, rng)
-    grid = apply_reel_caps(grid, reel_set, rng)
+    hw_params = plan.target_config.params if plan.target_feature_id == "hold_and_win" else {}
+    # Neon Joker Spins (GDD-02 §7): the purchase spin draws on the base
+    # weights with buy_exclude_symbols (the scatter) removed, redrawn until it
+    # shows at least buy_min_coins coins — a real, server-drawn grid that
+    # opens the round on its own coins.
+    if hw_params.get("buy_exclude_symbols"):
+        reel_set = with_weight_overrides(reel_set, {code: 0 for code in hw_params["buy_exclude_symbols"]})
+    min_coins = int(hw_params.get("buy_min_coins") or 0)
+    coin_code = hw_params.get("trigger_symbol_code", "coin")
+    for _ in range(100_000):
+        grid = spin_reels(reel_set, rng)
+        grid = apply_reel_caps(grid, reel_set, rng)
+        if sum(column.count(coin_code) for column in grid.reels) >= min_coins:
+            break
 
     # Volt Coins (product): a bought Hold & Win lands its own trigger — the
     # coin line from `buy_coin_line` (row index per reel) — so the player
     # sees the line that "won" the round, exactly like a natural trigger.
-    hw_params = plan.target_config.params if plan.target_feature_id == "hold_and_win" else {}
     buy_line = hw_params.get("buy_coin_line")
     if buy_line:
         coin_code = hw_params.get("trigger_symbol_code", "coin")
@@ -321,6 +362,9 @@ async def run_feature_buy(
 
     bet_per_line = Decimal(bet_amount) / Decimal(len(paylines))
     evaluation = evaluate_spin(grid, reel_set.symbols, paylines, bet_per_line, Decimal(bet_amount))
+    # GDD-02 §7: line wins of the purchase spin are not paid (nor shown).
+    if hw_params.get("buy_pay_lines", True) is False:
+        evaluation = evaluate_spin(grid, reel_set.symbols, [], bet_per_line, Decimal(bet_amount))
     spin_win = evaluation.total_win
 
     ctx = FeatureContext(
@@ -357,8 +401,16 @@ async def run_feature_buy(
     # natural trigger would) instead of the generic FeatureOut used below.
     is_hold_and_win = plan.target_feature_id == "hold_and_win"
     hold_and_win_result = result if is_hold_and_win else None
+    max_win_reached = False
     if is_hold_and_win:
         spin_win += result.win_amount
+        # The cap counts from the bet, not the purchase price (GDD-02 §7.7).
+        fs_config = find_feature_config(game_config, "free_spins")
+        spin_win, max_win_reached = free_spins_round.apply_cap(
+            state, spin_win, bet_amount,
+            fs_config.params.get("round_max_win_multiplier") if fs_config is not None else None,
+            False, False,
+        )
     else:
         free_spins_round.enter_round(state, bet_amount)
 
@@ -418,4 +470,5 @@ async def run_feature_buy(
         popup=popup,
         coin_multiplier=coin_multiplier_out(coin_details),
         hold_and_win=hold_and_win_out(hold_and_win_result),
+        max_win_reached=max_win_reached,
     )
