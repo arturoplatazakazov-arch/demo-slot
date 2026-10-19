@@ -481,61 +481,81 @@ def build_plate(tier):
 
 def build_lever():
     """The cabinet's lever, in frame.webp px (anchored to .cabinet like the
-    frame skeleton). `pull` (0.9s): grabbed and yanked down towards the
-    viewer — the arm swings forward over the hub and foreshortens — then it
-    springs back up and wobbles out. `idle` (4s): a glint slides over the
-    ball now and then."""
+    frame skeleton). A real one-armed bandit lever is pulled TOWARDS the
+    player: seen from the front the stick swings through the hub and ends
+    pointing down at you — it foreshortens, flips below the pivot, and the
+    ball comes down and grows as it nears the camera. So: stick = a bone at
+    the pivot whose scaleY runs 1 -> -0.4, ball = its own bone riding the
+    stick's tip, scaled up with the approach. `pull` 0.95s, `idle` 4s glint."""
     import json
     meta = json.load(open(os.path.join(LAYERS, 'lever.json')))
     W, H = meta['frame']
     x0, y0, x1, y1 = meta['bbox']
     px, py = meta['pivot']
     arm = load(os.path.join(IMG, 'lever_arm.webp'))
-    sk = NFx('lever', W, H, 1.0, {'idle': 4.0, 'pull': 0.9})
+    SPLIT = 395 - y0                        # ball + collar above, stick below
+    # crops get soft edges: the glow was cut square by the frame split and
+    # showed as a dark box once the ball left its place
+    ball_im = V.edge_fade(arm.crop((0, 0, arm.width, SPLIT + 14)), 0.14, 0.1)
+    stick_im = arm.crop((0, SPLIT, arm.width, arm.height))
+    sk = NFx('lever', W, H, 1.0, {'idle': 4.0, 'pull': 0.95})
     bx, by = sk.xy(px, py)
-    b = sk.bone('arm', x=bx, y=by)
-    sk.image('arm', arm)
-    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    sk.slot('arm', b, 'arm', w=arm.width, x=cx - px, y=py - cy)
-    hl = V.highlight(arm, gamma=1.2, gain=1.6)
-    sk.image('arm_hl', hl)
-    sk.res_of['arm_hl'] = 0.5
-    sk.hidden_slot('arm_hl', b, 'arm_hl', w=arm.width, x=cx - px, y=py - cy, blend='additive')
-    # spark + ring where the stick hits its stop
+    cx = (x0 + x1) / 2
+    L = py - (y0 + SPLIT)                   # stick length, pivot -> ball joint
+    # stick: drawn from the pivot upwards, scaled about the pivot
+    st = sk.bone('stick', x=bx, y=by)
+    sk.image('stick', stick_im)
+    sk.slot('stick', st, 'stick', w=stick_im.width, x=cx - px, y=py - (y0 + SPLIT + stick_im.height / 2))
+    # ball: its own bone at the stick's tip; image bottom sits on the joint
+    ax = bx + (cx - px)
+    ba = sk.bone('ball', x=ax, y=by + L)
+    sk.image('ball', ball_im)
+    sk.slot('ball', ba, 'ball', w=ball_im.width, x=0, y=ball_im.height / 2 - 14)
+    hl = V.highlight(ball_im, gamma=1.2, gain=1.6)
+    sk.image('ball_hl', hl)
+    sk.res_of['ball_hl'] = 0.5
+    sk.hidden_slot('ball_hl', ba, 'ball_hl', w=ball_im.width, x=0, y=ball_im.height / 2 - 14, blend='additive')
     sk.image('flare', V.star4(192))
     sk.image('ring', V.ring(192))
-    fb = sk.bone('stop', x=bx, y=by)
-    sk.hidden_slot('flare', fb, 'flare', 'ffd75a', w=150, blend='additive')
-    rb = sk.bone('stop_r', parent=fb)
-    sk.hidden_slot('ring', rb, 'ring', 'ff9de0', w=120, blend='additive')
-    ball_y = py - (y0 + 40)                      # ball height above the pivot
+    sk.hidden_slot('flare', ba, 'flare', 'ffd75a', w=170, x=0, y=ball_im.height / 2, blend='additive')
+    rb = sk.bone('ring_b', parent=ba, x=0, y=ball_im.height / 2)
+    sk.hidden_slot('ring', rb, 'ring', 'ff9de0', w=150, blend='additive')
 
-    def pull(t):
-        """(rotation, scaleY): 0..0.18 yank down, hold, 0.32.. spring back."""
-        if t < 0.06:                               # grab: tiny lift first
-            k = out_cubic(t / 0.06)
-            return 4 * k, 1.0 + 0.03 * k
-        if t < 0.2:                                # yank: swings forward and shortens
-            k = in_out_sine((t - 0.06) / 0.14)
-            return lerp(4, -32, k), lerp(1.03, 0.42, k)
-        if t < 0.3:                                # at the stop
-            return -32, 0.42
-        u = t - 0.3                                # released: springs back with a wobble
-        e = math.exp(-6.5 * u)
-        return 32 * -e * math.cos(15 * u), 1 - 0.58 * e * math.cos(15 * u)
+    def reach(t):
+        """0 = rest (up), 1 = fully pulled (pointing at the player)."""
+        if t < 0.07:                                 # grab: a hair up first
+            return -0.06 * out_cubic(t / 0.07)
+        if t < 0.24:                                 # the pull
+            return lerp(-0.06, 1.0, in_out_sine((t - 0.07) / 0.17))
+        if t < 0.34:                                 # held at the stop
+            return 1.0
+        u = t - 0.34                                 # let go: springs back, wobbles
+        return math.exp(-7 * u) * math.cos(14 * u)
 
-    sk.anim('pull', b, 'rotate', lambda t: pull(t)[0])
-    sk.anim('pull', b, 'scale', lambda t: (1.0, pull(t)[1]))
-    sk.anim('pull', 'arm', 'alpha', lambda t: 1.0)
-    sk.anim('pull', 'arm_hl', 'alpha', lambda t: 0.5 * ease_hump(t, 0.05, 0.35))
-    sk.anim('pull', 'flare', 'alpha', lambda t: 0.0 if t < 0.19 else seg(t, 0.19, 0.45, 1, 0))
-    sk.anim('pull', fb, 'scale', lambda t: (seg(t, 0.19, 0.3, 0.3, 1.1, out_back) if t > 0.19 else 0.3,) * 2)
-    sk.anim('pull', 'ring', 'alpha', lambda t: 0.0 if t < 0.19 else seg(t, 0.19, 0.5, 0.9, 0))
-    sk.anim('pull', rb, 'scale', lambda t: (seg(t, 0.19, 0.5, 0.3, 1.6),) * 2)
-    sk.anim('idle', b, 'rotate', lambda t: 0)
-    sk.anim('idle', b, 'scale', lambda t: (1, 1))
-    sk.anim('idle', 'arm', 'alpha', lambda t: 1.0)
-    sk.anim('idle', 'arm_hl', 'alpha', lambda t: 0.45 * ease_hump(t, 2.4, 2.9))
+    def stick_sy(t):
+        return 1 - 1.4 * reach(t)                    # 1 -> -0.4 (below the pivot)
+
+    def ball_pos(t):
+        return (ax, by + L * stick_sy(t))
+
+    def ball_scale(t):
+        return 1 + 0.5 * max(0.0, reach(t))          # closer = bigger
+
+    sk.anim('pull', st, 'scale', lambda t: (1 + 0.12 * max(0.0, reach(t)), stick_sy(t)))
+    sk.anim('pull', ba, 'translate', ball_pos)
+    sk.anim('pull', ba, 'scale', lambda t: (ball_scale(t),) * 2)
+    for n in ('stick', 'ball'):
+        sk.anim('pull', n, 'alpha', lambda t: 1.0)
+    sk.anim('pull', 'ball_hl', 'alpha', lambda t: 0.55 * ease_hump(t, 0.1, 0.4))
+    sk.anim('pull', 'flare', 'alpha', lambda t: 0.0 if t < 0.23 else seg(t, 0.23, 0.5, 1, 0))
+    sk.anim('pull', 'ring', 'alpha', lambda t: 0.0 if t < 0.23 else seg(t, 0.23, 0.55, 0.9, 0))
+    sk.anim('pull', rb, 'scale', lambda t: (seg(t, 0.23, 0.55, 0.3, 1.7),) * 2)
+    sk.anim('idle', st, 'scale', lambda t: (1, 1))
+    sk.anim('idle', ba, 'translate', lambda t: (ax, by + L))
+    sk.anim('idle', ba, 'scale', lambda t: (1, 1))
+    for n in ('stick', 'ball'):
+        sk.anim('idle', n, 'alpha', lambda t: 1.0)
+    sk.anim('idle', 'ball_hl', 'alpha', lambda t: 0.45 * ease_hump(t, 2.4, 2.9))
     for n in ('flare', 'ring'):
         sk.anim('idle', n, 'alpha', lambda t: 0.0)
     sk.write()
