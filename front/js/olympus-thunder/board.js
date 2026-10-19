@@ -41,7 +41,8 @@
   }
 
   function srcFor(code) {
-    return ART + (orbValue(code) ? 'orb' : code) + '.webp';
+    const v = document.body.dataset.symbolsV; // cache-bust re-painted art
+    return ART + (orbValue(code) ? 'orb' : code) + '.webp' + (v ? `?v=${v}` : '');
   }
 
   function place(c, col, row, dy = 0) {

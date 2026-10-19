@@ -620,3 +620,32 @@ body.spine-symbols .cell.is-spine .cell__img { visibility: hidden; }
   /* keep the raised bolt clear of the catalog button */
   .zeus         { top: 40px; }
 }
+
+/* ---------- rare symbols glow in their own colour (product) ----------
+   A soft halo behind the four rares (helmet crimson, lyre turquoise,
+   amphora orange, wreath green) that breathes slowly and flares on a win. */
+.cell[data-code="helmet"]  { --rare: 255, 70, 60; }
+.cell[data-code="lyre"]    { --rare: 40, 230, 215; }
+.cell[data-code="amphora"] { --rare: 255, 150, 40; }
+.cell[data-code="wreath"]  { --rare: 80, 235, 120; }
+.cell[data-code="helmet"]::before, .cell[data-code="lyre"]::before,
+.cell[data-code="amphora"]::before, .cell[data-code="wreath"]::before {
+  content: ''; position: absolute; inset: -6%; z-index: 0; pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(var(--rare), .62), rgba(var(--rare), .22) 55%, rgba(var(--rare), 0));
+  animation: rare-glow 3.2s ease-in-out infinite;
+}
+.cell .cell__img { z-index: 1; }
+.cell[data-code="helmet"] .cell__img, .cell[data-code="lyre"] .cell__img,
+.cell[data-code="amphora"] .cell__img, .cell[data-code="wreath"] .cell__img {
+  filter: drop-shadow(0 0 6px rgba(var(--rare), .75));
+}
+.cell.is-win[data-code]::before { animation: rare-flare 620ms ease-in-out infinite; }
+.cell.is-dim::before { opacity: .25; animation: none; }
+@keyframes rare-glow { 50% { opacity: .65; transform: scale(.94); } }
+@keyframes rare-flare { 50% { opacity: 1; transform: scale(1.18); } }
+@media (prefers-reduced-motion: reduce) {
+  .cell[data-code]::before { animation: none; }
+}
+.cell.is-dim[data-code] .cell__img { filter: brightness(.38) saturate(.5); }
+.cell.is-win[data-code] .cell__img { filter: drop-shadow(0 0 10px rgba(var(--rare, 255, 215, 90), .95)); }
