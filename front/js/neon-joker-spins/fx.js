@@ -15,7 +15,7 @@
 // the only source of layout truth on both orientations.
 (function () {
   const ROOT = 'img/neon-joker-spins/spine';
-  const FX_V = 7;
+  const FX_V = 8;
   const box = (w, h) => ({ x: -w / 2, y: -h / 2, width: w, height: h });
   const BOX = {
     frame: box(1122, 1159),
@@ -137,6 +137,9 @@
     // the rig's box is roomier than the old flat art — 1.16 brings him back
     // to the same height on screen
     inst.mascot = make('mascot', el, 1.16);
+    // crossfade between clips: the near-win lean has to ease in and out,
+    // a hard cut from idle read as a twitch
+    res.mascot.animationStateData.defaultMix = 0.45;
     inst.mascot.play('idle', true);
     S.back.addBase(inst.mascot);
     document.body.classList.add('fx-mascot');

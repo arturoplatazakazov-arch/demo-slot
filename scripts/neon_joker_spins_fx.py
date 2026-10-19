@@ -942,7 +942,10 @@ PART_SCALE = {'bell_a': 0.48, 'bell_b': 0.48, 'bell_c': 0.48,
 # (card) arm entirely behind the torso; head + bells; the near (snapping)
 # arm last — its shoulder cap over the jacket puff, the hand in front of the
 # face when it comes up to the chin.
-DRAW = ['leg_r_up', 'leg_r_low', 'leg_l_up', 'leg_l_low',
+# Boots BEHIND their own thigh: the leg goes INTO the boot, so the thigh's
+# rounded end has to cover the boot's dark open cuff (drawn the other way
+# round the empty boot mouth showed under every knee).
+DRAW = ['leg_r_low', 'leg_r_up', 'leg_l_low', 'leg_l_up',
         'arm_r_up', 'arm_r_low', 'HANDS_R', 'torso',
         'head', 'bell_a', 'bell_b', 'bell_c',
         'arm_l_up', 'arm_l_low', 'HANDS_L']
@@ -986,7 +989,7 @@ def build_mascot():
         PIV[f'arm_{side}_low'] = centre_at(low, 0.07)
         JOINT[(f'arm_{side}_low', f'hand_{side}')] = centre_at(low, 0.93)
     sk = NFx('mascot', RIG_W, RIG_H, 1.0, {'idle': 6.0, 'cheer': 1.6, 'laugh': 2.0, 'bow': 2.2,
-                                            'win': 1.3, 'near_win': 1.2, 'near_miss': 1.6})
+                                            'win': 1.3, 'near_win': 2.4, 'near_miss': 1.6})
     ground = -RIG_H / 2 + 24
     # hip line height above the ground: shin (pivot -> sole) + thigh (pivot -> knee)
     kl = PART_SCALE.get('leg_l_low', 1.0)
@@ -1244,27 +1247,40 @@ def build_mascot():
     hands('win', 'snap')
     snap('win', 0.45)
 
-    # near win (loops while the last reel is anticipating): leans towards
-    # the reels, fist up at the chin, a tense tremble, one foot tapping
+    # near win (loops while the last reel is anticipating): held breath, not
+    # a fidget. He eases forward towards the reels and stays there: fist at
+    # the chin, slow deep breathing, the head creeping closer, weight rising
+    # a little onto the toes. Everything moves on one slow 2.4s cycle (the
+    # loop length), no high-frequency shake — at the reels' scale any fast
+    # jitter reads as twitching.
+    NEAR = 2.4
+
+    def lean_in(t):
+        # first loop pass eases in from rest; the loop itself holds the lean
+        return 1.0
+
     def head_near(t):
-        return -8 + 1.2 * math.sin(2 * math.pi * t / 0.15)
+        breath = math.sin(2 * math.pi * t / NEAR)
+        return -9 - 2.5 * breath
 
     def near(t):
-        trem = math.sin(2 * math.pi * t / 0.12)
-        tap = max(0, math.sin(2 * math.pi * t / 0.6))
+        breath = math.sin(2 * math.pi * t / NEAR)           # slow inhale/exhale
+        creep = 0.5 - 0.5 * math.cos(2 * math.pi * t / NEAR)  # 0..1..0
         m = {
-            'hip': (8, -10),
-            'hip_r': -2,
-            'torso': -7 + 0.8 * trem,
-            'torso_s': (1, 1 - 0.01),
+            'hip': (10 + 4 * creep, -8 + 6 * creep),        # lean in, rise on the toes
+            'hip_r': -2.5 - 1.0 * creep,
+            'torso': -8 - 2.5 * creep,
+            'torso_s': (1 - 0.006 * breath, 1 + 0.014 * breath),
             'head': head_near(t),
-            'shrug': 8 + 1.5 * trem,
-            # fist up at the chin, card arm lowered
-            'arm_l_up': 14, 'arm_l_low': 10 + 2 * trem,
-            'arm_r_up': -8, 'arm_r_low': -75 + 2 * trem,
-            'leg_l_up': 2, 'leg_r_up': -3 - 5 * tap, 'leg_r_low': 8 * tap,
+            'shrug': 6 + 4 * breath,
+            # fist up at the chin, knuckles pressed a touch harder on the inhale
+            'arm_l_up': 14 + 2 * creep, 'arm_l_low': 10 - 4 * creep,
+            # card hand lowered, fingers tightening around the card
+            'arm_r_up': -8 - 2 * creep, 'arm_r_low': -75 + 3 * breath,
+            'leg_l_up': 2, 'leg_l_low': -2 * creep,
+            'leg_r_up': -3 - 2 * creep, 'leg_r_low': 4 * creep,
         }
-        m.update(bells(head_near, t, 0.6))
+        m.update(bells(head_near, t, 0.35))
         return m
     put('near_win', near)
     hands('near_win', 'fist')
