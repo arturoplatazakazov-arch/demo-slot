@@ -30,6 +30,41 @@ const READY_CODES = new Set([
 const ILLUMINATOR_CODES = new Set(['gold-of-baku', 'gold-of-baku-2', 'volt-coins', 'neon-joker-spins']);
 const SPIN_FACTORY_CODES = new Set(['big-catch', 'caesars-fortune', 'ice-spin-deluxe', 'tesla-spins']);
 
+// Neon Joker Spins и три его скина (A/B/C — сравнение арт-дирекшена по ГДД):
+// одна игра на бэкенде (код neon-joker-spins), четыре страницы. В Illuminator
+// они живут отдельной подкатегорией #njsGrid — карточки строятся из одной
+// записи /catalog. Нет подкатегории на странице — NJS идёт в Illuminator как раньше.
+const NJS_CODE = 'neon-joker-spins';
+const NJS_VARIANTS = [
+  { page: 'neon-joker-spins.html', name: 'Neon Joker Spins', badge: 'Оригинал', cover: 'img/neon-joker-spins/img/cover.jpg' },
+  {
+    page: 'neon-joker-spins-a.html', name: 'Neon Joker Spins · A', badge: 'Neon Sign',
+    cover: 'img/neon-joker-spins/skins/a/img/cover.jpg',
+    desc: 'Плоский неон 80-х: светящиеся трубки, мокрый асфальт, неоновая рама.',
+  },
+  {
+    page: 'neon-joker-spins-b.html', name: 'Neon Joker Spins · B', badge: 'Glossy Show',
+    cover: 'img/neon-joker-spins/skins/b/img/cover.jpg',
+    desc: 'Глянцевое шоу: объёмные символы, золотая рама с лампочками, сцена.',
+  },
+  {
+    page: 'neon-joker-spins-c.html', name: 'Neon Joker Spins · C', badge: 'Rock Chrome',
+    cover: 'img/neon-joker-spins/skins/c/img/cover.jpg',
+    desc: 'Рок-клуб: сталь и хром, Джокер-панк, молнии вместо линий выигрыша.',
+  },
+];
+
+function njsEntries(entry) {
+  return NJS_VARIANTS.map((v) => ({
+    ...entry,
+    name: v.name,
+    catalog_badge: v.badge,
+    catalog_play_url: v.page,
+    catalog_cover_path: v.cover || entry.catalog_cover_path,
+    catalog_description: v.desc || entry.catalog_description,
+  }));
+}
+
 const isUnicornGame = (code) => /uniqorn|unicorn/.test(code);
 
 const PLAY_ICON = '<svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4Z" fill="currentColor"/></svg>';
@@ -82,12 +117,14 @@ async function renderCatalog() {
   const illuminatorGrid = document.getElementById('illuminatorGrid');
   const spinFactoryGrid = document.getElementById('spinFactoryGrid');
   const devGrid = document.getElementById('devGrid');
+  const njsGrid = document.getElementById('njsGrid');
   const grids = [readyGrid, illuminatorGrid, spinFactoryGrid, devGrid].filter(Boolean);
 
   try {
     const entries = (await apiGet('/catalog')).reverse();
     const ready = entries.filter((e) => READY_CODES.has(e.code));
-    const illuminator = entries.filter((e) => ILLUMINATOR_CODES.has(e.code));
+    const illuminator = entries.filter((e) => ILLUMINATOR_CODES.has(e.code) && !(njsGrid && e.code === NJS_CODE));
+    const njs = njsGrid ? entries.filter((e) => e.code === NJS_CODE).flatMap(njsEntries) : [];
     const spinFactory = entries.filter((e) => SPIN_FACTORY_CODES.has(e.code));
     const dev = entries.filter((e) => !READY_CODES.has(e.code)
       && !ILLUMINATOR_CODES.has(e.code) && !SPIN_FACTORY_CODES.has(e.code));
@@ -95,6 +132,7 @@ async function renderCatalog() {
 
     if (readyGrid) for (const entry of ready) appendCard(readyGrid, entry);
     if (illuminatorGrid) for (const entry of illuminator) appendCard(illuminatorGrid, entry);
+    if (njsGrid) for (const entry of njs) appendCard(njsGrid, entry);
     if (spinFactoryGrid) for (const entry of spinFactory) appendCard(spinFactoryGrid, entry);
     if (devGrid) for (const entry of dev) appendCard(devGrid, entry);
   } catch (err) {
@@ -104,7 +142,12 @@ async function renderCatalog() {
   }
 
   if (readyGrid) toggleSection('readySection', readyGrid);
-  if (illuminatorGrid) toggleSection('illuminatorSection', illuminatorGrid);
+  if (njsGrid) toggleSection('njsSubsection', njsGrid);
+  if (illuminatorGrid) {
+    toggleSection('illuminatorSection', illuminatorGrid);
+    // секция видна, если есть хотя бы подкатегория NJS
+    if (njsGrid && njsGrid.children.length) document.getElementById('illuminatorSection').hidden = false;
+  }
   if (spinFactoryGrid) toggleSection('spinFactorySection', spinFactoryGrid);
   if (devGrid) toggleSection('devSection', devGrid);
 }

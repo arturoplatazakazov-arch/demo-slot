@@ -12,7 +12,8 @@
 // раскрытие номиналов, респины, Коллектор (искры от каждой монеты), сбор в
 // TOTAL, GRAND за 9/9.
 
-const ASSET_ROOT = 'img/neon-joker-spins';
+// Страницы-скины (neon-joker-spins-a|b|c.html) подменяют корень на свою папку арта.
+const ASSET_ROOT = window.NJS_ASSET_ROOT || 'img/neon-joker-spins';
 // Статика без Cache-Control — поднимать при ЛЮБОЙ замене файла в img/neon-joker-spins/.
 const ASSET_VERSION = 3;
 
@@ -279,11 +280,16 @@ function showWinLine(win) {
   const all = [{ x: left, y: first.y - slope0 * (first.x - left) }, ...pts, { x: right, y: last.y + slope1 * (right - last.x) }];
   const d = all.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
   svg.innerHTML = '';
-  for (const cls of ['win-line__glow', 'win-line__core']) {
-    const path = document.createElementNS(WIN_LINE_NS, 'path');
-    path.setAttribute('class', cls);
-    path.setAttribute('d', d);
-    svg.appendChild(path);
+  // Скины рисуют свою линию (js/neon-joker-spins/winlines.js): точки — края
+  // окна + центры ячеек, cells — только центры.
+  if (window.NJS_WINLINE) window.NJS_WINLINE(svg, all, pts);
+  else {
+    for (const cls of ['win-line__glow', 'win-line__core']) {
+      const path = document.createElementNS(WIN_LINE_NS, 'path');
+      path.setAttribute('class', cls);
+      path.setAttribute('d', d);
+      svg.appendChild(path);
+    }
   }
   svg.classList.remove('is-playing');
   void svg.getBoundingClientRect();
@@ -293,6 +299,7 @@ function showWinLine(win) {
 
 function hideWinLine() {
   fx('hideLine');
+  if (window.NJS_WINLINE_STOP) window.NJS_WINLINE_STOP();
   if (winLineSvg) {
     winLineSvg.remove();
     winLineSvg = null;
@@ -952,7 +959,7 @@ async function playHoldAndWin(hw, bet) {
   await hwWait(1000);
 
   // 2. вывеска HOLD & WIN, режим раунда
-  await playPopup('holdAndWin', 0, turbo ? 600 : 1300);
+  if (!(await showBonusScreen('hw'))) await playPopup('holdAndWin', 0, turbo ? 600 : 1300);
   enterHoldAndWinMode();
   const initialSet = new Set(initial.map(idx));
   cellInfos.forEach((info, i) => { if (info && !initialSet.has(i)) setCellEmpty(info); });
@@ -1106,7 +1113,169 @@ function setupDevPanel() {
   document.querySelectorAll('[data-popup]').forEach((btn) => {
     btn.addEventListener('click', () => playPopup(btn.dataset.popup, 123456));
   });
+  document.querySelectorAll('[data-screen]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const k = btn.dataset.screen;
+      if (k === 'feature') showFeatureScreen(); else showBonusScreen(k);
+    });
+  });
 }
+
+// --- Превью фич / бонус-экраны -----------------------------------------------------
+//
+// Spine-скелеты из scripts/neon_joker_spins_screens.py (у каждого скина свои —
+// в ASSET_ROOT/screens): `intro` (3 с) -> `idle` (петля) до тапа, затем 500 мс
+// затухания. Нарисованы на дизайн-канвасе игры (1600x900 / 720x1280, центр в
+// нуле) и привязаны к #stage его дизайн-боксом. Свой SpineStage на
+// #screenCanvas поверх всего. Атласы кита — premultiplied. Нет WebGL или
+// скелета — экран просто не показывается (бонус уходит в старый попап).
+
+const SCREEN_ROOT = `${ASSET_ROOT}/screens`;
+const SCREEN_BOX = {
+  desk: { x: -800, y: -450, width: 1600, height: 900 },
+  mob: { x: -360, y: -640, width: 720, height: 1280 },
+};
+const SCREEN_V = 3;                 // поднимать при пересборке screens
+const SCREEN_FADE_MS = 500;
+const BONUS_SCREEN_AUTOCLOSE_MS = 10000;
+let screenStage = null;
+let screenOpen = false;
+const screenResourceCache = {};
+
+function screenVariant() {
+  return isMobileLayout() ? 'mob' : 'desk';
+}
+
+function getScreenStage() {
+  if (screenStage) return screenStage;
+  if (!window.spine || !window.SpineEngine) return null;
+  try {
+    screenStage = new SpineEngine.SpineStage(document.getElementById('screenCanvas'));
+  } catch (err) {
+    console.warn('[njs] screens: no WebGL', err);
+    return null;
+  }
+  return screenStage;
+}
+
+function getScreenResource(kind, variant = screenVariant()) {
+  const key = `${kind}_${variant}`;
+  if (!screenResourceCache[key]) {
+    screenResourceCache[key] = SpineEngine.SpineResource.load(screenStage.assetManager, `${SCREEN_ROOT}/${key}`, {
+      premultipliedAlpha: true, version: SCREEN_V,
+    });
+    screenResourceCache[key].catch(() => { delete screenResourceCache[key]; });
+  }
+  return screenResourceCache[key];
+}
+
+function showSpineScreen(kind, { dark = false, autoCloseMs = 0 } = {}) {
+  const root = document.getElementById('featureScreen');
+  const stage = getScreenStage();
+  if (!stage || !root || screenOpen) return Promise.resolve(false);
+  screenOpen = true;
+  return getScreenResource(kind).then((resource) => new Promise((resolve) => {
+    let variant = screenVariant();
+    let inst = null;
+    let alpha = 1;
+    let done = false;
+    let closing = false;
+    let autoTimer = null;
+
+    const mount = (res, fromEntry) => {
+      const next = res.createInstance();
+      next.anchorEl = document.getElementById('stage');
+      next.fit = 1;
+      next.boundsOverride = SCREEN_BOX[variant];
+      if (fromEntry && fromEntry.animation) {
+        const entry = next.animationState.setAnimation(0, fromEntry.animation.name, fromEntry.loop);
+        entry.trackTime = fromEntry.trackTime;
+        if (!fromEntry.loop) next.queue('idle', true);
+      } else {
+        next.play('intro', false);
+        next.queue('idle', true);
+      }
+      next.skeleton.color.a = alpha;
+      if (inst) stage.removeOverlay(inst);
+      inst = next;
+      stage.addOverlay(inst);
+    };
+    root.classList.toggle('is-dark', dark);
+    const setBg = () => {
+      const src = `${ASSET_ROOT}/img/${isMobileLayout() ? 'bg_base_mob' : 'bg_base'}.jpg`;
+      root.style.setProperty('--fs-bg', `url("${new URL(src, location.href).href}")`);
+    };
+    const onResize = () => {
+      setBg();
+      const v = screenVariant();
+      if (v === variant || closing) return;
+      variant = v;
+      const entry = inst.animationState.getCurrent(0);
+      getScreenResource(kind, v).then((res) => { if (!done) mount(res, entry); }).catch(() => {});
+    };
+
+    setBg();
+    mount(resource, null);
+    window.addEventListener('resize', onResize);
+    document.body.classList.add('is-feature-screen');
+    root.hidden = false;
+    void root.offsetWidth;
+    root.classList.add('is-open');
+
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(autoTimer);
+      stage.removeOverlay(inst);
+      window.removeEventListener('resize', onResize);
+      root.hidden = true;
+      root.classList.remove('is-open');
+      root.style.transition = '';
+      document.body.classList.remove('is-feature-screen');
+      screenOpen = false;
+      resolve(true);
+    };
+    const close = () => {
+      if (closing) return;
+      closing = true;
+      clearTimeout(autoTimer);
+      root.removeEventListener('click', close);
+      if (window.Sound) Sound.playSfx('click');
+      root.style.transition = `opacity ${SCREEN_FADE_MS}ms ease-out`;
+      root.classList.remove('is-open');
+      const start = performance.now();
+      const tick = (now) => {
+        if (done) return;
+        const t = Math.min(1, (now - start) / SCREEN_FADE_MS);
+        alpha = 1 - t;
+        inst.skeleton.color.a = alpha;
+        if (t < 1) requestAnimationFrame(tick);
+        else finish();
+      };
+      requestAnimationFrame(tick);
+      setTimeout(finish, SCREEN_FADE_MS + 200); // скрытая вкладка: rAF стоит
+    };
+    root.addEventListener('click', close);
+    if (autoCloseMs) autoTimer = setTimeout(close, autoCloseMs);
+  })).catch((err) => {
+    console.warn(`[njs] ${kind} screen failed:`, err);
+    screenOpen = false;
+    document.body.classList.remove('is-feature-screen');
+    root.hidden = true;
+    return false;
+  });
+}
+
+function showFeatureScreen() {
+  return showSpineScreen('feature');
+}
+
+// kind: 'fs' (вход во фриспины) | 'hw' (вход в Hold & Win). false — экрана нет,
+// вызывающий показывает старый попап.
+function showBonusScreen(kind) {
+  return showSpineScreen(`bonus_${kind}`, { dark: true, autoCloseMs: BONUS_SCREEN_AUTOCLOSE_MS });
+}
+window.showBonusScreen = showBonusScreen;
 
 // --- Вьюпорт ---------------------------------------------------------------------
 
@@ -1209,6 +1378,7 @@ async function init() {
   document.dispatchEvent(new Event('njs:ready'));
   if (window.Preloader) window.Preloader.done();
   window.__slot = { cellInfos };
+  showFeatureScreen();
 }
 
 window.slotReady = new Promise((resolve) => document.addEventListener('njs:ready', resolve, { once: true }));

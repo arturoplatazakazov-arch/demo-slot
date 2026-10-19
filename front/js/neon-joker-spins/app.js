@@ -129,7 +129,9 @@ async function presentResult(data, bet) {
   // 2. Free Spins: вход / ретриггер / счётчик / выход.
   if (fsTriggeredNow) {
     await celebrateScatters();
-    await playPopup('freeSpins', 0, 2000, { panelText: String(fs.spins_awarded || fs.spins_remaining) });
+    if (!(await window.showBonusScreen('fs'))) {
+      await playPopup('freeSpins', 0, 2000, { panelText: String(fs.spins_awarded || fs.spins_remaining) });
+    }
     enterFreeSpins(fs.spins_remaining, bet);
   } else if (retrigger) {
     await celebrateScatters();

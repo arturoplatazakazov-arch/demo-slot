@@ -61,6 +61,21 @@ body {
 .game-grid + .catalog-section {
   margin-top: 48px;
 }
+/* Подкатегория внутри секции (Neon Joker Spins: оригинал + скины A/B/C). */
+.catalog-subsection {
+  margin-top: 32px;
+  padding: 18px 18px 22px;
+  border-radius: 18px;
+  border: 1px dashed var(--card-border);
+  background: rgba(255, 255, 255, 0.025);
+}
+.catalog-subsection__title {
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: clamp(16px, 2vw, 21px);
+  letter-spacing: 0.5px;
+  margin: 0 0 16px;
+  color: var(--gold);
+}
 .catalog-section__title {
   font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
   font-size: clamp(20px, 2.6vw, 28px);

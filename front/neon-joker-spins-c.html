@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neon Joker Spins C — demo</title>
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/preloader.css?v=1">
+<link rel="stylesheet" href="css/neon-joker-spins.css?v=2">
+<link rel="stylesheet" href="css/njs-skin-c.css?v=1">
+<link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
+</head>
+<body>
+
+  <div class="preloader" id="preloader">
+    <div class="preloader__logo" id="preloaderLogo"><img src="img/neon-joker-spins/skins/c/img/logo.webp?v=1" alt="" onerror="this.remove()"></div>
+    <div class="preloader__bar"><div class="preloader__fill" id="preloaderFill"></div></div>
+    <div class="preloader__pct" id="preloaderPct">0%</div>
+  </div>
+
+  <a class="to-catalog-btn" href="games.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    В каталог
+  </a>
+
+  <!-- DEV-ONLY: попапы и фичи без ожидания настоящего выпадения. -->
+  <div class="dev-panel">
+    <button class="dev-btn" data-popup="bigWin" type="button">Big Win</button>
+    <button class="dev-btn" data-popup="megaWin" type="button">Mega Win</button>
+    <button class="dev-btn" data-popup="epicWin" type="button">Epic Win</button>
+    <button class="dev-btn" data-dev="hw" type="button">Hold &amp; Win</button>
+    <button class="dev-btn" data-dev="fs" type="button">Free Spins</button>
+    <button class="dev-btn" data-screen="feature" type="button">Превью</button>
+    <button class="dev-btn" data-screen="fs" type="button">Экран FS</button>
+    <button class="dev-btn" data-screen="hw" type="button">Экран H&amp;W</button>
+  </div>
+
+
+  <!-- Скин-сравнение: переключатель сохраняет query (?api=...). -->
+  <nav class="skin-switch" id="skinSwitch"><a href="neon-joker-spins-a.html">A<span> · Neon Sign</span></a><a href="neon-joker-spins-b.html">B<span> · Glossy Show</span></a><a href="neon-joker-spins-c.html" class="is-on">C<span> · Rock Chrome</span></a><a href="neon-joker-spins.html">Оригинал</a></nav>
+  <style>
+    .skin-switch { position: fixed; top: 10px; left: 10px; z-index: 120; display: flex; gap: 4px;
+      padding: 4px; border-radius: 999px; background: rgba(10, 4, 20, 0.8); border: 1px solid rgba(255, 255, 255, 0.18);
+      font: 700 12px/1 'Baloo 2', system-ui, sans-serif; backdrop-filter: blur(4px); }
+    .skin-switch a { padding: 7px 11px; border-radius: 999px; color: #e8dcff; text-decoration: none; white-space: nowrap; }
+    .skin-switch a.is-on { background: #ffd75a; color: #2a0f00; }
+    @media (orientation: portrait) { .skin-switch { top: auto; bottom: 6px; left: 50%; transform: translateX(-50%); padding: 2px; font-size: 10px; }
+      .skin-switch a { padding: 4px 8px; } .skin-switch a span { display: none; } }
+  </style>
+  <script>for (const a of document.querySelectorAll('#skinSwitch a')) a.search = location.search;</script>
+
+  <div class="screen" id="screen">
+
+    <!-- Фон на весь экран (cover), база и фриспины кросс-фейдом. -->
+    <div class="layer bg" id="bgLayer">
+      <div class="bg__img bg__img--base"></div>
+      <div class="bg__img bg__img--fs"></div>
+    </div>
+
+    <!-- Spine: фон (боке, прожекторы FS) и маскот — под сценой. -->
+    <canvas class="layer fx-canvas fx-back" id="fxBack"></canvas>
+
+    <!-- Дизайн-канвас: десктоп 1600x900, портрет 720x1280 (updateStageScale). -->
+    <div class="stage" id="stage">
+
+      <img class="obj mascot" id="mascot" src="img/neon-joker-spins/skins/c/img/mascot.webp?v=1" alt="">
+
+      <!-- Окно барабанов лежит ПОД рамой: рама с прозрачным проёмом и
+           неоновыми перемычками накрывает ленты. -->
+      <div class="obj reel" id="reel"></div>
+      <div class="obj cabinet" aria-hidden="true"></div>
+      <div class="obj fx-layer" id="fxLayer"></div>
+
+      <div class="obj logo"><img src="img/neon-joker-spins/skins/c/img/logo.webp?v=1" alt="Neon Joker Spins"></div>
+
+      <!-- Джекпоты: множитель из сида x ставка (JACKPOT_LADDER в slot.js). -->
+      <div class="obj jackpots" id="jackpots">
+        <div class="jp jp--mini" data-tier="mini"><span class="jp__name">MINI</span><span class="jp__value glyphs"></span></div>
+        <div class="jp jp--minor" data-tier="minor"><span class="jp__name">MINOR</span><span class="jp__value glyphs"></span></div>
+        <div class="jp jp--major" data-tier="major"><span class="jp__name">MAJOR</span><span class="jp__value glyphs"></span></div>
+        <div class="jp jp--grand" data-tier="grand"><span class="jp__name">GRAND</span><span class="jp__value glyphs"></span></div>
+      </div>
+
+      <!-- Счётчик фриспинов (виден только в раунде) и HUD Hold & Win. -->
+      <div class="obj side-panel fs-panel" id="fsPanel">
+        <div class="side-panel__label">FREE SPINS</div>
+        <div class="side-panel__value glyphs" id="fsLeft"></div>
+        <div class="side-panel__label side-panel__label--sub">WIN</div>
+        <div class="side-panel__value side-panel__value--sm glyphs" id="fsWin"></div>
+        <div class="fs-panel__plus" id="fsPlus">+5</div>
+      </div>
+
+      <div class="obj side-panel hw-panel" id="hwPanel">
+        <div class="side-panel__label">RESPINS</div>
+        <div class="hw-lamps"><span class="hw-lamp"></span><span class="hw-lamp"></span><span class="hw-lamp"></span></div>
+        <div class="side-panel__label side-panel__label--sub">TOTAL</div>
+        <div class="side-panel__value side-panel__value--sm glyphs" id="hwTotal"></div>
+      </div>
+
+      <!-- Неоновая вывеска BUY (img/buy_on|buy_off.webp); цена — битмап-шрифтом
+           в пустом окне вывески. -->
+      <button class="obj buy-btn" id="buyBtn" type="button" aria-label="Buy Hold &amp; Win">
+        <span class="buy-btn__price glyphs" id="buyPrice"></span>
+      </button>
+
+      <div class="obj reel-win" id="reelWin"><span class="glyphs" id="reelWinValue"></span></div>
+    </div>
+
+    <!-- Spine над сценой: лампочки рамы, лого, джекпоты, символы, линии. -->
+    <canvas class="layer fx-canvas fx-front" id="fxFront"></canvas>
+    <div class="layer screen-dim" id="screenDim"></div>
+    <!-- Big Win: лучи и монетный дождь — между затемнением и попапом. -->
+    <canvas class="layer fx-canvas fx-mid" id="fxMid"></canvas>
+    <div class="layer popup-host" id="popupHost"></div>
+    <!-- Неоновая вывеска попапа — над попапом. -->
+    <canvas class="layer fx-canvas fx-top" id="fxTop"></canvas>
+  </div>
+
+  <!-- Окно покупки: одна карточка, цена в валюте по текущей ставке. -->
+  <div class="buy-dialog" id="buyDialog" hidden>
+    <div class="buy-dialog__card">
+      <div class="buy-dialog__title">BUY HOLD &amp; WIN</div>
+      <img class="buy-dialog__coin" src="img/neon-joker-spins/skins/c/coins/collector.webp?v=1" alt="">
+      <p class="buy-dialog__text">Служебный спин даёт не меньше 5 монет и сразу запускает Hold &amp; Win с шансом на Коллектор и джекпоты.</p>
+      <div class="buy-dialog__price"><span id="buyDialogPrice">0</span> <span class="buy-dialog__cur" id="buyDialogCur">FUN</span></div>
+      <div class="buy-dialog__actions">
+        <button class="buy-dialog__btn buy-dialog__btn--no" id="buyNo" type="button">ОТМЕНА</button>
+        <button class="buy-dialog__btn buy-dialog__btn--yes" id="buyYes" type="button">КУПИТЬ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Превью фич (после прелоадера) и бонус-экраны FS / Hold & Win — Spine-скелеты
+       scripts/neon_joker_spins_screens.py на своём канвасе поверх всего. -->
+  <div class="fscreen" id="featureScreen" hidden>
+    <canvas class="fscreen__canvas" id="screenCanvas"></canvas>
+  </div>
+
+  <div class="info-popup" id="infoPopup" hidden>
+    <div class="info-popup__panel">
+      <button class="info-popup__close" id="infoPopupClose" type="button" aria-label="Закрыть">×</button>
+      <h2 class="info-popup__title">Правила</h2>
+      <div class="info-popup__rules">
+        <p>3×3, 5 фиксированных линий, выигрыш за 3 одинаковых символа на линии. <b>Wild</b> заменяет всё, кроме монеты, Коллектора и Джокера.</p>
+        <p><b>3+ Джокера</b> в любом месте запускают <b>10 Free Spins</b> и платят 2×–200× ставки. 3+ Джокера во Free Spins дают <b>+5 спинов</b>. Во Free Spins монеты выпадают чаще.</p>
+        <p><b>5+ монет</b> запускают <b>Hold &amp; Win</b> (3 респина). Номиналы 1×–25× или MINI 20× / MINOR 50× / MAJOR 250×; заполнение поля — <b>GRAND 1 000×</b>.</p>
+        <p>В Hold &amp; Win может выпасть <b>Коллектор</b>: он собирает сумму всех монет на поле, включая упавшие в том же респине (кроме джекпотов и других Коллекторов). Не больше 2 Коллекторов за раунд.</p>
+        <p><b>Buy Hold &amp; Win</b>: запуск раунда за 34.5× ставки, служебный спин даёт не меньше 5 монет, его линии не выплачиваются.</p>
+        <p>Максимальный выигрыш — 2 500× ставки за раунд. RTP 96.0 %.</p>
+      </div>
+      <div class="info-popup__list" id="infoPopupList"></div>
+    </div>
+  </div>
+
+  <!-- Нижний бар V3 (общий контракт: data-action spin/bet-minus/bet-plus/sound/info,
+       id betValue/balanceValue, классы ui-icon-btn / ui-spin-btn / ui-balance__currency /
+       ui-bet-field__currency). -->
+  <div class="v3-bar" id="v3Bar">
+    <div class="v3-row">
+      <div class="v3-group">
+        <div class="v3-menu">
+          <div class="v3-menu__flyout" id="v3Flyout">
+            <button class="ui-icon-btn v3-btn" data-action="home" type="button" aria-label="В каталог">
+              <svg viewBox="0 0 24 24"><path d="M3 11.4 12 4l9 7.4" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.6 10v9.2h4.2v-5.6h4.4v5.6h4.2V10" fill="currentColor" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="ui-icon-btn v3-btn v3-btn--sound" data-action="sound" type="button" aria-label="Звук">
+              <svg viewBox="0 0 24 24"><path class="v3-spk" d="M4 9.2v5.6h3.6L13 19V5L7.6 9.2H4Z" fill="currentColor"/><path class="v3-wave v3-wave--1" d="M16.2 9a4.6 4.6 0 0 1 0 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="v3-wave v3-wave--2" d="M18.9 6.6a8 8 0 0 1 0 10.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="v3-slash" d="M5 19 19 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            </button>
+            <button class="ui-icon-btn v3-btn" data-action="info" type="button" aria-label="Информация">
+              <svg viewBox="0 0 24 24"><rect x="10.6" y="10" width="2.8" height="9" rx="1.4" fill="currentColor"/><circle cx="12" cy="6.4" r="1.7" fill="currentColor"/></svg>
+            </button>
+          </div>
+          <button class="ui-icon-btn v3-btn v3-btn--menu" id="v3MenuBtn" type="button" aria-label="Меню" aria-expanded="false">
+            <svg viewBox="0 0 24 24"><path d="M4 7.5h16M4 12h16M4 16.5h16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            <span class="v3-btn__dot" aria-hidden="true"></span>
+          </button>
+        </div>
+        <button class="ui-icon-btn v3-btn v3-btn--auto" id="v3AutoBtn" type="button" aria-label="Автоигра" aria-expanded="false">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.1" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8.6 15.4 12 7.6l3.4 7.8M9.8 13.2h4.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+
+      <button class="ui-spin-btn v3-spin" data-action="spin" type="button" aria-label="Спин">
+        <span class="v3-spin__ring" aria-hidden="true"></span>
+        <svg class="v3-spin__icon" viewBox="0 0 48 48">
+          <path d="M9 20.5A15.2 15.2 0 0 1 34.4 14" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>
+          <path d="M34.6 7.4V14h-6.7" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M39 27.5A15.2 15.2 0 0 1 13.6 34" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>
+          <path d="M13.4 40.6V34h6.7" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="v3-spin__count" id="v3SpinCount" hidden></span>
+      </button>
+
+      <div class="v3-group">
+        <button class="ui-icon-btn v3-btn v3-btn--turbo" id="v3TurboBtn" type="button" aria-label="Турбо" aria-pressed="false">
+          <svg viewBox="0 0 24 24"><path d="M13.4 2.5 5.2 13.4h5.1l-1.1 8.1 8.3-11.1h-5.2l1.1-7.9Z" fill="currentColor"/></svg>
+        </button>
+        <button class="ui-icon-btn v3-btn v3-btn--bet" id="v3BetBtn" type="button" aria-label="Ставка" aria-expanded="false">
+          <svg viewBox="0 0 24 24"><ellipse cx="12" cy="7.4" rx="7.6" ry="2.9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.4 7.4v3.1c0 1.6 3.4 2.9 7.6 2.9s7.6-1.3 7.6-2.9V7.4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.4 11.9V15c0 1.6 3.4 2.9 7.6 2.9s7.6-1.3 7.6-2.9v-3.1" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="v3-tip v3-tip--bet" id="v3BetTip" hidden>
+      <button class="ui-icon-btn v3-tip__step" data-action="bet-minus" type="button" aria-label="Уменьшить ставку">
+        <svg viewBox="0 0 24 24"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
+      <div class="v3-tip__field">
+        <span class="v3-tip__label">BET</span>
+        <span class="v3-tip__amount"><span id="v3BetMirror">0</span> <span class="ui-bet-field__currency">FUN</span></span>
+      </div>
+      <button class="ui-icon-btn v3-tip__step" data-action="bet-plus" type="button" aria-label="Увеличить ставку">
+        <svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="v3-chips" id="v3AutoTip" hidden>
+      <button class="v3-chip" data-spins="10" type="button">10</button>
+      <button class="v3-chip" data-spins="25" type="button">25</button>
+      <button class="v3-chip" data-spins="50" type="button">50</button>
+      <button class="v3-chip" data-spins="100" type="button">100</button>
+    </div>
+
+    <div class="v3-readout">
+      <div class="v3-readout__col">
+        <span class="v3-readout__label">BALANCE</span>
+        <span class="v3-readout__value"><span id="balanceValue">1,000,000</span> <span class="ui-balance__currency">FUN</span></span>
+      </div>
+      <div class="v3-readout__col v3-readout__col--right">
+        <span class="v3-readout__label">BET</span>
+        <span class="v3-readout__value"><span id="betValue">100</span> <span class="v3-readout__cur">FUN</span></span>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="js/telegram.js?v=2"></script>
+  <script src="js/preloader.js?v=1"></script>
+  <script src="js/config.js?v=2"></script>
+  <script src="js/api.js?v=2"></script>
+  <script src="js/reel-math.js?v=6"></script>
+  <script src="js/reel-spin.js?v=2"></script>
+  <script src="vendor/spine-webgl.js"></script>
+  <script src="js/spine-engine.js?v=7"></script>
+  <script src="js/neon-joker-spins/sound.js?v=1"></script>
+  <script>window.NJS_ASSET_ROOT = 'img/neon-joker-spins/skins/c'; window.NJS_SKIN = 'c';</script>
+  <script src="js/neon-joker-spins/winlines.js?v=2"></script>
+  <script src="js/neon-joker-spins/slot.js?v=2"></script>
+  <script src="js/neon-joker-spins/app.js?v=2"></script>
+  <script src="js/ui-bar-v3.js?v=4"></script>
+</body>
+</html>
