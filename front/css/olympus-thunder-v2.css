@@ -649,3 +649,63 @@ body.spine-symbols .cell.is-spine .cell__img { visibility: hidden; }
 }
 .cell.is-dim[data-code] .cell__img { filter: brightness(.38) saturate(.5); }
 .cell.is-win[data-code] .cell__img { filter: drop-shadow(0 0 10px rgba(var(--rare, 255, 215, 90), .95)); }
+
+/* ---------- feature symbols (product): FREE SPINS ring and JACKPOT eagle
+   are ~12% larger than the rest and alive on the board ---------- */
+.cell[data-code="scatter"] .cell__img, .cell[data-code="eagle"] .cell__img { scale: 1.12; }
+.cell[data-code="scatter"]::before, .cell[data-code="eagle"]::before {
+  content: ''; position: absolute; inset: -14%; z-index: 0; pointer-events: none; border-radius: 50%;
+}
+/* scatter: an electric halo of turquoise rays spinning behind a ring that
+   rocks and crackles */
+.cell[data-code="scatter"]::before {
+  background:
+    radial-gradient(closest-side, rgba(70, 235, 255, .55), rgba(70, 235, 255, 0) 70%),
+    repeating-conic-gradient(from 0deg, rgba(150, 245, 255, .55) 0 5deg, transparent 5deg 24deg);
+  -webkit-mask: radial-gradient(closest-side, #000 35%, transparent 100%);
+          mask: radial-gradient(closest-side, #000 35%, transparent 100%);
+  animation: scatter-rays 6s linear infinite;
+}
+.cell[data-code="scatter"] .cell__img { animation: scatter-rock 2.4s ease-in-out infinite; }
+@keyframes scatter-rays { to { rotate: 360deg; } }
+@keyframes scatter-rock {
+  0%, 100% { rotate: -5deg; filter: drop-shadow(0 0 8px rgba(70, 235, 255, .8)); }
+  48% { filter: drop-shadow(0 0 8px rgba(70, 235, 255, .8)); }
+  50% { rotate: 5deg; filter: drop-shadow(0 0 16px rgba(180, 250, 255, 1)) brightness(1.25); }
+  54% { filter: drop-shadow(0 0 8px rgba(70, 235, 255, .8)); }
+}
+/* eagle: a slow golden sunburst behind, wings beating and the bird rising */
+.cell[data-code="eagle"]::before {
+  background:
+    radial-gradient(closest-side, rgba(255, 200, 60, .6), rgba(255, 200, 60, 0) 72%),
+    repeating-conic-gradient(from 0deg, rgba(255, 220, 120, .5) 0 7deg, transparent 7deg 30deg);
+  -webkit-mask: radial-gradient(closest-side, #000 35%, transparent 100%);
+          mask: radial-gradient(closest-side, #000 35%, transparent 100%);
+  animation: eagle-rays 14s linear infinite, eagle-pulse 2s ease-in-out infinite;
+}
+.cell[data-code="eagle"] .cell__img { animation: eagle-beat 1.6s cubic-bezier(.45, 0, .55, 1) infinite; transform-origin: 50% 60%; }
+@keyframes eagle-rays { to { rotate: -360deg; } }
+@keyframes eagle-pulse { 50% { opacity: .55; } }
+@keyframes eagle-beat {
+  0%, 100% { translate: 0 0; scale: 1.12 1.12; filter: drop-shadow(0 0 8px rgba(255, 200, 60, .8)); }
+  30% { translate: 0 -5%; scale: 1.2 1.06; filter: drop-shadow(0 0 16px rgba(255, 220, 120, 1)); }
+  60% { translate: 0 -2%; scale: 1.08 1.14; }
+}
+.cell.is-dim[data-code="scatter"]::before, .cell.is-dim[data-code="eagle"]::before { opacity: .2; animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .cell[data-code="scatter"] .cell__img, .cell[data-code="eagle"] .cell__img, .cell[data-code]::before { animation: none; }
+}
+
+/* ---------- depth (product): shadows under the frame, logo, hero,
+   jackpot plaques and Buy ---------- */
+.board__frame { filter: drop-shadow(0 22px 26px rgba(8, 20, 30, .55)) drop-shadow(0 6px 8px rgba(8, 20, 30, .45)); }
+.logo { filter: drop-shadow(0 10px 14px rgba(8, 20, 30, .6)) drop-shadow(0 3px 4px rgba(8, 20, 30, .5)); }
+.zeus__fallback { filter: drop-shadow(-14px 22px 24px rgba(8, 20, 30, .55)); }
+.jp { filter: drop-shadow(0 8px 10px rgba(8, 20, 30, .5)); }
+.buy-btn { filter: drop-shadow(0 12px 14px rgba(8, 20, 30, .6)); }
+.buy-btn:hover { filter: drop-shadow(0 12px 14px rgba(8, 20, 30, .6)) brightness(1.12); }
+.win-plate { filter: drop-shadow(0 10px 12px rgba(8, 20, 30, .5)); }
+
+/* jackpot plaques sit above everything on the stage (portrait: the stele's
+   crest used to cover MINI) */
+.jackpots { z-index: 12; }
