@@ -91,7 +91,16 @@ def step_frame() -> None:
     # rounded inner corners) so no smear of the magenta fill survives
     ys, xs = np.where(ndimage.binary_erosion(hole, iterations=6))
     hole[ys.min() - 5:ys.max() + 6, xs.min() - 5:xs.max() + 6] = True
-    arr[..., 3] = np.where(hole, 0, arr[..., 3])
+    # the crest's bolt hangs down into the opening: keep whatever ornament
+    # (not pale fill, not magenta) is connected to the art above the opening
+    orig_a = arr[..., 3].copy()
+    art = (orig_a > 40) & ~pale & ~pink
+    ys0, xs0 = np.where(hole)
+    top = ys0.min()
+    lab, _ = ndimage.label(art)
+    keep_ids = set(np.unique(lab[top - 3, :])) - {0}
+    crest = np.isin(lab, list(keep_ids)) & hole & (np.arange(arr.shape[0])[:, None] < top + 120)
+    arr[..., 3] = np.where(hole & ~crest, 0, arr[..., 3])
     ys, xs = np.where(hole)
     hx0, hx1, hy0, hy1 = xs.min(), xs.max() + 1, ys.min(), ys.max() + 1
     hw, hh = hx1 - hx0, hy1 - hy0
@@ -109,6 +118,10 @@ def step_frame() -> None:
     # re-measure the hole on the result: transparent area enclosed by the frame
     a = alpha(out) > 40
     enclosed = ndimage.binary_fill_holes(a) & ~a
+    lab2, n2 = ndimage.label(enclosed)
+    if n2 > 1:  # the crest tip can split off slivers: keep the big opening
+        sizes = ndimage.sum(enclosed, lab2, range(1, n2 + 1))
+        enclosed = lab2 == (int(np.argmax(sizes)) + 1)
     ys, xs = np.where(enclosed)
     hx0, hx1, hy0, hy1 = int(xs.min()), int(xs.max()) + 1, int(ys.min()), int(ys.max()) + 1
     # inset 6px so the gold inner line overlaps the board edge a touch
