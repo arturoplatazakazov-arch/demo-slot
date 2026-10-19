@@ -1,4 +1,5 @@
-"""Neon Joker Spins — three art-direction skins (A neon sign, B glossy show, C rock chrome).
+"""Neon Joker Spins — art-direction skins (A neon sign, B glossy show, C rock chrome,
+D 1980s slot machine).
 
 Each skin is the same game (slot.js / app.js / backend untouched) with its own
 art folder front/img/neon-joker-spins/skins/<x>/ (picked up through
@@ -22,6 +23,7 @@ Glyph font, popups and FX sprites are shared with the base game (copied).
 from __future__ import annotations
 
 import colorsys
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -164,6 +166,8 @@ def face(im: Image.Image) -> tuple[float, float, float, float]:
     if k == 0:
         return 0.3, 0.3, 0.4, 0.4
     x, y, w, h = st[k, 0], st[k, 1], st[k, 2], st[k, 3]
+    if w > W * 0.72:  # flat face merged with the rim (plain gold coin): take the inner disc
+        return 0.22, 0.22, 0.56, 0.56
     return x / W, y / H, w / W, h / H
 
 
@@ -235,7 +239,7 @@ def build(x: str) -> dict:
 
     img = dst / "img"
     # catalog cover: the concept mockup of this direction, 900x563 like the base game
-    mock = {"a": "A_neon_sign", "b": "B_glossy_show", "c": "C_rock_chrome"}[x]
+    mock = {"a": "A_neon_sign", "b": "B_glossy_show", "c": "C_rock_chrome", "d": "D_retro_80s"}[x]
     cm = Image.open(ROOT / f"design/neon-joker-spins-concepts/{mock}_base.jpg").convert("RGB")
     ch = round(cm.width * 563 / 900)
     cm = cm.crop((0, (cm.height - ch) // 2, cm.width, (cm.height - ch) // 2 + ch)).resize((900, 563), Image.LANCZOS)
@@ -298,6 +302,21 @@ def build(x: str) -> dict:
         save(m, img / "mascot.webp")
         geo["mascot_ar"] = m.width / m.height
     return geo
+
+
+# Per-skin CSS that is about the look, not the measured geometry.
+EXTRA_CSS = {
+    # D: paper reel strips on drums — cream, darker towards the top/bottom edge
+    # (cylinder), thin shadow between the drums; Hold & Win dims the paper.
+    "d": """.reel { background:
+  linear-gradient(180deg, rgba(40, 20, 10, 0.55) 0%, rgba(40, 20, 10, 0) 18%, rgba(40, 20, 10, 0) 82%, rgba(40, 20, 10, 0.55) 100%),
+  linear-gradient(90deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0) 3%, rgba(0, 0, 0, 0) 97%, rgba(0, 0, 0, 0.35) 100%) 0 0 / calc(100% / 3) 100% repeat-x,
+  #f1e6cc; }
+.screen.is-hw .reel { background:
+  linear-gradient(180deg, rgba(20, 8, 4, 0.6) 0%, rgba(20, 8, 4, 0) 20%, rgba(20, 8, 4, 0) 80%, rgba(20, 8, 4, 0.6) 100%),
+  #6e5a44; }
+""",
+}
 
 
 def css(x: str, g: dict) -> str:
@@ -366,7 +385,7 @@ def css(x: str, g: dict) -> str:
     P.append(f"  .buy-btn {{ left: 6px; top: 20px; width: {pbw}px; height: {pbw / buy['ar']:.0f}px; }}")
     P.append("  .side-panel { left: 572px; top: 20px; }")
     if "frame" in g:
-        fw_px = min(610, 716 * w) / w  # рама не шире экрана
+        fw_px = min(610, max(716 * w, 560)) / w  # рама не шире экрана, но окно не уже 560 (широкие боковины D уходят за край)
         fh_px = fw_px / ar
         wt = max(py + ph + 8 + fh_px * t, 420)
         P.append("  :root {")
@@ -386,11 +405,13 @@ def css(x: str, g: dict) -> str:
     l, t, w, h = g["coll_face"]
     L.append(f".reel__cell[data-symbol=\"collector\"] .coin-val {{ left: {(l + w * 0.12) * 100:.1f}%; right: {(1 - l - w * 0.88) * 100:.1f}%;"
              f" top: {(t + h * 0.14) * 100:.1f}%; height: {h * 0.72 * 100:.1f}%; }}")
+    L.append(EXTRA_CSS.get(x, ""))
     return "\n".join(L) + "\n"
 
 
-NAMES = {"a": "A · Neon Sign", "b": "B · Glossy Show", "c": "C · Rock Chrome"}
+NAMES = {"a": "A · Neon Sign", "b": "B · Glossy Show", "c": "C · Rock Chrome", "d": "D · Retro 80s"}
 
+SWITCHER_RE = r"\n  <!-- Скин-сравнение.*?a\.search = location\.search;</script>\n"
 SWITCHER = """
   <!-- Скин-сравнение: переключатель сохраняет query (?api=...). -->
   <nav class="skin-switch" id="skinSwitch">{links}</nav>
@@ -407,25 +428,45 @@ SWITCHER = """
 """
 
 
-def page(x: str) -> str:
-    html = (ROOT / "front/neon-joker-spins.html").read_text()
-    root = f"img/neon-joker-spins/skins/{x}"
+def switch_links(x: str | None) -> str:
+    """Links of the version switcher; x = active skin, None = the base game."""
     links = "".join(
         f'<a href="neon-joker-spins-{k}.html"{" class=\"is-on\"" if k == x else ""}>{k.upper()}<span>{NAMES[k][1:]}</span></a>' for k in NAMES)
-    links += '<a href="neon-joker-spins.html">Оригинал</a>'
+    on = ' class="is-on"' if x is None else ""
+    return links + f'<a href="neon-joker-spins.html"{on}>Оригинал</a>'
+
+
+def base_page() -> None:
+    """The base game carries the same switcher (Оригинал active); replaced in
+    place on every run, skin pages strip it and add their own."""
+    path = ROOT / "front/neon-joker-spins.html"
+    html = path.read_text()
+    html = re.sub(SWITCHER_RE, "\n", html, flags=re.S)
+    anchor = '  <div class="screen" id="screen">'
+    assert anchor in html
+    html = html.replace(anchor, SWITCHER.format(links=switch_links(None)) + "\n" + anchor, 1)
+    path.write_text(html)
+
+
+def page(x: str) -> str:
+    html = (ROOT / "front/neon-joker-spins.html").read_text()
+    html = re.sub(SWITCHER_RE, "\n", html, flags=re.S)
+    root = f"img/neon-joker-spins/skins/{x}"
+    links = switch_links(x)
     reps = [
         ("<title>Neon Joker Spins — demo</title>", f"<title>Neon Joker Spins {x.upper()} — demo</title>"),
-        ('<link rel="stylesheet" href="css/neon-joker-spins.css?v=2">',
-         f'<link rel="stylesheet" href="css/neon-joker-spins.css?v=2">\n<link rel="stylesheet" href="css/njs-skin-{x}.css?v=1">'),
+        ('<link rel="stylesheet" href="css/neon-joker-spins.css?v=3">',
+         f'<link rel="stylesheet" href="css/neon-joker-spins.css?v=3">\n<link rel="stylesheet" href="css/njs-skin-{x}.css?v=1">'),
         ("img/neon-joker-spins/img/logo.webp?v=2", f"{root}/img/logo.webp?v=1"),
         ("img/neon-joker-spins/img/mascot.webp?v=1", f"{root}/img/mascot.webp?v=1"),
         ("img/neon-joker-spins/coins/collector.webp?v=1", f"{root}/coins/collector.webp?v=1"),
         # без Spine-пака: он нарисован под оригинальный арт
         ('  <script src="js/neon-joker-spins/fx.js?v=1"></script>\n', ""),
-        ('  <script src="js/neon-joker-spins/slot.js?v=2"></script>',
+        ('  <script src="js/neon-joker-spins/slot.js?v=3"></script>',
          f"  <script>window.NJS_ASSET_ROOT = '{root}'; window.NJS_SKIN = '{x}';</script>\n"
-         '  <script src="js/neon-joker-spins/winlines.js?v=2"></script>\n'
-         '  <script src="js/neon-joker-spins/slot.js?v=2"></script>'),
+         '  <script src="js/neon-joker-spins/winlines.js?v=3"></script>\n'
+         '  <script src="js/neon-joker-spins/slot.js?v=3"></script>\n'
+         '  <script src="js/neon-joker-spins/mascot.js?v=1"></script>'),
         ('  <div class="screen" id="screen">', SWITCHER.format(links=links) + '\n  <div class="screen" id="screen">'),
     ]
     for a, b in reps:
@@ -435,7 +476,8 @@ def page(x: str) -> str:
 
 
 if __name__ == "__main__":
-    for x in sys.argv[1:] or ["a", "b", "c"]:
+    base_page()
+    for x in sys.argv[1:] or list(NAMES):
         g = build(x)
         (CSS / f"njs-skin-{x}.css").write_text(css(x, g))
         (ROOT / f"front/neon-joker-spins-{x}.html").write_text(page(x))

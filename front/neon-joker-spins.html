@@ -6,7 +6,7 @@
 <title>Neon Joker Spins — demo</title>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/preloader.css?v=1">
-<link rel="stylesheet" href="css/neon-joker-spins.css?v=2">
+<link rel="stylesheet" href="css/neon-joker-spins.css?v=3">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 </head>
 <body>
@@ -33,6 +33,22 @@
     <button class="dev-btn" data-screen="fs" type="button">Экран FS</button>
     <button class="dev-btn" data-screen="hw" type="button">Экран H&amp;W</button>
   </div>
+
+
+
+
+  <!-- Скин-сравнение: переключатель сохраняет query (?api=...). -->
+  <nav class="skin-switch" id="skinSwitch"><a href="neon-joker-spins-a.html">A<span> · Neon Sign</span></a><a href="neon-joker-spins-b.html">B<span> · Glossy Show</span></a><a href="neon-joker-spins-c.html">C<span> · Rock Chrome</span></a><a href="neon-joker-spins-d.html">D<span> · Retro 80s</span></a><a href="neon-joker-spins.html" class="is-on">Оригинал</a></nav>
+  <style>
+    .skin-switch { position: fixed; top: 10px; left: 10px; z-index: 120; display: flex; gap: 4px;
+      padding: 4px; border-radius: 999px; background: rgba(10, 4, 20, 0.8); border: 1px solid rgba(255, 255, 255, 0.18);
+      font: 700 12px/1 'Baloo 2', system-ui, sans-serif; backdrop-filter: blur(4px); }
+    .skin-switch a { padding: 7px 11px; border-radius: 999px; color: #e8dcff; text-decoration: none; white-space: nowrap; }
+    .skin-switch a.is-on { background: #ffd75a; color: #2a0f00; }
+    @media (orientation: portrait) { .skin-switch { top: auto; bottom: 6px; left: 50%; transform: translateX(-50%); padding: 2px; font-size: 10px; }
+      .skin-switch a { padding: 4px 8px; } .skin-switch a span { display: none; } }
+  </style>
+  <script>for (const a of document.querySelectorAll('#skinSwitch a')) a.search = location.search;</script>
 
   <div class="screen" id="screen">
 
@@ -229,7 +245,7 @@
   <script src="js/spine-engine.js?v=7"></script>
   <script src="js/neon-joker-spins/sound.js?v=1"></script>
   <script src="js/neon-joker-spins/fx.js?v=1"></script>
-  <script src="js/neon-joker-spins/slot.js?v=2"></script>
+  <script src="js/neon-joker-spins/slot.js?v=3"></script>
   <script src="js/neon-joker-spins/app.js?v=2"></script>
   <script src="js/ui-bar-v3.js?v=4"></script>
 </body>

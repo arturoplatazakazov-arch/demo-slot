@@ -1,5 +1,5 @@
 // Neon Joker Spins — skin-specific win lines (A neon tube, B marquee bulbs,
-// C lightning). slot.js showWinLine() hands over its SVG (stage pixels) with
+// C lightning, D 80s lamp payline). slot.js showWinLine() hands over its SVG (stage pixels) with
 // the line's points: window edges + cell centres (all) and cell centres only
 // (cells); the skin page sets window.NJS_SKIN before this script.
 // The base game keeps its own Spine line (fx.js) and does not load this file.
@@ -84,6 +84,16 @@
   .wl-c-node { fill: #e9fbff; filter: drop-shadow(0 0 8px #2ce8ff) drop-shadow(0 0 16px #ff2fb4); }
   .win-line.is-playing .wl-c-node { animation: wl-c-hit 380ms ease-out both; transform-box: fill-box; transform-origin: center; }
   @keyframes wl-c-hit { 0% { transform: scale(2.4); opacity: 0 } 40% { opacity: 1 } 100% { transform: scale(1) } }
+
+  .wl-d-rail { fill: none; stroke: #3a0d0d; stroke-width: 20; stroke-linecap: round; stroke-linejoin: round; }
+  .wl-d-rail2 { fill: none; stroke: #b8bec9; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: .8; }
+  .wl-d-lamp { fill: #5a2a00; }
+  .win-line.is-playing .wl-d-lamp { animation: wl-d-on 900ms steps(1, end) both; }
+  @keyframes wl-d-on { 0% { fill: #5a2a00; filter: none } 1% { fill: #ffd27a; filter: drop-shadow(0 0 6px #ffb02e) drop-shadow(0 0 12px #ff6a00) }
+    60% { fill: #ffd27a } 70% { fill: #7a3a00; filter: none } 80% { fill: #ffe9b0; filter: drop-shadow(0 0 8px #ffb02e) } 100% { fill: #ffd27a; filter: drop-shadow(0 0 6px #ffb02e) } }
+  .wl-d-cap { fill: #ff3b1f; filter: drop-shadow(0 0 8px #ff3b1f); stroke: #d8dde6; stroke-width: 3; }
+  .win-line.is-playing .wl-d-cap { animation: wl-d-blink 300ms steps(2, jump-none) infinite; }
+  @keyframes wl-d-blink { 0% { opacity: 1 } 100% { opacity: .35 } }
   `;
   const style = document.createElement('style');
   style.textContent = STYLE;
@@ -143,6 +153,20 @@
       stop();
       zap();
       timer = setInterval(zap, 60);
+    },
+    // D — ламповый индикатор линии автомата 80-х: янтарные лампы загораются
+    // по очереди слева направо, затем мигают; на концах красные лампы.
+    d(svg, all, cells) {
+      const dpath = pathOf(all);
+      el('path', { class: 'wl-d-rail', d: dpath }, svg);
+      el('path', { class: 'wl-d-rail2', d: dpath }, svg);
+      const lamps = along(all, 30);
+      lamps.forEach((p, i) => {
+        const l = el('rect', { class: 'wl-d-lamp', x: p.x - 8, y: p.y - 8, width: 16, height: 16, rx: 4 }, svg);
+        l.style.animationDelay = `${Math.round((i / lamps.length) * 320)}ms`;
+      });
+      for (const p of [all[0], all[all.length - 1]]) el('circle', { class: 'wl-d-cap', cx: p.x, cy: p.y, r: 15 }, svg);
+      void cells;
     },
   };
 

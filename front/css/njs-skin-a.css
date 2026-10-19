@@ -31,8 +31,8 @@
   .buy-btn { left: 6px; top: 20px; width: 130px; height: 64px; }
   .side-panel { left: 572px; top: 20px; }
   :root {
-    --frame-w: 716.0px; --frame-h: 719.0px;
-    --frame-x: 1.7px; --frame-y: 313.9px;
+    --frame-w: 726.8px; --frame-h: 729.8px;
+    --frame-x: -3.7px; --frame-y: 312.3px;
     --fw-l: 0.1151; --fw-t: 0.1476; --fw-w: 0.7705; --fw-h: 0.7033;
   }
   .cabinet { background-image: url('../img/neon-joker-spins/skins/a/img/frame.webp?v=1'); }
@@ -40,3 +40,4 @@
 .mascot { left: 30px; top: 70px; height: 800px; max-width: 470px; object-fit: contain; object-position: 50% 100%; }
 .reel__cell .coin-val { left: 29.6%; right: 33.2%; top: 34.8%; height: 26.3%; }
 .reel__cell[data-symbol="collector"] .coin-val { left: 37.6%; right: 37.3%; top: 39.6%; height: 20.8%; }
+

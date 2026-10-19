@@ -30,7 +30,7 @@ const READY_CODES = new Set([
 const ILLUMINATOR_CODES = new Set(['gold-of-baku', 'gold-of-baku-2', 'volt-coins', 'neon-joker-spins']);
 const SPIN_FACTORY_CODES = new Set(['big-catch', 'caesars-fortune', 'ice-spin-deluxe', 'tesla-spins']);
 
-// Neon Joker Spins и три его скина (A/B/C — сравнение арт-дирекшена по ГДД):
+// Neon Joker Spins и его скины (A/B/C/D — сравнение арт-дирекшена по ГДД):
 // одна игра на бэкенде (код neon-joker-spins), четыре страницы. В Illuminator
 // они живут отдельной подкатегорией #njsGrid — карточки строятся из одной
 // записи /catalog. Нет подкатегории на странице — NJS идёт в Illuminator как раньше.
@@ -51,6 +51,11 @@ const NJS_VARIANTS = [
     page: 'neon-joker-spins-c.html', name: 'Neon Joker Spins · C', badge: 'Rock Chrome',
     cover: 'img/neon-joker-spins/skins/c/img/cover.jpg',
     desc: 'Рок-клуб: сталь и хром, Джокер-панк, молнии вместо линий выигрыша.',
+  },
+  {
+    page: 'neon-joker-spins-d.html', name: 'Neon Joker Spins · D', badge: 'Retro 80s',
+    cover: 'img/neon-joker-spins/skins/d/img/cover.jpg',
+    desc: 'Автомат 80-х: хромированный корпус, барабаны под стеклом, лампы и рычаг.',
   },
 ];
 

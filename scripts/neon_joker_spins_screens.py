@@ -13,7 +13,7 @@ Copy matches app/seed/neon_joker_spins.py: 3+ Jokers anywhere = 10 free spins
 (+5 on retrigger, coins land more often); 5+ coins = Hold & Win, 3 respins,
 a new coin resets them, 9/9 = GRAND; the Collector gathers every plain coin.
 
-    <venv>/bin/python scripts/neon_joker_spins_screens.py <fonts_dir> [orig a b c]
+    <venv>/bin/python scripts/neon_joker_spins_screens.py <fonts_dir> [orig a b c d]
     fonts_dir: baloo.ttf, luckiest.ttf
 """
 
@@ -51,6 +51,9 @@ GAMES = {
     'c': {'root': 'front/img/neon-joker-spins/skins/c',
           'title': [(0, 'ffffff'), (0.5, 'c9ced8'), (1, '7d8494')], 'glow': 'ff2fb4', 'ink': '0a0610',
           'rim': '9aa1ad', 'edge': 'ff2fb4', 'body': ('1c1424', '08060c'), 'rays': '2ce8ff', 'halo': 'ff2fb4'},
+    'd': {'root': 'front/img/neon-joker-spins/skins/d',
+          'title': [(0, 'ffffff'), (0.4, 'ffe08a'), (1, 'e05a00')], 'glow': 'ff3b1f', 'ink': '2a0a00',
+          'rim': 'd8dde6', 'edge': 'ffb02e', 'body': ('3a0d14', '120406'), 'rays': 'ffb02e', 'halo': 'ff3b1f'},
 }
 
 

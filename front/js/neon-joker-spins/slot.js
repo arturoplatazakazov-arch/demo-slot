@@ -478,6 +478,10 @@ function mascotCheer(clip = 'cheer') {
     fx('mascot', clip);
     return;
   }
+  if (window.NJS_MASCOT) {   // скины: живой маскот (js/neon-joker-spins/mascot.js)
+    NJS_MASCOT.react(clip);
+    return;
+  }
   restartClass(document.getElementById('mascot'), 'is-cheer', 950);
 }
 window.mascotCheer = mascotCheer;
@@ -616,6 +620,7 @@ async function landReels(grid, { anticipate = true } = {}) {
       Sound.playSfx('anticipation');
       fx('anticipation', true);
       fx('mascotNear', true);
+      if (window.NJS_MASCOT) NJS_MASCOT.near(true);
       window.__lastAnticipated = true;
       for (let col = firstAnt; col < GRID_COLS; col++) {
         const codes = columnCodes(col);
@@ -626,6 +631,7 @@ async function landReels(grid, { anticipate = true } = {}) {
       }
       fx('anticipation', false);
       fx('mascotNear', false);
+      if (window.NJS_MASCOT) NJS_MASCOT.near(false);
     }
   } finally {
     reelsBusy = false;

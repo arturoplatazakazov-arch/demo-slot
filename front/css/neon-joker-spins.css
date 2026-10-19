@@ -587,3 +587,9 @@ body.is-feature-screen .dev-panel,
 body.is-feature-screen .to-catalog-btn,
 body.is-feature-screen .skin-switch,
 body.is-feature-screen .v3-bar { visibility: hidden; }
+
+/* Скины: маскот рисует js/neon-joker-spins/mascot.js на канвасе (ноги на полу,
+   деформация по высоте) — картинка остаётся только якорем раскладки. */
+.mascot.is-live { visibility: hidden; animation: none; }
+.mascot-live { pointer-events: none; }
+@media (orientation: portrait) { .mascot-live { display: none; } }

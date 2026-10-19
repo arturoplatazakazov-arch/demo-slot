@@ -40,3 +40,4 @@
 .mascot { left: 30px; top: 70px; height: 800px; max-width: 470px; object-fit: contain; object-position: 50% 100%; }
 .reel__cell .coin-val { left: 29.0%; right: 29.9%; top: 39.5%; height: 26.3%; }
 .reel__cell[data-symbol="collector"] .coin-val { left: 36.8%; right: 34.5%; top: 39.4%; height: 21.4%; }
+
