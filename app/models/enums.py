@@ -41,6 +41,10 @@ class FeatureType(str, enum.Enum):
     # mechanic is avalanche/cascade (app/engine/avalanche.py) instead of the
     # default line-pay + count-pay evaluation.
     AVALANCHE = "avalanche"
+    # Same kind of pure config carrier: scatter-pays tumble with multiplier
+    # orbs, TOTAL MULTIPLIER free spins, eagle jackpot wheel and its own
+    # multi-SKU buy (app/engine/scatter_tumble*.py, app/api/v1/spin_tumble.py).
+    SCATTER_TUMBLE = "scatter_tumble"
 
 
 class SimulationStatus(str, enum.Enum):

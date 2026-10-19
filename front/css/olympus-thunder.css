@@ -1,0 +1,601 @@
+/* Olympus Thunder (GDD-04) — 6x5 scatter-pays tumble.
+
+   Layout model: one design canvas per orientation (desktop 1920x1080,
+   portrait 1080x1700); every object is absolutely placed in design px inside
+   #stage and #stage is contain-scaled (--stage-scale, game.js:fitStage) and
+   pinned to the TOP of the screen, so the V3 bar never covers the reels.
+   Behind the stage the scene is layered for parallax: sky (base / FS
+   crossfade) -> Spine clouds + lightning (#fxBack) -> marble temple.
+
+   Timings that JS waits on are mirrored as constants in board.js (FALL_MS,
+   BURST_MS, ...). Change both together. */
+
+:root {
+  --navy: #16213e;
+  --navy-deep: #0b1026;
+  --marble: #e8e1d0;
+  --gold: #f5b400;
+  --gold-lt: #ffd75a;
+  --cyan: #9fe8ff;
+  --violet: #a46bff;
+
+  --design-w: 1920px;
+  --design-h: 1080px;
+  --stage-scale: 1;
+
+  /* grid: 6 x 5 square cells (desktop) */
+  --cell: 126px;
+  --cols: 6;
+  --rows: 5;
+}
+
+* { box-sizing: border-box; }
+html, body { overflow: hidden; }
+body {
+  margin: 0;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--navy-deep);
+  color: var(--marble);
+  font-family: 'Cinzel', Georgia, serif;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+button { font-family: inherit; }
+
+.to-catalog-btn {
+  position: fixed; top: 10px; right: 10px; z-index: 120;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 999px;
+  background: rgba(11, 16, 38, .72); border: 1px solid rgba(245, 180, 0, .45);
+  color: var(--gold-lt); font: 600 13px/1 'Cinzel', serif; text-decoration: none;
+  backdrop-filter: blur(4px);
+}
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+/* ---------- scene ---------- */
+.screen { position: fixed; inset: 0; overflow: hidden; background: var(--navy-deep); }
+.layer { position: absolute; }
+
+.sky { inset: -3%; z-index: 0; }
+.sky__img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  transition: opacity 1.4s ease;
+  animation: sky-drift 40s ease-in-out infinite alternate;
+}
+.sky__img--fs { opacity: 0; }
+.screen[data-mode="fs"] .sky__img--fs { opacity: 1; }
+@keyframes sky-drift {
+  from { transform: scale(1.02) translate3d(-0.6%, 0, 0); }
+  to   { transform: scale(1.06) translate3d(0.6%, -0.8%, 0); }
+}
+
+.spine-fx { inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.spine-fx--back { z-index: 1; }
+.spine-fx--mid { z-index: 5; }
+body.fx-over-dim .spine-fx--front { z-index: 44; }
+.spine-fx--front { position: fixed; z-index: 30; }
+.fly-layer, .screen-dim, .popup, .wheel-scene, .buy { position: fixed; }
+
+.temple {
+  z-index: 2; left: 0; top: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: 50% 100%;
+  pointer-events: none;
+  filter: drop-shadow(0 0 30px rgba(0, 0, 0, .45));
+}
+/* a lightning flash lights the marble for a beat */
+.flash {
+  inset: 0; z-index: 3; pointer-events: none; opacity: 0;
+  background: radial-gradient(120% 90% at 50% 10%, rgba(200, 240, 255, .55), rgba(159, 232, 255, .12) 45%, transparent 70%);
+  mix-blend-mode: screen;
+}
+.flash.is-on { animation: flash 520ms ease-out; }
+@keyframes flash {
+  0% { opacity: 0; } 8% { opacity: 1; } 20% { opacity: .25; } 30% { opacity: .85; } 100% { opacity: 0; }
+}
+
+.stage {
+  position: absolute; z-index: 10;
+  left: 50%; top: 0;
+  width: var(--design-w); height: var(--design-h);
+  transform: translateX(-50%) scale(var(--stage-scale));
+  transform-origin: 50% 0;
+}
+.obj { position: absolute; }
+
+/* ---------- objects: desktop placement ---------- */
+.zeus   { left: -30px; top: 210px; width: 700px; height: 900px; }
+.zeus__fallback { width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; }
+body.spine-zeus .zeus__fallback { visibility: hidden; }
+.logo   { left: 60px;  top: 6px;   width: 520px; filter: drop-shadow(0 8px 18px rgba(0, 0, 0, .55)); }
+body.spine-logo .logo { visibility: hidden; }
+
+.jackpots { left: 722px; top: 10px; width: 756px; height: 74px; display: flex; gap: 8px; }
+.win-plate { left: 910px; top: 66px; width: 380px; height: 154px; z-index: 3; }
+.board  { left: 698px; top: 202px; width: 804px; height: 678px; z-index: 2; }
+.medallion { left: 1532px; top: 236px; width: 236px; height: 295px; }
+.fs-counter { left: 1532px; top: 560px; width: 236px; height: 120px; }
+.buy-btn { left: 500px; top: 300px; width: 200px; height: 208px; z-index: 3; }
+
+/* ---------- jackpot plates ---------- */
+.jp { position: relative; flex: 1 1 0; height: 100%; }
+.jp img { width: 100%; height: 100%; object-fit: contain; }
+.jp__name, .jp__val {
+  position: absolute; left: 22%; right: 22%; text-align: center; white-space: nowrap;
+  text-shadow: 0 2px 0 #000, 0 0 10px rgba(0, 0, 0, .8);
+}
+.jp__name { top: 22%; font-size: 13px; letter-spacing: .14em; color: #fff; opacity: .9; }
+.jp__val { top: 43%; font-size: 22px; font-weight: 600; color: var(--gold-lt); }
+.jp[data-tier="mini"]  .jp__name { color: #9dffb0; }
+.jp[data-tier="minor"] .jp__name { color: #9fd0ff; }
+.jp[data-tier="major"] .jp__name { color: #d8b0ff; }
+.jp[data-tier="grand"] .jp__name { color: #ffb3a8; }
+.jp.is-hit { animation: jp-hit 900ms ease-in-out 3; }
+@keyframes jp-hit { 50% { transform: scale(1.12); filter: brightness(1.6) drop-shadow(0 0 18px var(--gold)); } }
+
+/* ---------- plates (hole = magenta cut, measured in ui/holes.json) ---------- */
+.win-plate img, .medallion img, .buy-btn img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.win-plate::before, .medallion::before {
+  /* dark enamel behind the transparent hole of the plate */
+  content: ''; position: absolute; z-index: -1; border-radius: 999px;
+  background: radial-gradient(ellipse at 50% 30%, #23305a, var(--navy-deep) 75%);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, .9);
+}
+.win-plate::before { left: 17%; right: 17%; top: 31%; bottom: 22%; }
+.win-plate__label, .win-plate__value {
+  position: absolute; left: 18%; right: 18%; text-align: center; white-space: nowrap;
+}
+.win-plate__label { top: 38%; font-size: 15px; letter-spacing: .12em; color: var(--marble); opacity: .85; transition: all .25s; }
+.win-plate__value {
+  top: 50%; font-size: 30px; font-weight: 600; line-height: 1;
+  background: linear-gradient(180deg, #fff6c8, var(--gold-lt) 45%, #e08a00);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .9));
+}
+.win-plate.has-value .win-plate__label { top: 32%; font-size: 12px; }
+.win-plate.is-bump .win-plate__value { animation: bump 300ms ease-out; }
+@keyframes bump { 40% { transform: scale(1.22); } }
+
+.medallion::before { left: 15%; right: 15%; top: 32%; bottom: 13%; border-radius: 50%; }
+.medallion__label { position: absolute; left: 0; right: 0; top: 41%; text-align: center; font-size: 13px; letter-spacing: .1em; line-height: 1.15; opacity: .85; }
+.medallion__value {
+  position: absolute; left: 0; right: 0; top: 56%; text-align: center;
+  font-size: 54px; font-weight: 600; line-height: 1;
+  background: linear-gradient(180deg, #fff, var(--gold-lt) 50%, #f08c00);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, .85)) drop-shadow(0 0 14px rgba(245, 180, 0, .5));
+}
+.medallion.is-hit { animation: medal-hit 650ms cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes medal-hit { 30% { transform: scale(1.18); filter: brightness(1.7); } }
+
+.fs-counter {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(36, 18, 70, .85), rgba(11, 16, 38, .92));
+  border: 2px solid rgba(245, 180, 0, .7);
+  box-shadow: 0 0 0 4px rgba(11, 16, 38, .6), 0 10px 30px rgba(0, 0, 0, .5), inset 0 0 20px rgba(164, 107, 255, .35);
+}
+.fs-counter__label { font-size: 15px; letter-spacing: .16em; color: var(--marble); }
+.fs-counter__value { font-size: 52px; font-weight: 600; color: var(--gold-lt); line-height: 1.05; text-shadow: 0 3px 0 #000; }
+
+.medallion, .fs-counter { opacity: 0; transform: scale(.7); transition: opacity .5s, transform .5s cubic-bezier(.2, 1.5, .4, 1); pointer-events: none; }
+.screen[data-mode="fs"] .medallion, .screen[data-mode="fs"] .fs-counter { opacity: 1; transform: none; }
+
+.buy-btn { border: 0; padding: 0; background: none; cursor: pointer; transition: transform .15s, opacity .3s, filter .2s; }
+.buy-btn::before {
+  content: ''; position: absolute; left: 17%; right: 17%; top: 10%; bottom: 27%; border-radius: 50%; z-index: -1;
+  background: radial-gradient(circle at 50% 35%, #3a2a00, #120c00 70%);
+  box-shadow: inset 0 0 18px rgba(245, 180, 0, .5);
+}
+.buy-btn__label {
+  position: absolute; left: 0; right: 0; top: 28%; text-align: center;
+  font-size: 26px; font-weight: 600; line-height: 1.05; color: var(--gold-lt);
+  text-shadow: 0 2px 0 #000, 0 0 12px rgba(245, 180, 0, .6);
+}
+.buy-btn:hover { transform: scale(1.05); filter: brightness(1.15); }
+.buy-btn:active { transform: scale(.96); }
+.buy-btn[disabled], .screen[data-mode="fs"] .buy-btn { opacity: 0; pointer-events: none; }
+body.is-busy .buy-btn { filter: grayscale(.6) brightness(.7); pointer-events: none; }
+
+/* ---------- board ---------- */
+/* frame PNG = board + its own ornament margin (scripts/olympus_thunder_build.py:_frame) */
+.board__frame { position: absolute; left: -90px; top: -90px; width: calc(100% + 180px); height: calc(100% + 180px); z-index: 2; pointer-events: none; }
+.board::before {
+  /* glass behind the symbols: lets the temple read through, keeps symbols legible */
+  content: ''; position: absolute; z-index: 0;
+  left: 24px; right: 24px; top: 24px; bottom: 24px;
+  background: linear-gradient(180deg, rgba(11, 16, 38, .62), rgba(22, 33, 62, .48));
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, .7);
+  backdrop-filter: blur(3px);
+}
+.screen[data-mode="fs"] .board::before { background: linear-gradient(180deg, rgba(40, 14, 70, .6), rgba(22, 16, 52, .5)); }
+.board__grid {
+  position: absolute; z-index: 1;
+  left: 24px; top: 24px;
+  width: calc(var(--cell) * var(--cols)); height: calc(var(--cell) * var(--rows));
+  overflow: hidden;
+}
+.board__fx { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+
+.cell {
+  position: absolute; left: 0; top: 0;
+  width: var(--cell); height: var(--cell);
+  will-change: transform;
+}
+.cell__img { position: absolute; inset: 3%; width: 94%; height: 94%; object-fit: contain; transition: filter .2s; }
+.cell.is-dim .cell__img { filter: brightness(.38) saturate(.5); }
+.cell.is-win .cell__img { animation: sym-win 620ms ease-in-out infinite; filter: drop-shadow(0 0 10px rgba(255, 215, 90, .9)); }
+@keyframes sym-win { 50% { transform: scale(1.12); } }
+.cell.is-pop .cell__img { animation: sym-pop 260ms ease-in forwards; }
+@keyframes sym-pop { to { transform: scale(1.35); opacity: 0; filter: brightness(3) drop-shadow(0 0 20px #9fe8ff); } }
+body.spine-symbols .cell.is-spine .cell__img { visibility: hidden; }
+.cell.is-spine-orb .cell__img, .cell.is-spine-orb .cell__num { visibility: hidden; }
+.cell.is-land .cell__img { animation: land 240ms ease-out; }
+@keyframes land { 0% { transform: scaleY(.86) translateY(5%); } 60% { transform: scaleY(1.04); } }
+
+/* orb: art + number (Cinzel), value colour by size */
+.cell__num {
+  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+  text-align: center; font-weight: 600; font-size: 40px; line-height: 1;
+  color: #fff; letter-spacing: -.02em;
+  -webkit-text-stroke: 2px #3a1c00;
+  paint-order: stroke fill;
+  text-shadow: 0 3px 0 #2a1400, 0 0 12px rgba(255, 160, 0, .9);
+  pointer-events: none;
+}
+.cell__num.is-big { font-size: 36px; color: #fff4c0; text-shadow: 0 3px 0 #2a1400, 0 0 16px #ff3d00; }
+.cell__num.is-huge { font-size: 34px; color: #fff; text-shadow: 0 3px 0 #2a0040, 0 0 18px #c040ff, 0 0 30px #c040ff; }
+.cell.is-orb .cell__img { animation: orb-breathe 2.4s ease-in-out infinite; }
+@keyframes orb-breathe { 50% { transform: scale(1.05); filter: brightness(1.15); } }
+.cell.is-orb-fade .cell__img, .cell.is-orb-fade .cell__num { transition: opacity .5s, filter .5s; opacity: .35; filter: grayscale(1); }
+
+/* flying orb value (collect) */
+.fly-layer { inset: 0; z-index: 31; pointer-events: none; }
+.fly {
+  position: absolute; left: 0; top: 0; pointer-events: none;
+  font-weight: 600; color: #fff; white-space: nowrap;
+  -webkit-text-stroke: 2px #3a1c00; paint-order: stroke fill;
+  text-shadow: 0 0 14px #ffb000, 0 0 30px rgba(255, 176, 0, .6);
+}
+
+/* step / series counter banners over the grid */
+.combo {
+  position: absolute; z-index: 4; left: 50%; top: 50%;
+  transform: translate(-50%, -50%) scale(.6); opacity: 0;
+  font-size: 64px; font-weight: 600; white-space: nowrap; color: #fff;
+  -webkit-text-stroke: 3px #3a1c00; paint-order: stroke fill;
+  text-shadow: 0 0 20px #ffb000, 0 6px 0 #2a1400;
+  pointer-events: none;
+}
+.combo.is-on { animation: combo 1200ms ease-out forwards; }
+@keyframes combo {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.5); }
+  18% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  30% { transform: translate(-50%, -50%) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -62%) scale(1); }
+}
+
+/* ---------- dim / popup ---------- */
+.screen-dim { inset: 0; z-index: 40; background: rgba(4, 6, 16, .78); opacity: 0; pointer-events: none; transition: opacity .35s; }
+.screen-dim.is-on { opacity: 1; pointer-events: auto; }
+.screen-dim.is-black { background: #000; }
+
+.popup {
+  inset: 0; z-index: 45; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2vmin; cursor: pointer;
+}
+.popup[hidden] { display: none; }
+.popup__rays {
+  position: absolute; left: 50%; top: 46%; width: 160vmax; height: 160vmax;
+  margin: -80vmax 0 0 -80vmax; pointer-events: none; opacity: .55;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 215, 90, .22) 0 6deg, transparent 6deg 18deg);
+  -webkit-mask: radial-gradient(circle, #000 0, transparent 55%); mask: radial-gradient(circle, #000 0, transparent 55%);
+  animation: rays 24s linear infinite;
+}
+.popup[data-tier="fs"] .popup__rays, .popup[data-tier="super"] .popup__rays { background: repeating-conic-gradient(from 0deg, rgba(190, 120, 255, .25) 0 6deg, transparent 6deg 18deg); }
+@keyframes rays { to { transform: rotate(360deg); } }
+.popup__title { position: relative; width: min(80vw, 860px); max-height: 22vh; object-fit: contain; filter: drop-shadow(0 10px 30px rgba(0, 0, 0, .7)); }
+.popup.is-in .popup__title { animation: title-in 700ms cubic-bezier(.2, 1.6, .35, 1); }
+@keyframes title-in { 0% { transform: scale(.2) rotate(-6deg); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.popup__sub { position: relative; font-size: clamp(16px, 2.6vmin, 30px); letter-spacing: .14em; color: var(--marble); text-shadow: 0 2px 0 #000; }
+.popup__amount {
+  position: relative; font-size: clamp(44px, 11vmin, 140px); font-weight: 600; line-height: 1;
+  background: linear-gradient(180deg, #fffbe0, var(--gold-lt) 40%, #e98a00 75%, #ffcf4a);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 5px 0 #3a1c00) drop-shadow(0 0 30px rgba(255, 180, 0, .55));
+}
+.popup__hint { position: relative; font-size: 13px; letter-spacing: .2em; opacity: 0; transition: opacity .4s; color: var(--marble); }
+.popup.can-close .popup__hint { opacity: .6; }
+
+/* ---------- wheel ---------- */
+.wheel-scene { inset: 0; z-index: 46; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2vmin; }
+.wheel-scene[hidden] { display: none; }
+.wheel-scene__title { width: min(64vw, 520px); max-height: 15vh; object-fit: contain; filter: drop-shadow(0 8px 20px rgba(0, 0, 0, .7)); animation: title-in 700ms cubic-bezier(.2, 1.6, .35, 1); }
+.wheel { position: relative; width: min(64vmin, 600px); aspect-ratio: 1; margin-top: 4vmin; }
+.wheel__disc { position: absolute; inset: 0; will-change: transform; }
+.wheel__disc img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 20px 40px rgba(0, 0, 0, .7)); }
+.wheel__labels { position: absolute; inset: 0; }
+.wheel__label {
+  position: absolute; left: 50%; top: 50%; width: 0; height: 0;
+}
+.wheel__label span {
+  position: absolute; left: 0; top: 0; transform: translate(-50%, -50%);
+  font-size: clamp(11px, 2.3vmin, 20px); font-weight: 600; white-space: nowrap; color: #fff;
+  text-shadow: 0 2px 0 #000, 0 0 8px rgba(0, 0, 0, .9); letter-spacing: .05em;
+}
+.wheel__label.is-win span { color: var(--gold-lt); animation: bump 500ms ease-in-out 4; }
+.wheel__pointer { position: absolute; left: 50%; top: -9%; width: 15%; transform: translateX(-50%); filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .8)); z-index: 2; }
+
+/* ---------- buy window ---------- */
+.buy { inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(4, 6, 16, .82); }
+.buy[hidden] { display: none; }
+.buy__panel {
+  position: relative; padding: 2.4vmin 3vmin 3vmin;
+  border-radius: 20px; text-align: center;
+  background: linear-gradient(180deg, #1b2547, var(--navy-deep));
+  border: 2px solid rgba(245, 180, 0, .65);
+  box-shadow: 0 0 0 6px rgba(11, 16, 38, .8), 0 30px 80px rgba(0, 0, 0, .7), inset 0 0 40px rgba(245, 180, 0, .12);
+  max-width: 96vw;
+}
+.buy__title { margin: 0 0 1.6vmin; font-size: clamp(22px, 4.4vmin, 44px); letter-spacing: .12em; color: var(--gold-lt); text-shadow: 0 3px 0 #000; }
+.buy__close { position: absolute; right: 10px; top: 6px; border: 0; background: none; color: var(--marble); font-size: 34px; cursor: pointer; opacity: .7; }
+.buy__cards { display: flex; gap: 2vmin; justify-content: center; }
+.card {
+  position: relative; width: min(24vw, 30vh, 250px); aspect-ratio: 376 / 720; border: 0; padding: 0; background: none; cursor: pointer;
+  transition: transform .2s, filter .2s;
+}
+.card img { width: 100%; height: 100%; object-fit: contain; }
+.card:hover { transform: translateY(-6px) scale(1.03); filter: brightness(1.12) drop-shadow(0 0 18px rgba(245, 180, 0, .45)); }
+.card[disabled] { filter: grayscale(1) brightness(.5); cursor: not-allowed; transform: none; }
+.card__text { position: absolute; left: 12%; right: 12%; bottom: 9.5%; height: 13%; display: flex; flex-direction: column; justify-content: center; }
+.card__name { font-size: clamp(10px, 1.9vmin, 17px); font-weight: 600; color: #fff; letter-spacing: .04em; line-height: 1.1; }
+.card__price { font-size: clamp(13px, 2.6vmin, 24px); font-weight: 600; color: var(--gold-lt); line-height: 1.2; }
+.card__desc { margin-top: .8vmin; font-family: 'Baloo 2', system-ui, sans-serif; font-size: clamp(10px, 1.6vmin, 14px); color: var(--marble); opacity: .8; line-height: 1.25; max-width: 100%; }
+.buy__bet { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 2vmin; }
+.buy__step { width: 42px; height: 42px; border-radius: 50%; border: 2px solid rgba(245, 180, 0, .7); background: #0b1026; color: var(--gold-lt); font-size: 24px; cursor: pointer; }
+.buy__bet-val { display: flex; flex-direction: column; min-width: 150px; }
+.buy__bet-val span { font-size: 12px; letter-spacing: .2em; opacity: .7; }
+.buy__bet-val b { font-size: 26px; color: #fff; }
+.buy__confirm { position: absolute; inset: 0; border-radius: 20px; background: rgba(6, 9, 22, .94); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 20px; }
+.buy__confirm[hidden] { display: none; }
+.buy__confirm p { margin: 0; font-size: clamp(16px, 3vmin, 26px); line-height: 1.4; }
+.buy__confirm-row { display: flex; gap: 16px; }
+.buy__yes, .buy__no { min-width: 150px; padding: 14px 20px; border-radius: 999px; font-size: 18px; font-weight: 600; cursor: pointer; letter-spacing: .08em; }
+.buy__yes { border: 0; color: #2a1400; background: linear-gradient(180deg, #ffe58a, #f5b400 60%, #c77d00); box-shadow: 0 4px 0 #6b3d00, 0 0 20px rgba(245, 180, 0, .5); }
+.buy__no { border: 2px solid rgba(232, 225, 208, .4); background: transparent; color: var(--marble); }
+
+/* ---------- info / paytable ---------- */
+.info-popup { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; background: rgba(4, 6, 16, .86); }
+.info-popup[hidden] { display: none; }
+.info-popup__panel {
+  position: relative; width: min(94vw, 900px); max-height: 86vh; overflow: auto; padding: 26px 28px;
+  border-radius: 18px; background: linear-gradient(180deg, #1b2547, var(--navy-deep));
+  border: 2px solid rgba(245, 180, 0, .55);
+  font-family: 'Baloo 2', system-ui, sans-serif; font-size: 15px; line-height: 1.45;
+}
+.info-popup__close { position: absolute; right: 12px; top: 6px; border: 0; background: none; color: var(--marble); font-size: 32px; cursor: pointer; }
+.info-popup h2 { font-family: 'Cinzel', serif; color: var(--gold-lt); margin: 18px 0 8px; font-size: 20px; letter-spacing: .08em; }
+.info-popup h2:first-child { margin-top: 0; }
+.pt { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.pt__row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 10px; background: rgba(255, 255, 255, .04); }
+.pt__row img { width: 56px; height: 56px; object-fit: contain; flex: none; }
+.pt__pays { display: grid; grid-template-columns: auto auto; column-gap: 8px; font-size: 13px; }
+.pt__pays b { color: var(--gold-lt); }
+.info-popup table { border-collapse: collapse; margin: 6px 0; }
+.info-popup td, .info-popup th { padding: 3px 12px 3px 0; text-align: left; }
+
+/* ---------- portrait ---------- */
+@media (orientation: portrait) {
+  :root { --design-w: 1080px; --design-h: 1700px; --cell: 158px; }
+  .logo      { left: 280px; top: 0;     width: 520px; }
+  .jackpots  { left: 40px;  top: 270px; width: 1000px; height: 92px; gap: 10px; }
+  .jp__name  { font-size: 16px; }
+  .jp__val   { font-size: 28px; }
+  .win-plate { left: 330px; top: 352px; width: 420px; height: 171px; }
+  .win-plate__label { font-size: 17px; }
+  .win-plate__value { font-size: 36px; }
+  .board     { left: 40px;  top: 508px; width: 1000px; height: 842px; }
+  .board::before { left: 26px; right: 26px; top: 26px; bottom: 26px; }
+  .board__grid { left: 26px; top: 26px; }
+  .board__frame { left: -104px; top: -104px; width: calc(100% + 208px); height: calc(100% + 208px); }
+  .cell__num { font-size: 50px; }
+  .cell__num.is-big, .cell__num.is-huge { font-size: 44px; }
+  .zeus      { left: -30px; top: 1180px; width: 560px; height: 840px; }
+  .buy-btn   { left: 790px; top: 1370px; width: 230px; height: 240px; }
+  .buy-btn__label { font-size: 30px; }
+  .medallion { left: 800px; top: 1350px; width: 220px; height: 275px; }
+  .fs-counter { left: 520px; top: 1400px; width: 250px; height: 140px; }
+  .combo { font-size: 80px; }
+}
+
+/* Rares read 10% bigger than the rest (product request). `scale` composes
+   with the win/land/pop keyframes, which all animate `transform`. */
+.cell[data-code="helmet"] .cell__img, .cell[data-code="lyre"] .cell__img,
+.cell[data-code="amphora"] .cell__img, .cell[data-code="wreath"] .cell__img { scale: 1.1; }
+
+/* ---------- layout v2 (product): board centred on the canvas, jackpots as a
+   column on the right, Buy Bonus under them; Zeus steps further left. ---------- */
+@media (orientation: landscape) {
+  .zeus      { left: -150px; }
+  .logo      { left: 36px; width: 410px; }
+  .board     { left: 558px; }
+  .win-plate { left: 770px; }
+  .jackpots  { left: 1480px; top: 120px; width: 330px; height: 432px; flex-direction: column; gap: 12px; }
+  .jp        { flex: 0 0 99px; height: 99px; min-height: 0; }
+  .jp img    { height: 100%; }
+  .jp__name  { font-size: 17px; top: 20%; }
+  .jp__val   { font-size: 30px; top: 42%; }
+  .buy-btn   { left: 1545px; top: 610px; }
+  .medallion { left: 1527px; top: 560px; }
+  .fs-counter { left: 1527px; top: 870px; }
+}
+
+/* the closed V3 menu flyout is an invisible box over the board's lower-left
+   cell / the Buy button: only its buttons should ever take clicks */
+.v3-bar .v3-menu__flyout { pointer-events: none; }
+
+/* portrait v2 (product: "very broken"): the frame is drawn for a 1000-wide
+   board with a 104px ornament margin and bled off both screen edges. A 136px
+   cell keeps board + frame inside the 1080 canvas; the frame margin is given
+   in % of the board so it scales with it. */
+@media (orientation: portrait) {
+  :root { --cell: 136px; }
+  .board        { left: 106px; top: 548px; width: 868px; height: 732px; }
+  .board__frame { left: -10.4%; top: -12.35%; width: 120.8%; height: 124.7%; }
+  .win-plate    { top: 360px; }
+  .zeus         { left: -60px; top: 1250px; width: 520px; height: 780px; }
+  .buy-btn      { left: 800px; top: 1395px; width: 220px; height: 229px; }
+  .medallion    { left: 800px; top: 1370px; width: 220px; height: 275px; }
+  .fs-counter   { left: 470px; top: 1430px; width: 260px; height: 140px; }
+}
+
+/* Zeus is a full-figure rig now (hips, legs, cloak tail): he stands on the
+   temple floor in front of the columns; the box keeps the rig's 0.565 aspect. */
+@media (orientation: landscape) {
+  .zeus { left: 0px; top: 150px; width: 508px; height: 900px; }
+}
+@media (orientation: portrait) {
+  .zeus { left: -10px; top: 1080px; width: 400px; height: 708px; }
+}
+
+/* the logo sits in front of everything on the stage (frame included) */
+.logo { z-index: 20; }
+
+/* ---------- hero (product: "make him look perfect, animation can wait") ----------
+   One coherent full-figure painting instead of the parts rig (the parts came
+   from different generations and never matched). Life comes from a slow
+   breath from the feet and the lightning layer (hero_glow.webp: the bolt,
+   the palm sparks and their halo cut from the same painting) flickering on
+   top; game.js still sets #zeus[data-anim] for the reactions. */
+.zeus__fallback, .zeus__glow {
+  position: absolute; left: 0; bottom: 0; width: 100%; height: 100%;
+  object-fit: contain; object-position: 50% 100%; pointer-events: none;
+  transform-origin: 50% 100%;
+}
+.zeus__fallback {
+  visibility: visible !important;
+  filter: drop-shadow(0 18px 24px rgba(0, 0, 0, .55)) drop-shadow(0 0 30px rgba(120, 190, 255, .18));
+  animation: hero-breathe 5.5s ease-in-out infinite;
+}
+.zeus__glow { opacity: .55; animation: hero-breathe 5.5s ease-in-out infinite, bolt-flicker 2.6s steps(1, end) infinite; }
+@keyframes hero-breathe { 50% { transform: scale(1.006, 1.012); } }
+@keyframes bolt-flicker {
+  0% { opacity: .5; } 7% { opacity: .9; } 9% { opacity: .35; } 12% { opacity: .8; }
+  30% { opacity: .55; } 58% { opacity: .7; } 60% { opacity: .4; } 64% { opacity: .85; } 80% { opacity: .55; }
+}
+/* reactions: the lightning flares, Zeus rises a touch */
+.zeus[data-anim="orb"] .zeus__glow,
+.zeus[data-anim="big_mult"] .zeus__glow,
+.zeus[data-anim="fs"] .zeus__glow,
+.zeus[data-anim="jackpot"] .zeus__glow,
+.zeus[data-anim="bigwin"] .zeus__glow { animation: hero-flare 1.4s ease-out; }
+@keyframes hero-flare { 0% { opacity: 1; filter: brightness(1.8); } 100% { opacity: .55; filter: none; } }
+.zeus[data-anim="big_mult"] .zeus__fallback,
+.zeus[data-anim="fs"] .zeus__fallback,
+.zeus[data-anim="jackpot"] .zeus__fallback,
+.zeus[data-anim="bigwin"] .zeus__fallback { animation: hero-rise 1.4s cubic-bezier(.22, 1, .36, 1); }
+@keyframes hero-rise { 30% { transform: translateY(-10px) scale(1.02); filter: brightness(1.15) drop-shadow(0 0 40px rgba(159, 232, 255, .55)); } }
+
+@media (orientation: landscape) {
+  .zeus { left: 18px; top: 168px; width: 500px; height: 888px; }
+}
+@media (orientation: portrait) {
+  .zeus { left: -36px; top: 1180px; width: 420px; height: 746px; z-index: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zeus__fallback, .zeus__glow { animation: none; }
+}
+
+/* ---------- portrait v3 (product review): one composition, no dead zones ----
+   Zeus rises from behind the board at top-left (his legs are hidden by the
+   board), logo + jackpots fill the band to his right, the win counter sits on
+   the frame's crest, the board takes the full width, Buy / multiplier make a
+   compact bottom row. Canvas shortened to 1560 so nothing floats. */
+@media (orientation: portrait) {
+  :root { --design-h: 1560px; --cell: 140px; }
+  .zeus       { left: -24px; top: -30px; width: 470px; height: 835px; z-index: 0; }
+  .logo       { left: 430px; top: 4px; width: 610px; }
+  .jackpots   { left: 440px; top: 236px; width: 600px; height: 168px;
+                display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+  .jp         { height: 79px; }
+  .jp__name   { font-size: 15px; }
+  .jp__val    { font-size: 26px; }
+  .board      { left: 94px; top: 500px; width: 892px; height: 752px; }
+  .board::before { left: 26px; right: 26px; top: 26px; bottom: 26px; }
+  .board__grid { left: 26px; top: 26px; }
+  .board__frame { left: -10.4%; top: -12.35%; width: 120.8%; height: 124.7%; }
+  .win-plate  { left: 330px; top: 360px; width: 420px; height: 171px; }
+  .buy-btn    { left: 60px; top: 1330px; width: 210px; height: 219px; }
+  .medallion  { left: 60px; top: 1300px; width: 200px; height: 250px; }
+  .fs-counter { left: 760px; top: 1350px; width: 260px; height: 140px; }
+}
+
+@media (orientation: portrait) {
+  :root { --design-h: 1580px; }
+  .logo       { left: 480px; top: 0; width: 520px; }
+  .jackpots   { left: 450px; top: 268px; width: 590px; height: 156px; gap: 8px 14px; }
+  .jp         { height: 74px; }
+  .board      { top: 548px; }
+  .win-plate  { left: 345px; top: 418px; width: 390px; height: 159px; }
+  .buy-btn    { left: 70px; top: 1398px; width: 176px; height: 183px; }
+  .buy-btn__label { font-size: 22px; }
+  .medallion  { left: 60px; top: 1360px; width: 180px; height: 225px; }
+  .fs-counter { left: 780px; top: 1410px; width: 240px; height: 130px; }
+}
+
+/* sit the hero in the storm light: slight cool grade + a cyan rim from behind
+   and a contact shadow on the step (desktop) */
+.zeus__fallback {
+  filter: saturate(.92) contrast(1.04)
+          drop-shadow(-6px -4px 10px rgba(140, 210, 255, .28))
+          drop-shadow(0 22px 26px rgba(0, 0, 0, .6));
+}
+.zeus::after {
+  content: ''; position: absolute; left: 10%; right: 6%; bottom: -2%; height: 7%; z-index: -1;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, .65), transparent);
+}
+@media (orientation: portrait) { .zeus::after { display: none; } }
+
+/* frame rebuilt from the second kit (scripts/olympus_thunder_build.py:_frame2):
+   the PNG is board + its own margin, offsets given in % of the board */
+.board__frame { left: -7.84%; top: -12.09%; width: 115.67%; height: 124.19%; }
+@media (orientation: portrait) {
+  .board__frame { left: -7.62%; top: -11.84%; width: 115.25%; height: 123.67%; }
+}
+
+/* desktop rule (product): the framed board is centred and takes 70-80% of
+   the screen height — here ~75% (frame 929 of the 1080 canvas) */
+@media (orientation: landscape) {
+  :root { --cell: 140px; }
+  .board     { left: 516px; top: 166px; width: 888px; height: 748px; }
+  .win-plate { left: 780px; top: 26px; }
+}
+
+/* jackpot plates (product: "numbers must fit"): boxes keep the plate art's
+   2.5:1 ratio so the value sits inside the painted panel, and they are big */
+.jp img { object-fit: fill; }
+@media (orientation: landscape) {
+  .jackpots { left: 1488px; top: 96px; width: 320px; height: 548px; gap: 12px; }
+  .jp       { flex: 0 0 128px; height: 128px; width: 320px; }
+  .jp__name { font-size: 18px; top: 21%; }
+  .jp__val  { font-size: 33px; top: 41%; left: 20%; right: 20%; }
+  .buy-btn  { left: 1545px; top: 668px; }
+  .medallion { left: 1527px; top: 660px; }
+}
+@media (orientation: portrait) {
+  /* a full-width row of four plates between the header and the board */
+  :root { --design-h: 1710px; }
+  .zeus       { top: -40px; height: 760px; width: 428px; left: -10px; }
+  .logo       { left: 470px; top: 0; width: 540px; }
+  .win-plate  { left: 540px; top: 262px; width: 400px; height: 163px; }
+  .jackpots   { left: 24px; top: 430px; width: 1032px; height: 104px;
+                display: flex; flex-direction: row; gap: 12px; justify-content: space-between; }
+  .jp         { flex: 0 0 249px; width: 249px; height: 100px; }
+  .jp__name   { font-size: 15px; top: 20%; }
+  .jp__val    { font-size: 25px; top: 42%; left: 20%; right: 20%; }
+  .board      { top: 660px; }
+  .buy-btn    { left: 70px; top: 1512px; }
+  .medallion  { left: 60px; top: 1480px; }
+  .fs-counter { left: 780px; top: 1530px; }
+}

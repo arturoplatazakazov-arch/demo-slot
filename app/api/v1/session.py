@@ -7,7 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
 from app.api.v1 import schemas
-from app.api.v1.loaders import bet_config_out, load_active_config, load_session
+from app.api.v1.loaders import bet_config_out, find_feature_config, load_active_config, load_session
+from app.api.v1.spin_tumble import tumble_rules_out
 from app.core.config import get_settings
 from app.models.game import Game
 from app.models.session import Session
@@ -70,6 +71,11 @@ async def start_session(
         ],
         free_spins_trigger=free_spins_trigger,
         hold_and_win_trigger=hold_and_win_trigger,
+        game_rules=(
+            tumble_rules_out(game_config, tumble_config)
+            if (tumble_config := find_feature_config(game_config, "scatter_tumble")) is not None
+            else None
+        ),
     )
 
 

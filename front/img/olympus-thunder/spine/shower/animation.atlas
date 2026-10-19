@@ -1,0 +1,12 @@
+animation.webp
+size:407,262
+filter:Linear,Linear
+pma:true
+glint
+bounds:0,0,240,262
+leaf
+bounds:242,0,72,79
+coin
+bounds:316,0,67,67
+edge
+bounds:385,0,20,63

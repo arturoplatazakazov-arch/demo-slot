@@ -27,7 +27,10 @@ const READY_CODES = new Set([
   'neon-reels', 'party-of-goods', 'sugar-galaxy', 'wild-western-story',
   'multi-fruits-story', 'lucky-joker-3h3', 'gangsta-casino',
 ]);
-const ILLUMINATOR_CODES = new Set(['gold-of-baku', 'gold-of-baku-2', 'volt-coins', 'neon-joker-spins', 'savannah-kings']);
+const ILLUMINATOR_CODES = new Set([
+  'gold-of-baku', 'gold-of-baku-2', 'volt-coins', 'neon-joker-spins', 'savannah-kings',
+  'olympus-thunder', 'olympus-thunder-v2', 'olympus-thunder-v3',
+]);
 
 // Illuminator games shipped in several front-end layouts over one backend
 // game get their own sub-section (heading + one card per variant) instead of
@@ -98,6 +101,9 @@ function njsEntries(entry) {
 }
 
 const isUnicornGame = (code) => /uniqorn|unicorn/.test(code);
+// Olympus Thunder and its design variants (olympus-thunder-v2, -v3, ...): a
+// subsection of Illuminator (#olympusGrid), original first.
+const isOlympusGame = (code) => /^olympus-thunder(-v\d+)?$/.test(code);
 
 const PLAY_ICON = '<svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4Z" fill="currentColor"/></svg>';
 const ADMIN_ICON = '<svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2-1.5-2-3.4-2.4 1a7.7 7.7 0 0 0-1.7-1L15 3h-4l-.3 2.5a7.7 7.7 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.5 7.5 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a7.7 7.7 0 0 0 1.7 1L11 21h4l.3-2.5a7.7 7.7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="13" cy="12" r="2.6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
@@ -174,13 +180,18 @@ async function renderCatalog() {
   const spinFactoryGrid = document.getElementById('spinFactoryGrid');
   const devGrid = document.getElementById('devGrid');
   const njsGrid = document.getElementById('njsGrid');
+  const olympusGrid = document.getElementById('olympusGrid');
   const grids = [readyGrid, illuminatorGrid, spinFactoryGrid, devGrid].filter(Boolean);
 
   try {
     const entries = (await apiGet('/catalog')).reverse();
     const ready = entries.filter((e) => READY_CODES.has(e.code));
-    const illuminator = entries.filter((e) => ILLUMINATOR_CODES.has(e.code) && !(njsGrid && e.code === NJS_CODE));
+    const illuminator = entries.filter((e) => ILLUMINATOR_CODES.has(e.code) && !(njsGrid && e.code === NJS_CODE)
+      && !(olympusGrid && isOlympusGame(e.code)));
     const njs = njsGrid ? entries.filter((e) => e.code === NJS_CODE).flatMap(njsEntries) : [];
+    // Olympus Thunder and its design variants: Illuminator's own subsection
+    // (#olympusGrid), v1 first; pages without one keep them in Illuminator
+    const olympus = olympusGrid ? entries.filter((e) => isOlympusGame(e.code)).sort((a, b) => a.code.localeCompare(b.code)) : [];
     const spinFactory = entries.filter((e) => SPIN_FACTORY_CODES.has(e.code));
     const dev = entries.filter((e) => !READY_CODES.has(e.code)
       && !ILLUMINATOR_CODES.has(e.code) && !SPIN_FACTORY_CODES.has(e.code));
@@ -194,6 +205,7 @@ async function renderCatalog() {
       }
     }
     if (njsGrid) for (const entry of njs) appendCard(njsGrid, entry);
+    if (olympusGrid) for (const entry of olympus) appendCard(olympusGrid, entry);
     if (spinFactoryGrid) for (const entry of spinFactory) appendCard(spinFactoryGrid, entry);
     if (devGrid) for (const entry of dev) appendCard(devGrid, entry);
   } catch (err) {
@@ -204,10 +216,12 @@ async function renderCatalog() {
 
   if (readyGrid) toggleSection('readySection', readyGrid);
   if (njsGrid) toggleSection('njsSubsection', njsGrid);
+  if (olympusGrid) toggleSection('olympusSection', olympusGrid);
   if (illuminatorGrid) {
     toggleSection('illuminatorSection', illuminatorGrid);
     // секция видна, если есть хотя бы подкатегория NJS
     if (njsGrid && njsGrid.children.length) document.getElementById('illuminatorSection').hidden = false;
+    if (olympusGrid && olympusGrid.children.length) document.getElementById('illuminatorSection').hidden = false;
   }
   if (spinFactoryGrid) toggleSection('spinFactorySection', spinFactoryGrid);
   if (devGrid) toggleSection('devSection', devGrid);

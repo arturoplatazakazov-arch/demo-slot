@@ -1,0 +1,761 @@
+/* Olympus Thunder — design variant 3 "Noir / black-figure".
+
+   Same game, math and JS as v1 (olympus-thunder.css); its own art and
+   direction. Art style of the v3 pack: Attic black-figure vase painting —
+   glossy black figures on terracotta, incised lines, bone/cream and red
+   slip. The page is the glaze: warm near-black, almost monochrome; colour
+   comes from the symbols, terracotta and the ochre accent (lightning is an
+   incised ochre/white line, not a cyan glow). The grid has no frame art:
+   hairline dividers plus four ochre corner brackets. The win counter is
+   pure Cinzel (inscription capitals) and is the hero of the screen; in free
+   spins the total multiplier becomes a giant terracotta numeral. Zeus is a
+   static hero image animated in CSS (#zeus[data-anim], set by game.js).
+
+   Every image is variant-local: img/olympus-thunder/v3/ (placeholders and
+   generated art: scripts/olympus_thunder_v3_art.py). The v1 Spine rigs for
+   Zeus, logo and symbols are off (<body data-spine-*="off">).
+
+   Layout model (shared with v1, read by game.js): one design canvas per
+   orientation (desktop 1920x1080, portrait 1080x1700), every .obj is
+   absolutely placed in design px inside #stage, #stage is contain-scaled
+   (--stage-scale) and pinned to the top. Portrait reserves 170 css px for
+   the V3 bar; on desktop the bar overlays the bottom ~190 px, so nothing
+   that matters sits below y=880.
+
+   Timings JS waits on (board.js FALL_MS, BURST_MS, ...) are unchanged. */
+
+:root {
+  /* black-figure palette */
+  --ink: #0b0806;                              /* glaze black, warm */
+  --ink-2: #140d0a;                            /* panels */
+  --terracotta: #c2622d;                       /* the fired clay */
+  --terracotta-lt: #e07a3c;                    /* numerals on black, 6.6:1 */
+  --slip: #efe4cc;                             /* bone / cream slip: text */
+  --slip-red: #9e2f1c;                         /* red slip */
+  --ochre: #e0a640;                            /* accent: money, lightning */
+  --marble: var(--slip);
+  --hair: rgba(239, 228, 204, .085);           /* grid dividers */
+  --hair-strong: rgba(239, 228, 204, .2);
+  --bracket: rgba(224, 166, 64, .85);
+  --marble-dim: rgba(239, 228, 204, .74);      /* ~10:1 on --ink */
+  --accent: var(--ochre);
+
+  --ease-out: cubic-bezier(.16, 1, .3, 1);     /* expo-ish out */
+
+  --design-w: 1920px;
+  --design-h: 1080px;
+  --stage-scale: 1;
+
+  --cell: 120px;
+  --cols: 6;
+  --rows: 5;
+  --pad: 20px;                                 /* board inset around #grid */
+
+  /* z scale inside the fixed overlays (mirrors v1 values JS relies on) */
+  --z-fx-front: 30;
+  --z-fly: 31;
+  --z-dim: 40;
+  --z-fx-over-dim: 44;
+  --z-popup: 45;
+  --z-wheel: 46;
+  --z-buy: 50;
+  --z-catalog: 120;
+  --z-info: 200;
+}
+
+* { box-sizing: border-box; }
+html, body { overflow: hidden; }
+body {
+  margin: 0;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--ink);
+  color: var(--marble);
+  font-family: 'Cinzel', Georgia, serif;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+button { font-family: inherit; }
+:focus-visible { outline: 2px solid var(--ochre); outline-offset: 3px; }
+
+.to-catalog-btn {
+  position: fixed; top: 10px; right: 10px; z-index: var(--z-catalog);
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 2px;
+  background: rgba(11, 8, 6, .7); border: 1px solid var(--hair-strong);
+  color: var(--marble); font: 600 13px/1 'Cinzel', serif; letter-spacing: .06em; text-decoration: none;
+  transition: border-color .2s, color .2s;
+}
+.to-catalog-btn:hover { border-color: var(--ochre); color: #fff; }
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+/* ---------- scene ---------- */
+.screen { position: fixed; inset: 0; overflow: hidden; background: var(--ink); }
+.screen[data-mode="fs"] { --accent: var(--terracotta-lt); }
+.layer { position: absolute; }
+
+.sky { inset: -3%; z-index: 0; }
+.sky__img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  transition: opacity 1.6s ease;
+  animation: sky-drift 48s ease-in-out infinite alternate;
+}
+.sky__img--fs { opacity: 0; }
+.screen[data-mode="fs"] .sky__img--fs { opacity: 1; }
+@keyframes sky-drift {
+  from { transform: scale(1.02) translate3d(-0.5%, 0, 0); }
+  to   { transform: scale(1.05) translate3d(0.5%, -0.6%, 0); }
+}
+
+.spine-fx { inset: 0; width: 100%; height: 100%; pointer-events: none; }
+/* #fxBack / #fxMid stay empty here: the v1 painted clouds (Spine "bg") and
+   the Zeus/logo rigs are switched off on <body> (data-spine-*="off"). */
+.spine-fx--back { z-index: 1; }
+.spine-fx--mid { z-index: 5; }
+/* discharge bursts / strike / coin shower are art-neutral Spine FX drawn in
+   cold cyan-gold; fire them in the vase palette (ochre / terracotta). */
+.spine-fx--front { filter: sepia(.85) saturate(1.5) hue-rotate(-14deg); }
+body.fx-over-dim .spine-fx--front { z-index: var(--z-fx-over-dim); }
+.spine-fx--front { position: fixed; z-index: var(--z-fx-front); }
+.fly-layer, .screen-dim, .popup, .wheel-scene, .buy { position: fixed; }
+
+.temple { display: none; }
+/* lightning: the one loud moment of the screen */
+.flash {
+  inset: 0; z-index: 3; pointer-events: none; opacity: 0;
+  background: radial-gradient(110% 80% at 38% 18%, rgba(255, 236, 200, .5), rgba(224, 166, 64, .14) 42%, transparent 72%);
+  mix-blend-mode: screen;
+}
+.flash.is-on { animation: flash 560ms ease-out; }
+@keyframes flash {
+  0% { opacity: 0; } 6% { opacity: 1; } 18% { opacity: .2; } 28% { opacity: .9; } 100% { opacity: 0; }
+}
+
+.stage {
+  position: absolute; z-index: 10;
+  left: 50%; top: 0;
+  width: var(--design-w); height: var(--design-h);
+  transform: translateX(-50%) scale(var(--stage-scale));
+  transform-origin: 50% 0;
+}
+.obj { position: absolute; }
+
+/* ---------- desktop composition ----------
+   top band: logo (left) · jackpot row + win numeral (centre)
+   middle:   Zeus hero (left, behind) · board (centre) · bonus column (right) */
+.zeus      { left: -60px; top: 40px; width: 900px; height: 900px; }
+.logo      { left: 64px; top: 30px; width: 340px; filter: drop-shadow(0 10px 24px rgba(0, 0, 0, .7)); }
+
+.jackpots  { left: 470px; top: 26px; width: 980px; height: 34px; }
+.win-plate { left: 560px; top: 72px; width: 800px; height: 150px; }
+.board     { left: 580px; top: 236px; width: calc(var(--cell) * 6 + var(--pad) * 2); height: calc(var(--cell) * 5 + var(--pad) * 2); }
+.buy-btn   { left: 1420px; top: 560px; width: 420px; height: 132px; }
+.medallion { left: 1380px; top: 252px; width: 460px; height: 320px; }
+.fs-counter { left: 1440px; top: 600px; width: 340px; height: 132px; }
+
+/* ---------- Zeus: static hero, motion in CSS ----------
+   #zeusFallback shows body[data-hero] (v3/hero.webp). On cues game.js sets
+   #zeus[data-anim] (orb | big_mult | fs | jackpot | bigwin) for 1.6 s, then
+   back to idle. */
+.zeus__fallback { display: block; width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; }
+.zeus {
+  transform-origin: 50% 90%;
+  transition: opacity .8s var(--ease-out);
+  animation: hero-idle 7s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes hero-idle {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(0, -10px, 0) rotate(-.4deg); }
+}
+.zeus[data-anim="orb"], .zeus[data-anim="big_mult"] { animation: hero-cue 900ms var(--ease-out); }
+.zeus[data-anim="fs"], .zeus[data-anim="jackpot"], .zeus[data-anim="bigwin"] { animation: hero-strike 1400ms var(--ease-out); }
+@keyframes hero-cue {
+  30% { transform: translate3d(8px, -6px, 0) rotate(.8deg); filter: brightness(1.18); }
+}
+@keyframes hero-strike {
+  12% { transform: translate3d(18px, -14px, 0) scale(1.04) rotate(1.6deg); filter: brightness(1.35) drop-shadow(0 0 30px rgba(224, 166, 64, .55)); }
+  40% { transform: translate3d(10px, -8px, 0) scale(1.02) rotate(.8deg); }
+}
+/* game.js restarts .flash.is-on (remove, reflow, add) and leaves the class
+   on, so lighting the hero must be a one-shot animation, not a state: the
+   reflow un-matches :has() and the animation restarts with each strike. */
+.screen:has(.flash.is-on) .zeus[data-anim="idle"] {
+  animation: hero-lit 900ms ease-out, hero-idle 7s ease-in-out 900ms infinite alternate;
+}
+@keyframes hero-lit { from { filter: brightness(1.45) drop-shadow(0 0 24px rgba(255, 236, 200, .5)); } }
+
+/* ---------- jackpots: a quiet row of type, tier = a coloured dot ---------- */
+.jackpots { display: flex; justify-content: center; align-items: center; gap: 36px; }
+.jp {
+  display: flex; align-items: baseline; gap: 8px; white-space: nowrap;
+  transition: transform .3s var(--ease-out);
+}
+.jp__dot {
+  width: 8px; height: 8px; border-radius: 50%; flex: none; align-self: center;
+  background: var(--tier); box-shadow: 0 0 10px var(--tier);
+}
+.jp__name { font-size: 15px; font-weight: 600; letter-spacing: .16em; color: var(--marble-dim); }
+.jp__val { font-size: 23px; font-weight: 600; color: var(--marble); font-variant-numeric: tabular-nums; }
+.jp[data-tier="grand"] { --tier: #e5513a; }   /* red slip, fired bright */
+.jp[data-tier="major"] { --tier: var(--terracotta-lt); }
+.jp[data-tier="minor"] { --tier: var(--ochre); }
+.jp[data-tier="mini"]  { --tier: var(--slip); }
+.jp.is-hit { animation: jp-hit 900ms ease-in-out 3; }
+.jp.is-hit .jp__val { color: var(--tier); }
+@keyframes jp-hit { 50% { transform: scale(1.14); } }
+
+/* ---------- win counter: pure type ---------- */
+.win-plate {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  text-align: center; pointer-events: none;
+}
+.win-plate__label {
+  font-size: 30px; font-weight: 600; letter-spacing: .14em; color: var(--marble-dim);
+  white-space: nowrap; line-height: 1;
+  transition: font-size .35s var(--ease-out), color .35s, letter-spacing .35s var(--ease-out);
+}
+.win-plate__value {
+  font-size: 112px; font-weight: 700; line-height: .92; letter-spacing: -.01em;
+  color: var(--ochre); white-space: nowrap; font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 36px rgba(224, 166, 64, .32), 0 4px 0 rgba(0, 0, 0, .55);
+}
+.win-plate__value:empty { display: none; }
+.win-plate.has-value .win-plate__label { font-size: 17px; letter-spacing: .3em; color: var(--marble); }
+.win-plate.is-bump .win-plate__value { animation: bump 320ms var(--ease-out); }
+@keyframes bump { 35% { transform: scale(1.12); text-shadow: 0 0 60px rgba(224, 166, 64, .7), 0 4px 0 rgba(0, 0, 0, .55); } }
+
+/* ---------- board: frameless ---------- */
+/* board border = the painted vase-rim frame from the v3 pack
+   (scripts/olympus_thunder_v3_pack.py); its opening sits on the grid. */
+.board__frame { position: absolute; z-index: 2; pointer-events: none; max-width: none;
+  left: calc(var(--pad) - 107px); top: calc(var(--pad) - 140px); width: 862px; height: 812px; }
+.board::before {
+  /* the void the symbols float in: dark enough for legibility, Zeus still reads through */
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  background: radial-gradient(120% 90% at 50% 40%, rgba(11, 8, 6, .5), rgba(8, 6, 4, .76));
+  box-shadow: 0 0 0 1px var(--hair), 0 40px 90px rgba(0, 0, 0, .55);
+}
+.board__grid {
+  position: absolute; z-index: 1;
+  left: var(--pad); top: var(--pad);
+  width: calc(var(--cell) * var(--cols)); height: calc(var(--cell) * var(--rows));
+  overflow: hidden;
+}
+.board::after {
+  /* interior hairlines only: one every --cell; the box stops 1px short of
+     the grid so the last column/row line is clipped and the edge stays open */
+  content: ''; position: absolute; z-index: 0; pointer-events: none;
+  left: var(--pad); top: var(--pad);
+  width: calc(var(--cell) * var(--cols) - 1px); height: calc(var(--cell) * var(--rows) - 1px);
+  background-image:
+    linear-gradient(to right, transparent calc(var(--cell) - 1px), var(--hair) calc(var(--cell) - 1px)),
+    linear-gradient(to bottom, transparent calc(var(--cell) - 1px), var(--hair) calc(var(--cell) - 1px));
+  background-size: var(--cell) 100%, 100% var(--cell);
+  background-repeat: repeat-x, repeat-y;
+}
+.board__fx { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+
+.board__corner {
+  position: absolute; z-index: 2; width: 40px; height: 40px; pointer-events: none;
+  border: 0 solid var(--bracket);
+  transition: border-color 1s ease, filter .2s;
+  filter: drop-shadow(0 0 6px rgba(224, 166, 64, .45));
+}
+.screen[data-mode="fs"] .board__corner { border-color: rgba(224, 122, 60, .9); filter: drop-shadow(0 0 6px rgba(194, 98, 45, .5)); }
+.screen[data-mode="fs"] .board { --hair: rgba(224, 122, 60, .1); }
+/* double bracket: a short inner L nested inside each corner */
+.board__corner::after {
+  content: ''; position: absolute; width: 14px; height: 14px; border: inherit; border-width: 0; border-color: inherit;
+}
+.board__corner--tl::after { left: 6px; top: 6px; border-top: 1px solid; border-left: 1px solid; }
+.board__corner--tr::after { right: 6px; top: 6px; border-top: 1px solid; border-right: 1px solid; }
+.board__corner--bl::after { left: 6px; bottom: 6px; border-bottom: 1px solid; border-left: 1px solid; }
+.board__corner--br::after { right: 6px; bottom: 6px; border-bottom: 1px solid; border-right: 1px solid; }
+.board__corner--tl { left: -6px; top: -6px; border-top-width: 2px; border-left-width: 2px; }
+.board__corner--tr { right: -6px; top: -6px; border-top-width: 2px; border-right-width: 2px; }
+.board__corner--bl { left: -6px; bottom: -6px; border-bottom-width: 2px; border-left-width: 2px; }
+.board__corner--br { right: -6px; bottom: -6px; border-bottom-width: 2px; border-right-width: 2px; }
+.screen:has(.flash.is-on) .board__corner { animation: corner-lit 700ms ease-out; }
+@keyframes corner-lit { from { filter: drop-shadow(0 0 14px #fff) brightness(1.8); } }
+
+.cell {
+  position: absolute; left: 0; top: 0;
+  width: var(--cell); height: var(--cell);
+  will-change: transform;
+}
+.cell__img { position: absolute; inset: 4%; width: 92%; height: 92%; object-fit: contain; transition: filter .2s; }
+.cell.is-dim .cell__img { filter: brightness(.3) saturate(.25); }
+.cell.is-win .cell__img { animation: sym-win 620ms ease-in-out infinite; filter: drop-shadow(0 0 12px rgba(224, 166, 64, .85)); }
+@keyframes sym-win { 50% { transform: scale(1.1); } }
+.cell.is-pop .cell__img { animation: sym-pop 260ms ease-in forwards; }
+@keyframes sym-pop { to { transform: scale(1.32); opacity: 0; filter: brightness(3) drop-shadow(0 0 20px #ffd890); } }
+body.spine-symbols .cell.is-spine .cell__img { visibility: hidden; }
+.cell.is-spine-orb .cell__img, .cell.is-spine-orb .cell__num { visibility: hidden; }
+.cell.is-land .cell__img { animation: land 240ms ease-out; }
+@keyframes land { 0% { transform: scaleY(.88) translateY(5%); } 60% { transform: scaleY(1.03); } }
+
+/* orb value: solid type with a dark keyline (no gradient fill) */
+.cell__num {
+  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+  text-align: center; font-weight: 700; font-size: 38px; line-height: 1;
+  color: #fff; letter-spacing: -.02em;
+  -webkit-text-stroke: 2px #1a0d06;
+  paint-order: stroke fill;
+  text-shadow: 0 2px 0 #070403, 0 0 14px rgba(224, 166, 64, .9);
+  pointer-events: none;
+}
+.cell__num.is-big { font-size: 35px; color: #fff4c0; text-shadow: 0 2px 0 #1a0e00, 0 0 16px rgba(255, 176, 0, .95); -webkit-text-stroke-color: #2a1600; }
+.cell__num.is-huge { font-size: 33px; color: #fff; text-shadow: 0 2px 0 #1a0030, 0 0 18px #c040ff, 0 0 30px #c040ff; -webkit-text-stroke-color: #220036; }
+.cell.is-orb .cell__img { animation: orb-breathe 2.4s ease-in-out infinite; }
+@keyframes orb-breathe { 50% { transform: scale(1.05); filter: brightness(1.15); } }
+.cell.is-orb-fade .cell__img, .cell.is-orb-fade .cell__num { transition: opacity .5s, filter .5s; opacity: .3; filter: grayscale(1); }
+
+/* flying orb value (collect) */
+.fly-layer { inset: 0; z-index: var(--z-fly); pointer-events: none; }
+.fly {
+  position: absolute; left: 0; top: 0; pointer-events: none;
+  font-weight: 700; color: #fff; white-space: nowrap;
+  -webkit-text-stroke: 2px #1a0d06; paint-order: stroke fill;
+  text-shadow: 0 0 14px var(--ochre), 0 0 30px rgba(224, 166, 64, .55);
+}
+
+/* step / series banners over the grid: solid type, ochre bloom */
+.combo {
+  position: absolute; z-index: 4; left: 50%; top: 50%;
+  transform: translate(-50%, -50%) scale(.7); opacity: 0;
+  font-size: 60px; font-weight: 700; white-space: nowrap; color: #fff; letter-spacing: .04em;
+  text-shadow: 0 0 24px rgba(224, 166, 64, .9), 0 4px 0 rgba(0, 0, 0, .7);
+  pointer-events: none;
+}
+.combo.is-on { animation: combo 1200ms var(--ease-out) forwards; }
+@keyframes combo {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.7); filter: blur(6px); }
+  18% { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: blur(0); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -60%) scale(1); }
+}
+
+/* ---------- bonus column ---------- */
+/* Buy Bonus: an outlined control, not a coin. Ochre hairline = money. */
+.buy-btn {
+  display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; align-content: center;
+  column-gap: 18px; row-gap: 6px; padding: 0 30px; text-align: left;
+  background: rgba(11, 8, 6, .55); color: var(--ochre);
+  border: 1px solid rgba(224, 166, 64, .55); border-radius: 2px; cursor: pointer;
+  transition: background .25s, border-color .25s, opacity .4s, transform .2s var(--ease-out);
+}
+.buy-btn__bolt { grid-row: 1 / 3; width: 46px; height: 46px; align-self: center; color: var(--terracotta-lt); filter: drop-shadow(0 0 10px rgba(224, 166, 64, .5)); }
+.buy-btn__label { font-size: 34px; font-weight: 700; letter-spacing: .1em; line-height: 1; white-space: nowrap; color: var(--ochre); }
+.buy-btn__sub { font-size: 15px; font-weight: 600; letter-spacing: .14em; color: var(--marble-dim); text-transform: uppercase; }
+.buy-btn::before, .buy-btn::after {
+  /* the board's bracket motif */
+  content: ''; position: absolute; width: 18px; height: 18px; border: 0 solid var(--ochre); pointer-events: none;
+}
+.buy-btn::before { left: -5px; top: -5px; border-top-width: 2px; border-left-width: 2px; }
+.buy-btn::after { right: -5px; bottom: -5px; border-bottom-width: 2px; border-right-width: 2px; }
+.buy-btn:hover { background: rgba(224, 166, 64, .1); border-color: var(--ochre); }
+.buy-btn:active { transform: scale(.98); }
+.buy-btn[disabled], .screen[data-mode="fs"] .buy-btn { opacity: 0; pointer-events: none; }
+body.is-busy .buy-btn { opacity: .42; pointer-events: none; }
+
+/* TOTAL MULTIPLIER: free spins only — the biggest thing on screen */
+.medallion {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center;
+}
+.medallion__label { font-size: 18px; font-weight: 600; letter-spacing: .3em; color: var(--marble); white-space: nowrap; }
+.medallion__value {
+  font-size: 220px; font-weight: 700; line-height: .9; letter-spacing: -.03em; white-space: nowrap;
+  color: var(--terracotta-lt); font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 50px rgba(194, 98, 45, .45), 0 6px 0 rgba(0, 0, 0, .6);
+}
+.medallion.is-hit .medallion__value { animation: medal-hit 650ms var(--ease-out); }
+@keyframes medal-hit {
+  25% { transform: scale(1.12); color: #fff; text-shadow: 0 0 90px rgba(224, 166, 64, .95), 0 6px 0 rgba(0, 0, 0, .6); }
+}
+
+.fs-counter {
+  display: flex; align-items: baseline; justify-content: center; gap: 18px;
+  border-top: 1px solid rgba(224, 166, 64, .4); border-bottom: 1px solid rgba(224, 166, 64, .4);
+}
+.fs-counter__value { font-size: 76px; font-weight: 700; line-height: 1.4; color: var(--ochre); font-variant-numeric: tabular-nums; }
+.fs-counter__label { font-size: 20px; font-weight: 600; letter-spacing: .22em; color: var(--marble); }
+
+.medallion, .fs-counter {
+  opacity: 0; transform: translateY(14px); filter: blur(8px); pointer-events: none;
+  transition: opacity .6s var(--ease-out), transform .6s var(--ease-out), filter .6s var(--ease-out);
+}
+.screen[data-mode="fs"] .medallion, .screen[data-mode="fs"] .fs-counter { opacity: 1; transform: none; filter: none; }
+.screen[data-mode="fs"] .medallion { transition-delay: .15s; }
+
+/* ---------- dim / popup ---------- */
+.screen-dim { inset: 0; z-index: var(--z-dim); background: rgba(11, 8, 6, .84); opacity: 0; pointer-events: none; transition: opacity .35s; }
+.screen-dim.is-on { opacity: 1; pointer-events: auto; }
+.screen-dim.is-black { background: #000; }
+
+.popup {
+  inset: 0; z-index: var(--z-popup); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2vmin; cursor: pointer;
+}
+.popup[hidden] { display: none; }
+.popup__rays {
+  /* one warm ring of light instead of sunburst rays */
+  position: absolute; left: 50%; top: 46%; width: 120vmin; height: 120vmin;
+  margin: -60vmin 0 0 -60vmin; pointer-events: none;
+  background: radial-gradient(circle, rgba(224, 166, 64, .16), rgba(224, 166, 64, .05) 38%, transparent 62%);
+  animation: halo 3.6s ease-in-out infinite alternate;
+}
+.popup[data-tier="fs"] .popup__rays, .popup[data-tier="super"] .popup__rays, .popup[data-tier="total"] .popup__rays {
+  background: radial-gradient(circle, rgba(224, 122, 60, .2), rgba(194, 98, 45, .06) 38%, transparent 62%);
+}
+@keyframes halo { from { transform: scale(.94); opacity: .75; } to { transform: scale(1.06); opacity: 1; } }
+.popup__title { position: relative; width: min(80vw, 820px); max-height: 22vh; object-fit: contain; filter: drop-shadow(0 10px 30px rgba(0, 0, 0, .8)); }
+.popup.is-in .popup__title { animation: title-in 800ms var(--ease-out); }
+@keyframes title-in { 0% { transform: scale(.6); opacity: 0; filter: blur(14px); } 100% { transform: none; opacity: 1; filter: drop-shadow(0 10px 30px rgba(0, 0, 0, .8)); } }
+.popup__sub { position: relative; font-size: clamp(15px, 2.4vmin, 26px); letter-spacing: .22em; color: var(--marble); text-align: center; padding: 0 16px; }
+.popup__amount {
+  position: relative; font-size: clamp(48px, 12vmin, 150px); font-weight: 700; line-height: 1;
+  color: var(--ochre); font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 50px rgba(224, 166, 64, .4), 0 5px 0 rgba(0, 0, 0, .7);
+}
+.popup__hint { position: relative; font-size: 13px; letter-spacing: .2em; opacity: 0; transition: opacity .4s; color: var(--marble-dim); }
+.popup.can-close .popup__hint { opacity: 1; }
+
+/* ---------- wheel ---------- */
+.wheel-scene { inset: 0; z-index: var(--z-wheel); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2vmin; }
+.wheel-scene[hidden] { display: none; }
+.wheel-scene__title { width: min(64vw, 520px); max-height: 15vh; object-fit: contain; filter: drop-shadow(0 8px 20px rgba(0, 0, 0, .7)); animation: title-in 800ms var(--ease-out); }
+.wheel { position: relative; width: min(64vmin, 600px); aspect-ratio: 1; margin-top: 4vmin; }
+.wheel__disc { position: absolute; inset: 0; will-change: transform; }
+.wheel__disc img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 20px 40px rgba(0, 0, 0, .7)); }
+.wheel__labels { position: absolute; inset: 0; }
+.wheel__label { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+.wheel__label span {
+  position: absolute; left: 0; top: 0; transform: translate(-50%, -50%);
+  font-size: clamp(11px, 2.3vmin, 20px); font-weight: 700; white-space: nowrap; color: #fff;
+  text-shadow: 0 2px 0 #000, 0 0 8px rgba(0, 0, 0, .9); letter-spacing: .05em;
+}
+.wheel__label.is-win span { color: var(--ochre); animation: bump 500ms ease-in-out 4; }
+.wheel__pointer { position: absolute; left: 50%; top: -9%; width: 15%; transform: translateX(-50%); filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .8)); z-index: 2; }
+
+/* ---------- buy window ---------- */
+.buy { inset: 0; z-index: var(--z-buy); display: flex; align-items: center; justify-content: center; background: rgba(11, 8, 6, .86); }
+.buy[hidden] { display: none; }
+.buy__panel {
+  position: relative; padding: 3vmin 3.4vmin 3.2vmin;
+  border-radius: 2px; text-align: center;
+  background: var(--ink-2);
+  border: 1px solid rgba(224, 166, 64, .32);
+  box-shadow: 0 40px 100px rgba(0, 0, 0, .8);
+  max-width: 96vw;
+}
+.buy__panel::before, .buy__panel::after {
+  content: ''; position: absolute; width: 26px; height: 26px; border: 0 solid var(--ochre); pointer-events: none;
+}
+.buy__panel::before { left: -6px; top: -6px; border-top-width: 2px; border-left-width: 2px; }
+.buy__panel::after { right: -6px; bottom: -6px; border-bottom-width: 2px; border-right-width: 2px; }
+.buy__title { margin: 0 0 2vmin; font-size: clamp(22px, 4.2vmin, 42px); font-weight: 700; letter-spacing: .18em; color: var(--ochre); }
+.buy__close {
+  position: absolute; right: 8px; top: 6px; width: 44px; height: 44px;
+  border: 0; background: none; color: var(--marble); font-size: 32px; line-height: 1; cursor: pointer; opacity: .8;
+  transition: opacity .2s, color .2s;
+}
+.buy__close:hover { opacity: 1; color: var(--ochre); }
+.buy__cards { display: flex; gap: 2vmin; justify-content: center; }
+.card {
+  position: relative; width: min(24vw, 30vh, 250px); aspect-ratio: 376 / 720; border: 0; padding: 0; background: none; cursor: pointer;
+  transition: transform .25s var(--ease-out), filter .25s;
+}
+.card img { width: 100%; height: 100%; object-fit: contain; }
+.card:hover { transform: translateY(-6px); filter: brightness(1.1) drop-shadow(0 0 18px rgba(224, 166, 64, .35)); }
+.card[disabled] { filter: grayscale(1) brightness(.5); cursor: not-allowed; transform: none; }
+.card__text { position: absolute; left: 12%; right: 12%; bottom: 9.5%; height: 13%; display: flex; flex-direction: column; justify-content: center; }
+.card__name { font-size: clamp(10px, 1.9vmin, 17px); font-weight: 700; color: #fff; letter-spacing: .04em; line-height: 1.1; }
+.card__price { font-size: clamp(13px, 2.6vmin, 24px); font-weight: 700; color: var(--ochre); line-height: 1.2; }
+.card__desc { margin-top: .8vmin; font-family: 'Baloo 2', system-ui, sans-serif; font-size: clamp(11px, 1.6vmin, 14px); color: var(--marble); line-height: 1.3; max-width: 100%; }
+.buy__bet { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 2.4vmin; }
+.buy__step {
+  width: 44px; height: 44px; border-radius: 2px; border: 1px solid rgba(224, 166, 64, .55);
+  background: transparent; color: var(--ochre); font-size: 24px; line-height: 1; cursor: pointer;
+  transition: background .2s, border-color .2s;
+}
+.buy__step:hover { background: rgba(224, 166, 64, .1); border-color: var(--ochre); }
+.buy__bet-val { display: flex; flex-direction: column; min-width: 160px; gap: 4px; }
+.buy__bet-val span { font-size: 12px; font-weight: 600; letter-spacing: .26em; color: var(--marble-dim); }
+.buy__bet-val b { font-size: 28px; color: #fff; font-variant-numeric: tabular-nums; }
+.buy__confirm { position: absolute; inset: 0; border-radius: 2px; background: rgba(11, 8, 6, .96); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; padding: 20px; }
+.buy__confirm[hidden] { display: none; }
+.buy__confirm p { margin: 0; font-size: clamp(16px, 3vmin, 26px); line-height: 1.45; max-width: 32ch; }
+.buy__confirm-row { display: flex; gap: 16px; }
+.buy__yes, .buy__no { min-width: 150px; padding: 14px 22px; border-radius: 2px; font-size: 17px; font-weight: 700; cursor: pointer; letter-spacing: .12em; }
+.buy__yes { border: 1px solid var(--terracotta-lt); color: #1a1200; background: var(--terracotta-lt); transition: background .2s; }
+.buy__yes:hover { background: var(--ochre); }
+.buy__no { border: 1px solid rgba(239, 228, 204, .45); background: transparent; color: var(--marble); }
+.buy__no:hover { border-color: var(--marble); }
+
+/* ---------- info / paytable ---------- */
+.info-popup { position: fixed; inset: 0; z-index: var(--z-info); display: flex; align-items: center; justify-content: center; background: rgba(11, 8, 6, .88); }
+.info-popup[hidden] { display: none; }
+.info-popup__panel {
+  position: relative; width: min(94vw, 900px); max-height: 86vh; overflow: auto; padding: 28px 30px;
+  border-radius: 2px; background: var(--ink-2);
+  border: 1px solid var(--hair-strong);
+  font-family: 'Baloo 2', system-ui, sans-serif; font-size: 15px; line-height: 1.5;
+}
+.info-popup__panel p { max-width: 72ch; }
+.info-popup__close { position: absolute; right: 10px; top: 6px; width: 44px; height: 44px; border: 0; background: none; color: var(--marble); font-size: 32px; line-height: 1; cursor: pointer; }
+.info-popup h2 { font-family: 'Cinzel', serif; color: var(--ochre); margin: 22px 0 10px; font-size: 20px; letter-spacing: .1em; }
+.info-popup h2:first-child { margin-top: 0; }
+.pt { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.pt__row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 2px; border: 1px solid var(--hair); }
+.pt__row img { width: 56px; height: 56px; object-fit: contain; flex: none; }
+.pt__pays { display: grid; grid-template-columns: auto auto; column-gap: 8px; font-size: 13px; }
+.pt__pays b { color: var(--ochre); }
+.info-popup table { border-collapse: collapse; margin: 6px 0; }
+.info-popup td, .info-popup th { padding: 3px 12px 3px 0; text-align: left; }
+
+/* ---------- portrait ----------
+   logo + jackpots (2x2) · win numeral · board · bonus row; Zeus fills the
+   lower right behind the board's foot and the bonus row. */
+@media (orientation: portrait) {
+  :root { --design-w: 1080px; --design-h: 1700px; --cell: 158px; --pad: 18px; }
+  .logo      { left: 46px; top: 22px; width: 360px; }
+  .jackpots  {
+    left: 40px; top: 230px; width: 1000px; height: 84px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
+  }
+  .jp {
+    display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto;
+    column-gap: 10px; row-gap: 6px; align-items: center; justify-content: center; justify-items: start;
+  }
+  .jp + .jp { border-left: 1px solid var(--hair); }
+  .jp__dot   { width: 10px; height: 10px; }
+  .jp__name  { font-size: 18px; }
+  .jp__val   { grid-column: 1 / -1; justify-self: center; font-size: 30px; }
+  .win-plate { left: 40px; top: 328px; width: 1000px; height: 150px; }
+  .win-plate__label { font-size: 34px; }
+  .win-plate.has-value .win-plate__label { font-size: 20px; }
+  .win-plate__value { font-size: 120px; }
+  .board     { left: 48px; top: 492px; }
+  .board__corner { width: 48px; height: 48px; }
+  .cell__num { font-size: 50px; }
+  .cell__num.is-big, .cell__num.is-huge { font-size: 44px; }
+  .zeus      { left: 300px; top: 1040px; width: 860px; height: 860px; }
+  /* in free spins the multiplier numeral sits over the hero: step him back */
+  .screen[data-mode="fs"] .zeus { opacity: .38; }
+  .board::before { background: radial-gradient(120% 90% at 50% 40%, rgba(11, 8, 6, .66), rgba(8, 6, 4, .84)); }
+  .buy-btn   { left: 48px; top: 1356px; width: 470px; height: 170px; padding: 0 36px; column-gap: 22px; }
+  .buy-btn__label { font-size: 42px; }
+  .buy-btn__sub { font-size: 18px; }
+  .buy-btn__bolt { width: 58px; height: 58px; }
+  .medallion { left: 530px; top: 1330px; width: 510px; height: 290px; }
+  .medallion__value { font-size: 200px; }
+  .medallion__label { font-size: 20px; }
+  .fs-counter { left: 48px; top: 1356px; width: 440px; height: 170px; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  .fs-counter__value { font-size: 96px; line-height: 1; }
+  .combo { font-size: 78px; }
+}
+
+/* ---------- reduced motion: keep every state, drop the travel ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .sky__img { animation: none; transition: opacity .3s linear; }
+  .flash.is-on { animation: flash-soft 600ms linear; }
+  @keyframes flash-soft { 0% { opacity: 0; } 20% { opacity: .35; } 100% { opacity: 0; } }
+  .zeus, .zeus[data-anim], .screen:has(.flash.is-on) .zeus[data-anim="idle"], .screen:has(.flash.is-on) .board__corner { animation: none; }
+  .win-plate.is-bump .win-plate__value, .medallion.is-hit .medallion__value, .jp.is-hit,
+  .cell.is-win .cell__img, .cell.is-orb .cell__img, .cell.is-land .cell__img, .popup__rays,
+  .wheel__label.is-win span { animation: none; }
+  .combo.is-on { animation: combo-fade 1200ms linear forwards; }
+  @keyframes combo-fade { 0%, 100% { opacity: 0; transform: translate(-50%, -50%); } 15%, 80% { opacity: 1; transform: translate(-50%, -50%); } }
+  .popup.is-in .popup__title, .wheel-scene__title { animation: fade-in 300ms linear; }
+  @keyframes fade-in { from { opacity: 0; } }
+  .medallion, .fs-counter { transform: none; filter: none; transition: opacity .3s linear; }
+  .buy-btn, .card { transition: none; }
+  .card:hover { transform: none; }
+}
+
+/* Rares read 10% bigger than the rest (product request). `scale` composes
+   with the win/land/pop keyframes, which all animate `transform`. */
+.cell[data-code="helmet"] .cell__img, .cell[data-code="lyre"] .cell__img,
+.cell[data-code="amphora"] .cell__img, .cell[data-code="wreath"] .cell__img { scale: 1.1; }
+
+/* desktop: 108px cells so the painted frame's palmettes clear the win
+   numeral above and the frame's foot stays on the 1080 canvas */
+:root { --cell: 108px; }
+.board { left: 616px; top: 335px; }
+/* the CSS brackets/hairlines were the stand-in until the painted frame came */
+.board__corner { display: none; }
+.board::after { display: none; }
+.board::before { box-shadow: 0 40px 90px rgba(0, 0, 0, .55); }
+@media (orientation: portrait) {
+  /* the painted border is ~16% of the opening: a 140px cell keeps it on screen */
+  :root { --cell: 128px; }
+  .board { left: 138px; top: 640px; }
+  .board__frame { left: calc(var(--pad) - 127px); top: calc(var(--pad) - 166px); width: 1022px; height: 962px; }
+}
+
+/* ---------- painted UI kit (scripts/olympus_thunder_v3_pack.py ui) ----------
+   Jackpot tablets in their tier slip (black grand, red major, ochre minor,
+   white mini); the cut-out panel gets a glaze-black fill so the type reads. */
+.jackpots { top: 4px; height: 84px; gap: 14px; }
+.jp {
+  position: relative; width: 214px; height: 84px; flex: none;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  background:
+    var(--tablet) center / contain no-repeat,
+    linear-gradient(#0b0806, #120b08) center / 58% 44% no-repeat;
+}
+.jp__dot { display: none; }
+.jp__name { font-size: 12px; letter-spacing: .2em; line-height: 1.1; color: var(--tier); }
+.jp__val { font-size: 21px; line-height: 1.05; }
+.jp[data-tier="grand"] { --tablet: url("../img/olympus-thunder/v3/ui/jp_grand.webp"); }
+.jp[data-tier="major"] { --tablet: url("../img/olympus-thunder/v3/ui/jp_major.webp"); }
+.jp[data-tier="minor"] { --tablet: url("../img/olympus-thunder/v3/ui/jp_minor.webp"); }
+.jp[data-tier="mini"]  { --tablet: url("../img/olympus-thunder/v3/ui/jp_mini.webp"); }
+.win-plate { top: 96px; }
+
+/* Buy Bonus: the bolt disc, caption under it */
+.buy-btn {
+  left: 1500px; top: 440px; width: 260px; height: 270px; padding: 0; border: 0; border-radius: 50%;
+  display: block;
+  background:
+    url("../img/olympus-thunder/v3/ui/buy_button.webp?v=2") center top / 260px auto no-repeat,
+    radial-gradient(circle at 50% 46%, #1a100b 0 30%, transparent 31%) center top / 260px 270px no-repeat;
+}
+.buy-btn::before, .buy-btn::after, .buy-btn__bolt, .buy-btn__sub { display: none; }
+.buy-btn__label {
+  position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%);
+  font-size: 30px; text-shadow: 0 2px 0 rgba(0, 0, 0, .6);
+}
+.buy-btn:hover { background-color: transparent; filter: brightness(1.12); }
+
+@media (orientation: portrait) {
+  .jackpots { left: 40px; top: 226px; width: 1000px; height: 92px; display: flex; gap: 8px; justify-content: space-between; }
+  .jp { width: 242px; height: 92px; border: 0; }
+  .jp + .jp { border-left: 0; }
+  .jp__name { font-size: 15px; }
+  .jp__val { font-size: 24px; }
+  .buy-btn { left: 60px; top: 1462px; width: 200px; height: 208px; padding: 0;
+    background-size: 200px auto, 200px 208px; }
+  .buy-btn__label { font-size: 26px; }
+}
+
+/* the closed V3 menu flyout is an invisible box over the board's lower-left
+   cell / the Buy button: only its buttons should ever take clicks */
+.v3-bar .v3-menu__flyout { pointer-events: none; }
+
+/* the logo sits in front of everything on the stage (frame included) */
+.logo { z-index: 20; }
+
+/* ---------- layout v4 (product): bigger board, Zeus + Buy moved, jackpots
+   promoted to large tablets where the eye lands first ---------- */
+@media (orientation: landscape) {
+  :root { --cell: 120px; }
+  .board        { left: 580px; top: 276px; }
+  .board__frame { left: calc(var(--pad) - 119px); top: calc(var(--pad) - 156px); width: 958px; height: 902px; }
+  .logo         { left: 40px; top: 18px; width: 380px; }
+  .jackpots     { left: 470px; top: 8px; width: 1060px; height: 104px; gap: 12px; justify-content: center; }
+  .jp           { width: 256px; height: 104px; }
+  .jp__name     { font-size: 15px; }
+  .jp__val      { font-size: 27px; }
+  .win-plate    { left: 1440px; top: 210px; width: 440px; height: 210px; }
+  .win-plate__value { font-size: 84px; }
+  .zeus         { left: -10px; top: 170px; width: 560px; height: 880px; }
+  .buy-btn      { left: 1550px; top: 560px; width: 260px; height: 270px; }
+  .medallion    { left: 1440px; top: 470px; width: 440px; height: 300px; }
+  .medallion__value { font-size: 170px; }
+  .fs-counter   { left: 1490px; top: 810px; width: 340px; height: 120px; }
+}
+@media (orientation: portrait) {
+  :root { --design-h: 1660px; --cell: 136px; }
+  .zeus         { left: -30px; top: -20px; width: 500px; height: 790px; opacity: 1; }
+  .logo         { left: 480px; top: 6px; width: 560px; }
+  .jackpots     { left: 470px; top: 286px; width: 590px; height: 212px;
+                  display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+  .jp           { width: 289px; height: 101px; }
+  .jp__name     { font-size: 15px; }
+  .jp__val      { font-size: 28px; }
+  .win-plate    { left: 210px; top: 512px; width: 660px; height: 112px; }
+  .win-plate__label { font-size: 26px; }
+  .win-plate__value { font-size: 86px; }
+  .board        { left: 114px; top: 778px; }
+  .board__frame { left: calc(var(--pad) - 135px); top: calc(var(--pad) - 176px); width: 1085px; height: 1023px; }
+  .buy-btn      { left: 880px; top: 500px; width: 160px; height: 166px; background-size: 160px auto, 160px 166px; }
+  .buy-btn__label { font-size: 20px; }
+  .medallion    { left: 820px; top: 500px; width: 240px; height: 180px; }
+  .medallion__value { font-size: 110px; }
+  .fs-counter   { left: 20px; top: 520px; width: 200px; height: 90px; }
+}
+
+/* ---------- portrait v5 (product: "very unsuccessful, redo") ----------
+   Header split in two: left = logo, win counter, Buy; right = Zeus at full
+   height, mirrored so he strides toward the board. Under the header the
+   four jackpot tablets run the full width (the first thing after the logo),
+   then the board takes the whole width. */
+@media (orientation: portrait) {
+  :root { --design-h: 1640px; --cell: 136px; }
+  .zeus         { left: 600px; top: 0; width: 470px; height: 600px; z-index: 0; }
+  .zeus__fallback { transform: scaleX(-1); }
+  .logo         { left: 30px; top: 18px; width: 470px; }
+  .win-plate    { left: 20px; top: 262px; width: 400px; height: 170px; }
+  .win-plate__label { font-size: 22px; }
+  .win-plate__value { font-size: 78px; }
+  .buy-btn      { left: 420px; top: 262px; width: 170px; height: 177px; background-size: 170px auto, 170px 177px; }
+  .buy-btn__label { font-size: 21px; }
+  .medallion    { left: 400px; top: 252px; width: 210px; height: 190px; }
+  .medallion__value { font-size: 104px; }
+  .fs-counter   { left: 30px; top: 230px; width: 380px; height: 44px; gap: 12px; }
+  .fs-counter__value { font-size: 36px; }
+  .jackpots     { left: 22px; top: 478px; width: 1036px; height: 104px; display: flex; gap: 10px; justify-content: space-between; }
+  .jp           { width: 252px; height: 104px; }
+  .jp__name     { font-size: 15px; }
+  .jp__val      { font-size: 27px; }
+  .board        { left: 114px; top: 760px; }
+}
+
+@media (orientation: portrait) {
+  /* calm the painted frieze behind the header so logo / win / jackpots read */
+  .stage::before {
+    content: ''; position: absolute; z-index: -1; pointer-events: none;
+    left: -200px; right: -200px; top: -60px; height: 720px;
+    background: linear-gradient(rgba(11, 8, 6, .82), rgba(11, 8, 6, .62) 72%, rgba(11, 8, 6, 0));
+  }
+  .zeus         { left: 545px; top: 40px; width: 520px; height: 560px; }
+  .win-plate    { left: 20px; top: 268px; width: 380px; height: 180px; }
+  .win-plate__label { font-size: 26px; color: var(--slip); }
+  .buy-btn      { left: 400px; top: 252px; width: 190px; height: 198px; background-size: 190px auto, 190px 198px; }
+  .buy-btn__label { font-size: 24px; }
+  .jackpots     { top: 486px; }
+}
+
+/* ---------- board +20% desktop / +10% portrait (product) ---------- */
+@media (orientation: landscape) {
+  :root { --cell: 144px; }
+  .board        { left: 508px; top: 165px; }
+  .board__frame { left: calc(var(--pad) - 143px); top: calc(var(--pad) - 187px); width: 1150px; height: 1082px; }
+  .logo         { left: 24px; top: 18px; width: 350px; }
+  .zeus         { left: -30px; top: 250px; width: 440px; height: 820px; }
+  .win-plate    { left: 1545px; top: 26px; width: 360px; height: 180px; }
+  .win-plate__label { font-size: 24px; }
+  .win-plate__value { font-size: 70px; }
+  .jackpots     { left: 1575px; top: 222px; width: 300px; height: 446px;
+                  display: flex; flex-direction: column; gap: 10px; }
+  .jp           { width: 300px; height: 104px; flex: none; }
+  .buy-btn      { left: 1610px; top: 690px; width: 230px; height: 240px; background-size: 230px auto, 230px 240px; }
+  .medallion    { left: 1545px; top: 680px; width: 360px; height: 260px; }
+  .medallion__value { font-size: 130px; }
+  .fs-counter   { left: 1555px; top: 950px; width: 340px; height: 100px; }
+}
+@media (orientation: portrait) {
+  :root { --cell: 150px; }
+  .board        { left: 72px; top: 699px; }
+  .board__frame { left: calc(var(--pad) - 89px); top: calc(var(--pad) - 117px); width: 1078px; height: 978px; }
+}
+
+/* desktop rule (product): framed board centred, 70-80% of screen height
+   (~78%: frame 960 of the 1080 canvas) */
+@media (orientation: landscape) {
+  :root { --cell: 128px; }
+  .board        { left: 556px; top: 206px; }
+  .board__frame { left: calc(var(--pad) - 127px); top: calc(var(--pad) - 166px); width: 1020px; height: 960px; }
+}

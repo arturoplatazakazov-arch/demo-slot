@@ -1,0 +1,14 @@
+animation.webp
+size:1063,738
+filter:Linear,Linear
+pma:true
+bolt0
+bounds:0,0,176,738
+bolt1
+bounds:178,0,167,738
+bolt2
+bounds:347,0,154,738
+burst
+bounds:503,0,300,282
+dot
+bounds:805,0,256,256

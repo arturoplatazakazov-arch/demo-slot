@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Olympus Thunder — Ascension</title>
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/preloader.css?v=1">
+<link rel="stylesheet" href="css/olympus-thunder-v2.css?v=9">
+<link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
+</head>
+<body data-game-id="olympus-thunder-v2"
+      data-sky="v2/sky.jpg|v2/sky_mob.jpg" data-sky-fs="v2/sky_fs.jpg|v2/sky_fs_mob.jpg"
+      data-temple="none" data-frame="v2/frame.webp|v2/frame.webp"
+      data-symbols="img/olympus-thunder/v2/symbols/"
+      data-spine-zeus="off" data-spine-logo="off" data-spine-symbols="off" data-spine-bg="off" data-hero="v2/hero.webp" data-titles="img/olympus-thunder/v2/titles/" data-cards="img/olympus-thunder/v2/ui/">
+
+  <div class="preloader" id="preloader">
+    <div class="preloader__logo" id="preloaderLogo"><img src="img/olympus-thunder/v2/logo.webp" alt="" onerror="this.remove()"></div>
+    <div class="preloader__bar"><div class="preloader__fill" id="preloaderFill"></div></div>
+    <div class="preloader__pct" id="preloaderPct">0%</div>
+  </div>
+
+  <a class="to-catalog-btn" href="games.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    В каталог
+  </a>
+
+  <div class="screen" id="screen" data-mode="base">
+
+    <!-- Variant 2 "Ascension": dawn above the storm. Layers: dawn sky (base) /
+         gods' storm sky (FS) -> Spine clouds + lightning (#fxBack) -> the storm
+         cloud sea below (#temple, no temple in this variant) -> Zeus + logo
+         Spine (#fxMid) -> a front cloud bank hiding Zeus' waist -> stage. -->
+    <div class="layer sky" id="sky">
+      <img class="sky__img sky__img--base" id="skyBase" alt="">
+      <img class="sky__img sky__img--fs" id="skyFs" alt="">
+    </div>
+    <canvas class="layer spine-fx spine-fx--back" id="fxBack" aria-hidden="true"></canvas>
+    <img class="layer temple clouds clouds--back" id="temple" alt="">
+    <canvas class="layer spine-fx spine-fx--mid" id="fxMid" aria-hidden="true"></canvas>
+    <div class="layer flash" id="flash" aria-hidden="true"></div>
+
+    <div class="stage" id="stage">
+
+      <!-- Зевс: Spine-риг из частей (js/olympus-thunder/spine.js), PNG — фолбэк. -->
+      <div class="obj zeus" id="zeus"><img class="zeus__fallback" id="zeusFallback" src="img/olympus-thunder/v2/hero.webp" alt=""></div>
+
+      <img class="obj logo" id="logo" src="img/olympus-thunder/v2/logo.webp" alt="Olympus Thunder">
+
+      <!-- Jackpot ladder: marble plaques, Grand on top and largest. -->
+      <div class="obj jackpots" id="jackpots" aria-label="Джекпоты">
+        <div class="jp" data-tier="grand"><img src="img/olympus-thunder/v2/gem_grand.webp" alt=""><span class="jp__name">GRAND</span><span class="jp__val">1 000×</span></div>
+        <div class="jp" data-tier="major"><img src="img/olympus-thunder/v2/gem_major.webp" alt=""><span class="jp__name">MAJOR</span><span class="jp__val">250×</span></div>
+        <div class="jp" data-tier="minor"><img src="img/olympus-thunder/v2/gem_minor.webp" alt=""><span class="jp__name">MINOR</span><span class="jp__val">50×</span></div>
+        <div class="jp" data-tier="mini"><img src="img/olympus-thunder/v2/gem_mini.webp" alt=""><span class="jp__name">MINI</span><span class="jp__val">20×</span></div>
+      </div>
+
+      <!-- Счётчик выигрыша серии каскадов: лавровая лента под стелой (GDD §12). -->
+      <div class="obj win-plate" id="winPlate">
+        <img src="img/olympus-thunder/v2/ribbon.webp" alt="">
+        <span class="win-plate__label" id="winPlateLabel">ВЫИГРЫШ ДО 10 000×</span>
+        <span class="win-plate__value" id="winPlateValue"></span>
+      </div>
+
+      <div class="obj board" id="board">
+        <img class="board__frame" id="frame" alt="">
+        <div class="board__grid" id="grid"></div>
+        <div class="board__fx" id="boardFx"></div>
+      </div>
+
+      <!-- TOTAL MULTIPLIER — только во фриспинах. -->
+      <div class="obj medallion" id="medallion">
+        <img src="img/olympus-thunder/v2/ui/medallion.webp" alt="">
+        <span class="medallion__label">ОБЩИЙ<br>МНОЖИТЕЛЬ</span>
+        <span class="medallion__value" id="totalMult">×1</span>
+      </div>
+
+      <div class="obj fs-counter" id="fsCounter">
+        <span class="fs-counter__label">FREE SPINS</span>
+        <span class="fs-counter__value" id="fsLeft">15</span>
+      </div>
+
+      <button class="obj buy-btn" id="buyBtn" type="button">
+        <img src="img/olympus-thunder/v2/ui/buy_button.webp" alt="">
+        <span class="buy-btn__label">BUY<br>BONUS</span>
+      </button>
+
+    </div>
+
+  </div>
+
+  <!-- Оверлеи — вне .screen: fixed-контейнер сам по себе контекст наложения,
+       иначе нижний бар V3 (z 20) рисовался бы поверх попапов и окна покупки. -->
+    <canvas class="layer spine-fx spine-fx--front" id="fxFront" aria-hidden="true"></canvas>
+  <div class="layer fly-layer" id="flyLayer" aria-hidden="true"></div>
+  <div class="layer screen-dim" id="screenDim"></div>
+
+  <!-- Попап: тайтл-арт + сумма (big/mega/epic, free spins, итог, джекпот). -->
+  <div class="layer popup" id="popup" hidden>
+    <div class="popup__rays" aria-hidden="true"></div>
+    <img class="popup__title" id="popupTitle" alt="">
+    <div class="popup__sub" id="popupSub"></div>
+    <div class="popup__amount" id="popupAmount"></div>
+    <div class="popup__hint" id="popupHint">нажмите, чтобы продолжить</div>
+  </div>
+
+  <!-- Jackpot Wheel (GDD §8): исход решает сервер, колесо доезжает до сектора. -->
+  <div class="layer wheel-scene" id="wheelScene" hidden>
+    <img class="wheel-scene__title" src="img/olympus-thunder/v2/titles/jackpot.webp" alt="Jackpot">
+    <div class="wheel">
+      <div class="wheel__disc" id="wheelDisc">
+        <img src="img/olympus-thunder/v2/wheel/wheel.webp" alt="">
+        <div class="wheel__labels" id="wheelLabels"></div>
+      </div>
+      <img class="wheel__pointer" src="img/olympus-thunder/v2/wheel/pointer.webp" alt="">
+    </div>
+  </div>
+
+  <!-- Buy Bonus: три карточки (GDD §9). -->
+  <div class="layer buy" id="buyWindow" hidden>
+    <div class="buy__panel">
+      <button class="buy__close" id="buyClose" type="button" aria-label="Закрыть">×</button>
+      <h2 class="buy__title">BUY BONUS</h2>
+      <div class="buy__cards" id="buyCards"></div>
+      <div class="buy__bet">
+        <button class="buy__step" id="buyBetMinus" type="button" aria-label="Меньше">−</button>
+        <div class="buy__bet-val"><span>СТАВКА</span><b id="buyBet">0</b></div>
+        <button class="buy__step" id="buyBetPlus" type="button" aria-label="Больше">+</button>
+      </div>
+      <div class="buy__confirm" id="buyConfirm" hidden>
+        <p id="buyConfirmText"></p>
+        <div class="buy__confirm-row">
+          <button class="buy__no" id="buyNo" type="button">Отмена</button>
+          <button class="buy__yes" id="buyYes" type="button">Купить</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="info-popup" id="infoPopup" hidden>
+    <div class="info-popup__panel">
+      <button class="info-popup__close" id="infoPopupClose" type="button" aria-label="Закрыть">×</button>
+      <div id="infoBody"></div>
+    </div>
+  </div>
+
+  <!-- Нижний бар V3 — контракт data-action / id / классов не менять. -->
+  <div class="v3-bar" id="v3Bar">
+    <div class="v3-row">
+      <div class="v3-group">
+        <div class="v3-menu">
+          <div class="v3-menu__flyout" id="v3Flyout">
+            <button class="ui-icon-btn v3-btn" data-action="home" type="button" aria-label="В каталог">
+              <svg viewBox="0 0 24 24"><path d="M3 11.4 12 4l9 7.4" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.6 10v9.2h4.2v-5.6h4.4v5.6h4.2V10" fill="currentColor" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="ui-icon-btn v3-btn v3-btn--sound" data-action="sound" type="button" aria-label="Звук">
+              <svg viewBox="0 0 24 24"><path class="v3-spk" d="M4 9.2v5.6h3.6L13 19V5L7.6 9.2H4Z" fill="currentColor"/><path class="v3-wave v3-wave--1" d="M16.2 9a4.6 4.6 0 0 1 0 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="v3-wave v3-wave--2" d="M18.9 6.6a8 8 0 0 1 0 10.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="v3-slash" d="M5 19 19 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            </button>
+            <button class="ui-icon-btn v3-btn" data-action="info" type="button" aria-label="Информация">
+              <svg viewBox="0 0 24 24"><rect x="10.6" y="10" width="2.8" height="9" rx="1.4" fill="currentColor"/><circle cx="12" cy="6.4" r="1.7" fill="currentColor"/></svg>
+            </button>
+          </div>
+          <button class="ui-icon-btn v3-btn v3-btn--menu" id="v3MenuBtn" type="button" aria-label="Меню" aria-expanded="false">
+            <svg viewBox="0 0 24 24"><path d="M4 7.5h16M4 12h16M4 16.5h16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            <span class="v3-btn__dot" aria-hidden="true"></span>
+          </button>
+        </div>
+        <button class="ui-icon-btn v3-btn v3-btn--auto" id="v3AutoBtn" type="button" aria-label="Автоигра" aria-expanded="false">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.1" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8.6 15.4 12 7.6l3.4 7.8M9.8 13.2h4.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <button class="ui-spin-btn v3-spin" data-action="spin" type="button" aria-label="Спин">
+        <span class="v3-spin__ring" aria-hidden="true"></span>
+        <svg class="v3-spin__icon" viewBox="0 0 48 48">
+          <path d="M9 20.5A15.2 15.2 0 0 1 34.4 14" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>
+          <path d="M34.6 7.4V14h-6.7" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M39 27.5A15.2 15.2 0 0 1 13.6 34" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>
+          <path d="M13.4 40.6V34h6.7" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="v3-spin__count" id="v3SpinCount" hidden></span>
+      </button>
+      <div class="v3-group">
+        <button class="ui-icon-btn v3-btn v3-btn--turbo" id="v3TurboBtn" type="button" aria-label="Турбо" aria-pressed="false">
+          <svg viewBox="0 0 24 24"><path d="M13.4 2.5 5.2 13.4h5.1l-1.1 8.1 8.3-11.1h-5.2l1.1-7.9Z" fill="currentColor"/></svg>
+        </button>
+        <button class="ui-icon-btn v3-btn v3-btn--bet" id="v3BetBtn" type="button" aria-label="Ставка" aria-expanded="false">
+          <svg viewBox="0 0 24 24"><ellipse cx="12" cy="7.4" rx="7.6" ry="2.9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.4 7.4v3.1c0 1.6 3.4 2.9 7.6 2.9s7.6-1.3 7.6-2.9V7.4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.4 11.9V15c0 1.6 3.4 2.9 7.6 2.9s7.6-1.3 7.6-2.9v-3.1" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="v3-tip v3-tip--bet" id="v3BetTip" hidden>
+      <button class="ui-icon-btn v3-tip__step" data-action="bet-minus" type="button" aria-label="Уменьшить ставку">
+        <svg viewBox="0 0 24 24"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
+      <div class="v3-tip__field">
+        <span class="v3-tip__label">BET</span>
+        <span class="v3-tip__amount"><span id="v3BetMirror">0</span> <span class="ui-bet-field__currency">FUN</span></span>
+      </div>
+      <button class="ui-icon-btn v3-tip__step" data-action="bet-plus" type="button" aria-label="Увеличить ставку">
+        <svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="v3-chips" id="v3AutoTip" hidden>
+      <button class="v3-chip" data-spins="10" type="button">10</button>
+      <button class="v3-chip" data-spins="25" type="button">25</button>
+      <button class="v3-chip" data-spins="50" type="button">50</button>
+      <button class="v3-chip" data-spins="100" type="button">100</button>
+    </div>
+    <div class="v3-readout">
+      <div class="v3-readout__col">
+        <span class="v3-readout__label">BALANCE</span>
+        <span class="v3-readout__value"><span id="balanceValue">1,000,000</span> <span class="ui-balance__currency">FUN</span></span>
+      </div>
+      <div class="v3-readout__col v3-readout__col--right">
+        <span class="v3-readout__label">BET</span>
+        <span class="v3-readout__value"><span id="betValue">10,000</span> <span class="v3-readout__cur">FUN</span></span>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="js/telegram.js?v=2"></script>
+  <script src="js/preloader.js?v=1"></script>
+  <script src="js/config.js?v=2"></script>
+  <script src="js/api.js?v=2"></script>
+  <script src="vendor/spine-webgl.js"></script>
+  <script src="js/spine-engine.js?v=7"></script>
+  <script src="js/olympus-thunder/sound.js?v=7"></script>
+  <script src="js/olympus-thunder/spine.js?v=11"></script>
+  <script src="js/olympus-thunder/board.js?v=7"></script>
+  <script src="js/olympus-thunder/ui.js?v=7"></script>
+  <script src="js/olympus-thunder/game.js?v=12"></script>
+  <script src="js/ui-bar-v3.js?v=4"></script>
+</body>
+</html>

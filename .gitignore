@@ -17,7 +17,10 @@ assets_src_backup_20260728/
 # кадры до вырезания фона и фоны 1x до апскейла. В рантайме не нужны —
 # та же логика, что у assets_src_backup_* выше.
 front/img/*/src/
+# Olympus Thunder: cut parts are an intermediate of scripts/olympus_thunder_build.py
+front/img/olympus-thunder/parts/
 
 provider2/art/
 provider2/mockups/
 provider3/art/
+front/img/olympus-thunder/v*/src/

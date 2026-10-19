@@ -1,0 +1,14 @@
+animation.webp
+size:938,249
+filter:Linear,Linear
+pma:true
+ring
+bounds:0,0,250,249
+burst
+bounds:252,0,250,235
+streak
+bounds:504,0,230,209
+dot
+bounds:736,0,128,128
+debris
+bounds:866,0,70,75

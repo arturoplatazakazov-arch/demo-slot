@@ -59,6 +59,9 @@ class SessionStartResponse(BaseModel):
     symbols: list[PaytableSymbolOut]
     free_spins_trigger: FreeSpinsTriggerOut | None = None
     hold_and_win_trigger: HoldAndWinTriggerOut | None = None
+    # scatter_tumble games only (app/api/v1/spin_tumble.py:tumble_rules_out):
+    # buy SKUs, jackpot prizes/sectors and paytable for the client.
+    game_rules: dict | None = None
 
 
 class ActiveFeatureState(BaseModel):
@@ -298,6 +301,9 @@ class SpinResponse(BaseModel):
     # The round hit free_spins.round_max_win_multiplier: total_win is the cap
     # and any free-spins round it belonged to is over.
     max_win_reached: bool = False
+    # scatter_tumble games only — the whole tumble series, orbs, multipliers,
+    # scatter/jackpot outcome (app/api/v1/spin_tumble.py:_tumble_out).
+    tumble: dict | None = None
 
 
 class SymbolArtOut(BaseModel):

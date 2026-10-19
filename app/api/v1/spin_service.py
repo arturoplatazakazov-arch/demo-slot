@@ -29,6 +29,7 @@ from app.api.v1.response_builders import (
     wheel_of_fortune_out,
 )
 from app.api.v1.spin_avalanche import run_avalanche_feature_buy, run_avalanche_spin
+from app.api.v1.spin_tumble import run_tumble_buy, run_tumble_spin
 from app.api.v1.spin_persistence import commit_spin
 from app.engine.reels import spin_reels, weighted_pick
 from app.engine.rng import RNGProvider
@@ -53,6 +54,10 @@ async def run_spin(
 ) -> schemas.SpinResponse:
     game_config = await load_active_config(db, session.game_id)
     reel_set = to_reel_set_config(game_config)
+
+    tumble_config = find_feature_config(game_config, "scatter_tumble")
+    if tumble_config is not None:
+        return await run_tumble_spin(db, session, game_config, requested_bet_amount, rng, tumble_config)
 
     avalanche_config = find_feature_config(game_config, "avalanche")
     if avalanche_config is not None:
@@ -329,6 +334,10 @@ async def run_feature_buy(
 ) -> schemas.SpinResponse:
     game_config = await load_active_config(db, session.game_id)
     reel_set = to_reel_set_config(game_config)
+
+    tumble_config = find_feature_config(game_config, "scatter_tumble")
+    if tumble_config is not None:
+        return await run_tumble_buy(db, session, game_config, feature_id, requested_bet_amount, rng, tumble_config)
 
     avalanche_config = find_feature_config(game_config, "avalanche")
     if avalanche_config is not None:

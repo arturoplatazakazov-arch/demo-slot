@@ -1,0 +1,605 @@
+/* Olympus Thunder — design variant 2 "Ascension".
+
+   Same game, math and art pack as v1 (css/olympus-thunder.css); different
+   art direction: daylight above the storm. The board is a carved white-marble
+   stele floating over a sea of storm clouds, Zeus stands to its RIGHT
+   (mirrored by js/olympus-thunder/v2.js so he faces the board), the jackpots
+   climb a ladder of marble plaques on the LEFT, the win counter is a laurel
+   ribbon draped over the stele's plinth.
+
+   Colour strategy — committed marble: light stone carries the playfield
+   furniture (stele, plaques, ribbon, buy panel), gold only for trims, storm
+   navy for text and for the recessed well the symbols sit in (they were drawn
+   for a dark ground). Cyan only in lightning. No gradient text anywhere.
+
+   Layout model is v1's: one design canvas per orientation (desktop 1920x1080,
+   portrait 1080x1700), every .obj absolutely placed in design px inside
+   #stage, which game.js contain-scales and pins to the top. Variant art
+   (frame, ribbon, plaques, clouds, dawn sky) comes from
+   scripts/olympus_thunder_v2_art.py; the .board__frame offsets below are
+   printed by its `tablet` step. Timings JS waits on mirror board.js. */
+
+:root {
+  --navy: #16213e;
+  --navy-deep: #0b1026;
+  --ink: #16213e;                 /* text on marble */
+  --ink-soft: #3a4566;            /* secondary text on marble, 8.9:1 on --marble */
+  --marble: #e8e1d0;
+  --marble-lit: #f3eee2;
+  --gold: #f5b400;
+  --gold-lt: #ffd75a;
+  --gold-deep: #8a5a00;           /* gold that must read on marble */
+  --cyan: #9fe8ff;
+
+  --font-display: 'Cinzel', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+
+  --design-w: 1920px;
+  --design-h: 1080px;
+  --stage-scale: 1;
+
+  /* grid: 6 x 5 square cells */
+  --cell: 116px;
+  --cols: 6;
+  --rows: 5;
+  --well-pad: 18px;               /* navy margin between stele rim and grid */
+
+  /* z scale inside .screen / page */
+  --z-sky: 0; --z-fx-back: 1; --z-clouds-back: 2; --z-flash: 3; --z-fx-mid: 5;
+  --z-clouds-front: 6; --z-stage: 10;
+}
+
+* { box-sizing: border-box; }
+html, body { overflow: hidden; }
+body {
+  margin: 0;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--navy-deep);
+  color: var(--marble);
+  font-family: var(--font-display);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+button { font-family: inherit; }
+
+.to-catalog-btn {
+  position: fixed; top: 10px; right: 10px; z-index: 120;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 999px;
+  background: rgba(11, 16, 38, .78); border: 1px solid rgba(245, 180, 0, .5);
+  color: var(--gold-lt); font: 600 13px/1 var(--font-display); text-decoration: none;
+}
+.to-catalog-btn svg { width: 14px; height: 14px; }
+.to-catalog-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+/* ---------- scene ---------- */
+.screen { position: fixed; inset: 0; overflow: hidden; background: #2a2340; }
+.layer { position: absolute; }
+
+.sky { inset: -3%; z-index: var(--z-sky); }
+.sky__img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%;
+  transition: opacity 1.6s ease;
+  animation: sky-drift 48s ease-in-out infinite alternate;
+}
+.sky__img--fs { opacity: 0; }
+.screen[data-mode="fs"] .sky__img--fs { opacity: 1; }
+@keyframes sky-drift {
+  from { transform: scale(1.02) translate3d(-0.5%, 0, 0); }
+  to   { transform: scale(1.05) translate3d(0.5%, -0.6%, 0); }
+}
+
+.spine-fx { inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.spine-fx--back { z-index: var(--z-fx-back); }
+.spine-fx--mid { z-index: var(--z-fx-mid); }
+body.fx-over-dim .spine-fx--front { z-index: 44; }
+.spine-fx--front { position: fixed; z-index: 30; }
+.fly-layer, .screen-dim, .popup, .wheel-scene, .buy { position: fixed; }
+
+/* the storm the stele floats above: back bank behind Zeus, front bank between
+   Zeus and the stage (hides his waist so he rises out of the clouds) */
+.clouds { left: -2%; width: 104%; bottom: 0; pointer-events: none; transition: filter 1.6s ease; }
+.clouds--front img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 100%; }
+.clouds--back { z-index: var(--z-clouds-back); height: 50%; object-fit: cover; object-position: 50% 100%; }
+.clouds--front { z-index: var(--z-clouds-front); height: 34%; }
+.clouds--back { animation: cloud-sway 26s ease-in-out infinite alternate; }
+.clouds--front { animation: cloud-sway 19s ease-in-out infinite alternate-reverse; }
+@keyframes cloud-sway { from { transform: translate3d(-1.2%, 0, 0); } to { transform: translate3d(1.2%, 0, 0); } }
+/* in the bonus the cloud sea darkens under the gods' storm */
+.screen[data-mode="fs"] .clouds { filter: brightness(.62) saturate(1.3) hue-rotate(-12deg); }
+
+.flash {
+  inset: 0; z-index: var(--z-flash); pointer-events: none; opacity: 0;
+  background: radial-gradient(120% 90% at 60% 8%, rgba(225, 248, 255, .5), rgba(159, 232, 255, .1) 45%, transparent 70%);
+  mix-blend-mode: screen;
+}
+.flash.is-on { animation: flash 520ms ease-out; }
+@keyframes flash {
+  0% { opacity: 0; } 8% { opacity: 1; } 20% { opacity: .25; } 30% { opacity: .85; } 100% { opacity: 0; }
+}
+
+.stage {
+  position: absolute; z-index: var(--z-stage);
+  left: 50%; top: 0;
+  width: var(--design-w); height: var(--design-h);
+  transform: translateX(-50%) scale(var(--stage-scale));
+  transform-origin: 50% 0;
+}
+.obj { position: absolute; }
+
+/* ---------- objects: desktop placement ---------- */
+/* Zeus: a static hero image (the v1 Spine rig is off: data-spine-zeus="off"),
+   right of the stele and partly behind it. --hero-flip mirrors the art so he
+   faces the board (-1 for art drawn facing right; set 1 for art facing left).
+   game.js sets #zeus[data-anim] (orb / big_mult / fs / jackpot / bigwin, back
+   to idle after 1.6s) — CSS answers with a short surge. */
+.zeus   { left: 1262px; top: 64px; width: 720px; height: 1000px; z-index: 0; --hero-flip: -1;
+  -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent 96%); mask-image: linear-gradient(to bottom, #000 70%, transparent 96%); }
+.zeus__fallback {
+  width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%;
+  transform-origin: 50% 100%;
+  transform: scaleX(var(--hero-flip));
+  animation: hero-idle 7s ease-in-out infinite;
+  filter: drop-shadow(0 18px 30px rgba(22, 20, 50, .35));
+}
+@keyframes hero-idle {
+  0%, 100% { transform: scaleX(var(--hero-flip)) translateY(0) scale(1); }
+  50% { transform: scaleX(var(--hero-flip)) translateY(-10px) scale(1.012); }
+}
+.zeus[data-anim="orb"] .zeus__fallback,
+.zeus[data-anim="big_mult"] .zeus__fallback,
+.zeus[data-anim="fs"] .zeus__fallback,
+.zeus[data-anim="jackpot"] .zeus__fallback,
+.zeus[data-anim="bigwin"] .zeus__fallback { animation: hero-surge 1.2s var(--ease-out); }
+.zeus[data-anim="big_mult"] .zeus__fallback,
+.zeus[data-anim="jackpot"] .zeus__fallback,
+.zeus[data-anim="bigwin"] .zeus__fallback { animation-duration: 1.6s; }
+@keyframes hero-surge {
+  0% { transform: scaleX(var(--hero-flip)); filter: drop-shadow(0 18px 30px rgba(22, 20, 50, .35)); }
+  18% { transform: scaleX(var(--hero-flip)) translateY(-26px) scale(1.04); filter: brightness(1.25) drop-shadow(0 0 40px rgba(159, 232, 255, .85)); }
+  100% { transform: scaleX(var(--hero-flip)); filter: drop-shadow(0 18px 30px rgba(22, 20, 50, .35)); }
+}
+body.spine-zeus .zeus__fallback { visibility: hidden; }
+
+.logo   { left: 52px; top: 14px; width: 476px; filter: drop-shadow(0 8px 14px rgba(11, 16, 38, .55)); transform-origin: 50% 60%; animation: logo-float 9s ease-in-out infinite; }
+@keyframes logo-float { 50% { transform: translateY(-5px); } }
+body.spine-logo .logo { visibility: hidden; }
+
+.jackpots {
+  left: 70px; top: 284px; width: 440px; height: 424px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.board  { left: 584px; top: 160px; width: calc(var(--cell) * var(--cols) + var(--well-pad) * 2); height: calc(var(--cell) * var(--rows) + var(--well-pad) * 2); z-index: 2; }
+.win-plate { left: 610px; top: 770px; width: 680px; height: 152px; z-index: 3; }
+.buy-btn { left: 196px; top: 726px; width: 190px; height: 198px; z-index: 3; }
+.medallion { left: 64px; top: 716px; width: 204px; height: 255px; }
+.fs-counter { left: 290px; top: 772px; width: 214px; height: 140px; }
+
+/* ---------- jackpot ladder: marble plaques ---------- */
+.jp {
+  position: relative; width: 100%; flex: 0 0 auto;
+  display: grid; grid-template-columns: auto 1fr; grid-template-rows: 1fr 1fr; align-items: center;
+  column-gap: 14px; padding: 0 26px 0 22px;
+  border-image: url(../img/olympus-thunder/v2/plaque.webp) 36 fill / 18px / 0 stretch;
+  filter: drop-shadow(0 6px 10px rgba(22, 20, 50, .35));
+}
+.jp[data-tier="grand"] { height: 118px; }
+.jp[data-tier="major"] { height: 98px; width: 92%; }
+.jp[data-tier="minor"] { height: 88px; width: 85%; }
+.jp[data-tier="mini"]  { height: 80px; width: 78%; }
+.jp img { grid-row: 1 / 3; height: 66%; width: auto; filter: drop-shadow(0 2px 2px rgba(40, 20, 0, .35)); }
+.jp__name, .jp__val { white-space: nowrap; text-align: left; line-height: 1; }
+.jp__name { align-self: end; padding-bottom: 5px; font-size: 18px; font-weight: 700; letter-spacing: .22em; }
+.jp__val  { align-self: start; padding-top: 3px; font-size: 30px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums lining-nums; }
+.jp[data-tier="grand"] .jp__name { color: #8e1b2a; font-size: 20px; }
+.jp[data-tier="grand"] .jp__val  { font-size: 40px; }
+.jp[data-tier="major"] .jp__name { color: #5b2a8c; }
+.jp[data-tier="major"] .jp__val  { font-size: 34px; }
+.jp[data-tier="minor"] .jp__name { color: #1d4e9e; }
+.jp[data-tier="minor"] .jp__val  { font-size: 30px; }
+.jp[data-tier="mini"]  .jp__name { color: #1c6b3a; font-size: 16px; }
+.jp[data-tier="mini"]  .jp__val  { font-size: 27px; }
+.jp.is-hit { animation: jp-hit 900ms var(--ease-out) 3; }
+@keyframes jp-hit { 50% { transform: scale(1.08); filter: brightness(1.15) drop-shadow(0 0 22px var(--gold)); } }
+
+/* ---------- win counter: laurel ribbon (band = 130..630 x 40..132 of 760x170) ---------- */
+.win-plate img, .medallion img, .buy-btn img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.win-plate__label, .win-plate__value {
+  position: absolute; left: 20%; right: 20%; text-align: center; white-space: nowrap; color: var(--ink);
+}
+.win-plate__label {
+  top: 42%; transform: translateY(-50%);
+  font-family: var(--font-display); font-size: 21px; font-weight: 700; letter-spacing: .12em;
+  transition: top .3s var(--ease-out), font-size .3s var(--ease-out), color .3s;
+}
+.win-plate__value {
+  top: 60%; transform: translateY(-50%);
+  font-size: 40px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums lining-nums;
+}
+.win-plate.has-value .win-plate__label { top: 33%; font-size: 14px; color: var(--ink-soft); }
+.win-plate.is-bump .win-plate__value { animation: bump 300ms var(--ease-out); }
+@keyframes bump { 40% { transform: translateY(-50%) scale(1.18); } }
+
+/* ---------- FS: total multiplier medallion + spins plaque ---------- */
+.medallion::before {
+  content: ''; position: absolute; z-index: -1; border-radius: 50%;
+  left: 15%; right: 15%; top: 32%; bottom: 13%;
+  background: radial-gradient(ellipse at 50% 30%, #23305a, var(--navy-deep) 75%);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, .9);
+}
+.medallion__label {
+  position: absolute; left: 0; right: 0; top: 43%; text-align: center;
+  font-family: var(--font-ui); font-size: 12px; font-weight: 700; letter-spacing: .12em; line-height: 1.2; color: var(--marble);
+}
+.medallion__value {
+  position: absolute; left: 0; right: 0; top: 58%; text-align: center;
+  font-size: 50px; font-weight: 800; line-height: 1; color: var(--gold-lt);
+  text-shadow: 0 3px 0 #3a1c00, 0 0 16px rgba(245, 180, 0, .45);
+}
+.medallion.is-hit { animation: medal-hit 650ms var(--ease-out); }
+@keyframes medal-hit { 30% { transform: scale(1.14); filter: brightness(1.5); } }
+
+.fs-counter {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  border-image: url(../img/olympus-thunder/v2/plaque.webp) 36 fill / 18px / 0 stretch;
+  filter: drop-shadow(0 6px 10px rgba(22, 20, 50, .35));
+}
+.fs-counter__label { font-size: 15px; font-weight: 700; letter-spacing: .2em; color: var(--ink-soft); }
+.fs-counter__value { font-size: 54px; font-weight: 800; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums lining-nums; }
+
+.medallion, .fs-counter {
+  opacity: 0; transform: translateY(16px) scale(.92);
+  transition: opacity .5s var(--ease-out), transform .6s var(--ease-out); pointer-events: none;
+}
+.screen[data-mode="fs"] .medallion, .screen[data-mode="fs"] .fs-counter { opacity: 1; transform: none; }
+
+/* ---------- buy bonus ---------- */
+.buy-btn { border: 0; padding: 0; background: none; cursor: pointer; transition: transform .2s var(--ease-out), opacity .3s, filter .2s; }
+.buy-btn::before {
+  content: ''; position: absolute; left: 17%; right: 17%; top: 10%; bottom: 27%; border-radius: 50%; z-index: -1;
+  background: radial-gradient(circle at 50% 35%, #23305a, var(--navy-deep) 72%);
+  box-shadow: inset 0 0 18px rgba(245, 180, 0, .35);
+}
+.buy-btn__label {
+  position: absolute; left: 0; right: 0; top: 28%; text-align: center;
+  font-size: 26px; font-weight: 800; line-height: 1.05; color: var(--gold-lt);
+  text-shadow: 0 2px 0 #000;
+}
+.buy-btn:hover { transform: translateY(-3px) scale(1.04); filter: brightness(1.1); }
+.buy-btn:active { transform: scale(.96); }
+.buy-btn:focus-visible { outline: 3px solid var(--cyan); outline-offset: 4px; border-radius: 50%; }
+.buy-btn[disabled], .screen[data-mode="fs"] .buy-btn { opacity: 0; pointer-events: none; }
+body.is-busy .buy-btn { filter: grayscale(.6) brightness(.8); pointer-events: none; }
+
+/* ---------- board: navy well inside the marble stele ---------- */
+/* frame = stele art with a transparent hole exactly the board rect
+   (olympus_thunder_v2_art.py tablet step prints these offsets) */
+.board__frame { position: absolute; left: -108px; top: -177px; width: 948px; height: 908px; z-index: 2; pointer-events: none; max-width: none; }
+.board::before {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  background:
+    radial-gradient(90% 70% at 50% 0%, rgba(60, 80, 140, .45), transparent 70%),
+    linear-gradient(180deg, #1a2648, var(--navy-deep));
+  box-shadow: inset 0 10px 24px rgba(0, 0, 0, .65), inset 0 -4px 14px rgba(0, 0, 0, .4);
+  transition: background 1.2s;
+}
+.screen[data-mode="fs"] .board::before {
+  background:
+    radial-gradient(90% 70% at 50% 0%, rgba(150, 80, 220, .4), transparent 70%),
+    linear-gradient(180deg, #2a1650, #120a2a);
+}
+.board__grid {
+  position: absolute; z-index: 1;
+  left: var(--well-pad); top: var(--well-pad);
+  width: calc(var(--cell) * var(--cols)); height: calc(var(--cell) * var(--rows));
+  overflow: hidden;
+}
+.board__fx { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+
+.cell {
+  position: absolute; left: 0; top: 0;
+  width: var(--cell); height: var(--cell);
+  will-change: transform;
+}
+.cell__img { position: absolute; inset: 3%; width: 94%; height: 94%; object-fit: contain; transition: filter .2s; }
+.cell.is-dim .cell__img { filter: brightness(.38) saturate(.5); }
+.cell.is-win .cell__img { animation: sym-win 620ms ease-in-out infinite; filter: drop-shadow(0 0 10px rgba(255, 215, 90, .9)); }
+@keyframes sym-win { 50% { transform: scale(1.12); } }
+.cell.is-pop .cell__img { animation: sym-pop 260ms ease-in forwards; }
+@keyframes sym-pop { to { transform: scale(1.35); opacity: 0; filter: brightness(3) drop-shadow(0 0 20px #9fe8ff); } }
+body.spine-symbols .cell.is-spine .cell__img { visibility: hidden; }
+.cell.is-spine-orb .cell__img, .cell.is-spine-orb .cell__num { visibility: hidden; }
+.cell.is-land .cell__img { animation: land 240ms ease-out; }
+@keyframes land { 0% { transform: scaleY(.86) translateY(5%); } 60% { transform: scaleY(1.04); } }
+
+/* orb: art + number (Cinzel), value colour by size */
+.cell__num {
+  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%);
+  text-align: center; font-weight: 700; font-size: 37px; line-height: 1;
+  color: #fff; letter-spacing: -.02em;
+  -webkit-text-stroke: 2px #3a1c00;
+  paint-order: stroke fill;
+  text-shadow: 0 3px 0 #2a1400, 0 0 12px rgba(255, 160, 0, .9);
+  pointer-events: none;
+}
+.cell__num.is-big { font-size: 33px; color: #fff4c0; text-shadow: 0 3px 0 #2a1400, 0 0 16px #ff3d00; }
+.cell__num.is-huge { font-size: 31px; color: #fff; text-shadow: 0 3px 0 #2a0040, 0 0 18px #c040ff, 0 0 30px #c040ff; }
+.cell.is-orb .cell__img { animation: orb-breathe 2.4s ease-in-out infinite; }
+@keyframes orb-breathe { 50% { transform: scale(1.05); filter: brightness(1.15); } }
+.cell.is-orb-fade .cell__img, .cell.is-orb-fade .cell__num { transition: opacity .5s, filter .5s; opacity: .35; filter: grayscale(1); }
+
+/* flying orb value (collect) */
+.fly-layer { inset: 0; z-index: 31; pointer-events: none; }
+.fly {
+  position: absolute; left: 0; top: 0; pointer-events: none;
+  font-weight: 700; color: #fff; white-space: nowrap;
+  -webkit-text-stroke: 2px #3a1c00; paint-order: stroke fill;
+  text-shadow: 0 0 14px #ffb000, 0 0 30px rgba(255, 176, 0, .6);
+}
+
+/* step / series counter banners over the grid */
+.combo {
+  position: absolute; z-index: 4; left: 50%; top: 50%;
+  transform: translate(-50%, -50%) scale(.6); opacity: 0;
+  font-size: 62px; font-weight: 800; white-space: nowrap; color: #fff;
+  -webkit-text-stroke: 3px #3a1c00; paint-order: stroke fill;
+  text-shadow: 0 0 20px #ffb000, 0 6px 0 #2a1400;
+  pointer-events: none;
+}
+.combo.is-on { animation: combo 1200ms ease-out forwards; }
+@keyframes combo {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.5); }
+  18% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); }
+  30% { transform: translate(-50%, -50%) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -62%) scale(1); }
+}
+
+/* ---------- dim / popup ---------- */
+.screen-dim { inset: 0; z-index: 40; background: rgba(8, 10, 28, .74); opacity: 0; pointer-events: none; transition: opacity .35s; }
+.screen-dim.is-on { opacity: 1; pointer-events: auto; }
+.screen-dim.is-black { background: #000; }
+
+.popup {
+  inset: 0; z-index: 45; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2vmin; cursor: pointer;
+}
+.popup[hidden] { display: none; }
+.popup__rays {
+  position: absolute; left: 50%; top: 46%; width: 160vmax; height: 160vmax;
+  margin: -80vmax 0 0 -80vmax; pointer-events: none; opacity: .5;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 236, 180, .22) 0 6deg, transparent 6deg 18deg);
+  -webkit-mask: radial-gradient(circle, #000 0, transparent 55%); mask: radial-gradient(circle, #000 0, transparent 55%);
+  animation: rays 24s linear infinite;
+}
+.popup[data-tier="fs"] .popup__rays, .popup[data-tier="super"] .popup__rays { background: repeating-conic-gradient(from 0deg, rgba(190, 120, 255, .25) 0 6deg, transparent 6deg 18deg); }
+@keyframes rays { to { transform: rotate(360deg); } }
+.popup__title { position: relative; width: min(80vw, 860px); max-height: 22vh; object-fit: contain; filter: drop-shadow(0 10px 30px rgba(0, 0, 0, .7)); }
+.popup.is-in .popup__title { animation: title-in 700ms var(--ease-out); }
+@keyframes title-in { 0% { transform: scale(.4); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.popup__sub { position: relative; font-family: var(--font-display); font-size: clamp(16px, 2.6vmin, 30px); font-weight: 700; letter-spacing: .14em; color: var(--marble-lit); text-shadow: 0 2px 0 #000; }
+/* the amount sits on a marble plaque: solid ink figures, no gradient text */
+.popup__amount {
+  position: relative; padding: .14em .7em .1em;
+  font-size: clamp(40px, 10vmin, 128px); font-weight: 800; line-height: 1; color: var(--ink);
+  font-variant-numeric: tabular-nums lining-nums;
+  border-image: url(../img/olympus-thunder/v2/plaque.webp) 36 fill / clamp(14px, 2.4vmin, 24px) / 0 stretch;
+  filter: drop-shadow(0 12px 26px rgba(0, 0, 0, .55));
+}
+.popup__amount:empty { display: none; }
+.popup.is-in .popup__amount { animation: amount-in 600ms var(--ease-out) 120ms both; }
+@keyframes amount-in { from { opacity: 0; transform: translateY(18px); } }
+.popup__hint { position: relative; font-family: var(--font-ui); font-size: 13px; letter-spacing: .14em; opacity: 0; transition: opacity .4s; color: var(--marble-lit); }
+.popup.can-close .popup__hint { opacity: .75; }
+
+/* ---------- wheel ---------- */
+.wheel-scene { inset: 0; z-index: 46; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2vmin; }
+.wheel-scene[hidden] { display: none; }
+.wheel-scene__title { width: min(64vw, 520px); max-height: 15vh; object-fit: contain; filter: drop-shadow(0 8px 20px rgba(0, 0, 0, .7)); animation: title-in 700ms var(--ease-out); }
+.wheel { position: relative; width: min(64vmin, 600px); aspect-ratio: 1; margin-top: 4vmin; }
+.wheel__disc { position: absolute; inset: 0; will-change: transform; }
+.wheel__disc img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 20px 40px rgba(0, 0, 0, .7)); }
+.wheel__labels { position: absolute; inset: 0; }
+.wheel__label { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+.wheel__label span {
+  position: absolute; left: 0; top: 0; transform: translate(-50%, -50%);
+  font-size: clamp(11px, 2.3vmin, 20px); font-weight: 700; white-space: nowrap; color: #fff;
+  text-shadow: 0 2px 0 #000, 0 0 8px rgba(0, 0, 0, .9); letter-spacing: .05em;
+}
+.wheel__label.is-win span { color: var(--gold-lt); animation: wheel-win 500ms ease-in-out 4; }
+@keyframes wheel-win { 40% { transform: translate(-50%, -50%) scale(1.2); } }
+.wheel__pointer { position: absolute; left: 50%; top: -9%; width: 15%; transform: translateX(-50%); filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .8)); z-index: 2; }
+
+/* ---------- buy window: a marble slab ---------- */
+.buy { inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(8, 10, 28, .8); }
+.buy[hidden] { display: none; }
+.buy__panel {
+  position: relative; padding: 2.6vmin 3.4vmin 3vmin;
+  text-align: center; color: var(--ink);
+  background: url(../img/olympus-thunder/v2/marble.webp) center / cover, var(--marble);
+  border: 3px solid var(--gold);
+  outline: 1px solid var(--gold-deep); outline-offset: -9px;
+  border-radius: 6px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .6), inset 0 0 0 1px rgba(255, 255, 255, .5);
+  max-width: 96vw;
+  animation: panel-in 380ms var(--ease-out);
+}
+@keyframes panel-in { from { opacity: 0; transform: translateY(14px) scale(.98); } }
+.buy__title { margin: 0 0 1.6vmin; font-size: clamp(22px, 4.2vmin, 42px); font-weight: 800; letter-spacing: .14em; color: var(--ink); }
+.buy__close {
+  position: absolute; right: 10px; top: 8px; width: 40px; height: 40px; border: 0; border-radius: 50%;
+  background: none; color: var(--ink); font-size: 30px; line-height: 1; cursor: pointer;
+}
+.buy__close:hover { background: rgba(22, 33, 62, .08); }
+.buy__close:focus-visible, .buy__step:focus-visible, .buy__yes:focus-visible, .buy__no:focus-visible, .card:focus-visible {
+  outline: 3px solid var(--navy); outline-offset: 3px;
+}
+.buy__cards { display: flex; gap: 2vmin; justify-content: center; }
+.card {
+  position: relative; width: min(24vw, 30vh, 250px); aspect-ratio: 376 / 720; border: 0; padding: 0; background: none; cursor: pointer;
+  transition: transform .25s var(--ease-out), filter .2s;
+  filter: drop-shadow(0 8px 14px rgba(22, 20, 50, .3));
+}
+.card img { width: 100%; height: 100%; object-fit: contain; }
+.card:hover { transform: translateY(-6px); filter: brightness(1.08) drop-shadow(0 14px 22px rgba(22, 20, 50, .38)); }
+.card[disabled] { filter: grayscale(1) brightness(.75); cursor: not-allowed; transform: none; }
+.card__text { position: absolute; left: 12%; right: 12%; bottom: 9.5%; height: 13%; display: flex; flex-direction: column; justify-content: center; }
+.card__name { font-size: clamp(10px, 1.9vmin, 17px); font-weight: 700; color: #fff; letter-spacing: .04em; line-height: 1.1; }
+.card__price { font-size: clamp(13px, 2.6vmin, 24px); font-weight: 800; color: var(--gold-lt); line-height: 1.2; }
+.card__desc { margin-top: .9vmin; font-family: var(--font-ui); font-size: clamp(10px, 1.6vmin, 14px); color: var(--ink-soft); line-height: 1.3; max-width: 100%; text-wrap: pretty; }
+.buy__bet { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 2vmin; }
+.buy__step {
+  width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--gold-deep);
+  background: var(--navy); color: var(--gold-lt); font-size: 24px; cursor: pointer;
+}
+.buy__step:active { transform: scale(.94); }
+.buy__bet-val { display: flex; flex-direction: column; min-width: 160px; }
+.buy__bet-val span { font-family: var(--font-ui); font-size: 12px; font-weight: 700; letter-spacing: .2em; color: var(--ink-soft); }
+.buy__bet-val b { font-size: 26px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums lining-nums; }
+.buy__confirm {
+  position: absolute; inset: 0; border-radius: 6px; background: rgba(243, 238, 226, .97);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 20px;
+}
+.buy__confirm[hidden] { display: none; }
+.buy__confirm p { margin: 0; font-family: var(--font-ui); font-size: clamp(16px, 3vmin, 26px); line-height: 1.4; color: var(--ink); }
+.buy__confirm b { font-family: var(--font-display); }
+.buy__confirm-row { display: flex; gap: 16px; }
+.buy__yes, .buy__no { min-width: 150px; padding: 14px 20px; border-radius: 999px; font-size: 18px; font-weight: 700; cursor: pointer; letter-spacing: .08em; }
+.buy__yes { border: 2px solid var(--gold); color: var(--gold-lt); background: var(--navy); box-shadow: 0 4px 0 var(--navy-deep); }
+.buy__yes:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--navy-deep); }
+.buy__no { border: 2px solid rgba(22, 33, 62, .35); background: transparent; color: var(--ink); }
+
+/* ---------- info / paytable (long reading: stays on navy) ---------- */
+.info-popup { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; background: rgba(8, 10, 28, .86); }
+.info-popup[hidden] { display: none; }
+.info-popup__panel {
+  position: relative; width: min(94vw, 900px); max-height: 86vh; overflow: auto; padding: 26px 28px;
+  border-radius: 10px; background: var(--navy);
+  border: 2px solid rgba(245, 180, 0, .55);
+  font-family: var(--font-ui); font-size: 15px; line-height: 1.55; color: var(--marble-lit);
+}
+.info-popup__panel p { max-width: 72ch; }
+.info-popup__close { position: absolute; right: 12px; top: 6px; border: 0; background: none; color: var(--marble); font-size: 32px; cursor: pointer; }
+.info-popup h2 { font-family: var(--font-display); color: var(--gold-lt); margin: 20px 0 8px; font-size: 20px; letter-spacing: .08em; }
+.info-popup h2:first-child { margin-top: 0; }
+.pt { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.pt__row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; background: rgba(255, 255, 255, .05); }
+.pt__row img { width: 56px; height: 56px; object-fit: contain; flex: none; }
+.pt__pays { display: grid; grid-template-columns: auto auto; column-gap: 8px; font-size: 13px; }
+.pt__pays b { color: var(--gold-lt); }
+.info-popup table { border-collapse: collapse; margin: 6px 0; }
+.info-popup td, .info-popup th { padding: 3px 12px 3px 0; text-align: left; }
+
+/* ---------- portrait ---------- */
+@media (orientation: portrait) {
+  :root { --design-w: 1080px; --design-h: 1700px; --cell: 150px; --well-pad: 20px; }
+  .logo      { left: 30px; top: 6px; width: 460px; }
+  .jackpots  { left: 40px; top: 254px; width: 460px; height: 322px; gap: 8px; }
+  .jp[data-tier="grand"] { height: 94px; }
+  .jp[data-tier="major"] { height: 78px; }
+  .jp[data-tier="minor"] { height: 70px; }
+  .jp[data-tier="mini"]  { height: 64px; }
+  .jp[data-tier="grand"] .jp__val { font-size: 34px; }
+  .jp[data-tier="major"] .jp__val { font-size: 28px; }
+  .jp[data-tier="minor"] .jp__val { font-size: 25px; }
+  .jp[data-tier="mini"]  .jp__val { font-size: 22px; }
+  .jp__name { font-size: 18px; padding-bottom: 3px; }
+  .jp[data-tier="grand"] .jp__name { font-size: 20px; }
+  .jp[data-tier="mini"] .jp__name { font-size: 16px; }
+  .zeus      { left: 470px; top: -24px; width: 640px; height: 900px; }
+  .board     { left: 70px; top: 690px; }
+  .board__frame { left: -139px; top: -227px; width: 1217px; height: 1166px; }
+  .win-plate { left: 220px; top: 1462px; width: 640px; height: 143px; }
+  .win-plate__label { font-size: 23px; }
+  .win-plate.has-value .win-plate__label { font-size: 16px; }
+  .win-plate__value { font-size: 44px; }
+  .cell__num { font-size: 48px; }
+  .cell__num.is-big, .cell__num.is-huge { font-size: 42px; }
+  .buy-btn   { left: 30px; top: 1500px; width: 172px; height: 180px; }
+  .buy-btn__label { font-size: 24px; }
+  .medallion { left: 876px; top: 1458px; width: 180px; height: 225px; }
+  .medallion__value { font-size: 44px; }
+  .fs-counter { left: 24px; top: 1520px; width: 188px; height: 130px; }
+  .fs-counter__value { font-size: 48px; }
+  .combo { font-size: 80px; }
+  .clouds--back { height: 46%; }
+  .clouds--front { height: 30%; }
+}
+
+/* ---------- reduced motion: keep state changes, drop travel ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .sky__img, .clouds--back, .clouds--front, .popup__rays, .logo { animation: none; }
+  .zeus__fallback { animation: none; }
+  .zeus[data-anim] .zeus__fallback { animation: hero-glow 1.2s ease; }
+  @keyframes hero-glow { 30% { filter: brightness(1.2) drop-shadow(0 0 36px rgba(159, 232, 255, .8)); } }
+  .zeus[data-anim="idle"] .zeus__fallback { animation: none; }
+  .cell.is-win .cell__img { animation: none; filter: drop-shadow(0 0 12px rgba(255, 215, 90, 1)) brightness(1.15); }
+  .cell.is-orb .cell__img, .cell.is-land .cell__img { animation: none; }
+  .jp.is-hit { animation: jp-glow 900ms ease-in-out 3; }
+  @keyframes jp-glow { 50% { filter: brightness(1.15) drop-shadow(0 0 22px var(--gold)); } }
+  .medallion.is-hit, .win-plate.is-bump .win-plate__value { animation: none; }
+  .popup.is-in .popup__title, .popup.is-in .popup__amount, .wheel-scene__title, .buy__panel { animation: fade-in 300ms ease both; }
+  @keyframes fade-in { from { opacity: 0; } }
+  .medallion, .fs-counter { transform: none; }
+  .buy-btn:hover, .card:hover { transform: none; }
+}
+
+/* Rares read 10% bigger than the rest (product request). `scale` composes
+   with the win/land/pop keyframes, which all animate `transform`. */
+.cell[data-code="helmet"] .cell__img, .cell[data-code="lyre"] .cell__img,
+.cell[data-code="amphora"] .cell__img, .cell[data-code="wreath"] .cell__img { scale: 1.1; }
+
+/* Hand-inked pack (scripts/olympus_thunder_v2_pack.py): the painted sky
+   already carries the cloud sea and the temple islands, so the procedural
+   cloud layers stay off. */
+.clouds--front { display: none; }
+
+/* the closed V3 menu flyout is an invisible box over the board's lower-left
+   cell / the Buy button: only its buttons should ever take clicks */
+.v3-bar .v3-menu__flyout { pointer-events: none; }
+
+/* the logo sits in front of everything on the stage (frame included) */
+.logo { z-index: 20; }
+
+/* desktop rule (product): framed board centred, 70-80% of screen height */
+@media (orientation: landscape) {
+  .board { left: 594px; top: 263px; }
+}
+
+/* desktop v3 (product: "our best variant — make it perfect"): board ~80% of
+   the screen height and centred; Zeus clears the stele on the right; the win
+   ribbon rides the stele's base instead of covering the last row; the left
+   column (logo, jackpot ladder, Buy) narrowed to stay off the frame. */
+@media (orientation: landscape) {
+  :root { --cell: 126px; }
+  .board        { left: 564px; top: 241px; }
+  .board__frame { left: -117px; top: -192px; width: 1026px; height: 982px; }
+  .win-plate    { left: 620px; top: 890px; width: 680px; height: 152px; }
+  .zeus         { left: 1430px; top: 170px; width: 560px; height: 900px; }
+  .logo         { left: 34px; top: 14px; width: 400px; }
+  .jackpots     { left: 44px; top: 250px; width: 380px; }
+  .buy-btn      { left: 140px; top: 760px; }
+  .medallion    { left: 40px; top: 740px; }
+  .fs-counter   { left: 250px; top: 790px; }
+}
+
+@media (orientation: landscape) {
+  /* Zeus fully clear of the stele and inside the canvas */
+  .zeus { left: 1478px; top: 230px; width: 440px; height: 830px; }
+}
+
+/* desktop: board +10% more (product) — frame now spans the full canvas height */
+@media (orientation: landscape) {
+  :root { --cell: 139px; }
+  .board        { left: 525px; top: 210px; }
+  .board__frame { left: -128px; top: -210px; width: 1127px; height: 1079px; }
+  .win-plate    { left: 620px; top: 925px; }
+  .zeus         { left: 1528px; top: 250px; width: 392px; height: 810px; }
+  .logo         { left: 24px; width: 360px; }
+  .jackpots     { left: 30px; width: 350px; }
+  .buy-btn      { left: 110px; }
+  .medallion    { left: 24px; }
+  .fs-counter   { left: 220px; }
+}
