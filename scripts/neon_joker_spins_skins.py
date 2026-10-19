@@ -442,6 +442,7 @@ def base_page() -> None:
     path = ROOT / "front/neon-joker-spins.html"
     html = path.read_text()
     html = re.sub(SWITCHER_RE, "\n", html, flags=re.S)
+    html = re.sub(r"\n{2,}(  <div class=\"screen\" id=\"screen\">)", r"\n\n\1", html)
     anchor = '  <div class="screen" id="screen">'
     assert anchor in html
     html = html.replace(anchor, SWITCHER.format(links=switch_links(None)) + "\n" + anchor, 1)
@@ -451,6 +452,7 @@ def base_page() -> None:
 def page(x: str) -> str:
     html = (ROOT / "front/neon-joker-spins.html").read_text()
     html = re.sub(SWITCHER_RE, "\n", html, flags=re.S)
+    html = re.sub(r"\n{2,}(  <div class=\"screen\" id=\"screen\">)", r"\n\n\1", html)
     root = f"img/neon-joker-spins/skins/{x}"
     links = switch_links(x)
     reps = [
@@ -464,7 +466,7 @@ def page(x: str) -> str:
         ('  <script src="js/neon-joker-spins/fx.js?v=1"></script>\n', ""),
         ('  <script src="js/neon-joker-spins/slot.js?v=3"></script>',
          f"  <script>window.NJS_ASSET_ROOT = '{root}'; window.NJS_SKIN = '{x}';</script>\n"
-         '  <script src="js/neon-joker-spins/winlines.js?v=3"></script>\n'
+         '  <script src="js/neon-joker-spins/winlines.js?v=6"></script>\n'
          '  <script src="js/neon-joker-spins/slot.js?v=3"></script>\n'
          '  <script src="js/neon-joker-spins/mascot.js?v=1"></script>'),
         ('  <div class="screen" id="screen">', SWITCHER.format(links=links) + '\n  <div class="screen" id="screen">'),
@@ -477,6 +479,10 @@ def page(x: str) -> str:
 
 if __name__ == "__main__":
     base_page()
+    if sys.argv[1:] == ["pages"]:  # only rewrite the html (switcher, script versions)
+        for x in NAMES:
+            (ROOT / f"front/neon-joker-spins-{x}.html").write_text(page(x))
+        raise SystemExit
     for x in sys.argv[1:] or list(NAMES):
         g = build(x)
         (CSS / f"njs-skin-{x}.css").write_text(css(x, g))
