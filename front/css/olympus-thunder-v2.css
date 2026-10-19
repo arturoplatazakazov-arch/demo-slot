@@ -603,3 +603,20 @@ body.spine-symbols .cell.is-spine .cell__img { visibility: hidden; }
   .medallion    { left: 24px; }
   .fs-counter   { left: 220px; }
 }
+
+@media (orientation: landscape) {
+  /* hero x2 (product): he stands from the canvas floor to its top, his
+     back shoulder just behind the stele, the cloak running off the edge */
+  .zeus { left: 1340px; top: -40px; width: 784px; height: 1120px; }
+}
+
+@media (orientation: landscape) {
+  /* the stele's lightning crest needs air above it: board -3.6%, frame top
+     at y=24 instead of the screen edge */
+  :root { --cell: 134px; }
+  .board        { left: 540px; top: 227px; }
+  .board__frame { left: -124px; top: -203px; width: 1088px; height: 1042px; }
+  .win-plate    { left: 620px; top: 917px; }
+  /* keep the raised bolt clear of the catalog button */
+  .zeus         { top: 40px; }
+}
