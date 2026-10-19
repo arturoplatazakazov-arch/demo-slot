@@ -30,10 +30,10 @@ from app.api.v1.response_builders import (
 )
 from app.api.v1.spin_avalanche import run_avalanche_feature_buy, run_avalanche_spin
 from app.api.v1.spin_persistence import commit_spin
-from app.engine.reels import spin_reels
+from app.engine.reels import spin_reels, weighted_pick
 from app.engine.rng import RNGProvider
-from app.engine.types import ReelSetConfig
-from app.engine.wins import evaluate_spin
+from app.engine.types import ReelSetConfig, WinEvaluation
+from app.engine.wins import evaluate_count_wins, evaluate_spin
 from app.features import default_registry
 from app.features.base import FeatureContext
 from app.models.session import Session
@@ -91,17 +91,27 @@ async def run_spin(
                 grid.reels[reel][row] = symbol_code
 
     wild_config = find_feature_config(game_config, "expanding_wild")
+    # Savannah Kings (GDD-03 §5.2.4): scatters and paws a lion expands over
+    # still count — keep the grid as it landed for count pays, triggers and
+    # the client (which draws the expansions from wild_events on top of it).
+    landed_grid = None
+    if wild_config is not None and wild_config.params.get("triggers_before_expand"):
+        landed_grid = dataclasses.replace(grid, reels=[list(column) for column in grid.reels])
     wild_events = apply_expanding_wild(grid, wild_config, state, rng, Decimal(bet_amount), reel_set)
 
     bet_per_line = Decimal(bet_amount) / Decimal(len(paylines))
     evaluation = evaluate_spin(grid, reel_set.symbols, paylines, bet_per_line, Decimal(bet_amount))
+    if landed_grid is not None:
+        evaluation = dataclasses.replace(
+            evaluation, count_wins=evaluate_count_wins(landed_grid, reel_set.symbols, Decimal(bet_amount))
+        )
 
     ctx = FeatureContext(
         session_state=state,
         rng=rng,
         bet_amount=Decimal(bet_amount),
         symbols=reel_set.symbols,
-        grid=grid,
+        grid=landed_grid or grid,
         win_evaluation=evaluation,
         is_bonus_buy=False,
     )
@@ -231,7 +241,7 @@ async def run_spin(
     balance_before = Decimal(str(session.balance))
     balance_after = balance_before + spin_win if was_in_free_spins else balance_before - bet_amount + spin_win
 
-    win_breakdown = {
+    win_breakdown: dict[str, object] = {
         "line_pay": str(evaluation.line_pay_total),
         "count_pay": str(evaluation.count_pay_total),
     }
@@ -274,7 +284,7 @@ async def run_spin(
     )
 
     return schemas.SpinResponse(
-        grid=to_frontend_grid(grid),
+        grid=to_frontend_grid(landed_grid or grid),
         winning_cells=[
             schemas.WinningCellOut(**c)
             for c in winning_cells(grid, evaluation.line_wins, evaluation.count_wins)
@@ -294,13 +304,20 @@ async def run_spin(
     )
 
 
-def with_weight_overrides(reel_set: ReelSetConfig, overrides: dict[str, int]) -> ReelSetConfig:
-    """The same reel set with the named symbols re-weighted (one weight for
-    every reel) — free-spins weight sets and the bought Hold & Win spin."""
+def with_weight_overrides(reel_set: ReelSetConfig, overrides: dict[str, int | list[int]]) -> ReelSetConfig:
+    """The same reel set with the named symbols re-weighted — free-spins
+    weight sets and the bought Hold & Win spin. A plain number applies to
+    every reel; a list is per reel (Savannah Kings' FS lion: 0 on reels 1
+    and 5, where it never lands)."""
+    def reweighted(weight: int | list[int]) -> list[int]:
+        if isinstance(weight, list):
+            return [int(w) for w in weight]
+        return [int(weight)] * reel_set.num_reels
+
     return dataclasses.replace(
         reel_set,
         symbols=[
-            dataclasses.replace(sym, weights=[int(overrides[sym.code])] * reel_set.num_reels)
+            dataclasses.replace(sym, weights=reweighted(overrides[sym.code]))
             if sym.code in overrides else sym
             for sym in reel_set.symbols
         ],
@@ -332,12 +349,16 @@ async def run_feature_buy(
     # results) — the player can win on this spin in addition to the
     # guaranteed feature entry, matching the "response как у /spin" contract.
     hw_params = plan.target_config.params if plan.target_feature_id == "hold_and_win" else {}
+    product = plan.product
     # Neon Joker Spins (GDD-02 §7): the purchase spin draws on the base
     # weights with buy_exclude_symbols (the scatter) removed, redrawn until it
     # shows at least buy_min_coins coins — a real, server-drawn grid that
-    # opens the round on its own coins.
-    if hw_params.get("buy_exclude_symbols"):
-        reel_set = with_weight_overrides(reel_set, {code: 0 for code in hw_params["buy_exclude_symbols"]})
+    # opens the round on its own coins. Savannah Kings sets the same key per
+    # product (GDD-03 §6.4.3: no paws on a Free Spins buy, no masks on a
+    # Jackpot Chance buy — a purchase never opens the other feature).
+    buy_exclude = product.get("buy_exclude_symbols") or hw_params.get("buy_exclude_symbols")
+    if buy_exclude:
+        reel_set = with_weight_overrides(reel_set, {code: 0 for code in buy_exclude})
     min_coins = int(hw_params.get("buy_min_coins") or 0)
     coin_code = hw_params.get("trigger_symbol_code", "coin")
     for _ in range(100_000):
@@ -355,6 +376,18 @@ async def run_feature_buy(
         for reel_index, row_index in enumerate(buy_line):
             grid.reels[reel_index][row_index] = coin_code
 
+    # Savannah Kings: the purchase spin shows its own trigger — `count` of
+    # `symbol` on distinct reels picked from `reels`, at random rows — so the
+    # player sees the masks/paws that "won" the feature.
+    buy_force = product.get("buy_force")
+    if buy_force:
+        candidate_reels = list(buy_force["reels"])
+        for _ in range(int(buy_force.get("count", len(candidate_reels)))):
+            index, _, _ = weighted_pick([1] * len(candidate_reels), rng)
+            reel_index = candidate_reels.pop(index)
+            row_index, _, _ = weighted_pick([1] * reel_set.num_rows, rng)
+            grid.reels[reel_index][row_index] = buy_force["symbol"]
+
     wild_config = find_feature_config(game_config, "expanding_wild")
     wild_events = apply_expanding_wild(
         grid, wild_config, state, rng, Decimal(bet_amount), reel_set, is_bonus_buy=True
@@ -365,6 +398,10 @@ async def run_feature_buy(
     # GDD-02 §7: line wins of the purchase spin are not paid (nor shown).
     if hw_params.get("buy_pay_lines", True) is False:
         evaluation = evaluate_spin(grid, reel_set.symbols, [], bet_per_line, Decimal(bet_amount))
+    # GDD-03 §6.4.3: the purchase spin pays nothing at all — no lines and no
+    # scatter pay for the masks it shows.
+    if product.get("buy_pay_spin", True) is False:
+        evaluation = WinEvaluation(line_wins=(), count_wins=())
     spin_win = evaluation.total_win
 
     ctx = FeatureContext(
@@ -400,9 +437,11 @@ async def run_feature_buy(
     # own win right away, and the response carries a HoldAndWinOut (like a
     # natural trigger would) instead of the generic FeatureOut used below.
     is_hold_and_win = plan.target_feature_id == "hold_and_win"
+    is_wheel = plan.target_feature_id == "wheel_of_fortune"
     hold_and_win_result = result if is_hold_and_win else None
+    wheel_result = result if is_wheel else None
     max_win_reached = False
-    if is_hold_and_win:
+    if is_hold_and_win or is_wheel:
         spin_win += result.win_amount
         # The cap counts from the bet, not the purchase price (GDD-02 §7.7).
         fs_config = find_feature_config(game_config, "free_spins")
@@ -416,7 +455,7 @@ async def run_feature_buy(
 
     balance_after = balance_before - plan.cost + spin_win
 
-    win_breakdown = {
+    win_breakdown: dict[str, object] = {
         "line_pay": str(evaluation.line_pay_total),
         "count_pay": str(evaluation.count_pay_total),
     }
@@ -426,6 +465,8 @@ async def run_feature_buy(
         features_triggered.append("expanding_wild")
     if hold_and_win_result is not None:
         win_breakdown["hold_and_win"] = hold_and_win_result.details
+    if wheel_result is not None:
+        win_breakdown["wheel_of_fortune"] = wheel_result.details
 
     await commit_spin(
         db,
@@ -445,7 +486,7 @@ async def run_feature_buy(
 
     feature_out = None
     popup = None
-    if not is_hold_and_win:
+    if not is_hold_and_win and not is_wheel:
         feature_out = schemas.FeatureOut(
             type=plan.target_feature_id,
             triggered=True,
@@ -470,5 +511,6 @@ async def run_feature_buy(
         popup=popup,
         coin_multiplier=coin_multiplier_out(coin_details),
         hold_and_win=hold_and_win_out(hold_and_win_result),
+        wheel_of_fortune=wheel_of_fortune_out(wheel_result),
         max_win_reached=max_win_reached,
     )

@@ -57,7 +57,12 @@ class WheelOfFortuneFeature(BonusFeature):
 
     def execute(self, game_state: FeatureContext, config: dict) -> FeatureResult:
         segments = self._segments(config)
-        weights = [int(segment.get("weight", 1)) for segment in segments]
+        # Savannah Kings (GDD-03 §6.4): a bought wheel spin ("Jackpot Chance")
+        # draws on its own weight set — same drum, same segments, only
+        # `buy_weight` replaces `weight`. Natural triggers (base game and
+        # inside free spins, bought rounds included) keep `weight`.
+        weight_key = "buy_weight" if game_state.is_bonus_buy and config.get("buy_weights_enabled") else "weight"
+        weights = [int(segment.get(weight_key, segment.get("weight", 1))) for segment in segments]
         index, raw, total = weighted_pick(weights, game_state.rng)
         segment = segments[index]
 
@@ -89,6 +94,7 @@ class WheelOfFortuneFeature(BonusFeature):
                 "segment_index": index,
                 "prize_type": "multiplier",
                 "multiplier": int(multiplier),
+                "tier": segment.get("tier"),
                 "win_amount": str(win_amount),
                 "segments": self._public_segments(segments),
                 "raw_draw": raw,
@@ -109,7 +115,12 @@ class WheelOfFortuneFeature(BonusFeature):
         drum order. Weights stay server-side — a player shouldn't be able to
         read the odds off the wire."""
         return [
-            {"type": segment.get("type", "multiplier"), "value": segment.get("value")}
+            {
+                "type": segment.get("type", "multiplier"),
+                "value": segment.get("value"),
+                # Jackpot wheels (Savannah Kings) name the tier each sector pays.
+                **({"tier": segment["tier"]} if segment.get("tier") else {}),
+            }
             for segment in segments
         ]
 
@@ -119,6 +130,10 @@ class WheelOfFortuneFeature(BonusFeature):
             "properties": {
                 "trigger_symbol_code": {"type": "string", "default": "wof"},
                 "trigger_count": {"type": "integer", "minimum": 1, "default": 3},
+                "buy_weights_enabled": {
+                    "type": "boolean", "default": False,
+                    "description": "A bought wheel spin draws on each segment's buy_weight instead of weight.",
+                },
                 "segments": {
                     "type": "array",
                     "minItems": 1,
@@ -128,6 +143,8 @@ class WheelOfFortuneFeature(BonusFeature):
                             "type": {"type": "string", "enum": ["multiplier", "free_spins"]},
                             "value": {"type": "integer", "minimum": 1},
                             "weight": {"type": "integer", "minimum": 1},
+                            "buy_weight": {"type": "integer", "minimum": 0},
+                            "tier": {"type": "string", "description": "Optional jackpot tier label (mini/minor/major/grand)."},
                         },
                         "required": ["type", "weight"],
                     },

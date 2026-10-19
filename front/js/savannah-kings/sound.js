@@ -1,0 +1,168 @@
+// Savannah Kings — central sound manager (the Provider 2 template's, from
+// ../big-catch/sound.js). The game has no sound pack of its own yet (GDD §9
+// wants African percussion + strings): music is borrowed from Golden Caravan
+// (warm desert theme, the closest mood), win stingers and the lion's
+// expansion from East Discovery, the rest from sound/common/. A real pack
+// replaces the paths below under the same keys (see front/sound/README.md).
+const COMMON = 'sound/common/';
+const WINS = 'sound/east-discovery/';
+const DROP = 'sound/party-of-goods/';
+const MUSIC = 'sound/golden-caravan/';
+
+const SOUND_FILES = {
+  smallWin: WINS + 'WIN_Small.wav',
+  bigWin: WINS + 'WIN_Big.wav',
+  megaWin: WINS + 'WIN_Mega.wav',
+  epicWin: WINS + 'WIN_Epic.wav',
+  bonusTotalWin: WINS + 'Bonus_spins_total_win.mp3',
+  scatterWin: WINS + 'SCATTER_win.mp3',
+  // A mask or a paw landing; the paws' trigger chimes like a coin.
+  scatterLand: DROP + 'Element_drop.mp3',
+  pawLand: DROP + 'Element_drop.mp3',
+  pawTrigger: WINS + 'HOLD&WIN_Coin.wav',
+  wildGrow: WINS + 'WILD_Scale.wav',
+  roar: WINS + 'WILD_Scale_wind.wav',
+  spinStart: COMMON + 'reel-start.mp3',
+  // Jackpot Wheel: ratchet per stud, stop thud.
+  wheelIn: COMMON + 'Popup-open.mp3',
+  wheelTick: COMMON + 'Click_UI.mp3',
+  wheelStop: COMMON + 'REELS_final_stop.mp3',
+  click: COMMON + 'Click_UI.mp3',
+  reelStop: COMMON + 'Reel_stop_slot.mp3',
+  finalReelStop: COMMON + 'REELS_final_stop.mp3',
+  anticipation: COMMON + 'REELS_anticipation.mp3',
+  popupOpen: COMMON + 'Popup-open.mp3',
+  popupClose: COMMON + 'Popup-close.mp3',
+};
+
+const MUSIC_FILES = {
+  base: { music: MUSIC + 'BG_Base.mp3' },
+  bonus: { music: MUSIC + 'BG_Bonus.mp3' },
+  wheel: { music: WINS + 'BG_Bonus.mp3' },
+};
+
+const SFX_VOLUME = 0.7;
+const MUSIC_VOLUME = 0.35; // main background track
+const ENV_VOLUME = 0.25; // environment/atmosphere layer — sits under the music
+
+let muted = localStorage.getItem('slot.muted') === '1';
+let currentLayers = []; // [{ audio, vol }] — music + environment played together
+let currentMusicKey = null;
+let musicUnlocked = false;
+let pendingMusicKey = 'base';
+
+// SFX go through WebAudio: <audio> elements have an inherent 100-300ms
+// playback latency on mobile (both iOS Safari and the Telegram webview), so
+// even fully-preloaded effects trailed the reel stops they were cued to.
+// Buffers are fetched+decoded once at page load and each play is a
+// BufferSource start — effectively instant. The preloaded-element path
+// below stays as the fallback for browsers without AudioContext and for any
+// buffer that hasn't finished decoding yet.
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+const sfxCtx = AudioCtx ? new AudioCtx() : null;
+const sfxGain = sfxCtx ? sfxCtx.createGain() : null;
+if (sfxGain) {
+  sfxGain.gain.value = SFX_VOLUME;
+  sfxGain.connect(sfxCtx.destination);
+}
+const sfxBuffers = {};
+// Exposed via Sound.preloadPromises so the boot preloader can count each
+// decode toward its progress bar; every promise resolves (errors swallowed),
+// so awaiting them can't hang the loader on missing files.
+const sfxLoadPromises = [];
+if (sfxCtx) {
+  for (const [name, src] of Object.entries(SOUND_FILES)) {
+    sfxLoadPromises.push(
+      fetch(src)
+        .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()))
+        .then((ab) => sfxCtx.decodeAudioData(ab))
+        .then((buf) => { sfxBuffers[name] = buf; })
+        .catch(() => {}), // missing file — fine to ignore
+    );
+  }
+}
+
+const sfxCache = {};
+for (const [name, src] of Object.entries(SOUND_FILES)) {
+  const audio = new Audio(src);
+  audio.preload = sfxCtx ? 'none' : 'auto'; // fallback path only — don't double-fetch
+  sfxCache[name] = audio;
+}
+
+function playSfx(name) {
+  if (muted) return;
+  if (sfxCtx && sfxBuffers[name]) {
+    if (sfxCtx.state === 'suspended') sfxCtx.resume();
+    const source = sfxCtx.createBufferSource();
+    source.buffer = sfxBuffers[name];
+    source.connect(sfxGain);
+    source.start();
+    return;
+  }
+  const cached = sfxCache[name];
+  if (!cached) return;
+  const audio = (cached.paused || cached.ended) ? cached : cached.cloneNode(true);
+  audio.volume = SFX_VOLUME;
+  if (audio.readyState > 0) audio.currentTime = 0;
+  audio.play().catch(() => {}); // autoplay-blocked / missing file — fine to ignore
+}
+
+function startLayer(src, vol) {
+  const audio = new Audio(src);
+  audio.loop = true;
+  audio.volume = muted ? 0 : vol;
+  audio.play().catch(() => {}); // autoplay-blocked / missing file — fine to ignore
+  return { audio, vol };
+}
+
+function playMusic(key) {
+  pendingMusicKey = key;
+  if (!musicUnlocked || currentMusicKey === key) return;
+  for (const layer of currentLayers) layer.audio.pause();
+  currentLayers = [];
+
+  const set = MUSIC_FILES[key];
+  if (!set) return;
+  currentLayers.push(startLayer(set.music, MUSIC_VOLUME));
+  if (set.env) currentLayers.push(startLayer(set.env, ENV_VOLUME));
+  currentMusicKey = key;
+}
+
+function unlockMusic() {
+  if (musicUnlocked) return;
+  musicUnlocked = true;
+  playMusic(pendingMusicKey);
+}
+
+function updateSoundIcon() {
+  const btn = document.querySelector('[data-action="sound"]');
+  if (btn) btn.classList.toggle('is-muted', muted);
+}
+
+function setMuted(next) {
+  muted = next;
+  localStorage.setItem('slot.muted', muted ? '1' : '0');
+  for (const layer of currentLayers) layer.audio.volume = muted ? 0 : layer.vol;
+  updateSoundIcon();
+}
+
+function toggleMuted() {
+  setMuted(!muted);
+}
+
+window.addEventListener('pointerdown', unlockMusic, { once: true });
+window.addEventListener('keydown', unlockMusic, { once: true });
+
+const Sound = {
+  playSfx,
+  playMusic,
+  preloadPromises: sfxLoadPromises,
+  setMuted,
+  toggleMuted,
+  get muted() {
+    return muted;
+  },
+};
+window.Sound = Sound;
+
+updateSoundIcon();

@@ -27,7 +27,34 @@ const READY_CODES = new Set([
   'neon-reels', 'party-of-goods', 'sugar-galaxy', 'wild-western-story',
   'multi-fruits-story', 'lucky-joker-3h3', 'gangsta-casino',
 ]);
-const ILLUMINATOR_CODES = new Set(['gold-of-baku', 'gold-of-baku-2', 'volt-coins', 'neon-joker-spins']);
+const ILLUMINATOR_CODES = new Set(['gold-of-baku', 'gold-of-baku-2', 'volt-coins', 'neon-joker-spins', 'savannah-kings']);
+
+// Illuminator games shipped in several front-end layouts over one backend
+// game get their own sub-section (heading + one card per variant) instead of
+// a single card. Each variant overrides the play page, badge, name and
+// description; the cover falls back to the game's catalog cover.
+const VARIANT_GROUPS = {
+  'savannah-kings': {
+    title: 'Savannah Kings',
+    variants: [
+      { url: 'savannah-kings-v3.html', badge: '1', name: 'Savannah Kings',
+        desc: 'Закатная саванна, каменная рамка: лестница джекпотов с GRAND в центре, медальоны покупки и выигрыша.',
+        cover: 'img/savannah-kings/cover_v3.jpg' },
+      { url: 'lions-reign.html', badge: '2', name: "Lion's Reign",
+        desc: 'Королевская версия: базальт с золотой филигранью и рубинами, символы в геральдических щитах, лев в короне.',
+        cover: 'img/lions-reign/cover.jpg' },
+      { url: 'golden-savannah.html', badge: '3', name: 'Golden Savannah',
+        desc: 'Графичная версия: африканский ар-деко и бумажная аппликация, узоры кенте, символы в ромбах.',
+        cover: 'img/golden-savannah/cover.jpg' },
+      { url: 'savannah-kings.html', badge: '4', name: 'Savannah Kings · Classic',
+        desc: 'Первая сборка: оригинальный арт, нижний бар управления, плашка выигрыша на барабанах.',
+        cover: 'img/savannah-kings/cover_v1.jpg' },
+      { url: 'savannah-kings-v2.html', badge: '5', name: 'Savannah Kings · Pride Rock',
+        desc: 'Альтернативная раскладка UI: скала гордости, панель управления сбоку от барабанов.',
+        cover: 'img/savannah-kings/cover_v2.jpg' },
+    ],
+  },
+};
 const SPIN_FACTORY_CODES = new Set(['big-catch', 'caesars-fortune', 'ice-spin-deluxe', 'tesla-spins']);
 
 // Neon Joker Spins и его скины (A/B/C/D — сравнение арт-дирекшена по ГДД):
@@ -110,6 +137,30 @@ function appendCard(gridEl, entry) {
   gridEl.appendChild(li);
 }
 
+// A sub-section inside a section's grid: spans the full row, own heading,
+// own grid of variant cards.
+function appendVariantGroup(gridEl, entry, group) {
+  const li = document.createElement('li');
+  li.className = 'catalog-sub';
+  li.innerHTML = `<h3 class="catalog-sub__title">${group.title}</h3><ul class="game-grid catalog-sub__grid"></ul>`;
+  const sub = li.querySelector('ul');
+  for (const v of group.variants) {
+    appendCard(sub, {
+      ...entry,
+      name: v.name,
+      catalog_badge: v.badge,
+      catalog_description: v.desc,
+      catalog_play_url: v.url,
+      catalog_cover_path: v.cover || entry.catalog_cover_path,
+    });
+  }
+  // Variant covers are optional screenshots: fall back to the game cover.
+  for (const img of sub.querySelectorAll('.game-card__img')) {
+    img.addEventListener('error', () => { img.src = entry.catalog_cover_path; }, { once: true });
+  }
+  gridEl.appendChild(li);
+}
+
 // Hides a section (heading included) when its grid ended up empty — e.g. no
 // game landed in Illuminator yet on this backend.
 function toggleSection(sectionId, gridEl) {
@@ -136,7 +187,12 @@ async function renderCatalog() {
     dev.sort((a, b) => isUnicornGame(a.code) - isUnicornGame(b.code));
 
     if (readyGrid) for (const entry of ready) appendCard(readyGrid, entry);
-    if (illuminatorGrid) for (const entry of illuminator) appendCard(illuminatorGrid, entry);
+    if (illuminatorGrid) {
+      for (const entry of illuminator) {
+        if (VARIANT_GROUPS[entry.code]) appendVariantGroup(illuminatorGrid, entry, VARIANT_GROUPS[entry.code]);
+        else appendCard(illuminatorGrid, entry);
+      }
+    }
     if (njsGrid) for (const entry of njs) appendCard(njsGrid, entry);
     if (spinFactoryGrid) for (const entry of spinFactory) appendCard(spinFactoryGrid, entry);
     if (devGrid) for (const entry of dev) appendCard(devGrid, entry);

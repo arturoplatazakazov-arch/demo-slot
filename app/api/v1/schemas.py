@@ -210,6 +210,8 @@ class WheelSegmentOut(BaseModel):
 
     type: str  # "multiplier" | "free_spins"
     value: int | None = None
+    # Jackpot wheels (Savannah Kings): which tier the segment pays.
+    tier: str | None = None
 
 
 class WheelOfFortuneOut(BaseModel):
@@ -223,6 +225,7 @@ class WheelOfFortuneOut(BaseModel):
     segment_index: int
     prize_type: str  # "multiplier" | "free_spins"
     multiplier: int | None = None
+    tier: str | None = None
     win_amount: int = 0
     segments: list[WheelSegmentOut]
 

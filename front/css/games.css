@@ -86,6 +86,23 @@ body {
   border-bottom: 1px solid var(--card-border);
 }
 
+/* Sub-section inside a section grid (games-catalog.js VARIANT_GROUPS):
+   takes the whole row, then lays its variants out on the same grid. */
+.catalog-sub {
+  grid-column: 1 / -1;
+  padding: 20px 20px 24px;
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  background: rgba(255, 215, 90, 0.04);
+}
+.catalog-sub__title {
+  margin: 0 0 16px;
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: clamp(18px, 2.2vw, 22px);
+  letter-spacing: 0.5px;
+  color: var(--gold);
+}
+
 .game-card {
   position: relative;
   display: block;

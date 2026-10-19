@@ -46,6 +46,7 @@ class FeatureBuyPlan:
     target_feature_id: str
     target_feature: BonusFeature
     target_config: FeatureConfig
+    product: dict
 
 
 def prepare_feature_buy(
@@ -84,4 +85,5 @@ def prepare_feature_buy(
         target_feature_id=target_feature_id,
         target_feature=target_feature,
         target_config=target_config,
+        product=product,
     )

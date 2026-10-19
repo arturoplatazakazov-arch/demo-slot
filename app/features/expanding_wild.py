@@ -43,6 +43,10 @@ class ExpandingWildFeature(BonusFeature):
     feature_id = "expanding_wild"
 
     def is_triggered(self, spin_result: FeatureContext, config: dict) -> bool:
+        # Savannah Kings (GDD-03 §5.2): the wild only expands inside a
+        # free-spins round; in the base game it stays a single cell.
+        if config.get("free_spins_only") and spin_result.session_state.get("free_spins_remaining", 0) <= 0:
+            return False
         if spin_result.session_state.get(_STATE_KEY):
             return True
         if spin_result.grid is None:
@@ -116,6 +120,17 @@ class ExpandingWildFeature(BonusFeature):
             "properties": {
                 "trigger_symbol_code": {"type": "string", "default": "wild"},
                 "walk_enabled": {"type": "boolean", "default": True},
+                "free_spins_only": {
+                    "type": "boolean", "default": False,
+                    "description": "Expand only inside a free-spins round (base-game wilds stay single cells).",
+                },
+                "triggers_before_expand": {
+                    "type": "boolean", "default": False,
+                    "description": (
+                        "Scatter/bonus symbols covered by an expansion still count: count pays and "
+                        "feature triggers read the grid as it landed, lines read the expanded one."
+                    ),
+                },
                 "walk_direction": {
                     "type": "string",
                     "enum": ["right"],

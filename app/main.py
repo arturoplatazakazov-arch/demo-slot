@@ -41,6 +41,7 @@ from app.seed.uniqorn_scandal import get_or_seed_active_config as get_or_seed_un
 from app.seed.uniqorn_shaolin_struggles import (
     get_or_seed_active_config as get_or_seed_uniqorn_shaolin_struggles,
 )
+from app.seed.savannah_kings import get_or_seed_active_config as get_or_seed_savannah_kings
 from app.seed.volt_coins import get_or_seed_active_config as get_or_seed_volt_coins
 from app.seed.wild_western_story import get_or_seed_active_config as get_or_seed_wild_western_story
 
@@ -84,6 +85,7 @@ async def lifespan(app: FastAPI):
         await get_or_seed_uniqorn_back_to_fabulous(db)
         await get_or_seed_uniqorn_scandal(db)
         await get_or_seed_uniqorn_shaolin_struggles(db)
+        await get_or_seed_savannah_kings(db)
         await get_or_seed_volt_coins(db)
         await get_or_seed_wild_western_story(db)
         await seed_provider2(db)

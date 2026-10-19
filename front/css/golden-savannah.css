@@ -1,0 +1,1057 @@
+/* Savannah Kings — V3 "Royal Court" layout variant.
+   Same game, same JS (js/savannah-kings/*), same art; only the composition
+   changes. One design stage per orientation (1920x1080 / 1080x1920) scaled
+   as a whole by slot.js fitStage().
+
+   Composition (landscape), all on an 8px rhythm, mirrored on x = 960:
+     crown     GRAND keystone 24..138, MINOR · MAJOR · MINI step 146..211
+     frame     crest top 216, reel window 348..876 (880x528, scale 1)
+     medallions Buy (left) / Win + Free spins (right), centred on the window
+     pill      976..1056, exactly the frame's width; the spin breaks out of it
+   The frame art's window is centred on its crest (both at 50.5% of the art),
+   so centring the reel window centres the crest on the GRAND plaque. */
+
+:root {
+  --gold-1: #fff3c4;
+  --gold-2: #ffd75a;
+  --gold-3: #f5b400;
+  --gold-4: #a86a00;
+  --ink: #1a0b06;
+  --wine: #4a1226;
+  --tan: #c99a52;
+  --cream: #fff4dc;
+  --cell: 176px;
+  --win-w: 880px;
+  --win-h: 528px;
+  /* Frame art: where the window sits inside reel_frame.png, as fractions. */
+  --frame-win-l: 0.0698;
+  --frame-win-t: 0.2095;
+  --frame-win-w: 0.8603;
+  --frame-win-h: 0.6993;
+  /* Jackpot plaques: the empty value panel, fractions of the plaque art. */
+  --jp-l: 0.48;
+  --jp-r: 0.09;
+  --jp-t: 0.195;
+  --jp-b: 0.095;
+  /* Wheel: rim inner radius as a fraction of the rim art. */
+  --rim-inner: 0.734;
+  --serif: 'Cinzel', 'Times New Roman', serif;
+  /* Shared gold text fill. */
+  --gold-text: linear-gradient(180deg, #fffbe6, var(--gold-2) 48%, #d58b00 78%, #fff1b0);
+  /* Glass used by the pill, chips and system buttons. */
+  --glass: linear-gradient(180deg, rgba(40, 16, 10, 0.88), rgba(14, 5, 4, 0.94));
+  --hairline: inset 0 1px 0 rgba(255, 225, 140, 0.55), inset 0 0 0 1.5px rgba(255, 215, 90, 0.28);
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #0d0405;
+  color: #fff;
+  font-family: var(--serif);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
+img { -webkit-user-drag: none; }
+
+.screen { position: fixed; inset: 0; overflow: hidden; }
+
+/* --- Backgrounds: cinematic grade ---------------------------------------- */
+
+.bg {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: 50% 58%;
+  filter: saturate(1.06) brightness(0.86) contrast(1.04);
+  transition: opacity 0.9s ease;
+}
+.bg--bonus { opacity: 0; }
+.screen[data-mode="freespins"] .bg--bonus { opacity: 1; }
+.fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.fx--back { z-index: 1; }
+.fx--front { z-index: 6; }
+
+/* Letterbox mood: soft dark bands top and bottom (the crown and the pill
+   sit in them and read cleanly), plus a deep oval vignette that leaves the
+   sunset glowing only behind the reels. */
+.screen::after {
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(10, 2, 4, 0.78) 0%, rgba(10, 2, 4, 0.34) 16%, transparent 30%,
+      transparent 70%, rgba(10, 2, 4, 0.42) 84%, rgba(10, 2, 4, 0.9) 100%),
+    radial-gradient(ellipse 72% 78% at 50% 54%, transparent 48%, rgba(14, 3, 6, 0.72) 100%);
+}
+/* A warm halo behind the crown and the frame: the "court" light. */
+.screen::before {
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(ellipse 34% 40% at 50% 46%, rgba(255, 170, 70, 0.22), transparent 70%);
+  mix-blend-mode: screen;
+  transition: opacity 0.9s ease;
+}
+.screen[data-mode="freespins"]::before {
+  background: radial-gradient(ellipse 34% 40% at 50% 46%, rgba(130, 140, 255, 0.2), transparent 70%);
+}
+
+/* --- Stage -------------------------------------------------------------- */
+
+.stage {
+  position: absolute; left: 50%; top: 50%;
+  width: 1920px; height: 1080px;
+  transform-origin: 50% 50%;
+  z-index: 3;
+}
+.overlays { z-index: 8; pointer-events: none; }
+.overlays > * { pointer-events: auto; }
+
+/* --- Jackpot plaques (shared by the crown and the wheel overlay) --------- */
+
+.jackpots {
+  position: absolute; left: 50%; top: 84px;
+  display: flex; gap: 14px;
+  transform: translateX(-50%);
+}
+.jp { position: relative; width: 344px; font-size: 30px; filter: drop-shadow(0 6px 10px rgba(30, 6, 6, 0.5)); }
+.jp img { display: block; width: 100%; }
+.jp span {
+  position: absolute;
+  left: calc(var(--jp-l) * 100%); right: calc(var(--jp-r) * 100%);
+  top: calc(var(--jp-t) * 100%); bottom: calc(var(--jp-b) * 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; letter-spacing: 0.02em; white-space: nowrap;
+  color: #fff6dc;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.8), 0 0 12px rgba(255, 200, 80, 0.35);
+}
+.jp--grand span { color: #ffe1a1; }
+.jp--minor span { color: #eef6ff; }
+.jp.is-won { animation: jp-won 0.8s ease-in-out infinite alternate; z-index: 2; }
+@keyframes jp-won {
+  from { transform: scale(1); filter: drop-shadow(0 0 0 rgba(255, 210, 80, 0)) brightness(1); }
+  to { transform: scale(1.1); filter: drop-shadow(0 0 22px rgba(255, 210, 80, 0.95)) brightness(1.25); }
+}
+
+/* --- Reels (as V1; centred on the crest axis, see header) -------------- */
+
+.reel {
+  position: absolute; left: 520px; top: 348px;
+  width: var(--win-w); height: var(--win-h);
+}
+.reel__bg {
+  position: absolute; inset: -4px; border-radius: 6px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 174px, rgba(255, 200, 120, 0.12) 174px 176px),
+    radial-gradient(ellipse at 50% 30%, rgba(70, 34, 18, 0.86), rgba(24, 10, 8, 0.93));
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.65);
+  transition: background 0.8s ease;
+}
+.screen[data-mode="freespins"] .reel__bg {
+  background:
+    repeating-linear-gradient(90deg, transparent 0 174px, rgba(160, 170, 255, 0.12) 174px 176px),
+    radial-gradient(ellipse at 50% 30%, rgba(34, 30, 70, 0.88), rgba(10, 8, 26, 0.94));
+}
+.reel__grid { position: absolute; inset: 0; display: flex; }
+.reel__col { position: relative; width: var(--cell); height: var(--win-h); overflow: hidden; }
+.reel__strip { position: absolute; left: 0; top: 0; width: 100%; }
+.reel__frame {
+  position: absolute; pointer-events: none; z-index: 4;
+  width: calc(var(--win-w) / var(--frame-win-w));
+  left: calc(var(--win-w) / var(--frame-win-w) * var(--frame-win-l) * -1);
+  top: calc(var(--win-h) / var(--frame-win-h) * var(--frame-win-t) * -1);
+  filter: drop-shadow(0 18px 24px rgba(20, 4, 4, 0.55));
+}
+
+.reel__cell {
+  position: relative; width: var(--cell); height: var(--cell);
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+.reel__cell > img {
+  width: 94%; height: 94%; object-fit: contain;
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.45));
+  pointer-events: none;
+}
+/* High (animal) and feature symbols read 5% larger than the letters. The
+   independent `scale` property composes with the idle/win `transform`
+   keyframes instead of being overwritten by them. */
+.reel__cell:is([data-symbol="elephant"], [data-symbol="buffalo"], [data-symbol="leopard"], [data-symbol="zebra"],
+  [data-symbol="wild"], [data-symbol="scatter"], [data-symbol="paw"]) > img,
+.reel__cell:is([data-symbol="elephant"], [data-symbol="buffalo"], [data-symbol="leopard"], [data-symbol="zebra"],
+  [data-symbol="wild"], [data-symbol="scatter"], [data-symbol="paw"])::before { scale: 1.05; }
+/* Captions on the two feature symbols (GDD §3.3). */
+.reel__cell[data-symbol="wild"]::after,
+.reel__cell[data-symbol="scatter"]::after,
+.reel__cell[data-symbol="paw"]::after {
+  position: absolute; left: 0; right: 0; bottom: 10px;
+  text-align: center; font-weight: 900; font-size: 30px; letter-spacing: 0.06em; line-height: 1;
+  background: linear-gradient(180deg, #fffbe6, var(--gold-2) 50%, #d58b00 75%, #fff1b0);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 2px 0 #3a1800) drop-shadow(0 0 3px rgba(0, 0, 0, 0.9));
+  pointer-events: none;
+}
+.reel__cell[data-symbol="wild"]::after { content: 'WILD'; font-size: 34px; }
+.reel__cell[data-symbol="scatter"]::after { content: 'SCATTER'; font-size: 25px; bottom: 6px; }
+.reel__cell[data-symbol="paw"]::after { content: 'JACKPOT'; font-size: 24px; bottom: 6px; }
+
+/* Shine sweep clipped to the symbol's own alpha. */
+.reel__cell::before {
+  content: ''; position: absolute; inset: 3%; pointer-events: none; opacity: 0;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 250, 220, 0.85) 50%, transparent 65%) no-repeat;
+  background-size: 300% 100%; background-position: 120% 0;
+  -webkit-mask-size: contain; mask-size: contain;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-position: center; mask-position: center;
+  mix-blend-mode: screen;
+}
+.reel__cell[data-symbol="wild"]::before { -webkit-mask-image: url(../img/golden-savannah/symbols/wild.png); mask-image: url(../img/golden-savannah/symbols/wild.png); }
+.reel__cell[data-symbol="scatter"]::before { -webkit-mask-image: url(../img/golden-savannah/symbols/scatter.png); mask-image: url(../img/golden-savannah/symbols/scatter.png); }
+.reel__cell[data-symbol="paw"]::before { -webkit-mask-image: url(../img/golden-savannah/symbols/paw.png); mask-image: url(../img/golden-savannah/symbols/paw.png); }
+.reel__cell[data-symbol="elephant"]::before { -webkit-mask-image: url(../img/golden-savannah/symbols/elephant.png); mask-image: url(../img/golden-savannah/symbols/elephant.png); }
+.reel__cell[data-symbol="buffalo"]::before { -webkit-mask-image: url(../img/golden-savannah/symbols/buffalo.png); mask-image: url(../img/golden-savannah/symbols/buffalo.png); }
+.reel__cell[data-symbol="leopard"]::before { -webkit-mask-image: url(../img/golden-savannah/symbols/leopard.png); mask-image: url(../img/golden-savannah/symbols/leopard.png); }
+.reel__cell[data-symbol="zebra"]::before { -webkit-mask-image: url(../img/golden-savannah/symbols/zebra.png); mask-image: url(../img/golden-savannah/symbols/zebra.png); }
+.reel__cell[data-symbol="a"]::before { -webkit-mask-image: url(../img/golden-savannah/symbols/a.png); mask-image: url(../img/golden-savannah/symbols/a.png); }
+.reel__cell[data-symbol="k"]::before { -webkit-mask-image: url(../img/golden-savannah/symbols/k.png); mask-image: url(../img/golden-savannah/symbols/k.png); }
+.reel__cell[data-symbol="q"]::before { -webkit-mask-image: url(../img/golden-savannah/symbols/q.png); mask-image: url(../img/golden-savannah/symbols/q.png); }
+.reel__cell[data-symbol="j"]::before { -webkit-mask-image: url(../img/golden-savannah/symbols/j.png); mask-image: url(../img/golden-savannah/symbols/j.png); }
+
+/* Idle life on the feature symbols only — the rest sit still until they win. */
+.reel__cell.is-special > img { animation: special-idle 3.2s ease-in-out infinite; }
+.reel__cell[data-symbol="scatter"] > img { animation-duration: 2.6s; }
+.reel__cell.is-special::before { animation: shine 4.8s ease-in-out infinite; }
+.reel__cell[data-symbol="paw"]::before { animation-delay: 1.4s; }
+@keyframes special-idle {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.45)) brightness(1); }
+  50% { transform: scale(1.035); filter: drop-shadow(0 0 14px rgba(255, 190, 60, 0.55)) brightness(1.08); }
+}
+@keyframes shine {
+  0%, 62% { opacity: 0; background-position: 120% 0; }
+  66% { opacity: 1; }
+  92% { opacity: 1; background-position: -20% 0; }
+  100% { opacity: 0; background-position: -20% 0; }
+}
+.reel__strip.is-fast .reel__cell::before,
+.reel__strip.is-fast .reel__cell::after { display: none; }
+.reel__strip.is-fast .reel__cell > img { animation: none; }
+
+/* Land: masks and paws thump down. */
+.reel__cell.is-landed > img { animation: land 0.5s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes land {
+  0% { transform: scale(1.28); filter: drop-shadow(0 0 24px rgba(255, 200, 80, 0.95)) brightness(1.35); }
+  100% { transform: scale(1); }
+}
+
+/* Wins */
+.reel__grid.has-win .reel__cell.is-dimmed { opacity: 0.32; filter: saturate(0.4) brightness(0.8); }
+.reel__cell.is-winning > img { animation: win-pulse 0.9s cubic-bezier(.3, 1.3, .5, 1); }
+.reel__cell.is-winning::before { animation: shine-once 0.9s ease-out; }
+@keyframes win-pulse {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.16); filter: drop-shadow(0 0 18px rgba(255, 210, 90, 0.95)) brightness(1.25); }
+  100% { transform: scale(1); filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.45)) brightness(1); }
+}
+@keyframes shine-once {
+  0% { opacity: 0; background-position: 120% 0; }
+  20% { opacity: 1; }
+  100% { opacity: 0; background-position: -20% 0; }
+}
+.reel__cell.is-win-active { z-index: 2; }
+.reel__cell.is-trigger { z-index: 5; }
+.reel__cell.is-trigger > img { animation: trigger 0.75s ease-in-out infinite alternate; }
+@keyframes trigger {
+  from { transform: scale(1); filter: drop-shadow(0 0 6px rgba(255, 190, 60, 0.6)) brightness(1); }
+  to { transform: scale(1.2); filter: drop-shadow(0 0 28px rgba(255, 210, 90, 1)) brightness(1.4); }
+}
+
+/* Anticipation: a hot gold edge runs round the reel that can still bring
+   the third mask / paw. */
+.reel__col.is-anticipating::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 3;
+  box-shadow: inset 0 0 0 3px rgba(255, 215, 90, 0.95), inset 0 0 30px rgba(255, 150, 40, 0.75);
+  animation: antic 0.5s ease-in-out infinite alternate;
+}
+@keyframes antic { from { opacity: 0.55; } to { opacity: 1; } }
+
+/* Win line */
+.win-line { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; overflow: visible; }
+.win-line path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.win-line__shadow { stroke: rgba(40, 10, 0, 0.65); stroke-width: 18; }
+.win-line__glow { stroke: rgba(255, 170, 40, 0.5); stroke-width: 22; filter: blur(6px); }
+.win-line__ribbon { stroke: #a86a00; stroke-width: 10; }
+.win-line__core {
+  stroke: #ffe69a; stroke-width: 4;
+  stroke-dasharray: 3000; stroke-dashoffset: 3000;
+  animation: line-draw 0.45s cubic-bezier(.22, 1, .36, 1) forwards;
+}
+/* A short bright highlight travelling along the line. */
+.win-line__spark {
+  stroke: #fffbe6; stroke-width: 6; stroke-dasharray: 60 3000; stroke-dashoffset: 60;
+  filter: drop-shadow(0 0 6px #ffd75a);
+  animation: line-spark 0.9s cubic-bezier(.22, 1, .36, 1) 0.15s forwards;
+}
+@keyframes line-spark { to { stroke-dashoffset: -1100; } }
+.win-line__gem { fill: #ffd75a; stroke: #4a2200; stroke-width: 3; filter: drop-shadow(0 0 6px rgba(255, 190, 60, 0.9)); }
+@keyframes line-draw { to { stroke-dashoffset: 0; } }
+
+.reel-win {
+  position: absolute; left: 50%; top: calc(100% + 34px); z-index: 6; pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.6); opacity: 0;
+  min-width: 380px; height: 124px; padding: 0 64px; display: flex; align-items: center; justify-content: center;
+  font-size: 64px; font-weight: 900; white-space: nowrap;
+  background: linear-gradient(180deg, #fffbe6, var(--gold-2) 45%, #e08a00 72%, #fff1b0);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 4px 0 #3a1600) drop-shadow(0 0 18px rgba(0, 0, 0, 0.7));
+}
+/* The plate is a separate layer: the amount itself uses background-clip. */
+.reel-win-plate {
+  position: absolute; left: 50%; top: calc(100% + 34px); z-index: 5; pointer-events: none;
+  width: 400px; height: 130px; transform: translate(-50%, -50%) scale(0.6); opacity: 0;
+  background: url(../img/golden-savannah/img/panel.webp) center / contain no-repeat;
+}
+.reel-win-plate.is-visible { animation: reel-win 2s ease forwards; }
+.reel-win.is-visible { animation: reel-win 2s ease forwards; }
+@keyframes reel-win {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  14% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  24% { transform: translate(-50%, -50%) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -60%) scale(1); }
+}
+
+/* --- Expanding Wild ------------------------------------------------------ */
+
+.big-wild {
+  position: absolute; left: 0; top: 0; width: var(--cell); height: var(--win-h);
+  z-index: 3; pointer-events: none;
+  clip-path: inset(calc(var(--from-row) * 33.333%) 0 calc((2 - var(--from-row)) * 33.333%) 0);
+  transition: clip-path 0.62s cubic-bezier(.2, .9, .25, 1);
+}
+.big-wild.is-grown { clip-path: inset(0 0 0 0); }
+.big-wild__light {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 45% at 50% 42%, rgba(255, 210, 110, 0.85), transparent 70%),
+    linear-gradient(180deg, #5a1a10, #2a0a06);
+}
+.screen[data-mode="freespins"] .big-wild__light {
+  background:
+    radial-gradient(ellipse 80% 45% at 50% 42%, rgba(255, 200, 110, 0.8), transparent 70%),
+    linear-gradient(180deg, #2a1a4a, #0e0820);
+}
+.big-wild__lion {
+  position: absolute; left: 50%; bottom: 0; height: 100%; max-width: none;
+  transform: translate(-50%, 14%) scale(0.86);
+  transform-origin: 50% 100%;
+  transition: transform 0.75s cubic-bezier(.2, 1.35, .4, 1);
+}
+.big-wild.is-grown .big-wild__lion { transform: translate(-50%, 0) scale(1); }
+.big-wild.is-roar .big-wild__lion { animation: roar 0.9s ease-out; }
+@keyframes roar {
+  0% { transform: translate(-50%, 0) scale(1); }
+  18% { transform: translate(-50%, -1%) scale(1.04); filter: brightness(1.3); }
+  30% { transform: translate(calc(-50% - 2px), 0) scale(1.03); }
+  42% { transform: translate(calc(-50% + 2px), 0) scale(1.03); }
+  100% { transform: translate(-50%, 0) scale(1); filter: brightness(1); }
+}
+.big-wild__frame {
+  position: absolute; inset: 0;
+  box-shadow: inset 0 0 0 3px var(--gold-2), inset 0 0 0 6px #6a3a00, inset 0 0 0 8px rgba(255, 215, 90, 0.5),
+    inset 0 0 26px rgba(255, 120, 30, 0.6);
+  border-radius: 4px;
+}
+.big-wild.is-roar .big-wild__frame { animation: frame-flash 0.9s ease-out; }
+@keyframes frame-flash { 20% { box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 6px #ffb000, inset 0 0 0 8px #fff, inset 0 0 60px rgba(255, 60, 20, 0.9); } }
+.big-wild__label {
+  position: absolute; left: 0; right: 0; bottom: 12px; text-align: center;
+  font-weight: 900; font-size: 40px; letter-spacing: 0.08em;
+  background: linear-gradient(180deg, #fffbe6, var(--gold-2) 50%, #d58b00 75%, #fff1b0);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 2px 0 #3a1800) drop-shadow(0 0 6px rgba(0, 0, 0, 0.9));
+}
+.reel__cell.is-under-wild { opacity: 0; transition: opacity 0.4s ease 0.15s; }
+.reel__cell.is-over-wild { z-index: 4; }
+
+
+/* ======================= V3 layout (landscape) =========================== */
+
+/* --- Logo (top-left) and system buttons (top-right) --------------------- */
+
+.logo {
+  position: absolute; left: 48px; top: 24px; width: 304px;
+  filter: drop-shadow(0 8px 14px rgba(20, 3, 6, 0.6));
+  animation: logo-breathe 6s ease-in-out infinite;
+}
+@keyframes logo-breathe {
+  0%, 100% { filter: drop-shadow(0 8px 14px rgba(20, 3, 6, 0.6)) brightness(1); }
+  50% { filter: drop-shadow(0 8px 18px rgba(255, 150, 40, 0.35)) brightness(1.06); }
+}
+
+.sys {
+  position: absolute; right: 48px; top: 48px;
+  z-index: 5;
+  display: flex; align-items: center; gap: 16px;
+}
+
+/* --- Prize crown --------------------------------------------------------- */
+
+.crown {
+  position: absolute; left: 0; right: 0; top: 24px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  pointer-events: none;
+}
+/* Gold hairline wings running out from the GRAND plaque, so the crown
+   reads as one piece across the top band. */
+.crown::before, .crown::after {
+  content: ''; position: absolute; top: 56px; width: 288px; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 215, 110, 0.85));
+  box-shadow: 0 0 8px rgba(255, 170, 60, 0.6);
+}
+.crown::before { right: calc(50% + 280px); }
+.crown::after { left: calc(50% + 280px); transform: scaleX(-1); }
+.crown__top { position: relative; }
+/* A slow breathing halo marks GRAND as the hero of the screen. */
+.crown__top::before {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 140%; height: 260%;
+  transform: translate(-50%, -50%); z-index: -1;
+  background: radial-gradient(ellipse closest-side, rgba(255, 170, 60, 0.42), rgba(255, 120, 40, 0.12) 55%, transparent);
+  animation: crown-halo 4.5s ease-in-out infinite;
+}
+@keyframes crown-halo { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+.crown .jp--grand { width: 560px; font-size: 40px; filter: drop-shadow(0 10px 18px rgba(20, 3, 6, 0.65)); }
+.crown__row { display: flex; gap: 16px; }
+.crown__row .jp { width: 320px; font-size: 24px; }
+/* Gentle sheen across the GRAND plaque. */
+.crown .jp--grand::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(110deg, transparent 40%, rgba(255, 245, 210, 0.38) 50%, transparent 60%) no-repeat;
+  background-size: 260% 100%; background-position: 130% 0;
+  -webkit-mask: url(../img/golden-savannah/img/jp_grand.webp) center / 100% 100% no-repeat;
+  mask: url(../img/golden-savannah/img/jp_grand.webp) center / 100% 100% no-repeat;
+  mix-blend-mode: screen;
+  animation: plaque-sheen 6s ease-in-out infinite;
+}
+@keyframes plaque-sheen {
+  0%, 70% { background-position: 130% 0; }
+  100% { background-position: -30% 0; }
+}
+
+/* --- Reels: centred on the crest axis ------------------------------------ */
+
+.reel { left: 520px; top: 348px; }
+
+/* --- Medallions ---------------------------------------------------------- */
+/* Buy (left) and Win / Free spins (right) are the same object mirrored on
+   the crest axis: a jewelled rim, a caption, a chip. */
+
+.medal {
+  --md: 256px;
+  position: absolute; top: 440px; width: var(--md);
+  display: flex; flex-direction: column; align-items: center;
+}
+.medal--buy { left: 72px; }
+.medal--status { right: 72px; }
+.medal__disc { position: relative; display: block; width: var(--md); height: var(--md); }
+.medal__core {
+  position: absolute; inset: 12%; border-radius: 50%;
+  background: radial-gradient(circle at 50% 38%, #4a1c10, #1a0805 72%);
+  box-shadow: inset 0 0 28px rgba(0, 0, 0, 0.85), 0 0 0 2px rgba(0, 0, 0, 0.4);
+  transition: background 0.8s ease;
+}
+.screen[data-mode="freespins"] .medal__core { background: radial-gradient(circle at 50% 38%, #2c2560, #0c0820 72%); }
+.medal__rim {
+  position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
+  filter: drop-shadow(0 12px 18px rgba(16, 3, 4, 0.65));
+}
+.medal__hub {
+  position: absolute; left: 50%; top: 50%; width: 84%;
+  transform: translate(-50%, -49%);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+}
+.medal__caption, .medal .readout__label, .medal .fs-panel__cell:first-child .fs-panel__label {
+  font-size: 30px; font-weight: 900; line-height: 36px; letter-spacing: 0.1em; white-space: nowrap;
+  background: var(--gold-text);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 3px 0 #2a1000) drop-shadow(0 0 8px rgba(0, 0, 0, 0.7));
+}
+.medal__caption { margin-top: 8px; }
+.medal__chip {
+  margin-top: 8px; height: 40px; padding: 0 20px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 22px; font-weight: 700; color: var(--cream); white-space: nowrap;
+  background: var(--glass); box-shadow: var(--hairline), 0 8px 18px rgba(0, 0, 0, 0.45);
+}
+
+/* Buy */
+.buy-btn { transition: transform 0.2s ease, filter 0.2s ease; }
+.buy-btn .medal__rim { animation: rim-glow 3s ease-in-out infinite; }
+@keyframes rim-glow {
+  0%, 100% { filter: drop-shadow(0 12px 18px rgba(16, 3, 4, 0.65)); }
+  50% { filter: drop-shadow(0 0 26px rgba(255, 180, 60, 0.8)); }
+}
+.buy-btn:hover { transform: scale(1.04); }
+.buy-btn:active { transform: scale(0.97); }
+body.is-locked .buy-btn { filter: grayscale(0.85) brightness(0.6); pointer-events: none; }
+body.is-locked .buy-btn .medal__rim { animation: none; }
+
+/* Status: win (base) / free spins (bonus) share the disc, caption and chip
+   slots of the Buy medallion, so the two sides line up exactly. */
+.medal--status .readout, .medal--status .fs-panel {
+  position: absolute; left: 0; top: 0; width: var(--md); height: calc(var(--md) + 96px);
+  transition: opacity 0.5s ease, transform 0.5s cubic-bezier(.2, 1.4, .4, 1);
+}
+.medal--status .readout__value {
+  position: absolute; left: 14%; right: 14%; top: 0; height: var(--md);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 40px; font-weight: 900; white-space: nowrap; color: transparent;
+  background: var(--gold-text); -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(0 3px 0 #2a1000);
+}
+#winValue:empty::before { content: '0.00'; opacity: 0.4; }
+.medal--status .readout__label { position: absolute; left: 0; right: 0; top: calc(var(--md) + 8px); text-align: center; }
+.readout--win .readout__value { opacity: 0.55; transition: opacity 0.3s; }
+.readout--win.is-on .readout__value { opacity: 1; animation: bump 0.45s ease; }
+.screen[data-mode="freespins"] .readout--win { opacity: 0; transform: scale(0.9); }
+
+.fs-panel { opacity: 0; transform: scale(0.9); pointer-events: none; }
+.screen[data-mode="freespins"] .fs-panel { opacity: 1; transform: none; }
+.fs-panel__cell:first-child .fs-panel__value {
+  position: absolute; left: 0; right: 0; top: 0; height: var(--md);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 104px; font-weight: 900; line-height: 1; color: transparent;
+  background: linear-gradient(180deg, #ffffff, #dcd8ff 45%, #8f86ea 78%, #f1eeff);
+  -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(0 4px 0 #120a3a) drop-shadow(0 0 16px rgba(120, 120, 255, 0.5));
+}
+.fs-panel__cell:first-child .fs-panel__label {
+  position: absolute; left: 0; right: 0; top: calc(var(--md) + 8px); text-align: center;
+  background-image: linear-gradient(180deg, #ffffff, #c9c3ff 55%, #7a70d8);
+  filter: drop-shadow(0 3px 0 #120a3a) drop-shadow(0 0 8px rgba(0, 0, 0, 0.7));
+}
+.fs-panel__sep { display: none; }
+.fs-panel__cell:last-child {
+  position: absolute; left: 50%; top: calc(var(--md) + 52px); transform: translateX(-50%);
+  height: 40px; padding: 0 20px; border-radius: 999px;
+  display: flex; align-items: center; gap: 8px; white-space: nowrap;
+  background: var(--glass); box-shadow: var(--hairline), 0 8px 18px rgba(0, 0, 0, 0.45);
+}
+.fs-panel__cell:last-child .fs-panel__label { font-size: 15px; font-weight: 700; letter-spacing: 0.18em; color: #c9c3ff; }
+.fs-panel__cell:last-child .fs-panel__value { font-size: 22px; font-weight: 900; color: var(--gold-2); }
+.fs-panel.is-bump .fs-panel__cell:first-child .fs-panel__value { animation: bump 0.45s ease; }
+@keyframes bump { 40% { transform: scale(1.25); } }
+
+/* --- Floating pill -------------------------------------------------------- */
+
+.bar {
+  position: absolute; left: 408px; top: 976px; width: 1104px; height: 80px;
+  z-index: 5; /* above the frame (z 4): the spin and the autoplay menu overlap it */
+  display: grid; grid-template-columns: 1fr auto 1fr; grid-template-rows: 100%; align-items: center;
+  padding: 0 40px; border-radius: 40px;
+  background: var(--glass);
+  box-shadow: var(--hairline), 0 16px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+/* Fine gold rule under the pill's top edge, fading out at both ends. */
+.bar::before {
+  content: ''; position: absolute; left: 64px; right: 64px; top: 0; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 230, 150, 0.95), transparent);
+}
+.bar__left, .bar__right { display: flex; align-items: center; gap: 16px; }
+.bar__right { justify-content: flex-end; }
+.bar__center { display: flex; align-items: center; gap: 24px; height: 100%; }
+
+.readout { display: flex; flex-direction: column; }
+.readout__label { font-size: 15px; font-weight: 700; letter-spacing: 0.24em; color: var(--tan); line-height: 20px; }
+.readout__value { font-size: 30px; font-weight: 700; color: var(--cream); white-space: nowrap; line-height: 36px; }
+.readout__value small { font-size: 17px; color: var(--tan); letter-spacing: 0.08em; }
+.readout--balance { min-width: 240px; }
+.readout--bet { align-items: center; min-width: 136px; }
+.readout.is-low .readout__value { animation: low 0.6s ease 2; }
+@keyframes low { 50% { color: #ff5a4a; } }
+
+.bet { display: flex; align-items: center; gap: 8px; }
+
+.ibtn {
+  width: 56px; height: 56px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 35%, #4a2414, #1c0a06 70%);
+  box-shadow: inset 0 0 0 2px rgba(255, 215, 90, 0.7), 0 4px 10px rgba(0, 0, 0, 0.5);
+  color: var(--gold-2);
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.ibtn svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.ibtn svg .fill { fill: currentColor; stroke: none; }
+.ibtn--sm { width: 44px; height: 44px; }
+.ibtn--sm svg { width: 22px; height: 22px; }
+.ibtn--ghost { background: var(--glass); box-shadow: var(--hairline), 0 6px 14px rgba(0, 0, 0, 0.45); }
+.ibtn:hover { filter: brightness(1.2); }
+.ibtn:active { transform: scale(0.92); }
+.ibtn.is-on { background: radial-gradient(circle at 50% 35%, #ffd75a, #b06a00 75%); color: #2a1000; }
+body.is-locked #betMinus, body.is-locked #betPlus { opacity: 0.4; pointer-events: none; }
+
+/* Spin: breaks out of the pill upward, over the frame's rock band. */
+.spin {
+  position: relative; top: -24px; width: 144px; height: 144px; border-radius: 50%; margin: 0 8px;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 30%, #7a3414, #260c06 68%);
+  box-shadow: 0 0 0 5px #2a1000, 0 0 0 9px var(--gold-3), 0 0 0 11px #7a4a00, 0 16px 30px rgba(0, 0, 0, 0.65),
+    inset 0 -10px 20px rgba(0, 0, 0, 0.55), inset 0 8px 14px rgba(255, 200, 120, 0.22);
+  color: var(--gold-2);
+  transition: transform 0.15s ease, filter 0.2s;
+}
+.spin__ring {
+  position: absolute; inset: -11px; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(from 0deg, transparent, rgba(255, 240, 180, 0.9) 8%, transparent 18%);
+  -webkit-mask: radial-gradient(circle closest-side, transparent 84%, #000 85%, #000 99%, transparent 100%);
+  mask: radial-gradient(circle closest-side, transparent 84%, #000 85%, #000 99%, transparent 100%);
+  animation: ring 4s linear infinite;
+}
+@keyframes ring { to { transform: rotate(360deg); } }
+.spin__icon, .spin__stop { width: 76px; height: 76px; fill: none; stroke: currentColor; stroke-width: 4.2; stroke-linecap: round; stroke-linejoin: round; }
+.spin__stop { display: none; fill: currentColor; stroke: none; }
+.spin:hover { filter: brightness(1.15); }
+.spin:active { transform: scale(0.95); }
+.spin.is-spinning .spin__icon { animation: spin-icon 0.6s linear infinite; }
+@keyframes spin-icon { to { transform: rotate(360deg); } }
+body.is-auto .spin__icon { display: none; }
+body.is-auto .spin__stop { display: block; }
+.spin__count {
+  position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+  font-size: 22px; font-weight: 900; color: #2a1000;
+  background: var(--gold-2); border-radius: 999px; padding: 0 12px; line-height: 32px;
+}
+.spin__count:empty { display: none; }
+.screen[data-mode="freespins"] .spin { filter: grayscale(0.4) brightness(0.8); pointer-events: none; }
+
+.auto-wrap { position: relative; }
+.auto-menu {
+  position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 8px; align-items: center; padding: 16px; border-radius: 20px;
+  background: rgba(24, 8, 6, 0.96); box-shadow: var(--hairline), 0 10px 24px rgba(0, 0, 0, 0.5);
+}
+.auto-menu[hidden] { display: none; }
+.auto-menu__title { font-size: 15px; letter-spacing: 0.22em; color: var(--tan); margin-right: 8px; }
+.auto-menu button {
+  width: 64px; height: 48px; border-radius: 12px; font-size: 24px; font-weight: 700; color: #fff3d6;
+  background: linear-gradient(180deg, #4a2414, #241008); box-shadow: inset 0 0 0 1.5px rgba(255, 215, 90, 0.55);
+}
+.auto-menu button:hover { background: linear-gradient(180deg, #ffd75a, #c98a00); color: #2a1000; }
+
+/* Menu: the system cluster's last button; the flyout drops below it. */
+.menu { position: relative; }
+.menu__fly {
+  position: absolute; top: 72px; right: 0; display: flex; flex-direction: column; gap: 8px;
+  opacity: 0; transform: translateY(-8px); pointer-events: none; transition: 0.2s ease;
+}
+.menu.is-open .menu__fly { opacity: 1; transform: none; pointer-events: auto; }
+.menu__item {
+  display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 24px 0 16px; border-radius: 28px;
+  font-size: 20px; font-weight: 700; letter-spacing: 0.16em; color: var(--gold-2); text-decoration: none; white-space: nowrap;
+  background: var(--glass); box-shadow: var(--hairline), 0 6px 14px rgba(0, 0, 0, 0.45);
+}
+.menu__item svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+#soundBtn .off { display: none; }
+#soundBtn.is-off .wav { display: none; }
+#soundBtn.is-off .off { display: inline; }
+
+/* In-reel win amount: centred on the window (V1 hangs it under the reels,
+   where V3 has the frame's rock band and the spin button). */
+.reel-win, .reel-win-plate { top: 50%; }
+
+/* --- Dim ---------------------------------------------------------------- */
+
+.screen-dim {
+  position: absolute; inset: 0; z-index: 7; pointer-events: none;
+  background: rgba(10, 2, 4, 0.72); opacity: 0; transition: opacity 0.34s ease;
+}
+.screen-dim.is-active { opacity: 1; pointer-events: auto; }
+.screen-dim.is-opaque { background: #070103; }
+
+/* --- Popups ------------------------------------------------------------- */
+
+.sk-popup {
+  position: absolute; left: 50%; top: 50%; width: 1100px;
+  display: flex; flex-direction: column; align-items: center;
+  transform: translate(-50%, -50%) scale(0.6); opacity: 0;
+  transition: transform 0.45s cubic-bezier(.2, 1.5, .4, 1), opacity 0.3s ease;
+  cursor: pointer;
+}
+.sk-popup.is-in { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.sk-popup.is-out { transform: translate(-50%, -50%) scale(1.1); opacity: 0; transition-duration: 0.3s; }
+.sk-popup__rays {
+  position: absolute; left: 50%; top: 45%; width: 1300px; height: 1300px; margin: -650px 0 0 -650px; z-index: -1;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 210, 110, 0.32) 0 6deg, transparent 6deg 18deg);
+  -webkit-mask: radial-gradient(circle, #000 8%, transparent 62%);
+  mask: radial-gradient(circle, #000 8%, transparent 62%);
+  animation: rays 18s linear infinite;
+}
+@keyframes rays { to { transform: rotate(360deg); } }
+.sk-popup.is-tier-mega .sk-popup__rays { background: repeating-conic-gradient(from 0deg, rgba(255, 110, 70, 0.35) 0 6deg, transparent 6deg 18deg); }
+.sk-popup.is-tier-epic .sk-popup__rays { background: repeating-conic-gradient(from 0deg, rgba(200, 130, 255, 0.35) 0 6deg, transparent 6deg 18deg); }
+.is-freeSpinsIntro .sk-popup__rays, .is-freeSpinsMore .sk-popup__rays { background: repeating-conic-gradient(from 0deg, rgba(150, 160, 255, 0.3) 0 6deg, transparent 6deg 18deg); }
+.sk-popup__title { width: 860px; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.6)); animation: title-in 0.7s cubic-bezier(.2, 1.4, .4, 1) both; }
+@keyframes title-in { from { transform: translateY(-60px) scale(1.3); opacity: 0; } }
+.sk-popup__panel { position: relative; width: 640px; margin-top: -26px; }
+.sk-popup__panel img { display: block; width: 100%; }
+.sk-popup__value {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 88px; font-weight: 900; white-space: nowrap;
+  background: linear-gradient(180deg, #fffbe6, var(--gold-2) 45%, #e08a00 72%, #fff1b0);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 4px 0 #3a1600);
+}
+.sk-popup.is-landed .sk-popup__value { animation: bump 0.5s ease; }
+.sk-popup__sub {
+  margin-top: 14px; font-size: 34px; font-weight: 700; letter-spacing: 0.24em; color: #f1e6ff;
+  text-shadow: 0 2px 0 #000, 0 0 16px rgba(120, 120, 255, 0.6);
+}
+
+/* --- Jackpot Wheel ------------------------------------------------------- */
+
+.wheel-overlay {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+  opacity: 0; transition: opacity 0.45s ease;
+  background: radial-gradient(ellipse at 50% 55%, rgba(80, 20, 10, 0.55), rgba(8, 2, 4, 0.92) 70%);
+}
+.wheel-overlay[hidden] { display: none; }
+.wheel-overlay.is-in { opacity: 1; }
+.wheel-overlay__title { width: 560px; margin-top: 6px; filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.6)); }
+.jackpots--wheel { position: relative; left: auto; top: auto; transform: none; margin-top: -8px; }
+.jackpots--wheel .jp { width: 330px; }
+.wheel {
+  position: relative; width: 680px; height: 680px; margin-top: 10px;
+  transform: scale(0.4) rotate(-40deg); opacity: 0;
+  transition: transform 0.85s cubic-bezier(.2, 1.3, .35, 1), opacity 0.4s ease;
+}
+.wheel-overlay.is-in .wheel { transform: none; opacity: 1; }
+.wheel-overlay.has-award .wheel,
+.wheel-overlay.has-award .wheel__btn { opacity: 0.18; filter: blur(3px); transition: opacity 0.4s ease, filter 0.4s ease; }
+.wheel__glow {
+  position: absolute; inset: -12%; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 190, 70, 0.45), transparent 62%);
+  animation: glow 2.4s ease-in-out infinite alternate;
+}
+@keyframes glow { from { opacity: 0.5; } to { opacity: 1; } }
+.wheel__disc {
+  position: absolute; border-radius: 50%; overflow: hidden;
+  inset: calc((1 - var(--rim-inner)) * 50% - 4px);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
+}
+.wheel__svg { width: 100%; height: 100%; display: block; }
+.wheel__label { font-family: var(--serif); font-weight: 900; font-size: 34px; letter-spacing: 0.04em; }
+.wheel__label--mini { fill: #ffe2b8; }
+.wheel__label--minor { fill: #ffffff; }
+.wheel__label--major { fill: #4a2200; }
+.wheel__label--grand { fill: #ffe7a6; font-size: 38px; }
+.wheel__label { paint-order: stroke; stroke: rgba(0, 0, 0, 0.45); stroke-width: 2px; }
+.wheel__label--major { stroke: rgba(255, 245, 200, 0.6); }
+.wheel__rim { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.wheel__lights { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; }
+.wheel__lights i {
+  position: absolute; width: 11%; height: 11%; margin: -5.5% 0 0 -5.5%; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 250, 210, 0.95) 0 14%, rgba(255, 190, 60, 0.55) 34%, transparent 68%);
+  opacity: 0.35;
+  animation: bulb-idle 1.6s ease-in-out infinite;
+  animation-delay: calc(var(--i) * -0.4s);
+}
+@keyframes bulb-idle { 50% { opacity: 0.9; } }
+.wheel-overlay.is-spinning .wheel__lights i { animation: bulb-chase 0.6s linear infinite; animation-delay: calc(var(--i) * 0.05s); }
+@keyframes bulb-chase { 0%, 100% { opacity: 0.2; } 15% { opacity: 1; transform: scale(1.25); } }
+.wheel-overlay.is-stopped .wheel__lights i { animation: bulb-flash 0.28s steps(2) infinite; }
+@keyframes bulb-flash { 50% { opacity: 1; transform: scale(1.3); } }
+.wheel__hub { position: absolute; left: 50%; top: 50%; width: 26%; transform: translate(-50%, -50%); pointer-events: none; }
+.wheel__pointer {
+  position: absolute; left: 50%; top: -8%; width: 15%; transform: translateX(-50%); transform-origin: 50% 20%;
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.6)); z-index: 2;
+}
+.wheel__pointer.is-tick { animation: tick 0.12s ease-out; }
+@keyframes tick { 40% { transform: translateX(-50%) rotate(-14deg); } }
+.wheel-overlay.is-stopped .wheel__glow { animation: glow 0.3s ease-in-out infinite alternate; }
+
+.wheel__btn {
+  margin-top: 6px; padding: 18px 54px; border-radius: 999px;
+  font-size: 40px; font-weight: 900; letter-spacing: 0.08em; color: #2a1000;
+  background: linear-gradient(180deg, #fff1b0, var(--gold-2) 40%, var(--gold-3) 70%, #b06a00);
+  box-shadow: 0 0 0 3px #4a2200, 0 0 0 6px rgba(255, 215, 90, 0.6), 0 12px 26px rgba(0, 0, 0, 0.6);
+  opacity: 0.35; transform: scale(0.94); transition: 0.25s ease;
+}
+.wheel__btn.is-ready { opacity: 1; transform: none; animation: ready 1.1s ease-in-out infinite; }
+@keyframes ready { 50% { transform: scale(1.06); box-shadow: 0 0 0 3px #4a2200, 0 0 0 6px rgba(255, 215, 90, 0.9), 0 0 40px rgba(255, 190, 60, 0.9); } }
+.wheel-overlay.is-spinning .wheel__btn { opacity: 0; }
+
+.wheel-award {
+  position: absolute; left: 50%; top: 50%; display: flex; flex-direction: column; align-items: center;
+  transform: translate(-50%, -50%) scale(0.5); opacity: 0;
+  transition: transform 0.5s cubic-bezier(.2, 1.5, .4, 1), opacity 0.3s ease;
+}
+.wheel-award[hidden] { display: none; }
+.wheel-award.is-in { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.wheel-award__rays {
+  position: absolute; left: 50%; top: 50%; width: 1400px; height: 1400px; margin: -700px 0 0 -700px; z-index: -1;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 210, 110, 0.4) 0 6deg, transparent 6deg 18deg);
+  -webkit-mask: radial-gradient(circle, #000 8%, transparent 60%); mask: radial-gradient(circle, #000 8%, transparent 60%);
+  animation: rays 14s linear infinite;
+}
+.wheel-award__tier {
+  font-size: 170px; font-weight: 900; letter-spacing: 0.06em; line-height: 1;
+  background: linear-gradient(180deg, #fffbe6, var(--gold-2) 40%, #e08a00 70%, #fff1b0);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 6px 0 #3a1600) drop-shadow(0 0 30px rgba(255, 160, 40, 0.6));
+}
+.wheel-award[data-tier="grand"] .wheel-award__tier { background-image: linear-gradient(180deg, #fff1d6, #ff7a6a 40%, #c0102a 70%, #ffd0a0); }
+.wheel-award[data-tier="minor"] .wheel-award__tier { background-image: linear-gradient(180deg, #ffffff, #d6e4f0 40%, #7f95aa 70%, #f4fbff); }
+.wheel-award[data-tier="mini"] .wheel-award__tier { background-image: linear-gradient(180deg, #ffe9cc, #e2a064 40%, #8a4a1a 70%, #ffd8aa); }
+.wheel-award__panel { position: relative; width: 680px; margin-top: 10px; }
+.wheel-award__panel img { display: block; width: 100%; }
+.wheel-award__value {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 92px; font-weight: 900;
+  background: linear-gradient(180deg, #fffbe6, var(--gold-2) 45%, #e08a00 72%, #fff1b0);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 4px 0 #3a1600);
+}
+
+/* --- Buy window ---------------------------------------------------------- */
+
+.buy-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.buy-overlay[hidden] { display: none; }
+.buy {
+  position: relative; display: flex; flex-direction: column; align-items: center;
+  padding: 0 56px 28px; margin-top: 56px; border-radius: 28px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(120, 50, 20, 0.55), transparent 60%), linear-gradient(180deg, #2a100a, #140605);
+  box-shadow: inset 0 0 0 2px rgba(255, 215, 90, 0.8), inset 0 0 0 6px #3a1800, inset 0 0 0 8px rgba(255, 215, 90, 0.35),
+    0 30px 80px rgba(0, 0, 0, 0.7); opacity: 0; transform: scale(0.85);
+  transition: opacity 0.3s ease, transform 0.4s cubic-bezier(.2, 1.4, .4, 1);
+}
+.buy-overlay.is-in .buy { opacity: 1; transform: none; }
+.buy__title { width: 470px; margin: -64px 0 4px; filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.6)); }
+.buy__close {
+  position: absolute; right: 18px; top: 18px; width: 56px; height: 56px; border-radius: 50%;
+  font-size: 46px; line-height: 1; color: var(--gold-2);
+  background: rgba(30, 8, 6, 0.9); box-shadow: inset 0 0 0 2px rgba(255, 215, 90, 0.7);
+}
+.buy__cards {
+  display: grid; grid-template-columns: repeat(2, 290px); grid-template-rows: repeat(5, auto);
+  column-gap: 64px; margin-top: 0;
+}
+.buy-card {
+  position: relative; width: 290px; display: grid; grid-row: span 5; grid-template-rows: subgrid; justify-items: center; align-items: start; text-align: center;
+  transition: transform 0.25s ease, filter 0.25s ease, opacity 0.25s;
+}
+.buy-card__art { width: 100%; filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.6)); }
+.buy-card__name {
+  margin-top: 6px; font-size: 38px; font-weight: 900; letter-spacing: 0.06em;
+  background: linear-gradient(180deg, #fffbe6, var(--gold-2) 50%, #d58b00 80%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 3px 0 #2a1000);
+}
+.buy-card--fs .buy-card__name { background-image: linear-gradient(180deg, #ffffff, #c9c3ff 55%, #7a70d8); }
+.buy-card__desc { margin-top: 6px; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 18px; line-height: 1.35; color: #f3e3c9; padding: 0 6px; text-wrap: balance; }
+.buy-card__price {
+  margin-top: 10px; padding: 10px 30px; border-radius: 999px; font-size: 30px; font-weight: 900; color: #2a1000;
+  background: linear-gradient(180deg, #fff1b0, var(--gold-2) 40%, var(--gold-3) 70%, #b06a00);
+  box-shadow: 0 0 0 3px #4a2200, 0 8px 18px rgba(0, 0, 0, 0.5);
+}
+.buy-card__note { margin-top: 8px; font-size: 18px; color: #c99a52; }
+.buy-card:hover:not(:disabled) { transform: translateY(-8px) scale(1.02); }
+.buy-card:disabled { filter: grayscale(0.9) brightness(0.6); cursor: default; }
+.buy-card:disabled .buy-card__price { background: #3a2a22; color: #c9a88a; font-size: 22px; }
+.buy-overlay.is-confirm .buy-card:not(.is-chosen) { opacity: 0.3; transform: scale(0.94); }
+.buy-overlay.is-confirm .buy-card.is-chosen { transform: scale(1.04); }
+.buy__confirm { text-align: center; height: 0; overflow: hidden; opacity: 0; transition: 0.3s ease; display: flex; flex-direction: column; align-items: center; }
+.buy-overlay.is-confirm .buy__confirm { height: 156px; opacity: 1; }
+.buy__q { margin: 14px 0 12px; font-size: 32px; color: #fff3d6; text-shadow: 0 2px 0 #000; }
+.buy__q b { color: var(--gold-2); }
+.buy__actions { display: flex; gap: 24px; }
+.buy__q small { display: block; margin-top: 6px; font-family: system-ui, sans-serif; font-size: 18px; color: #c99a52; }
+.gbtn {
+  min-width: 220px; padding: 16px 40px; border-radius: 999px; font-size: 32px; font-weight: 900; letter-spacing: 0.08em; color: #2a1000;
+  background: linear-gradient(180deg, #fff1b0, var(--gold-2) 40%, var(--gold-3) 70%, #b06a00);
+  box-shadow: 0 0 0 3px #4a2200, 0 10px 20px rgba(0, 0, 0, 0.5);
+}
+.gbtn--no { color: #fff3d6; background: linear-gradient(180deg, #5a2a1a, #2a0e08); box-shadow: 0 0 0 3px rgba(255, 215, 90, 0.5), 0 10px 20px rgba(0, 0, 0, 0.5); }
+.gbtn:active { transform: scale(0.96); }
+
+/* --- Paytable (real CSS px, not stage px) -------------------------------- */
+
+.paytable {
+  position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center;
+  background: rgba(8, 2, 4, 0.78); backdrop-filter: blur(4px);
+}
+.paytable[hidden] { display: none; }
+.paytable__panel {
+  position: relative; width: min(920px, 94vw); max-height: 90vh; overflow-y: auto;
+  padding: 28px 30px 30px; border-radius: 22px;
+  background: linear-gradient(180deg, #2a100a, #140605);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 215, 90, 0.55), 0 20px 50px rgba(0, 0, 0, 0.6);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #f2e2c8; font-size: 15px; line-height: 1.5;
+  user-select: text; -webkit-user-select: text;
+}
+.paytable__panel h2, .paytable__panel h3 { font-family: var(--serif); color: var(--gold-2); margin: 0 0 10px; letter-spacing: 0.06em; }
+.paytable__panel h2 { font-size: 26px; text-align: center; }
+.paytable__panel h3 { font-size: 18px; }
+.paytable__panel section { padding: 16px 0; border-top: 1px solid rgba(255, 215, 90, 0.18); }
+.paytable__panel p { margin: 6px 0; }
+.paytable__close { position: sticky; top: 0; float: right; width: 40px; height: 40px; border-radius: 50%; font-size: 28px; color: var(--gold-2); background: rgba(0, 0, 0, 0.4); box-shadow: inset 0 0 0 1.5px rgba(255, 215, 90, 0.5); }
+.pt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.pt-sym { display: flex; align-items: center; gap: 10px; }
+.pt-sym img { width: 76px; height: 76px; object-fit: contain; }
+.pt-sym ul, .pt-inline { list-style: none; margin: 0; padding: 0; }
+.pt-sym li, .pt-inline li { display: flex; gap: 8px; }
+.pt-sym li span, .pt-inline li span { color: #c99a52; min-width: 26px; }
+.pt-sym li b, .pt-inline li b { color: #fff4dc; }
+.pt-inline { display: flex; gap: 18px; }
+.pt-feature { display: flex; gap: 16px; align-items: flex-start; }
+.pt-feature img { width: 90px; height: 90px; object-fit: contain; flex: none; }
+.pt-odds { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 8px; }
+.pt-odds table { flex: 1 1 260px; border-collapse: collapse; font-size: 14px; }
+.pt-odds caption { text-align: left; font-weight: 700; color: var(--gold-2); padding-bottom: 6px; }
+.pt-odds th, .pt-odds td { padding: 5px 8px; text-align: left; border-bottom: 1px solid rgba(255, 215, 90, 0.12); }
+.pt-odds th { color: #c99a52; font-weight: 600; }
+.pt-odds .t-grand td:first-child { color: #ff8a7a; }
+.pt-odds .t-major td:first-child { color: var(--gold-2); }
+.pt-odds .t-minor td:first-child { color: #d6e4f0; }
+.pt-odds .t-mini td:first-child { color: #e2a064; }
+.pt-lines { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; margin-bottom: 8px; }
+.pt-line { display: flex; align-items: center; gap: 6px; }
+.pt-line i { font-style: normal; color: #c99a52; width: 20px; text-align: right; font-size: 13px; }
+.pt-line svg { width: 66px; height: 40px; }
+.pt-line rect { fill: rgba(255, 215, 90, 0.08); stroke: rgba(255, 215, 90, 0.3); stroke-width: 0.6; }
+.pt-line polyline { fill: none; stroke: var(--gold-2); stroke-width: 2; stroke-linejoin: round; }
+.pt-small { font-size: 13px; color: #c9a88a; }
+
+/* Portrait overlays (as V1) */
+body.is-portrait .sk-popup { width: 1000px; }
+body.is-portrait .sk-popup__title { width: 900px; }
+body.is-portrait .wheel-overlay__title { width: 640px; margin-top: 110px; }
+body.is-portrait .jackpots--wheel { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; margin-top: 10px; }
+body.is-portrait .jackpots--wheel .jp { width: 420px; }
+body.is-portrait .wheel { width: 940px; height: 940px; margin-top: 40px; }
+body.is-portrait .wheel__btn { margin-top: 40px; font-size: 48px; }
+body.is-portrait .buy__cards { grid-template-columns: 940px; grid-template-rows: none; row-gap: 30px; }
+body.is-portrait .buy-card { width: 940px; grid-row: auto; display: grid; grid-template-columns: 340px 1fr; grid-template-rows: auto auto auto 1fr; column-gap: 30px; text-align: left; align-items: start; }
+body.is-portrait .buy-card__art { grid-row: 1 / span 4; }
+body.is-portrait .buy-card__name { margin-top: 40px; font-size: 52px; }
+body.is-portrait .buy-card__desc { font-size: 30px; padding: 0; }
+body.is-portrait .buy-card__price { justify-self: start; font-size: 40px; }
+body.is-portrait .buy__title { width: 760px; }
+
+/* ======================= V3 layout (portrait, 1080x1920) ================= */
+/* Top to bottom on the centre axis: logo 72..291, crown 304..502, frame
+   520..1217 (reels at 0.94), the triad Buy · [turbo SPIN auto] · Win
+   centred on y = 1360, the pill 1600..1744, system row 1776..1864.
+   On a 390px-wide phone one design px is ~0.36 CSS px, so text and tap
+   targets are sized up here (and small buttons get a padded hit area). */
+
+body.is-portrait .logo { left: 340px; top: 72px; width: 400px; }
+body.is-portrait .crown { top: 304px; }
+body.is-portrait .crown::before, body.is-portrait .crown::after { top: 60px; width: 200px; }
+body.is-portrait .crown::before { right: calc(50% + 300px); }
+body.is-portrait .crown::after { left: calc(50% + 300px); }
+body.is-portrait .crown .jp--grand { width: 600px; font-size: 44px; }
+body.is-portrait .crown__row { gap: 12px; }
+body.is-portrait .crown__row .jp { width: 336px; font-size: 25px; }
+body.is-portrait .reel { left: 100px; top: 644px; transform: scale(0.94); transform-origin: 50% 0; }
+
+body.is-portrait .medal { --md: 232px; top: 1244px; }
+body.is-portrait .medal--buy { left: 40px; }
+body.is-portrait .medal--status { right: 40px; }
+body.is-portrait .medal__caption,
+body.is-portrait .medal .readout__label,
+body.is-portrait .medal .fs-panel__cell:first-child .fs-panel__label { font-size: 32px; letter-spacing: 0.06em; }
+body.is-portrait .medal__chip, body.is-portrait .fs-panel__cell:last-child { height: 48px; font-size: 28px; }
+body.is-portrait .fs-panel__cell:last-child { top: calc(var(--md) + 56px); }
+body.is-portrait .fs-panel__cell:last-child .fs-panel__label { font-size: 20px; }
+body.is-portrait .fs-panel__cell:last-child .fs-panel__value { font-size: 28px; }
+body.is-portrait .medal--status .readout__value { font-size: 48px; }
+body.is-portrait .fs-panel__cell:first-child .fs-panel__value { font-size: 104px; }
+
+body.is-portrait .bar {
+  left: 40px; top: 1600px; width: 1000px; height: 144px; border-radius: 72px;
+  grid-template-columns: 1fr 1fr; padding: 0 48px 0 64px;
+}
+body.is-portrait .bar__center {
+  position: absolute; left: 50%; top: -344px; height: 208px;
+  transform: translateX(-50%); gap: 24px;
+}
+body.is-portrait .spin {
+  top: 0; width: 208px; height: 208px; margin: 0;
+  box-shadow: 0 0 0 7px #2a1000, 0 0 0 13px var(--gold-3), 0 0 0 16px #7a4a00, 0 20px 36px rgba(0, 0, 0, 0.65),
+    inset 0 -14px 26px rgba(0, 0, 0, 0.55), inset 0 10px 18px rgba(255, 200, 120, 0.22);
+}
+body.is-portrait .spin__ring { inset: -16px; }
+body.is-portrait .spin__icon, body.is-portrait .spin__stop { width: 104px; height: 104px; }
+body.is-portrait .spin__count { font-size: 32px; line-height: 44px; padding: 0 16px; bottom: -12px; }
+body.is-portrait .bar__center > .ibtn, body.is-portrait #autoBtn { width: 104px; height: 104px; }
+body.is-portrait .bar__center .ibtn svg { width: 48px; height: 48px; }
+body.is-portrait .auto-menu { bottom: 128px; padding: 20px; gap: 12px; }
+body.is-portrait .auto-menu__title { display: none; }
+body.is-portrait .auto-menu button { width: 104px; height: 88px; font-size: 40px; border-radius: 16px; }
+body.is-portrait .readout__label { font-size: 26px; line-height: 32px; }
+body.is-portrait .readout__value { font-size: 52px; line-height: 60px; }
+body.is-portrait .readout__value small { font-size: 28px; }
+body.is-portrait .ibtn--sm { width: 96px; height: 96px; }
+body.is-portrait .ibtn--sm svg { width: 44px; height: 44px; }
+body.is-portrait .bet { gap: 16px; }
+body.is-portrait .readout--bet { min-width: 176px; }
+body.is-portrait .readout--balance { min-width: 0; }
+
+body.is-portrait .sys { left: 0; right: 0; top: 1776px; justify-content: center; gap: 32px; }
+body.is-portrait .sys .ibtn { width: 88px; height: 88px; }
+body.is-portrait .sys .ibtn svg { width: 40px; height: 40px; }
+body.is-portrait .menu__fly { top: auto; bottom: 112px; right: 50%; transform: translate(50%, 8px); }
+body.is-portrait .menu.is-open .menu__fly { transform: translate(50%, 0); }
+body.is-portrait .menu__item { height: 88px; padding: 0 40px 0 28px; border-radius: 44px; font-size: 32px; }
+body.is-portrait .menu__item svg { width: 40px; height: 40px; }
+/* Padded hit areas so the phone targets reach ~44 CSS px. */
+body.is-portrait .ibtn { position: relative; }
+body.is-portrait .ibtn::after { content: ''; position: absolute; inset: -16px; border-radius: 50%; }
+
+/* Reduced motion: keep state changes, drop the ambient loops and big moves. */
+@media (prefers-reduced-motion: reduce) {
+  .logo, .buy-btn .medal__rim, .crown__top::before, .crown .jp--grand::after, .spin__ring, .reel__cell.is-special > img, .reel__cell.is-special::before,
+  .sk-popup__rays, .wheel-award__rays, .wheel__glow, .wheel__lights i, .wheel__btn.is-ready { animation: none !important; }
+  .sk-popup, .wheel, .buy, .big-wild, .big-wild__lion { transition-duration: 0.01ms !important; }
+}
+
+.toast {
+  position: fixed; left: 50%; top: 18px; z-index: 9; transform: translate(-50%, -12px); opacity: 0; pointer-events: none;
+  padding: 10px 18px; border-radius: 999px; max-width: calc(100vw - 32px);
+  font: 600 15px/1.3 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #fff3d6;
+  background: rgba(24, 8, 6, 0.94); box-shadow: inset 0 0 0 1.5px rgba(255, 215, 90, 0.6), 0 10px 24px rgba(0, 0, 0, 0.5);
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(.22, 1, .36, 1);
+}
+.toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+
+
+/* ======================= V3 overrides of the V1 overlay rules ============ */
+
+/* Status line: over the reels, clear of the crown and the pill. */
+.toast { top: 50%; }
+
+/* Buy window: a little more room under the confirm buttons so their
+   outline and shadow are not cut by the panel. */
+.buy-overlay.is-confirm .buy__confirm { height: 176px; }
+
+/* While the buy window is up, the pill and the system buttons step back. */
+.bar, .sys { transition: opacity 0.25s ease; }
+body.is-buying .bar, body.is-buying .sys { opacity: 0; pointer-events: none; }
+
+/* Golden Savannah: measured value panels per plaque (crowns differ in height). */
+.jp--grand { --jp-l: 0.515; --jp-r: 0.068; --jp-t: 0.400; --jp-b: 0.091; }
+.jp--major { --jp-l: 0.514; --jp-r: 0.067; --jp-t: 0.346; --jp-b: 0.087; }
+.jp--minor { --jp-l: 0.515; --jp-r: 0.069; --jp-t: 0.327; --jp-b: 0.084; }
+.jp--mini { --jp-l: 0.514; --jp-r: 0.070; --jp-t: 0.232; --jp-b: 0.098; }
+
+/* Prize ladder in one row (see golden-savannah.html). Bottoms aligned so the
+   value panels share a baseline; GRAND largest at the end of the climb. */
+.crown--ladder {
+  top: 14px; flex-direction: row; justify-content: center; align-items: flex-end; gap: 14px;
+}
+.crown--ladder::before, .crown--ladder::after { display: none; }
+.crown--ladder .jp { width: 236px; font-size: 22px; }
+.crown--ladder .jp--grand { width: 372px; font-size: 32px; }
+body.is-portrait .crown--ladder { top: 304px; flex-wrap: wrap; width: 1000px; left: 40px; right: auto; row-gap: 10px; }
+body.is-portrait .crown--ladder .jp { width: 300px; font-size: 26px; }
+body.is-portrait .crown--ladder .crown__top { order: -1; flex-basis: 100%; display: flex; justify-content: center; }
+body.is-portrait .crown--ladder .jp--grand { width: 480px; font-size: 38px; }

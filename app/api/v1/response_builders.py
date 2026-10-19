@@ -2,8 +2,8 @@
 orchestrations (spin_service.py, spin_avalanche.py). Pure formatting — no
 state, no DB."""
 
+from collections.abc import Sequence
 from decimal import Decimal
-from typing import Sequence
 
 from app.api.v1 import schemas
 from app.engine.types import AvalancheResult, CountWin, LineWin
@@ -53,7 +53,7 @@ def free_spins_feature_out(
     return schemas.FeatureOut(
         type="free_spins",
         triggered=triggered_now,
-        spins_awarded=trigger_result.details.get("spins_awarded") if triggered_now else None,
+        spins_awarded=trigger_result.details.get("spins_awarded") if triggered_now and trigger_result is not None else None,
         spins_remaining=remaining_after,
         total_win=int(round_total_win),
         multiplier=multiplier,
@@ -116,6 +116,7 @@ def wheel_of_fortune_out(result) -> schemas.WheelOfFortuneOut | None:
         segment_index=details["segment_index"],
         prize_type=details["prize_type"],
         multiplier=details.get("multiplier"),
+        tier=details.get("tier"),
         win_amount=int(result.win_amount),
         segments=[schemas.WheelSegmentOut(**s) for s in details["segments"]],
     )
