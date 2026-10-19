@@ -15,7 +15,7 @@
 // the only source of layout truth on both orientations.
 (function () {
   const ROOT = 'img/neon-joker-spins/spine';
-  const FX_V = 9;
+  const FX_V = 10;
   const box = (w, h) => ({ x: -w / 2, y: -h / 2, width: w, height: h });
   const BOX = {
     frame: box(1122, 1159),
@@ -32,6 +32,7 @@
     mascot: box(760, 1520),
     bigwin: box(1200, 1200),
     buy: box(520, 328),
+    lever: box(1122, 1159),
     sign_bigWin: box(727, 206),
     sign_megaWin: box(900, 243),
     sign_epicWin: box(900, 355),
@@ -145,9 +146,27 @@
     document.body.classList.add('fx-mascot');
   }
 
+  // The lever only exists on the desktop cabinet: there the frame art without
+  // its arm is used (body.fx-lever) and Spine draws the arm, pulled on spin.
+  function mountLever() {
+    const show = !isMobile() && res.lever;
+    if (!show) {
+      if (inst.lever) S.front.removeBase(inst.lever);
+      inst.lever = null;
+      document.body.classList.remove('fx-lever');
+      return;
+    }
+    if (inst.lever) return;
+    inst.lever = make('lever', document.querySelector('.cabinet'));
+    inst.lever.play('idle', true);
+    S.front.addBase(inst.lever);
+    document.body.classList.add('fx-lever');
+  }
+
   function mountAll() {
     mountBg();
     mountFrame();
+    mountLever();
     mountMascot();
   }
 
@@ -173,6 +192,7 @@
       load(S.front, 'symbols'),
       load(S.front, 'winlines'),
       load(S.front, 'buy'),
+      load(S.front, 'lever'),
       ...plates.map((t) => load(S.front, `jp_${t}`)),
       load(S.mid, 'bigwin'),
       ...signs.map((k) => load(S.top, `sign_${k}`)),
@@ -218,6 +238,10 @@
   // --- hooks from slot.js ------------------------------------------------------
 
   NeonFx.spinStart = function () {
+    if (inst.lever) {
+      inst.lever.play('pull', false);
+      inst.lever.queue('idle', true);
+    }
     NeonFx.hideLine();
     NeonFx.setWin(false);
   };

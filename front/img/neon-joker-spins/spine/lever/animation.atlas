@@ -1,0 +1,12 @@
+animation.png?v=cb954d38
+size:440,293
+filter:Linear,Linear
+pma:true
+arm
+bounds:0,0,108,293
+flare
+bounds:110,0,150,150
+arm_hl
+bounds:262,0,54,146
+ring
+bounds:318,0,120,120

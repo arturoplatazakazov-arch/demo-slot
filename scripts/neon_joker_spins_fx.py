@@ -479,6 +479,69 @@ def build_plate(tier):
     return sk
 
 
+def build_lever():
+    """The cabinet's lever, in frame.webp px (anchored to .cabinet like the
+    frame skeleton). `pull` (0.9s): grabbed and yanked down towards the
+    viewer — the arm swings forward over the hub and foreshortens — then it
+    springs back up and wobbles out. `idle` (4s): a glint slides over the
+    ball now and then."""
+    import json
+    meta = json.load(open(os.path.join(LAYERS, 'lever.json')))
+    W, H = meta['frame']
+    x0, y0, x1, y1 = meta['bbox']
+    px, py = meta['pivot']
+    arm = load(os.path.join(IMG, 'lever_arm.webp'))
+    sk = NFx('lever', W, H, 1.0, {'idle': 4.0, 'pull': 0.9})
+    bx, by = sk.xy(px, py)
+    b = sk.bone('arm', x=bx, y=by)
+    sk.image('arm', arm)
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    sk.slot('arm', b, 'arm', w=arm.width, x=cx - px, y=py - cy)
+    hl = V.highlight(arm, gamma=1.2, gain=1.6)
+    sk.image('arm_hl', hl)
+    sk.res_of['arm_hl'] = 0.5
+    sk.hidden_slot('arm_hl', b, 'arm_hl', w=arm.width, x=cx - px, y=py - cy, blend='additive')
+    # spark + ring where the stick hits its stop
+    sk.image('flare', V.star4(192))
+    sk.image('ring', V.ring(192))
+    fb = sk.bone('stop', x=bx, y=by)
+    sk.hidden_slot('flare', fb, 'flare', 'ffd75a', w=150, blend='additive')
+    rb = sk.bone('stop_r', parent=fb)
+    sk.hidden_slot('ring', rb, 'ring', 'ff9de0', w=120, blend='additive')
+    ball_y = py - (y0 + 40)                      # ball height above the pivot
+
+    def pull(t):
+        """(rotation, scaleY): 0..0.18 yank down, hold, 0.32.. spring back."""
+        if t < 0.06:                               # grab: tiny lift first
+            k = out_cubic(t / 0.06)
+            return 4 * k, 1.0 + 0.03 * k
+        if t < 0.2:                                # yank: swings forward and shortens
+            k = in_out_sine((t - 0.06) / 0.14)
+            return lerp(4, -32, k), lerp(1.03, 0.42, k)
+        if t < 0.3:                                # at the stop
+            return -32, 0.42
+        u = t - 0.3                                # released: springs back with a wobble
+        e = math.exp(-6.5 * u)
+        return 32 * -e * math.cos(15 * u), 1 - 0.58 * e * math.cos(15 * u)
+
+    sk.anim('pull', b, 'rotate', lambda t: pull(t)[0])
+    sk.anim('pull', b, 'scale', lambda t: (1.0, pull(t)[1]))
+    sk.anim('pull', 'arm', 'alpha', lambda t: 1.0)
+    sk.anim('pull', 'arm_hl', 'alpha', lambda t: 0.5 * ease_hump(t, 0.05, 0.35))
+    sk.anim('pull', 'flare', 'alpha', lambda t: 0.0 if t < 0.19 else seg(t, 0.19, 0.45, 1, 0))
+    sk.anim('pull', fb, 'scale', lambda t: (seg(t, 0.19, 0.3, 0.3, 1.1, out_back) if t > 0.19 else 0.3,) * 2)
+    sk.anim('pull', 'ring', 'alpha', lambda t: 0.0 if t < 0.19 else seg(t, 0.19, 0.5, 0.9, 0))
+    sk.anim('pull', rb, 'scale', lambda t: (seg(t, 0.19, 0.5, 0.3, 1.6),) * 2)
+    sk.anim('idle', b, 'rotate', lambda t: 0)
+    sk.anim('idle', b, 'scale', lambda t: (1, 1))
+    sk.anim('idle', 'arm', 'alpha', lambda t: 1.0)
+    sk.anim('idle', 'arm_hl', 'alpha', lambda t: 0.45 * ease_hump(t, 2.4, 2.9))
+    for n in ('flare', 'ring'):
+        sk.anim('idle', n, 'alpha', lambda t: 0.0)
+    sk.write()
+    return sk
+
+
 def build_buy():
     """BUY sign: bulbs chase, tubes breathe, a sweep runs over BUY; `press`
     is the click flash (the unlit state is a separate DOM image)."""
@@ -1427,6 +1490,7 @@ def main():
         'mascot': build_mascot,
         'bigwin': build_bigwin,
         'buy': build_buy,
+        'lever': build_lever,
     }
     for tier in ('mini', 'minor', 'major', 'grand'):
         builders[f'jp_{tier}'] = lambda tier=tier: build_plate(tier)

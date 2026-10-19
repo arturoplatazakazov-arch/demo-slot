@@ -121,6 +121,8 @@ body {
 .fx-top { z-index: 10; }
 /* маскот рисует Spine (с дыханием и щелчком) — DOM-картинка остаётся якорем */
 body.fx-mascot .mascot { opacity: 0; animation: none; }
+/* рычаг рисует и дёргает Spine — рама без рычага */
+body.fx-lever .cabinet { background-image: url('../img/neon-joker-spins/img/frame_nolever.webp?v=1'); }
 /* логотип из слоёв рисует Spine (включение по буквам) */
 body.fx-ready .logo img { opacity: 0; animation: none; }
 /* символ, который сейчас играет Spine-клип, — статика прячется */

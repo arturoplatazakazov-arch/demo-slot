@@ -473,6 +473,36 @@ def faces() -> None:
         _save(f, BASE / "rig" / f"face_{name}.png")
 
 
+
+LEVER_BOX = (1014, 120, 1122, 548)   # frame.webp px: ball + stick, above the hub
+LEVER_PIVOT = (1050, 556)             # where the stick enters the hub
+
+
+def lever() -> None:
+    """Split the desktop cabinet's lever arm into its own sprite (the hub
+    stays in the frame) so Spine can pull it on every spin. The cut edge is
+    feathered over 10px so the stick blends into the hub."""
+    import json
+    fr = Image.open(IMG / "frame.webp").convert("RGBA")
+    a = np.asarray(fr).copy()
+    x0, y0, x1, y1 = LEVER_BOX
+    m = np.zeros(a.shape[:2], np.float32)
+    m[y0:y1, x0:x1] = 1.0
+    for i in range(10):   # feather the bottom edge into the hub
+        m[y1 + i, x0:x1] = 1.0 - (i + 1) / 11
+    arm = a.copy()
+    arm[..., 3] = (arm[..., 3] * m).astype(np.uint8)
+    rest = a.copy()
+    rest[..., 3] = (rest[..., 3] * (1 - m)).astype(np.uint8)
+    arm_im = Image.fromarray(arm, "RGBA")
+    bb = arm_im.getchannel("A").point(lambda v: 255 if v > 6 else 0).getbbox()
+    _save(arm_im.crop(bb), IMG / "lever_arm.png")
+    _save(Image.fromarray(rest, "RGBA"), IMG / "frame_nolever.png")
+    (BASE / "layers" / "lever.json").write_text(json.dumps({
+        "frame": list(fr.size), "bbox": list(bb), "pivot": list(LEVER_PIVOT)}))
+    print("lever", bb)
+
+
 FX_NAMES = ["spark", "orb_pink", "orb_cyan", "confetti", "ribbon", "zap",
             "coin_edge", "burst", "ring_pink", "ring_cyan", "spade", "heart"]
 
