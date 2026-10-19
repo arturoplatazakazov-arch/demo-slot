@@ -449,6 +449,30 @@ def buy() -> None:
                   f"w {w / im.width:.3f} h {h / im.height:.3f}")
 
 
+
+FACE_ORDER = ["neutral", "blink", "antic", "joy", "laugh", "sad"]
+
+
+def faces() -> None:
+    """Joker head expressions (3x2 sheet) -> rig/face_<name>.webp, each scaled
+    to the base head's width so the rig can swap them in place."""
+    im = _open("mascot_faces")
+    if im is None:
+        print("skip faces")
+        return
+    # the heads' neon glows touch side by side: split at a higher threshold
+    # (bodies only), the glow is then given back by the owner mask
+    found = items(im, thr=110, big_area=3000)
+    owner = _own(found, np.asarray(im).shape[:2])
+    base = Image.open(BASE / "rig" / "head.webp")
+    print("faces", len(found), [b for b, _ in found])
+    for name, (i, (b, m)) in zip(FACE_ORDER, enumerate(found)):
+        f = _trim(_cut(im, b, m, pad=8, owner=owner, index=i))
+        k = base.width / f.width
+        f = f.resize((base.width, round(f.height * k)), Image.LANCZOS)
+        _save(f, BASE / "rig" / f"face_{name}.png")
+
+
 FX_NAMES = ["spark", "orb_pink", "orb_cyan", "confetti", "ribbon", "zap",
             "coin_edge", "burst", "ring_pink", "ring_cyan", "spade", "heart"]
 

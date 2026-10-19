@@ -934,6 +934,8 @@ POSE = {
 }
 ARM_K = 0.52    # the straight-arm sheet was drawn ~1.9x the body sheet
 HAND_K = 0.46
+# expressions: neutral is the base head, the rest replace it per clip
+FACES = ['neutral', 'blink', 'antic', 'joy', 'laugh', 'sad']
 PART_SCALE = {'bell_a': 0.48, 'bell_b': 0.48, 'bell_c': 0.48,
               'arm_l_up': ARM_K, 'arm_l_low': ARM_K, 'arm_r_up': ARM_K, 'arm_r_low': ARM_K,
               'leg_l_up': 0.9, 'leg_l_low': 0.9, 'leg_r_up': 0.9, 'leg_r_low': 0.9}
@@ -1027,6 +1029,7 @@ def build_mascot():
         pos[n] = (x, y)
         sk.bone(n, parent=par, x=x, y=y, rot=POSE[n])
     hand_slots = {'l': [], 'r': []}
+    face_slots = []
     for side in ('l', 'r'):
         fx_, fy_ = JOINT[(f'arm_{side}_low', f'hand_{side}')]
         px_, py_ = PIV[f'arm_{side}_low']
@@ -1053,6 +1056,21 @@ def build_mascot():
         k = PART_SCALE.get(n, 1.0)
         px, py = PIV[n]
         sk.slot(n, n, n, w=im.width * k, x=(im.width / 2 - px) * k, y=-(im.height / 2 - py) * k)
+        if n == 'head':
+            # face variants (rig/face_<name>.webp): same head, same framing,
+            # only the expression differs; each is aligned to the base head
+            # by its own bbox, so a slightly different crop doesn't jump
+            for f in FACES:
+                fp = os.path.join(RIG, f'face_{f}.webp')
+                if not os.path.exists(fp):
+                    continue
+                fim = load(fp)
+                fk = im.width / fim.width
+                reg = f'face_{f}'
+                sk.image(reg, fim)
+                sk.hidden_slot(reg, n, reg, w=im.width * k, x=(im.width / 2 - px) * k,
+                               y=-(fim.height * fk / 2 - py) * k)
+                face_slots.append(f)
 
     # snap spark at the fingertip
     # the fingertips sit ~0.85 of the snap hand's length past the wrist,
@@ -1082,6 +1100,17 @@ def build_mascot():
             sk.anim(clip, b, 'translate', lambda t, a=a, d=d: (0, 0) if t < t0 else (
                 math.cos(a) * d * out_cubic(clamp((t - t0) / 0.5)), math.sin(a) * d * out_cubic(clamp((t - t0) / 0.5)) - 30 * clamp((t - t0) / 0.6) ** 2))
             sk.anim(clip, n, 'alpha', lambda t: 0.0 if t < t0 else seg(t, t0, t0 + 0.6, 1, 0))
+
+    def faces(clip, pick):
+        """pick: a face name or fn(t) -> name; 'neutral' = the base head."""
+        if not face_slots:
+            return
+        # the generated neutral face replaces the base head too, so every
+        # expression comes from the same drawing (no style jump on a switch)
+        sk.anim(clip, 'head', 'alpha', lambda t: 0.0 if 'neutral' in face_slots else
+                (1.0 if (pick(t) if callable(pick) else pick) == 'neutral' else 0.0))
+        for f in face_slots:
+            sk.anim(clip, f'face_{f}', 'alpha', lambda t, f=f: 1.0 if (pick(t) if callable(pick) else pick) == f else 0.0)
 
     def hands(clip, left, right='card'):
         """left/right: a key, or fn(t) -> key — which hand variant shows."""
@@ -1141,6 +1170,8 @@ def build_mascot():
         return m
     put('idle', idle)
     hands('idle', 'snap')
+    # idle: sly grin, a blink every loop, a smug look at the snap
+    faces('idle', lambda t: 'blink' if 1.1 < t < 1.24 or 3.6 < t < 3.72 else ('joy' if 4.45 < t < 4.9 else 'neutral'))
     snap('idle', 4.45)
 
     # cheer: anticipation crouch -> jump with arms up -> land -> settle, snap
@@ -1177,6 +1208,7 @@ def build_mascot():
         return m
     put('cheer', cheer)
     hands('cheer', lambda t: 'open' if 0.2 < t < 1.25 else 'snap')
+    faces('cheer', lambda t: 'antic' if t < 0.2 else ('joy' if t < 1.3 else 'neutral'))
     snap('cheer', 0.55)
 
     # laugh (free spins): head thrown back, shoulders shaking, hand on hip
@@ -1200,6 +1232,7 @@ def build_mascot():
         return m
     put('laugh', laugh)
     hands('laugh', lambda t: 'open' if 0.15 < t < 1.8 else 'snap')
+    faces('laugh', lambda t: 'laugh' if 0.08 < t < 1.75 else 'joy')
     snap('laugh', 0.15)
 
     # bow (jackpot): a showman's flourish — the card arm sweeps out, he bows
@@ -1222,6 +1255,7 @@ def build_mascot():
         return m
     put('bow', bow)
     hands('bow', lambda t: 'open' if 0.3 < t < 1.8 else 'snap')
+    faces('bow', lambda t: 'joy' if t < 0.4 else ('blink' if t < 1.5 else 'joy'))
     snap('bow', 1.95)
 
     # win (a regular line win): quick pleased nod, a flick of the snapping
@@ -1245,6 +1279,7 @@ def build_mascot():
         return m
     put('win', win)
     hands('win', 'snap')
+    faces('win', lambda t: 'joy' if t < 1.0 else 'neutral')
     snap('win', 0.45)
 
     # near win (loops while the last reel is anticipating): held breath, not
@@ -1284,6 +1319,7 @@ def build_mascot():
         return m
     put('near_win', near)
     hands('near_win', 'fist')
+    faces('near_win', 'antic')
 
     # near miss: «эх!» — slumps, head drops, then a shrug and back to rest
     def head_miss(t):
@@ -1307,6 +1343,7 @@ def build_mascot():
         return m
     put('near_miss', miss)
     hands('near_miss', lambda t: 'open' if t > 0.25 else 'fist', lambda t: 'card')
+    faces('near_miss', lambda t: 'antic' if t < 0.15 else ('sad' if t < 1.35 else 'neutral'))
     sk.write()
     return sk
 

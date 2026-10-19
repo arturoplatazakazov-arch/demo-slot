@@ -15,7 +15,7 @@
 // the only source of layout truth on both orientations.
 (function () {
   const ROOT = 'img/neon-joker-spins/spine';
-  const FX_V = 8;
+  const FX_V = 9;
   const box = (w, h) => ({ x: -w / 2, y: -h / 2, width: w, height: h });
   const BOX = {
     frame: box(1122, 1159),
