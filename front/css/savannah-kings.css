@@ -233,17 +233,17 @@ img { -webkit-user-drag: none; }
   -webkit-mask-position: center; mask-position: center;
   mix-blend-mode: screen;
 }
-.reel__cell[data-symbol="wild"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/wild.png); mask-image: url(../img/savannah-kings/symbols/wild.png); }
-.reel__cell[data-symbol="scatter"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/scatter.png); mask-image: url(../img/savannah-kings/symbols/scatter.png); }
-.reel__cell[data-symbol="paw"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/paw.png); mask-image: url(../img/savannah-kings/symbols/paw.png); }
-.reel__cell[data-symbol="elephant"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/elephant.png); mask-image: url(../img/savannah-kings/symbols/elephant.png); }
-.reel__cell[data-symbol="buffalo"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/buffalo.png); mask-image: url(../img/savannah-kings/symbols/buffalo.png); }
-.reel__cell[data-symbol="leopard"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/leopard.png); mask-image: url(../img/savannah-kings/symbols/leopard.png); }
-.reel__cell[data-symbol="zebra"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/zebra.png); mask-image: url(../img/savannah-kings/symbols/zebra.png); }
-.reel__cell[data-symbol="a"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/a.png); mask-image: url(../img/savannah-kings/symbols/a.png); }
-.reel__cell[data-symbol="k"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/k.png); mask-image: url(../img/savannah-kings/symbols/k.png); }
-.reel__cell[data-symbol="q"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/q.png); mask-image: url(../img/savannah-kings/symbols/q.png); }
-.reel__cell[data-symbol="j"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/j.png); mask-image: url(../img/savannah-kings/symbols/j.png); }
+.reel__cell[data-symbol="wild"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/wild.webp); mask-image: url(../img/savannah-kings/symbols/wild.webp); }
+.reel__cell[data-symbol="scatter"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/scatter.webp); mask-image: url(../img/savannah-kings/symbols/scatter.webp); }
+.reel__cell[data-symbol="paw"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/paw.webp); mask-image: url(../img/savannah-kings/symbols/paw.webp); }
+.reel__cell[data-symbol="elephant"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/elephant.webp); mask-image: url(../img/savannah-kings/symbols/elephant.webp); }
+.reel__cell[data-symbol="buffalo"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/buffalo.webp); mask-image: url(../img/savannah-kings/symbols/buffalo.webp); }
+.reel__cell[data-symbol="leopard"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/leopard.webp); mask-image: url(../img/savannah-kings/symbols/leopard.webp); }
+.reel__cell[data-symbol="zebra"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/zebra.webp); mask-image: url(../img/savannah-kings/symbols/zebra.webp); }
+.reel__cell[data-symbol="a"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/a.webp); mask-image: url(../img/savannah-kings/symbols/a.webp); }
+.reel__cell[data-symbol="k"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/k.webp); mask-image: url(../img/savannah-kings/symbols/k.webp); }
+.reel__cell[data-symbol="q"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/q.webp); mask-image: url(../img/savannah-kings/symbols/q.webp); }
+.reel__cell[data-symbol="j"]::before { -webkit-mask-image: url(../img/savannah-kings/symbols/j.webp); mask-image: url(../img/savannah-kings/symbols/j.webp); }
 
 /* Idle life on the feature symbols only — the rest sit still until they win. */
 .reel__cell.is-special > img { animation: special-idle 3.2s ease-in-out infinite; }

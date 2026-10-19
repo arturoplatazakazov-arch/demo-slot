@@ -12,7 +12,7 @@
 // their own art folder with window.SK_ASSET_ROOT.
 const ASSET_ROOT = window.SK_ASSET_ROOT || 'img/savannah-kings';
 const GAME_CODE = 'savannah-kings';
-const ART_V = 2;
+const ART_V = 3;
 
 // Codes are the contract with app/seed/savannah_kings.py.
 const SYMBOL_CODES = ['wild', 'scatter', 'paw', 'elephant', 'buffalo', 'leopard', 'zebra', 'a', 'k', 'q', 'j'];
@@ -42,7 +42,7 @@ const TIERS = ['grand', 'major', 'minor', 'mini'];
 const TIER_X = { mini: 20, minor: 50, major: 250, grand: 1000 };
 
 function symbolSrc(code) {
-  return `${ASSET_ROOT}/symbols/${code}.png?v=${ART_V}`;
+  return `${ASSET_ROOT}/symbols/${code}.webp?v=${ART_V}`;
 }
 function img(file) {
   return `${ASSET_ROOT}/img/${file}?v=${ART_V}`;
@@ -888,7 +888,7 @@ function preloadAssets() {
   const tasks = [];
   for (const code of SYMBOL_CODES) {
     tasks.push(track(preloadImage(symbolSrc(code))));
-    tasks.push(track(preloadImage(symbolSrc(code).replace('.png', '_blur.png'))));
+    tasks.push(track(preloadImage(symbolSrc(code).replace('.webp', '_blur.webp'))));
   }
   for (const f of [
     'reel_frame.webp', 'logo.webp', 'wild_big.webp', 'panel.webp', 'mascot.webp',

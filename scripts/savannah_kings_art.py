@@ -182,8 +182,9 @@ def fit_tile(piece, box, size=TILE):
 
 
 def save_png(im, path, max_w=None):
-    """Symbols stay PNG (js/reel-spin.js derives the _blur.png twin from the
-    name); everything else in img/ is written as WebP with alpha."""
+    """Symbols are lossless WebP (pixel-exact, ~25% under an optimised PNG;
+    js/reel-spin.js derives the _blur.webp twin from the name); everything
+    else in img/ is written as lossy WebP with alpha."""
     if isinstance(im, np.ndarray):
         im = Image.fromarray(im)
     if max_w and im.width > max_w:
@@ -193,7 +194,8 @@ def save_png(im, path, max_w=None):
         path = path.with_suffix('.webp')
         im.save(path, quality=90, method=6)
     else:
-        im.save(path, optimize=True)
+        path = path.with_suffix('.webp')
+        im.save(path, lossless=True, quality=100, method=6, exact=True)
     print(f'  {path.relative_to(ROOT)}  {im.size}  {path.stat().st_size // 1024}K')
     return im
 
@@ -226,7 +228,7 @@ def blur_twin(path):
     col = np.where(al_b > 1e-4, rgb_b / np.maximum(al_b, 1e-4), 0)
     out = np.concatenate([col, al_b], axis=2)
     Image.fromarray((np.clip(out, 0, 1) * 255).astype(np.uint8)).save(
-        str(path).replace('.png', '_blur.png'), optimize=True)
+        str(path).replace('.webp', '_blur.webp'), lossless=True, quality=100, method=6, exact=True)
 
 
 # --- jobs ------------------------------------------------------------------
@@ -255,9 +257,8 @@ def job_symbols():
                 crops += split_row(band, cols)
         for code, crop in zip(codes, crops):
             tile = fit_tile(crop, box)
-            path = SYM / f'{code}.png'
-            save_png(tile, path)
-            blur_twin(path)
+            save_png(tile, SYM / f'{code}.png')
+            blur_twin(SYM / f'{code}.webp')
 
 
 def job_wild_big():
