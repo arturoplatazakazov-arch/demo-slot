@@ -43,7 +43,7 @@ const FILLER_CODES = SYMBOL_CODES.filter((code) => code !== 'coin');
 // показывается пустой эмалью с номиналом поверх, поэтому код 'coin' ведёт
 // на coin_value.
 // Версия картинок символов: поднимать при замене арта (новый уайлд — 2, слиток — 3, 4, бриллиант — 5).
-const SYM_V = 13;  // V2: новый Wild-вспышка, батарея
+const SYM_V = 17;  // V2: новый Wild-вспышка, батарея
 // V2: слиток подменяется выбранным вариантом (review.js, data-ingot).
 function artCode(code) {
   if (code === 'coin') return 'coin_value';

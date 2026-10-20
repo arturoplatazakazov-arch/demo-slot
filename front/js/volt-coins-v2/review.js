@@ -6,7 +6,7 @@
 
 const REVIEW_VARIANTS = {
   field: { title: 'Поле', opts: { 1: 'Подсветка', 2: 'Виньетка', 3: 'Колодец света' }, def: '2' },
-  wild: { title: 'Wild', opts: { 0: 'Вспышка (новый)', 1: 'Подложка', 2: 'Крупнее', 3: 'Энергия' }, def: '0' },
+  wild: { title: 'Wild', opts: { 0: 'Плашка + вспышка на выигрыше', 1: 'Подложка', 2: 'Крупнее', 3: 'Энергия' }, def: '0' },
   ingot: { title: 'Слиток (H2)', opts: { 6: 'Мешок денег', 5: 'Сейф', 2: 'Батарея', 1: 'Изумруд', 3: 'Ядро', 4: 'Золото (было)' }, def: '6' },
   layout: { title: 'Портрет', opts: { 1: 'Рилы ниже', 2: 'Джекпоты в 2 ряда', 3: 'Катушки у рилов' }, def: '1' },
 };
@@ -15,7 +15,7 @@ function reviewGet(key) {
   const q = new URLSearchParams(location.search).get(key);
   if (q && REVIEW_VARIANTS[key].opts[q]) return q;
   try {
-    const v = localStorage.getItem(`vc2d.${key}`);
+    const v = localStorage.getItem(`vc2f.${key}`);
     if (v && REVIEW_VARIANTS[key].opts[v]) return v;
   } catch (e) { /* private mode */ }
   return REVIEW_VARIANTS[key].def;
@@ -23,7 +23,7 @@ function reviewGet(key) {
 
 function reviewSet(key, val) {
   document.body.dataset[key] = val;
-  try { localStorage.setItem(`vc2d.${key}`, val); } catch (e) { /* ignore */ }
+  try { localStorage.setItem(`vc2f.${key}`, val); } catch (e) { /* ignore */ }
   document.querySelectorAll(`.variants [data-key="${key}"]`).forEach((b) => {
     b.setAttribute('aria-pressed', String(b.dataset.val === val));
   });
@@ -34,7 +34,7 @@ function reviewSet(key, val) {
 
 function wildScale() {
   const w = document.body.dataset.wild;
-  return w === '2' ? 1.22 : w === '3' ? 1.1 : w === '0' ? 1.1 : 1;
+  return w === '2' ? 1.22 : w === '3' ? 1.1 : w === '0' ? 1.21 : 1;
 }
 
 function setupVariantsPanel() {
@@ -130,3 +130,24 @@ window.addEventListener('resize', () => {
     if (!img.src.endsWith(src)) img.src = src;
   });
 });
+
+// Десктоп: Buy Bonus и поле выигрыша — вертикальные плашки по бокам автомата;
+// портрет — горизонтальные под ним. Картинка и окно под сумму меняются по ориентации.
+const UI_PLATES = {"buy":{"w":1353,"h":317,"panel":{"l":0.6171,"t":0.224,"w":0.3112,"h":0.5584},"price":{"l":0.6171,"t":0.224,"w":0.3104,"h":0.5584}},"win":{"w":1790,"h":340,"panel":{"l":0.0492,"t":0.2382,"w":0.9028,"h":0.6441}},"buy_v":{"w":558,"h":902,"panel":{"l":0.0663,"t":0.4889,"w":0.8656,"h":0.4545}},"win_v":{"w":616,"h":842,"panel":{"l":0.0714,"t":0.2494,"w":0.8571,"h":0.69}}};
+function applyUiArt() {
+  const desk = !matchMedia('(orientation: portrait)').matches;
+  for (const [el, key] of [[document.getElementById('buyBonusBtn'), desk ? 'buy_v' : 'buy'], [document.getElementById('winMeter'), desk ? 'win_v' : 'win']]) {
+    if (!el) continue;
+    const art = UI_PLATES[key];
+    const img = el.querySelector('.ui-art');
+    const slot = el.querySelector('.ui-slot');
+    const src = `img/volt-coins-v2/ui/${key}.webp`;
+    if (!img.src.endsWith(src)) img.src = src;
+    const p = key === 'buy' ? art.price : art.panel;
+    Object.assign(slot.style, { left: `${p.l * 100}%`, top: `${p.t * 100}%`, width: `${p.w * 100}%`, height: `${p.h * 100}%` });
+    el.style.aspectRatio = `${art.w} / ${art.h}`;
+    el.classList.toggle('is-vertical', desk);
+  }
+}
+window.addEventListener('resize', applyUiArt);
+window.addEventListener('load', applyUiArt);

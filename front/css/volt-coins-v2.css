@@ -1708,4 +1708,35 @@ body.lights-off .screen[data-mode="bonus"] .cabinet::before { animation: none; d
 /* Wild-вспышка на 10% крупнее (может чуть выходить за ячейку); Spine-копия
    масштабируется так же (review.js wildScale). */
 body[data-wild="0"] .reel__cell.is-wild { z-index: 2; }
-body[data-wild="0"] .reel__cell.is-wild > img { scale: 1.1; }
+body[data-wild="0"] .reel__cell.is-wild > img { scale: 1.21; }  /* +10% и ещё +10% */
+
+/* Десктоп: вертикальные Buy Bonus (слева) и поле выигрыша (справа) у автомата.
+   Автомат: left 584.8, top 228.6, ширина ~750, высота ~599. */
+@media (orientation: landscape) {
+  .sign-buy-bonus.is-art.is-vertical { left: 370px; top: 300px; width: 200px; height: auto; }
+  .win-meter.is-art.is-vertical { left: 1350px; top: 320px; width: 230px; height: auto; }
+  .win-meter.is-art.is-vertical .win-meter__amount { font-size: 26cqh; display: flex; flex-direction: column; align-items: center; line-height: 1; }
+  .sign-buy-bonus.is-art.is-vertical .sign-buy-bonus__price { font-size: 30cqh; }
+}
+
+/* Wild в покое: еле заметные разряды — плазменная W изредка проскакивает поверх. */
+body[data-wild="0"] .reel__cell.is-wild::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: url("../img/volt-coins-v2/symbols/wild_burstfx.png?v=17") center / contain no-repeat;
+  scale: 1.21;
+  opacity: 0;
+  animation: wild-idle-zap 3.6s steps(1, end) infinite;
+}
+@keyframes wild-idle-zap {
+  0%, 70%   { opacity: 0; }
+  72%       { opacity: 0.22; }
+  74%       { opacity: 0.05; }
+  76%       { opacity: 0.18; }
+  78%, 100% { opacity: 0; }
+}
+.reel__cell.is-fx::after { visibility: hidden; }
+body.lights-off .reel__cell.is-wild::after { display: none; }

@@ -20,7 +20,7 @@
   const ROOT = 'img/volt-coins-v2/fx';
   // Версия atlas/json скелетов — поднимать при каждой пересборке fx
   // (PNG-страницы версионируются хешем в самом атласе).
-  const FX_V = 14;
+  const FX_V = 19;
   const BOX = {
     bg_desk: { x: -899, y: -437.5, width: 1798, height: 875 },
     bg_mob: { x: -465.5, y: -845, width: 931, height: 1690 },
