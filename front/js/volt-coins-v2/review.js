@@ -7,7 +7,7 @@
 const REVIEW_VARIANTS = {
   field: { title: 'Поле', opts: { 1: 'Подсветка', 2: 'Виньетка', 3: 'Колодец света' }, def: '2' },
   wild: { title: 'Wild', opts: { 0: 'Плашка + вспышка на выигрыше', 1: 'Подложка', 2: 'Крупнее', 3: 'Энергия' }, def: '0' },
-  ingot: { title: 'Слиток (H2)', opts: { 6: 'Мешок денег', 5: 'Сейф', 2: 'Батарея', 1: 'Изумруд', 3: 'Ядро', 4: 'Золото (было)' }, def: '6' },
+  ingot: { title: 'Слиток (H2)', opts: { 8: 'Энергоблок', 9: 'Энергоблок широкий (разряды)', 6: 'Мешок денег', 5: 'Сейф', 2: 'Батарея', 1: 'Изумруд', 3: 'Ядро', 4: 'Золото (было)' }, def: '8' },
   layout: { title: 'Портрет', opts: { 1: 'Рилы ниже', 2: 'Джекпоты в 2 ряда', 3: 'Катушки у рилов' }, def: '1' },
 };
 
@@ -15,7 +15,7 @@ function reviewGet(key) {
   const q = new URLSearchParams(location.search).get(key);
   if (q && REVIEW_VARIANTS[key].opts[q]) return q;
   try {
-    const v = localStorage.getItem(`vc2f.${key}`);
+    const v = localStorage.getItem(`vc2g.${key}`);
     if (v && REVIEW_VARIANTS[key].opts[v]) return v;
   } catch (e) { /* private mode */ }
   return REVIEW_VARIANTS[key].def;
@@ -23,7 +23,7 @@ function reviewGet(key) {
 
 function reviewSet(key, val) {
   document.body.dataset[key] = val;
-  try { localStorage.setItem(`vc2f.${key}`, val); } catch (e) { /* ignore */ }
+  try { localStorage.setItem(`vc2g.${key}`, val); } catch (e) { /* ignore */ }
   document.querySelectorAll(`.variants [data-key="${key}"]`).forEach((b) => {
     b.setAttribute('aria-pressed', String(b.dataset.val === val));
   });
@@ -104,7 +104,7 @@ window.addEventListener('load', () => setTimeout(placeVignette, 50));
 // Портрет на высоких телефонах: сцена 800x1450 упирается в ширину, и между
 // поле выигрыша и Spin остаётся пустота. --extra (px сцены) раздаётся
 // компоновкам: верх чуть ниже, барабаны ниже, нижний ряд ещё ниже.
-const LAYOUT_BOTTOM = { 1: 1115, 2: 1192, 3: 1190 };
+const LAYOUT_BOTTOM = { 1: 1185, 2: 1192, 3: 1190 };
 function fitPortraitExtra() {
   const portrait = matchMedia('(orientation: portrait)').matches;
   const spin = document.querySelector('.v3-spin');
@@ -120,8 +120,8 @@ function fitPortraitExtra() {
 window.addEventListener('resize', () => requestAnimationFrame(() => { fitPortraitExtra(); placeVignette(); }));
 window.addEventListener('load', () => setTimeout(() => { fitPortraitExtra(); placeVignette(); }, 60));
 
-const INGOT_ART = { 1: 'ingot_emerald', 2: 'ingot_cell', 3: 'ingot_core', 4: 'ingot', 5: 'ingot_safe', 6: 'ingot_bag' };
-function ingotArt() { return INGOT_ART[document.body.dataset.ingot] || 'ingot_bag'; }
+const INGOT_ART = { 1: 'ingot_emerald', 2: 'ingot_cell', 3: 'ingot_core', 4: 'ingot', 5: 'ingot_safe', 6: 'ingot_bag', 8: 'ingot_block', 9: 'ingot_block_wide' };
+function ingotArt() { return INGOT_ART[document.body.dataset.ingot] || 'ingot_block'; }
 // смена варианта слитка — перерисовать уже лежащие на поле и в лентах
 window.addEventListener('resize', () => {
   if (typeof symbolSrc !== 'function') return;
@@ -133,7 +133,7 @@ window.addEventListener('resize', () => {
 
 // Десктоп: Buy Bonus и поле выигрыша — вертикальные плашки по бокам автомата;
 // портрет — горизонтальные под ним. Картинка и окно под сумму меняются по ориентации.
-const UI_PLATES = {"buy":{"w":1353,"h":317,"panel":{"l":0.6171,"t":0.224,"w":0.3112,"h":0.5584},"price":{"l":0.6171,"t":0.224,"w":0.3104,"h":0.5584}},"win":{"w":1790,"h":340,"panel":{"l":0.0492,"t":0.2382,"w":0.9028,"h":0.6441}},"buy_v":{"w":558,"h":902,"panel":{"l":0.0663,"t":0.4889,"w":0.8656,"h":0.4545}},"win_v":{"w":616,"h":842,"panel":{"l":0.0714,"t":0.2494,"w":0.8571,"h":0.69}}};
+const UI_PLATES = {"buy":{"w":487,"h":192,"price":{"l":0,"t":0,"w":0,"h":0}},"win":{"w":559,"h":192,"panel":{"l":0.322,"t":0.2604,"w":0.585,"h":0.4844}},"buy_v":{"w":298,"h":279},"win_v":{"w":319,"h":283,"panel":{"l":0.163,"t":0.4452,"w":0.6677,"h":0.3746}},"buy_A":{"w":487,"h":192},"win_A":{"w":559,"h":192,"panel":{"l":0.322,"t":0.2604,"w":0.585,"h":0.4844}},"buy_B":{"w":488,"h":159},"win_B":{"w":564,"h":159,"panel":{"l":0.25,"t":0.0503,"w":0.7394,"h":0.9119}},"buy_vA":{"w":298,"h":279},"win_vA":{"w":319,"h":283,"panel":{"l":0.163,"t":0.4452,"w":0.6677,"h":0.3746}},"buy_vB":{"w":300,"h":308},"win_vB":{"w":318,"h":313,"panel":{"l":0.022,"t":0.2971,"w":0.9528,"h":0.6805}}};
 function applyUiArt() {
   const desk = !matchMedia('(orientation: portrait)').matches;
   for (const [el, key] of [[document.getElementById('buyBonusBtn'), desk ? 'buy_v' : 'buy'], [document.getElementById('winMeter'), desk ? 'win_v' : 'win']]) {
@@ -143,8 +143,10 @@ function applyUiArt() {
     const slot = el.querySelector('.ui-slot');
     const src = `img/volt-coins-v2/ui/${key}.webp`;
     if (!img.src.endsWith(src)) img.src = src;
-    const p = key === 'buy' ? art.price : art.panel;
-    Object.assign(slot.style, { left: `${p.l * 100}%`, top: `${p.t * 100}%`, width: `${p.w * 100}%`, height: `${p.h * 100}%` });
+    const p = art.panel;
+    // Buy Bonus без окна цены (цена — в попапе покупки)
+    slot.hidden = key.startsWith('buy');
+    if (p) Object.assign(slot.style, { left: `${p.l * 100}%`, top: `${p.t * 100}%`, width: `${p.w * 100}%`, height: `${p.h * 100}%` });
     el.style.aspectRatio = `${art.w} / ${art.h}`;
     el.classList.toggle('is-vertical', desk);
   }

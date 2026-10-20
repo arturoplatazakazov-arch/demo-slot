@@ -43,7 +43,7 @@ const FILLER_CODES = SYMBOL_CODES.filter((code) => code !== 'coin');
 // показывается пустой эмалью с номиналом поверх, поэтому код 'coin' ведёт
 // на coin_value.
 // Версия картинок символов: поднимать при замене арта (новый уайлд — 2, слиток — 3, 4, бриллиант — 5).
-const SYM_V = 17;  // V2: новый Wild-вспышка, батарея
+const SYM_V = 22;  // V2: новый Wild-вспышка, батарея
 // V2: слиток подменяется выбранным вариантом (review.js, data-ingot).
 function artCode(code) {
   if (code === 'coin') return 'coin_value';
@@ -196,6 +196,56 @@ function applyCellFlags(cell, code) {
   if (want && !(arcs && arcs.dataset.kind === want)) {
     cell.prepend(edgeArcs(want));
   }
+  const glass = cell.querySelector(':scope > .glass-arcs');
+  if (code === 'ingot' && !glass) cell.appendChild(glassArcs());
+  if (code !== 'ingot' && glass) glass.remove();
+}
+
+// Энергоблок (V2): разряды внутри двух стеклянных вставок, как в эмали монеты.
+// Осевые линии вставок в единицах viewBox (ячейка 100x80, 0 в центре), сняты
+// с альфы symbols/ingot_block_wide.png; края режет маска ingot_block_wide_glass.png.
+// Пересчитать при замене арта.
+const GLASS_LINES = [
+  [[-18.9, -13.1], [-15.3, -8.2], [-11.5, -3.4], [-9.3, 1.9], [-7.5, 7.4], [-6.5, 13.3], [-6.6, 19.6]],
+  [[12.5, -22.7], [17.3, -18.2], [21.6, -13.4], [24.3, -8.3], [26.2, -2.5], [27.1, 3.5], [25.2, 10.7]],
+];
+
+function glassBolt(line, seed) {
+  let x = Math.sin(seed * 39.425) * 43758.5453;
+  const rnd = () => { x = Math.sin(x) * 10000; return x - Math.floor(x); };
+  const n = line.length - 1;
+  const t0 = rnd() * 0.35, t1 = 0.65 + rnd() * 0.35;
+  const off = (rnd() - 0.5) * 7;
+  const pts = [];
+  const steps = 9;
+  for (let i = 0; i <= steps; i++) {
+    const f = (t0 + (t1 - t0) * (i / steps)) * n;
+    const k = Math.min(Math.floor(f), n - 1), u = f - k;
+    const [ax, ay] = line[k], [bx, by] = line[k + 1];
+    const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy) || 1;
+    const j = off + (i === 0 || i === steps ? 0 : (rnd() - 0.5) * 5);
+    pts.push(`${(ax + dx * u - (dy / len) * j).toFixed(2)},${(ay + dy * u + (dx / len) * j).toFixed(2)}`);
+  }
+  return `M${pts.join('L')}`;
+}
+
+function glassArcs() {
+  const wrap = document.createElement('span');
+  wrap.className = 'glass-arcs';
+  let paths = '';
+  GLASS_LINES.forEach((line, w) => {
+    for (let b = 0; b < 2; b++) {
+      const delay = (w * 0.7 + b * 1.4 + Math.random() * 0.8).toFixed(2);
+      const dur = (2 + Math.random() * 1.2).toFixed(2);
+      paths += `<g class="coin-arc" style="animation-delay:-${delay}s;animation-duration:${dur}s">`;
+      for (let v = 0; v < 3; v++) {
+        paths += `<path class="coin-arc__v coin-arc__v${v}" d="${glassBolt(line, w * 11 + b * 5 + v * 2 + Math.random())}"/>`;
+      }
+      paths += '</g>';
+    }
+  });
+  wrap.innerHTML = `<svg viewBox="-50 -40 100 80" preserveAspectRatio="none" aria-hidden="true">${paths}</svg>`;
+  return wrap;
 }
 
 // Еле заметные разряды по краям уайлда и монет (продукт): короткие ломаные по

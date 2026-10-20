@@ -50,7 +50,8 @@ function renderBalance() {
 
 function renderBuyBonusPrice() {
   const el = document.getElementById('buyBonusPrice');
-  if (el) el.textContent = `${formatNumber(currentBet() * BUY_BONUS_COST_MULTIPLIER)} ${gameState.currency}`;
+  // V2: сумма и валюта отдельными строками (на десктопе — в два этажа, как в поле WIN)
+  if (el) el.innerHTML = `<span class="sign-buy-bonus__sum">${formatNumber(currentBet() * BUY_BONUS_COST_MULTIPLIER)}</span> <span class="sign-buy-bonus__cur">${gameState.currency}</span>`;
 }
 
 function setupBetStepper() {

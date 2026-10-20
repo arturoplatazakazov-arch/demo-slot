@@ -20,7 +20,7 @@
   const ROOT = 'img/volt-coins-v2/fx';
   // Версия atlas/json скелетов — поднимать при каждой пересборке fx
   // (PNG-страницы версионируются хешем в самом атласе).
-  const FX_V = 19;
+  const FX_V = 25;
   const BOX = {
     bg_desk: { x: -899, y: -437.5, width: 1798, height: 875 },
     bg_mob: { x: -465.5, y: -845, width: 931, height: 1690 },
@@ -86,7 +86,29 @@
     if (e) e.trackTime = c.phase;
   }
 
+  // V2: разряд катушки подсвечивает фон вокруг неё — мягкая голубая вспышка,
+  // гаснет за ~0.9 с. DOM-слой под сценой (над фоном), без Spine.
+  function bgFlash(c, strength = 1) {
+    if (document.body.classList.contains('lights-off')) return;
+    const scr = document.getElementById('screen');
+    if (!scr || !c) return;
+    const sr = scr.getBoundingClientRect();
+    const r = c.el.getBoundingClientRect();
+    const h = coilHead(c);
+    const d = document.createElement('div');
+    d.className = 'bg-flash';
+    const size = Math.max(r.width, r.height) * 1.6;
+    Object.assign(d.style, {
+      left: `${h.x - sr.left - size / 2}px`, top: `${h.y - sr.top - size * 0.35}px`,
+      width: `${size}px`, height: `${size}px`, '--flash-a': String(0.55 * strength),
+    });
+    scr.appendChild(d);
+    setTimeout(() => d.remove(), 1000);
+  }
+  function flashCoils(strength = 1) { for (const c of coils) bgFlash(c, strength); }
+
   function coilsPlay(clip, loop = false, thenIdle = true) {
+    if (clip !== 'off') flashCoils(clip === 'spin' ? 0.6 : 1);
     for (const c of coils) {
       c.inst.play(clip, loop);
       if (!loop && thenIdle) c.inst.queue(winOn ? 'win' : 'off', true);
@@ -253,6 +275,7 @@
     const c = nearestCoil(p);
     if (!c) return;
     zap(zapFrom(c, p), p);
+    bgFlash(c, 0.8);
     if (!anticOn && !bigOn) {
       c.inst.play('spin', false);
       c.inst.queue(winOn ? 'win' : 'off', true);
@@ -270,6 +293,7 @@
       }
       c.inst.play('spin', false);
       c.inst.queue(winOn ? 'win' : 'off', true);
+      bgFlash(c, 0.5);
     }
   };
 

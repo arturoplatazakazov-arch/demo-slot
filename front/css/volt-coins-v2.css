@@ -1726,7 +1726,7 @@ body[data-wild="0"] .reel__cell.is-wild::after {
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  background: url("../img/volt-coins-v2/symbols/wild_burstfx.png?v=17") center / contain no-repeat;
+  background: url("../img/volt-coins-v2/symbols/wild_burstfx.png?v=18") center / contain no-repeat;
   scale: 1.21;
   opacity: 0;
   animation: wild-idle-zap 3.6s steps(1, end) infinite;
@@ -1740,3 +1740,110 @@ body[data-wild="0"] .reel__cell.is-wild::after {
 }
 .reel__cell.is-fx::after { visibility: hidden; }
 body.lights-off .reel__cell.is-wild::after { display: none; }
+
+/* Десктоп: плашки на 50px ниже и чуть меньше; цена Buy Bonus в два этажа. */
+@media (orientation: landscape) {
+  .sign-buy-bonus.is-art.is-vertical { left: 385px; top: 350px; width: 180px; }
+  .win-meter.is-art.is-vertical { left: 1355px; top: 370px; width: 205px; }
+  .sign-buy-bonus.is-art.is-vertical .sign-buy-bonus__price {
+    display: flex; flex-direction: column; align-items: center; line-height: 1; font-size: 34cqh;
+  }
+  .sign-buy-bonus.is-art.is-vertical .sign-buy-bonus__cur { font-size: 0.55em; color: var(--volt); }
+}
+@media (orientation: portrait) {
+  /* новые матовые плашки (ChatGPT): одна высота, вместе по ширине рамы */
+  body[data-layout="1"] .sign-buy-bonus.is-art { left: 4.75px; width: 423px; }
+  body[data-layout="1"] .win-meter.is-art { left: calc(4.75px + 423px + 10px); width: 357.5px; }
+}
+@media (orientation: portrait) {
+  /* Кнопки A (сталь рамы + янтарные лампы): одна высота, вместе по ширине рамы */
+  body[data-layout="1"] .sign-buy-bonus.is-art { left: 4.75px; width: 363.3px; }
+  body[data-layout="1"] .win-meter.is-art { left: calc(4.75px + 363.3px + 10px); width: 417.2px; }
+}
+@media (orientation: landscape) {
+  .sign-buy-bonus.is-art.is-vertical { left: 375px; top: 380px; width: 190px; }
+  .win-meter.is-art.is-vertical { left: 1350px; top: 380px; width: 210px; }
+}
+.sign-buy-bonus.is-art .ui-slot[hidden] { display: none; }
+
+/* Десктоп: автомат и джекпоты на 20px ниже; Buy Bonus и WIN одной высоты (200),
+   симметрично по бокам автомата (зазор 20px), центр чуть ниже центра автомата. */
+@media (orientation: landscape) {
+  .cabinet { top: 248.6px; }
+  .reel-win-amount-viewport { top: 290px; }
+  .jp-row.is-art { top: 154px; }
+  .sign-buy-bonus.is-art.is-vertical { left: 351.2px; top: 478px; width: 213.6px; }
+  .win-meter.is-art.is-vertical { left: 1354.4px; top: 478px; width: 225.4px; }
+}
+@media (orientation: landscape) {
+  /* ровно по центру автомата по вертикали: 248.6 + 599.6/2 − 200/2 */
+  .sign-buy-bonus.is-art.is-vertical,
+  .win-meter.is-art.is-vertical { top: 448.4px; }
+}
+
+/* Сумма в WIN крупнее */
+.win-meter.is-art .win-meter__amount { font-size: 82cqh; }
+@media (orientation: landscape) {
+  .win-meter.is-art.is-vertical .win-meter__amount { font-size: 36cqh; }
+}
+
+/* Buy Bonus: лёгкое мерцание в покое и ховер */
+.sign-buy-bonus.is-art {
+  transition: transform 160ms ease, filter 160ms ease;
+  animation: buy-idle 3.2s ease-in-out infinite;
+}
+@keyframes buy-idle {
+  0%, 100% { filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5)) brightness(1); }
+  50%      { filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 10px rgba(255, 170, 60, 0.45)) brightness(1.08); }
+}
+.sign-buy-bonus.is-art:hover:not(:disabled) {
+  animation: none;
+  transform: scale(1.04);
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 14px rgba(255, 185, 80, 0.75)) brightness(1.18);
+}
+.sign-buy-bonus.is-art:active:not(:disabled) { transform: scale(0.98); filter: brightness(0.95); }
+.sign-buy-bonus.is-art:disabled { animation: none; }
+body.lights-off .sign-buy-bonus.is-art { animation: none; }
+
+/* Подсветка фона при разряде катушки (fx.js bgFlash) */
+.bg-flash {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(140, 215, 255, 0.9), rgba(70, 150, 255, 0.45) 45%, rgba(40, 90, 255, 0) 100%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  animation: bg-flash 900ms ease-out forwards;
+}
+@keyframes bg-flash {
+  0%   { opacity: 0; }
+  12%  { opacity: var(--flash-a, 0.55); }
+  100% { opacity: 0; }
+}
+
+/* Бонус: фон заметно видно (раньше почти чёрный) */
+.screen[data-mode="bonus"] .bg { filter: brightness(0.7) saturate(1.2) hue-rotate(-12deg); }
+.screen[data-mode="bonus"] .field-vignette {
+  background:
+    radial-gradient(70% 40% at 50% 0%, rgba(255, 196, 70, 0.22), transparent 70%),
+    radial-gradient(var(--vig-rx, 60%) var(--vig-ry, 55%) at var(--vig-x, 50%) var(--vig-y, 50%),
+      rgba(60, 140, 255, 0.15) 0%, transparent 50%, rgba(2, 4, 20, 0.4) 85%, rgba(2, 4, 20, 0.6) 100%);
+}
+
+/* Энергоблок: разряды внутри стеклянных вставок (как в эмали монеты),
+   обрезаны маской вставок. Только у арта ingot_block_wide (data-ingot=9). */
+.glass-arcs {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  -webkit-mask: url(../img/volt-coins-v2/symbols/ingot_block_wide_glass.png?v=1) center / 100% 100% no-repeat;
+  mask: url(../img/volt-coins-v2/symbols/ingot_block_wide_glass.png?v=1) center / 100% 100% no-repeat;
+}
+.glass-arcs svg { display: block; width: 100%; height: 100%; filter: drop-shadow(0 0 1.5px #39a8ff); }
+.glass-arcs .coin-arc__v { stroke: #d6f0ff; stroke-width: 0.7; }
+body:not([data-ingot="9"]) .glass-arcs { display: none; }
+.reel__cell.is-dimmed .glass-arcs { opacity: 0.2; }
+body.lights-off .glass-arcs { display: none; }
+.reel__cell.is-fx .glass-arcs { visibility: hidden; }
