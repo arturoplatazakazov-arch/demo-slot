@@ -37,6 +37,17 @@ const ILLUMINATOR_CODES = new Set([
 // a single card. Each variant overrides the play page, badge, name and
 // description; the cover falls back to the game's catalog cover.
 const VARIANT_GROUPS = {
+  'volt-coins': {
+    title: 'Volt Coins',
+    variants: [
+      { url: 'volt-coins-v2.html', badge: 'V2', name: 'Volt Coins V2',
+        desc: 'Правки арт-ревью №2: спокойная периферия, светлое поле, новый Wild, мешок вместо слитка, поле выигрыша, варианты компоновки.',
+        cover: 'img/volt-coins/img/cover.jpg' },
+      { url: 'volt-coins.html', badge: 'V1', name: 'Volt Coins',
+        desc: 'Предыдущая версия, показанная на ревью.',
+        cover: 'img/volt-coins/img/cover.jpg' },
+    ],
+  },
   'savannah-kings': {
     title: 'Savannah Kings',
     variants: [
