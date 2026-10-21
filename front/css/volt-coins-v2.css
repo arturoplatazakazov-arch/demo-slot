@@ -1922,3 +1922,351 @@ body[data-field="2"] .screen:not([data-mode="bonus"]) .field-vignette {
 .sign-buy-bonus.is-art:disabled .ui-art-lit,
 body.lights-off .sign-buy-bonus.is-art .ui-art-lit { animation: none; opacity: 0; }
 .win-meter.is-art.is-lit .ui-art-lit { opacity: 1; transition-duration: 120ms; }
+
+/* ---------- Счётчик респинов на плашке (как Buy Bonus / WIN) ----------
+   Надпись RESPINS и гнёзда нарисованы; лампы рамы плашки в бонусе горят;
+   три заряда — голубые лампы в гнёздах (гаснут по одному, новая монета
+   зажигает все со вспышкой). */
+body[data-layout] .respin-counter.is-art {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  height: auto;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5));
+}
+.respin-counter.is-art .respin-counter__label { display: none; }
+.respin-counter.is-art .ui-art-lit { opacity: 1; }
+.respin-counter.is-art .respin-counter__pips { position: absolute; inset: 0; display: block; }
+.respin-counter.is-art .respin-pip {
+  position: absolute;
+  aspect-ratio: 1;
+  height: auto;
+  transform: translate(-50%, -50%);
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  opacity: 0;
+  transition: opacity 260ms ease;
+}
+.respin-counter.is-art .respin-pip.is-on {
+  opacity: 1;
+  background: radial-gradient(circle at 42% 38%, #ffffff 0%, #bff0ff 18%, #59d6ff 45%, #1a6bff 78%, rgba(26, 107, 255, 0) 100%);
+  box-shadow: 0 0 12px rgba(57, 216, 255, 0.9), 0 0 26px rgba(57, 160, 255, 0.55);
+}
+.respin-counter.is-art .respin-counter__pips.is-reset .respin-pip.is-on { animation: pip-reset-art 480ms ease-out; }
+@keyframes pip-reset-art {
+  0%   { transform: translate(-50%, -50%) scale(1.35); filter: brightness(1.8); }
+  100% { transform: translate(-50%, -50%) scale(1); filter: brightness(1); }
+}
+@media (orientation: landscape) {
+  body[data-layout] .respin-counter.is-art.is-vertical { left: 351.2px; top: 478px; width: 213.6px; }
+}
+@media (orientation: portrait) {
+  body[data-layout] .respin-counter.is-art { left: 165px; width: 470px; height: auto; }
+  body[data-layout="1"] .respin-counter.is-art { top: calc(392px + 630.8px + 10px + var(--extra, 0px) * 0.6); }
+}
+
+/* Мобила, все варианты «Портрет»: катушки, автомат и кнопки/плашки стоят
+   ровно как в «Рилы ниже» (1). Варианты отличаются только лого и рядом
+   джекпотов (в «2 ряда» он двухэтажный над тем же автоматом). */
+@media (orientation: portrait) {
+  body[data-layout="2"] .coil { top: calc(152px + var(--extra, 0px) * 0.6); width: 135px; height: 258px; }
+  body[data-layout="2"] .coil--left { left: 10px; }
+  body[data-layout="2"] .coil--right { left: 655px; }
+  body[data-layout="2"] .cabinet,
+  body[data-layout="3"] .cabinet { top: calc(392px + var(--extra, 0px) * 0.6); }
+  body[data-layout="2"] .sign-buy-bonus.is-art {
+    left: 4.75px; width: 363.3px; height: auto; top: calc(392px + 630.8px + 10px + var(--extra, 0px) * 0.6);
+  }
+  body[data-layout="2"] .win-meter.is-art {
+    left: calc(4.75px + 363.3px + 10px); width: 417.2px; height: auto; top: calc(392px + 630.8px + 10px + var(--extra, 0px) * 0.6);
+  }
+  body[data-layout="2"] .respin-counter.is-art { top: calc(392px + 630.8px + 10px + var(--extra, 0px) * 0.6); }
+  body[data-layout="2"] .jp-row.is-art { top: calc(392px + var(--extra, 0px) * 0.6 - 200px); }
+  body[data-layout="3"] .jp-row.is-art { top: calc(392px + var(--extra, 0px) * 0.6 - 78px); }
+}
+/* «Джекпоты в 2 ряда»: лого между катушками, сразу над рядом джекпотов
+   (низ лого = верх ряда, 392 − 200), а не у самого края экрана. */
+@media (orientation: portrait) {
+  /* ряд джекпотов компактнее (GRAND 84, ниже 64/58/54), чтобы лого
+     опустилось между катушками */
+  body[data-layout="2"] .jp-row.is-art { height: 160px; top: calc(392px + var(--extra, 0px) * 0.6 - 160px); }
+  body[data-layout="2"] .jp.is-art.jp--grand { --jp-h: 84px; margin: 0 calc((100% - 84px * 1304 / 322) / 2); }
+  body[data-layout="2"] .jp.is-art.jp--major { --jp-h: 64px; }
+  body[data-layout="2"] .jp.is-art.jp--minor { --jp-h: 58px; }
+  body[data-layout="2"] .jp.is-art.jp--mini  { --jp-h: 54px; }
+  body[data-layout="2"] .logo { left: 190px; width: 420px; height: 126px; top: calc(392px + var(--extra, 0px) * 0.6 - 160px - 124px); }
+}
+
+/* «Катушки у рилов» (мобила): автомат как в «Рилы ниже», под ним по бокам
+   две катушки целиком (видно до основания), между ними — Buy Bonus;
+   плашки WIN в этом варианте нет. Счётчик респинов в бонусе — там же. */
+@media (orientation: portrait) {
+  body[data-layout="3"] .coil { top: calc(392px + 630.8px + 30px + var(--extra, 0px) * 0.6); width: 150px; height: 286px; }
+  body[data-layout="3"] .coil--left { left: 14px; }
+  body[data-layout="3"] .coil--right { left: 636px; }
+  body[data-layout="3"] .win-meter.is-art { display: none; }
+  body[data-layout="3"] .logo { left: 130px; width: 540px; height: 162px; top: calc(146px + var(--extra, 0px) * 0.6); }
+  body[data-layout="3"] .sign-buy-bonus.is-art {
+    left: calc(400px - 363.3px / 2); width: 363.3px; height: auto; top: calc(392px + 630.8px + 40px + var(--extra, 0px) * 0.6);
+  }
+  body[data-layout="3"] .respin-counter.is-art {
+    left: calc(400px - 235px); width: 470px; top: calc(392px + 630.8px + 40px + var(--extra, 0px) * 0.6);
+  }
+}
+
+/* ---------- Рама «Неон» (Варианты → Рама: 2) ----------
+   Осевая LED-желоба = rect в SVG поверх рамы; бегущий огонёк — штрих
+   stroke-dasharray, едущий по pathLength 1000. */
+.frame-neon {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+  pointer-events: none;
+  overflow: visible;
+  --neon: #4fdcff;
+}
+.frame-neon rect { fill: none; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.frame-neon__base rect { stroke: var(--neon); stroke-width: 2px; opacity: 0.25; }
+.frame-neon__run rect {
+  stroke: #f2fdff;
+  stroke-width: 4px;
+  stroke-dasharray: 120 880;
+  filter: drop-shadow(0 0 2px var(--neon)) drop-shadow(0 0 6px var(--neon)) drop-shadow(0 0 14px var(--neon));
+  animation: neon-run 6s linear infinite;
+}
+/* Один огонёк по часовой, круг за кругом (pathLength 1000). */
+@keyframes neon-run { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -1000; } }
+/* выигрыш: быстрее и длиннее, база ярче */
+body.fx-win .frame-neon__run rect { animation-duration: 1.6s; stroke-dasharray: 180 820; }
+body.fx-win .frame-neon__base rect { opacity: 0.45; }
+/* бонус: желоб горит целиком и мягко пульсирует + один огонёк */
+.screen[data-mode="bonus"] .frame-neon__base rect {
+  opacity: 0.85; stroke: #bff2ff;
+  filter: drop-shadow(0 0 4px var(--neon)) drop-shadow(0 0 10px var(--neon));
+  animation: neon-pulse 2s ease-in-out infinite;
+}
+@keyframes neon-pulse { 0%, 100% { opacity: 0.65; } 50% { opacity: 1; } }
+body.lights-off .frame-neon__run { display: none; }
+
+/* «Катушки у рилов»: слот с джекпотами и лого выше на 10% высоты слота
+   (63 px), кнопка Buy Bonus (и счётчик респинов на её месте) — на 15% (95 px). */
+@media (orientation: portrait) {
+  body[data-layout="3"] .cabinet { top: calc(392px - 63px + var(--extra, 0px) * 0.6); }
+  body[data-layout="3"] .jp-row.is-art { top: calc(392px - 63px + var(--extra, 0px) * 0.6 - 78px); }
+  body[data-layout="3"] .logo { top: calc(146px - 63px + var(--extra, 0px) * 0.6); }
+  body[data-layout="3"] .sign-buy-bonus.is-art,
+  body[data-layout="3"] .respin-counter.is-art { top: calc(392px + 630.8px + 40px - 95px + var(--extra, 0px) * 0.6); }
+}
+
+/* ---------- Плашки при раме «Неон» ----------
+   Картинка — ui/<key>_neon.webp (сталь + желоб, без текста), подпись DOM,
+   неон по желобу — тот же .frame-neon. Buy Bonus: огонёк бежит всегда;
+   WIN: неон только при выигрыше; респины: в бонусе. */
+.plate-neon, .neon-label { display: none; }
+body[data-frame="2"] .plate-neon { display: block; z-index: 2; }
+body[data-frame="2"] .neon-label {
+  display: flex; position: absolute; align-items: center; justify-content: center;
+  container-type: size; pointer-events: none; z-index: 2;
+}
+.neon-label b {
+  font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 800;
+  font-size: min(46cqh, 17cqw); line-height: 0.95; letter-spacing: 0.06em; text-align: center;
+  color: #eef8ff;
+  text-shadow: 0 0 6px rgba(79, 220, 255, 0.85), 0 0 16px rgba(79, 220, 255, 0.45), 0 2px 0 #071233;
+}
+.sign-buy-bonus .neon-label b { font-size: min(40cqh, 13cqw); }
+.sign-buy-bonus.is-vertical .neon-label b { font-size: min(30cqh, 26cqw); }
+.plate-neon .frame-neon__run rect { animation-duration: 4s; stroke-dasharray: 160 840; }
+/* при «Неоне» мерцание ламп старых плашек не нужно — картинка одна */
+body[data-frame="2"] .ui-art-lit { display: none; }
+body[data-frame="2"] .sign-buy-bonus.is-art { animation: none; }
+/* WIN: в покое неона нет, при выигрыше — бежит и желоб светится */
+.win-meter .plate-neon .frame-neon__run { display: none; }
+.win-meter.is-lit .plate-neon .frame-neon__run { display: inline; }
+.win-meter .plate-neon .frame-neon__base rect { opacity: 0.12; }
+.win-meter.is-lit .plate-neon .frame-neon__base rect { opacity: 0.5; }
+.win-meter .neon-label b { font-size: min(52cqh, 30cqw); }
+.win-meter.is-vertical .neon-label b { font-size: min(70cqh, 22cqw); }
+.respin-counter .neon-label b { font-size: min(42cqh, 15cqw); }
+
+/* Поле выигрыша пока убрано (продукт): сумма — только в попапах/строке
+   выигрыша. На мобиле Buy Bonus остаётся один — по центру под слотом. */
+.win-meter, .win-meter.is-art { display: none !important; }
+@media (orientation: portrait) {
+  body[data-layout="1"] .sign-buy-bonus.is-art,
+  body[data-layout="2"] .sign-buy-bonus.is-art { left: calc(400px - 363.3px / 2); }
+}
+
+/* Рама «Неон»: две одинаковые дорожки напротив друг друга (вторая сдвинута
+   на полкруга своими keyframes — так при смене скорости они не съезжаются),
+   медленно по часовой; на выигрыше быстрее. */
+#frameNeon .frame-neon__run rect { stroke-dasharray: 140 860; animation: neon-run 12s linear infinite; }
+#frameNeon .frame-neon__run--b rect { animation-name: neon-run-b; }
+@keyframes neon-run-b { from { stroke-dashoffset: -500; } to { stroke-dashoffset: -1500; } }
+body.fx-win #frameNeon .frame-neon__run rect { animation-duration: 2.4s; stroke-dasharray: 180 820; }
+
+/* Buy Bonus при «Неоне»: бегущего огонька нет — весь желоб по периметру
+   вспыхивает пару раз каждые ~4.6 с и горит при наведении. */
+.sign-buy-bonus .plate-neon .frame-neon__run { display: none; }
+.sign-buy-bonus .plate-neon .frame-neon__base rect {
+  stroke: #e9fbff; stroke-width: 3px; opacity: 0;
+  filter: drop-shadow(0 0 2px var(--neon)) drop-shadow(0 0 7px var(--neon)) drop-shadow(0 0 14px var(--neon));
+  animation: buy-neon-blink 4.6s ease-in-out infinite;
+}
+@keyframes buy-neon-blink {
+  0%, 76%, 100% { opacity: 0.12; }
+  80% { opacity: 1; }
+  84% { opacity: 0.2; }
+  88% { opacity: 1; }
+  94% { opacity: 0.12; }
+}
+.sign-buy-bonus:hover:not(:disabled) .plate-neon .frame-neon__base rect { animation: none; opacity: 1; }
+.sign-buy-bonus:disabled .plate-neon .frame-neon__base rect,
+body.lights-off .sign-buy-bonus .plate-neon .frame-neon__base rect { animation: none; opacity: 0.12; }
+
+/* Портрет 4: «Джекпоты в 2 ряда» + катушки внизу (как в «Катушки у рилов»):
+   слот на месте варианта 2, катушки под ним по бокам, Buy Bonus между ними. */
+@media (orientation: portrait) {
+  body[data-layout-mod="low"] .coil { top: calc(392px + 630.8px + 30px + var(--extra, 0px) * 0.6); width: 150px; height: 286px; }
+  body[data-layout-mod="low"] .coil--left { left: 14px; }
+  body[data-layout-mod="low"] .coil--right { left: 636px; }
+  body[data-layout-mod="low"] .sign-buy-bonus.is-art {
+    left: calc(400px - 363.3px / 2); width: 363.3px; height: auto; top: calc(392px + 630.8px + 40px + var(--extra, 0px) * 0.6);
+  }
+  body[data-layout-mod="low"] .respin-counter.is-art {
+    left: calc(400px - 235px); width: 470px; top: calc(392px + 630.8px + 40px + var(--extra, 0px) * 0.6);
+  }
+}
+/* Портрет 5: «Катушки у рилов» + джекпоты в 2 ряда (над поднятым слотом),
+   лого над ними. */
+@media (orientation: portrait) {
+  body[data-layout-mod="jp2"] .jp-row.is-art {
+    left: 40px; width: 720px; display: flex; flex-wrap: wrap; align-content: flex-end; justify-content: center;
+    gap: 6px 10px; height: 160px; top: calc(392px - 63px + var(--extra, 0px) * 0.6 - 160px);
+  }
+  body[data-layout-mod="jp2"] .jp.is-art { width: auto; }
+  body[data-layout-mod="jp2"] .jp.is-art.jp--grand { --jp-h: 84px; margin: 0 calc((100% - 84px * 1304 / 322) / 2); }
+  body[data-layout-mod="jp2"] .jp.is-art.jp--major { --jp-h: 64px; }
+  body[data-layout-mod="jp2"] .jp.is-art.jp--minor { --jp-h: 58px; }
+  body[data-layout-mod="jp2"] .jp.is-art.jp--mini  { --jp-h: 54px; }
+  body[data-layout-mod="jp2"] .logo { left: 190px; width: 420px; height: 126px; top: calc(392px - 63px + var(--extra, 0px) * 0.6 - 160px - 124px); }
+}
+
+/* Джекпоты в 2 ряда: плашки только пропорционально (ширина от высоты
+   картинки) — раньше нижние были зажаты в 226 px и растягивались. */
+body[data-layout="2"] .jp.is-art:not(.jp--grand),
+body[data-layout="2"] .jp.is-art.jp--grand,
+body[data-layout-mod="jp2"] .jp.is-art:not(.jp--grand),
+body[data-layout-mod="jp2"] .jp.is-art.jp--grand { width: auto; }
+
+@media (orientation: portrait) {
+  /* Портрет 4: лого +30%, слот, джекпоты и Buy Bonus выше на 15% высоты
+     слота (95 px); катушки остаются внизу. */
+  body[data-layout-mod="low"] .cabinet { top: calc(392px - 95px + var(--extra, 0px) * 0.6); }
+  body[data-layout-mod="low"] .jp-row.is-art { height: 160px; top: calc(392px - 95px + var(--extra, 0px) * 0.6 - 160px); }
+  body[data-layout-mod="low"] .logo {
+    left: calc(400px - 546px / 2); width: 546px; height: 164px;
+    top: max(4px, calc(392px - 95px + var(--extra, 0px) * 0.6 - 160px - 164px));
+  }
+  body[data-layout-mod="low"] .sign-buy-bonus.is-art,
+  body[data-layout-mod="low"] .respin-counter.is-art { top: calc(392px + 630.8px + 40px - 95px + var(--extra, 0px) * 0.6); }
+
+  /* Портрет 5: джекпоты и лого +30%. */
+  body[data-layout-mod="jp2"] .jp-row.is-art { height: 208px; top: calc(392px - 63px + var(--extra, 0px) * 0.6 - 208px); }
+  body[data-layout-mod="jp2"] .jp.is-art.jp--grand { --jp-h: 109px; margin: 0 calc((100% - 109px * 1304 / 322) / 2); }
+  body[data-layout-mod="jp2"] .jp.is-art.jp--major { --jp-h: 83px; }
+  body[data-layout-mod="jp2"] .jp.is-art.jp--minor { --jp-h: 75px; }
+  body[data-layout-mod="jp2"] .jp.is-art.jp--mini  { --jp-h: 70px; }
+  body[data-layout-mod="jp2"] .logo {
+    left: calc(400px - 546px / 2); width: 546px; height: 164px;
+    top: max(4px, calc(392px - 63px + var(--extra, 0px) * 0.6 - 208px - 164px));
+  }
+}
+
+/* Десктоп 2: джекпоты в 2 ряда над автоматом (GRAND сверху), лого меньше и
+   выше, чтобы целиком поместилось над ними. */
+@media (orientation: landscape) {
+  body[data-desk="2"] .jp-row.is-art {
+    left: calc(960px - 380px); width: 760px; display: flex; flex-wrap: wrap; align-content: flex-end; justify-content: center;
+    gap: 6px 10px; height: 146px; top: calc(248.6px - 146px);
+  }
+  body[data-desk="2"] .jp.is-art { width: auto; }
+  body[data-desk="2"] .jp.is-art.jp--grand { --jp-h: 78px; margin: 0 calc((100% - 78px * 1304 / 322) / 2); }
+  body[data-desk="2"] .jp.is-art.jp--major { --jp-h: 62px; }
+  body[data-desk="2"] .jp.is-art.jp--minor { --jp-h: 57px; }
+  body[data-desk="2"] .jp.is-art.jp--mini  { --jp-h: 53px; }
+  body[data-desk="2"] .logo { left: calc(960px - 200px); width: 400px; height: 120px; top: -6px; }
+}
+/* Десктоп 2: ряды джекпотов ровно по ширине автомата (585..1335), нижний
+   ряд разнесён по краям (MAJOR слева, MINI справа) с отступами от рамы,
+   плашки не тянутся. Ряд и лого чуть ниже (ряд заходит на кромку рамы). */
+@media (orientation: landscape) {
+  body[data-desk="2"] .jp-row.is-art {
+    left: 585px; width: 750px; padding: 0 14px; box-sizing: border-box;
+    justify-content: space-between; top: calc(248.6px - 146px + 14px);
+  }
+  body[data-desk="2"] .logo { top: 8px; }
+}
+@media (orientation: landscape) {
+  /* GRAND: ширина только от высоты (старый flex-basis 380 тянул плашку) */
+  body[data-desk="2"] .jp.is-art.jp--grand { flex: 0 0 auto; width: auto; margin: 0 calc((100% - 78px * 1304 / 322) / 2); }
+  body[data-desk="2"] .jp.is-art:not(.jp--grand) { flex: 0 0 auto; width: auto; }
+}
+/* Десктоп 2: плашки на 10% крупнее (пропорционально), нижний ряд не до
+   самых краёв — по 10% ширины слота отступа с каждой стороны. */
+@media (orientation: landscape) {
+  body[data-desk="2"] .jp-row.is-art { height: 160px; padding: 0 75px; top: calc(248.6px - 160px + 14px); }
+  body[data-desk="2"] .jp.is-art.jp--grand { --jp-h: 86px; margin: 0 calc((100% - 86px * 1304 / 322) / 2); }
+  body[data-desk="2"] .jp.is-art.jp--major { --jp-h: 68px; }
+  body[data-desk="2"] .jp.is-art.jp--minor { --jp-h: 63px; }
+  body[data-desk="2"] .jp.is-art.jp--mini  { --jp-h: 58px; }
+  body[data-desk="2"] .logo { top: -6px; }
+}
+
+/* Варианты → «Свечение символов»: лёгкий ореол в цвет элемента у колокола и
+   слитка (цвет по выбранному арту слитка). Только DOM-картинка; на выигрыше
+   играет Spine-копия со своим светом. */
+body[data-glow="1"] .reel__cell[data-symbol="bell"] > img {
+  filter: drop-shadow(0 0 6px rgba(255, 176, 70, 0.75)) drop-shadow(0 0 16px rgba(255, 140, 40, 0.4));
+}
+body[data-glow="1"] .reel__cell[data-symbol="ingot"] > img {
+  filter: drop-shadow(0 0 6px rgba(90, 180, 255, 0.8)) drop-shadow(0 0 16px rgba(50, 130, 255, 0.45));
+}
+body[data-glow="1"][data-ingot="1"] .reel__cell[data-symbol="ingot"] > img,
+body[data-glow="1"][data-ingot="2"] .reel__cell[data-symbol="ingot"] > img,
+body[data-glow="1"][data-ingot="3"] .reel__cell[data-symbol="ingot"] > img,
+body[data-glow="1"][data-ingot="5"] .reel__cell[data-symbol="ingot"] > img {
+  filter: drop-shadow(0 0 6px rgba(80, 255, 140, 0.75)) drop-shadow(0 0 16px rgba(40, 220, 110, 0.4));
+}
+body[data-glow="1"][data-ingot="4"] .reel__cell[data-symbol="ingot"] > img,
+body[data-glow="1"][data-ingot="6"] .reel__cell[data-symbol="ingot"] > img {
+  filter: drop-shadow(0 0 6px rgba(255, 196, 80, 0.75)) drop-shadow(0 0 16px rgba(255, 160, 50, 0.4));
+}
+body[data-glow="1"] .reel__cell.is-dimmed[data-symbol="bell"] > img,
+body[data-glow="1"] .reel__cell.is-dimmed[data-symbol="ingot"] > img { filter: none; }
+/* Десктоп 2: нижние плашки на 15% ближе друг к другу (зазор 83 -> 70 px):
+   при space-between это +12.5 px отступа с каждой стороны ряда. */
+@media (orientation: landscape) {
+  body[data-desk="2"] .jp-row.is-art { padding: 0 87.5px; }
+}
+/* Десктоп 2: MAJOR / MINOR / MINI одной высоты, каждая — по центру своего
+   барабана (ряд стоит от левого края автомата: центр барабана i =
+   --frame-l + --cell-w * (i + 0.5)); GRAND по центру сверху. */
+@media (orientation: landscape) {
+  body[data-desk="2"] .jp.is-art:not(.jp--grand) {
+    position: absolute; bottom: 0; --jp-h: 64px; transform: translateX(-50%);
+  }
+  body[data-desk="2"] .jp.is-art.jp--major { --jp-h: 64px; left: calc(var(--frame-l) + var(--cell-w) * 0.5); }
+  body[data-desk="2"] .jp.is-art.jp--minor { --jp-h: 64px; left: calc(var(--frame-l) + var(--cell-w) * 1.5); }
+  body[data-desk="2"] .jp.is-art.jp--mini  { --jp-h: 64px; left: calc(var(--frame-l) + var(--cell-w) * 2.5); }
+  body[data-desk="2"] .jp-row.is-art { padding: 0; align-content: flex-start; }
+}
+body[data-glow="1"] .reel__cell[data-symbol="diamond"] > img {
+  filter: drop-shadow(0 0 6px rgba(110, 215, 255, 0.8)) drop-shadow(0 0 16px rgba(60, 170, 255, 0.45));
+}
+body[data-glow="1"] .reel__cell.is-dimmed[data-symbol="diamond"] > img { filter: none; }

@@ -20,7 +20,7 @@
   const ROOT = 'img/volt-coins-v2/fx';
   // Версия atlas/json скелетов — поднимать при каждой пересборке fx
   // (PNG-страницы версионируются хешем в самом атласе).
-  const FX_V = 27;
+  const FX_V = 30;
   const BOX = {
     bg_desk: { x: -899, y: -437.5, width: 1798, height: 875 },
     bg_mob: { x: -465.5, y: -845, width: 931, height: 1690 },
@@ -237,7 +237,8 @@
       mountDoor();
       frameInst = make('frame', document.getElementById('cabinetFrame'));
       frameInst.play('idle', true);
-      front.addBase(frameInst);
+      if (document.body.dataset.frame === '2') frameLampsOn = false;
+      if (frameLampsOn) front.addBase(frameInst);
       logoInst = make('logo', document.querySelector('.logo__img'));
       logoInst.play('idle', true);
       front.addBase(logoInst);
@@ -378,10 +379,21 @@
     }
   };
 
+  // V2 «Рама: Неон» — Spine-лампы старой рамы не показываем (review.js).
+  let frameLampsOn = true;
+  VoltFx.frameLamps = function frameLamps(on) {
+    if (frameInst && on !== frameLampsOn) {
+      if (on) front.addBase(frameInst);
+      else front.removeBase(frameInst);
+    }
+    frameLampsOn = on;
+  };
+
   // Frame + logo + coils pulse while a win is on screen (GDD: «пульсация при выигрыше»).
   VoltFx.setWin = function setWin(on) {
     if (on === winOn) return;
     winOn = on;
+    document.body.classList.toggle('fx-win', on);
     if (mode === 'base') frameInst.play(on ? 'win' : 'idle', true);
     logoInst.play(on ? 'win' : 'idle', true);
     if (!anticOn && !bigOn) coilsRest();
