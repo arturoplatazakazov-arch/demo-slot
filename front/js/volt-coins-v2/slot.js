@@ -50,6 +50,8 @@ function artCode(code) {
   if (code === 'ingot' && typeof ingotArt === 'function') return ingotArt();
   return code;
 }
+// V2: бриллиант на 5% меньше остальных (CSS + Spine-копия).
+const DIAMOND_SCALE = 0.95;
 function symbolSrc(code) {
   return `${ASSET_ROOT}/symbols/${artCode(code)}.png?v=${SYM_V}`;
 }
@@ -414,6 +416,8 @@ function clearCoinFace(info) {
   info.coinFace.remove();
   info.coinFace = null;
   info.cell.classList.remove('is-val-lo', 'is-val-mid', 'is-val-hi');
+  info.cell.style.removeProperty('--coin-k');
+  info.coinK = 1;
   if (info.symbol === 'coin') info.img.src = symbolSrc('coin');
 }
 
@@ -600,6 +604,8 @@ function showCoinFace(info, face) {
   info.cell.classList.remove('is-val-lo', 'is-val-mid', 'is-val-hi');
   const wcls = coinWeightClass(face);
   if (wcls) info.cell.classList.add(wcls);
+  info.coinK = typeof coinSizeK === 'function' ? coinSizeK(face) : 1;
+  info.cell.style.setProperty('--coin-k', String(info.coinK));
 }
 
 // --- Показ выигрыша ----------------------------------------------------------
@@ -613,6 +619,8 @@ function playWinAnimationOnce(info) {
     const clip = info.coinFace ? `coin_${info.faceKey}` : (info.symbol === 'ingot' ? artCode('ingot') : info.symbol);
     const inst = fx('symbol', info.cell, clip);
     if (inst && info.symbol === 'wild') inst.fit = wildScale();
+    if (inst && info.symbol === 'diamond') inst.fit = DIAMOND_SCALE;
+    if (inst && info.coinFace && info.coinK) inst.fit = info.coinK;
     if (inst) {
       info.fxInst = inst;
       info.cell.classList.add('is-fx');
@@ -701,6 +709,8 @@ function setWinMeter(amount, { last = false } = {}) {
   const valEl = box.querySelector('.win-meter__value');
   box.querySelector('.win-meter__label').textContent = last ? 'LAST WIN' : 'WIN';
   box.classList.toggle('is-last', last);
+  // лампы плашки горят, пока на ней свежий выигрыш; новый спин их гасит
+  box.classList.toggle('is-lit', !last && Number(amount) > 0);
   if (last) return;
   const to = Number(amount) || 0;
   const from = Number(valEl.dataset.v || 0);
@@ -1183,16 +1193,16 @@ const POPUP_CONFIG = {
 // Баннеры попапов нарисованы в ChatGPT (scripts/volt_coins_popups.py режет
 // листы): заголовок впечатан, а сумма печатается в пустую синюю панель
 // баннера — её доли (panel) замерены нарезкой, из них CSS ставит число.
-const POPUP_ART = {"big_win":{"w":632,"h":316,"panel":{"l":0.0585,"t":0.6171,"w":0.8797,"h":0.2848}},
-  "mega_win":{"w":947,"h":387,"panel":{"l":0.0665,"t":0.6072,"w":0.8712,"h":0.2894}},
-  "epic_win":{"w":1155,"h":478,"panel":{"l":0.0823,"t":0.6464,"w":0.8424,"h":0.2531}},
-  "hold_and_win":{"w":1074,"h":358,"panel":{"l":0.2067,"t":0.6536,"w":0.5857,"h":0.2486}},
-  "total_win":{"w":996,"h":387,"panel":{"l":0.0693,"t":0.6227,"w":0.8635,"h":0.2868}},
-  "buy_bonus":{"w":952,"h":451,"panel":{"l":0.0746,"t":0.4124,"w":0.8508,"h":0.4789}},
-  "jp_mini":{"w":585,"h":440,"panel":{"l":0.1043,"t":0.6886,"w":0.7949,"h":0.2114}},
-  "jp_minor":{"w":598,"h":437,"panel":{"l":0.1037,"t":0.6934,"w":0.786,"h":0.222}},
-  "jp_major":{"w":612,"h":504,"panel":{"l":0.0997,"t":0.7063,"w":0.8203,"h":0.2063}},
-  "jp_grand":{"w":632,"h":563,"panel":{"l":0.106,"t":0.7247,"w":0.7959,"h":0.1812}}};
+const POPUP_ART = {"big_win":{"w":651,"h":311,"panel":{"l":0.1014,"t":0.4823,"w":0.7988,"h":0.3698}},
+  "mega_win":{"w":884,"h":344,"panel":{"l":0.0939,"t":0.4622,"w":0.8145,"h":0.375}},
+  "epic_win":{"w":965,"h":465,"panel":{"l":0.1078,"t":0.4753,"w":0.7845,"h":0.3226}},
+  "hold_and_win":{"w":647,"h":307,"panel":{"l":0.1005,"t":0.4788,"w":0.7991,"h":0.3713}},
+  "total_win":{"w":903,"h":351,"panel":{"l":0.093,"t":0.453,"w":0.8162,"h":0.3704}},
+  "buy_bonus":{"w":681,"h":471,"panel":{"l":0.1028,"t":0.3079,"w":0.793,"h":0.5817}},
+  "jp_mini":{"w":419,"h":194,"panel":{"l":0.1002,"t":0.268,"w":0.8067,"h":0.6134}},
+  "jp_minor":{"w":444,"h":197,"panel":{"l":0.0901,"t":0.269,"w":0.8221,"h":0.5787}},
+  "jp_major":{"w":484,"h":197,"panel":{"l":0.1054,"t":0.2843,"w":0.8079,"h":0.599}},
+  "jp_grand":{"w":1304,"h":552,"panel":{"l":0.0567,"t":0.1739,"w":0.8873,"h":0.7627}}};
 const POPUP_ART_KEY = {
   bigWin: 'big_win', megaWin: 'mega_win', epicWin: 'epic_win',
   holdWinIntro: 'hold_and_win', holdWinTotal: 'total_win',
@@ -1204,11 +1214,11 @@ function artPopupNode(artKey, text, extraClass = '') {
   root.className = `game-popup is-art ${extraClass}`.trim();
   root.style.setProperty('--art-ar', `${a.w} / ${a.h}`);
   root.style.setProperty('--art-w', `${a.w}`);
-  // Не выше ~66% экрана: высокие баннеры (джекпоты) иначе наезжают на бар.
-  root.style.width = `min(900px, ${isMobileLayout() ? 94 : 86}vw, ${((66 * a.w) / a.h).toFixed(1)}vh)`;
+  // Продукт: в 1.5 раза меньше прежнего (было min(900px, 94/86vw, 66% высоты)).
+  root.style.width = `min(600px, ${isMobileLayout() ? 63 : 57}vw, ${((44 * a.w) / a.h).toFixed(1)}vh)`;
   const p = a.panel;
   root.innerHTML = `
-    <img class="game-popup__art" src="${ASSET_ROOT}/popups/${artKey}.webp" alt="">
+    <img class="game-popup__art" src="${ASSET_ROOT}/popups/${artKey}.webp?v=3" alt="">
     <div class="game-popup__panel" style="left:${p.l * 100}%;top:${p.t * 100}%;width:${p.w * 100}%;height:${p.h * 100}%">
       <span class="game-popup__value"></span>
     </div>`;
@@ -1333,7 +1343,7 @@ function playJackpotAward(tier) {
       pushScreenDim(false);
       await wait(DIM_TRANSITION_MS);
       if (POPUP_ART[`jp_${tier}`]) {
-        // Баннер тира из ChatGPT (JACKPOT + имя тира впечатаны), сумма — в панели.
+        // V2: плашка тира из ряда джекпотов (имя тира на ярлыке), JACKPOT + сумма — в панели.
         node = artPopupNode(`jp_${tier}`, formatAmount(value * jackpotBet), 'is-jackpot');
       } else {
         node = document.createElement('div');
@@ -1379,7 +1389,7 @@ function showBuyBonusDialog({ betSteps, betIndex, costMultiplier, currency, bala
     const bp = POPUP_ART.buy_bonus && POPUP_ART.buy_bonus.panel;
     node.innerHTML = bp ? `
       <div class="buy-dialog__banner" style="--art-ar:${POPUP_ART.buy_bonus.w} / ${POPUP_ART.buy_bonus.h}">
-        <img class="game-popup__art" src="${ASSET_ROOT}/popups/buy_bonus.webp" alt="">
+        <img class="game-popup__art" src="${ASSET_ROOT}/popups/buy_bonus.webp?v=2" alt="">
         <div class="buy-dialog__panel" style="left:${bp.l * 100}%;top:${bp.t * 100}%;width:${bp.w * 100}%;height:${bp.h * 100}%">
           <div class="buy-dialog__note" data-note></div>
           <div class="buy-dialog__price" data-price></div>
@@ -1781,7 +1791,7 @@ function preloadAssets() {
   const tasks = [];
   for (const code of [...SYMBOL_CODES, ...COIN_STATE_ART]) tasks.push(track(preloadImage(symbolSrc(code))));
   tasks.push(track(preloadImage(`${ASSET_ROOT}/img/logo.png`)));
-  tasks.push(track(preloadImage(`${ASSET_ROOT}/img/frame.png`)));
+  tasks.push(track(preloadImage(`${ASSET_ROOT}/img/frame_off.png`)));
   tasks.push(track(preloadImage(`${ASSET_ROOT}/img/${isMobileLayout() ? 'bg_mob' : 'bg_desk'}.jpg`)));
   if (window.VoltFx) tasks.push(track(window.VoltFx.load()));
   for (const p of Sound.preloadPromises || []) tasks.push(track(p));

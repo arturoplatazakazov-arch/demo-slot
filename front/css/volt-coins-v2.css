@@ -1847,3 +1847,78 @@ body:not([data-ingot="9"]) .glass-arcs { display: none; }
 .reel__cell.is-dimmed .glass-arcs { opacity: 0.2; }
 body.lights-off .glass-arcs { display: none; }
 .reel__cell.is-fx .glass-arcs { visibility: hidden; }
+
+/* Попапы V2 (спокойные, в стиле плашек корпуса): сумма не шире панели;
+   джекпот = плашка тира из ряда джекпотов, над суммой — подпись JACKPOT. */
+.game-popup__value { font-size: min(62cqh, 12cqw); }
+.game-popup.is-jackpot .game-popup__panel { gap: 1cqh; }
+.game-popup.is-jackpot .game-popup__panel::before { margin-top: 8cqh; }
+.game-popup.is-jackpot .game-popup__panel::before {
+  content: 'JACKPOT';
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 16cqh;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  color: #ffd36a;
+  text-shadow: 0 2px 0 #4a2a00, 0 0 10px rgba(255, 190, 70, 0.45);
+}
+.game-popup.is-jackpot .game-popup__value { font-size: min(46cqh, 11cqw); }
+
+/* Бриллиант на 5% меньше (Spine-копия — DIAMOND_SCALE в slot.js). */
+.reel__cell[data-symbol="diamond"] > img { scale: 0.95; }
+/* Монеты с номиналом: +2% на каждую ступень номинала (coinSizeK, review.js). */
+.reel__cell.is-coin > img,
+.reel__cell.is-coin .coin-face { scale: calc(1.1 * var(--coin-k, 1)); }
+.reel__cell.is-coin .wild-arcs[data-kind="coin"] { scale: var(--coin-k, 1); }
+/* Базовый экран светлее (продукт: «слишком тёмный»): фон и виньетка мягче. */
+body[data-field="2"] .screen:not([data-mode="bonus"]) .bg { filter: brightness(1.3) saturate(1.05); }
+body[data-field="2"] .screen:not([data-mode="bonus"]) .field-vignette {
+  background: radial-gradient(
+    var(--vig-rx, 60%) var(--vig-ry, 55%) at var(--vig-x, 50%) var(--vig-y, 50%),
+    transparent 50%, rgba(2, 4, 16, 0.38) 80%, rgba(2, 4, 16, 0.62) 100%);
+}
+/* Фон проглядывает из темноты (fx.js ambientGlow): та же картинка фона,
+   ярче, под радиальной маской, поверх виньетки, под автоматом. */
+.bg-reveal {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: center / cover no-repeat;
+  filter: brightness(3.6) saturate(1.2);
+  opacity: 0;
+  animation: bg-reveal 2400ms ease-in-out forwards;
+}
+@keyframes bg-reveal {
+  0%   { opacity: 0; }
+  30%  { opacity: var(--reveal-a, 0.85); }
+  45%  { opacity: calc(var(--reveal-a, 0.85) * 0.6); }
+  60%  { opacity: var(--reveal-a, 0.85); }
+  100% { opacity: 0; }
+}
+
+/* Мобила: катушки на 15% крупнее, низ остаётся на месте (за рамой).
+   scale, а не transform — у правой transform занят зеркалом. Spine и разряды
+   берут getBoundingClientRect, поэтому идут за масштабом. */
+@media (orientation: portrait) {
+  .coil { scale: 1.15; transform-origin: 50% 100%; }
+}
+
+/* Лампы плашек (как у рамы): горящая копия поверх погашенной.
+   Buy Bonus — в покое погашен, раз в ~4.5 с коротко вспыхивает, при
+   наведении горит. WIN — погашен, горит только при выигрыше. */
+.ui-art-lit { opacity: 0; transition: opacity 260ms ease; }
+.sign-buy-bonus.is-art { animation: none; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.5)); }
+.sign-buy-bonus.is-art .ui-art-lit { animation: buy-lamps 4.6s ease-in-out infinite; }
+@keyframes buy-lamps {
+  0%, 78%, 100% { opacity: 0; }
+  82% { opacity: 1; }
+  86% { opacity: 0.35; }
+  90% { opacity: 1; }
+  96% { opacity: 0; }
+}
+.sign-buy-bonus.is-art:hover:not(:disabled) .ui-art-lit { animation: none; opacity: 1; }
+.sign-buy-bonus.is-art:disabled .ui-art-lit,
+body.lights-off .sign-buy-bonus.is-art .ui-art-lit { animation: none; opacity: 0; }
+.win-meter.is-art.is-lit .ui-art-lit { opacity: 1; transition-duration: 120ms; }

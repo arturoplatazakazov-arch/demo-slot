@@ -20,7 +20,7 @@
   const ROOT = 'img/volt-coins-v2/fx';
   // Версия atlas/json скелетов — поднимать при каждой пересборке fx
   // (PNG-страницы версионируются хешем в самом атласе).
-  const FX_V = 25;
+  const FX_V = 27;
   const BOX = {
     bg_desk: { x: -899, y: -437.5, width: 1798, height: 875 },
     bg_mob: { x: -465.5, y: -845, width: 931, height: 1690 },
@@ -106,6 +106,35 @@
     setTimeout(() => d.remove(), 1000);
   }
   function flashCoils(strength = 1) { for (const c of coils) bgFlash(c, strength); }
+
+  // V2: фон сзади иногда проглядывает из темноты — в случайной точке слева
+  // или справа от автомата проявляется сам фон (его же картинка, ярче, под
+  // радиальной маской) с лёгкой голубой подсветкой; раз в 4–8 с, ~2.4 с.
+  function ambientGlow() {
+    setTimeout(ambientGlow, 4000 + Math.random() * 4000);
+    if (document.hidden || document.body.classList.contains('lights-off')) return;
+    const scr = document.getElementById('screen');
+    const bg = document.getElementById('bgLayer');
+    if (!scr || !bg) return;
+    const sr = scr.getBoundingClientRect();
+    const size = Math.max(sr.width, sr.height) * (0.32 + Math.random() * 0.18);
+    // десктоп: по бокам от автомата; мобила: сверху (за лого) или снизу (у кнопок) —
+    // в середине фон закрыт автоматом
+    const portrait = sr.height > sr.width;
+    const x = portrait ? sr.width * (0.1 + Math.random() * 0.8)
+      : sr.width * (Math.random() < 0.5 ? 0.04 + Math.random() * 0.3 : 0.66 + Math.random() * 0.3);
+    const y = portrait ? sr.height * (Math.random() < 0.6 ? 0.03 + Math.random() * 0.15 : 0.8 + Math.random() * 0.17)
+      : sr.height * (0.1 + Math.random() * 0.8);
+    const d = document.createElement('div');
+    d.className = 'bg-reveal';
+    d.style.backgroundImage = `url("${bg.currentSrc || bg.src}")`;
+    const m = `radial-gradient(${size / 2}px ${size / 2}px at ${x}px ${y}px, #000 0%, rgba(0,0,0,0.55) 45%, transparent 100%)`;
+    d.style.webkitMaskImage = m;
+    d.style.maskImage = m;
+    d.style.setProperty('--reveal-a', (0.85 + Math.random() * 0.15).toFixed(2));
+    scr.appendChild(d);
+    setTimeout(() => d.remove(), 2600);
+  }
 
   function coilsPlay(clip, loop = false, thenIdle = true) {
     if (clip !== 'off') flashCoils(clip === 'spin' ? 0.6 : 1);
@@ -221,6 +250,7 @@
         front.addOverlay(c.inst);
       });
       document.body.classList.add('fx-ready');
+      setTimeout(ambientGlow, 2500);
       load(back, isMobile() ? 'bg_desk' : 'bg_mob').catch(() => {});
       window.addEventListener('resize', () => {
         const v = isMobile() ? 'bg_mob' : 'bg_desk';

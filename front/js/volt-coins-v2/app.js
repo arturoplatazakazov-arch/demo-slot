@@ -224,14 +224,20 @@ function renderInfoPopupContent() {
   const list = document.getElementById('infoPopupList');
   if (!list) return;
   list.innerHTML = '';
-  for (const symbol of gameState.symbols) {
+  // Цена — в ставках (как в таблице заказчика): сервер платит за линию
+  // (ставка / число линий), поэтому делим на число линий. Дорогие сверху.
+  const lines = (gameState.paylines && gameState.paylines.length) || 5;
+  const price = (sym) => (sym.paytable['3'] !== undefined ? sym.paytable['3'] / lines : -1);
+  const symbols = [...gameState.symbols].sort((a, b) => price(b) - price(a));
+  for (const symbol of symbols) {
     const row = document.createElement('div');
     row.className = 'info-popup__row';
     const pays = symbol.paytable['3'] !== undefined
-      ? `<span>×3: <b>${formatNumber(symbol.paytable['3'])}</b> × ставка на линию</span>`
+      ? `<span>3 в линию: <b>${price(symbol).toLocaleString('ru-RU')}×</b> ставки</span>`
       : '<span>3 в линию запускают Hold &amp; Win</span>';
+    const art = typeof artCode === 'function' ? artCode(symbol.code) : symbol.code;
     row.innerHTML = `
-      <img src="img/volt-coins-v2/symbols/${symbol.code === 'coin' ? 'coin_value' : symbol.code}.png" alt="">
+      <img src="img/volt-coins-v2/symbols/${art}.png" alt="">
       <span class="info-popup__row-name"></span>
       <span class="info-popup__row-pays">${pays}</span>
     `;

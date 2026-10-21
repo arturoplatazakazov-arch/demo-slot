@@ -85,6 +85,15 @@ function coinWeightClass(face) {
   return 'is-val-lo';
 }
 
+// Размер монеты по номиналу (продукт): каждая ступень на 2% крупнее —
+// x1 < x2 < x3 < x5 < x10 < x15 < MINI < MINOR < MAJOR, чтобы номинал ловился
+// взглядом; шкала вокруг обычного размера (x1 −8%, MAJOR +8%).
+const COIN_SIZE_ORDER = ['x1', 'x2', 'x3', 'x5', 'x10', 'x15', 'mini', 'minor', 'major'];
+function coinSizeK(face) {
+  const i = face ? COIN_SIZE_ORDER.indexOf(face.word || face.digits) : -1;
+  return i < 0 ? 1 : 0.92 + 0.02 * i;   // x1 0.92 … MAJOR 1.08
+}
+
 // Центр/радиус виньетки = прямоугольник барабанов (в % экрана).
 function placeVignette() {
   const vig = document.querySelector('.field-vignette');
@@ -141,8 +150,19 @@ function applyUiArt() {
     const art = UI_PLATES[key];
     const img = el.querySelector('.ui-art');
     const slot = el.querySelector('.ui-slot');
-    const src = `img/volt-coins-v2/ui/${key}.webp`;
+    // лампы плашки: снизу погашенная копия, сверху горящая (её прозрачность
+    // ведёт CSS: Buy Bonus вспыхивает раз в ~4.5 с, WIN горит только при выигрыше)
+    const src = `img/volt-coins-v2/ui/${key}_off.webp?v=1`;
     if (!img.src.endsWith(src)) img.src = src;
+    let lit = el.querySelector('.ui-art-lit');
+    if (!lit) {
+      lit = document.createElement('img');
+      lit.className = 'ui-art ui-art-lit';
+      lit.alt = '';
+      img.after(lit);
+    }
+    const litSrc = `img/volt-coins-v2/ui/${key}.webp`;
+    if (!lit.src.endsWith(litSrc)) lit.src = litSrc;
     const p = art.panel;
     // Buy Bonus без окна цены (цена — в попапе покупки)
     slot.hidden = key.startsWith('buy');
