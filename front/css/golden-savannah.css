@@ -1055,3 +1055,16 @@ body.is-portrait .crown--ladder { top: 304px; flex-wrap: wrap; width: 1000px; le
 body.is-portrait .crown--ladder .jp { width: 300px; font-size: 26px; }
 body.is-portrait .crown--ladder .crown__top { order: -1; flex-basis: 100%; display: flex; justify-content: center; }
 body.is-portrait .crown--ladder .jp--grand { width: 480px; font-size: 38px; }
+
+/* Portrait: the jackpot ladder sits fully above the frame crest (it used to
+   run behind it and swallow MINOR) and the reels are 10% larger.
+   Top to bottom: logo 28..196, GRAND 206..362, MINI·MINOR·MAJOR ..~483,
+   frame 486..1267 (reels at 1.034, window from 650), triad from 1284,
+   pill 1640..1784, system row 1800..1888. */
+body.is-portrait .logo { left: 390px; top: 28px; width: 300px; }
+body.is-portrait .crown--ladder { top: 206px; row-gap: 8px; z-index: 2; }
+body.is-portrait .crown--ladder .jp--grand { width: 380px; font-size: 32px; }
+body.is-portrait .reel { top: 650px; transform: scale(1.034); }
+body.is-portrait .medal { top: 1284px; }
+body.is-portrait .bar { top: 1640px; }
+body.is-portrait .sys { top: 1800px; }
