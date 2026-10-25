@@ -164,6 +164,9 @@ class CoinMultiplierOut(BaseModel):
     # symbol present + a line win) vs. positions/values just being shown on
     # the coins with no payout effect yet — see coin_multiplier.py.
     applied: bool
+    # Free-spins round multiplier after this spin (round_accumulate games
+    # only, inside a round); None elsewhere.
+    round_multiplier: int | None = None
 
 
 class HoldAndWinLandedCoinOut(BaseModel):

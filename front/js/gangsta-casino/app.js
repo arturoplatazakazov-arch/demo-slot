@@ -1,6 +1,6 @@
 // Gangsta Casino — bottom UI bar + spin orchestration, adapted from
 // ../dirty-money-mafia/app.js (same mechanic set: line pay + scatter free
-// spins + expanding/walking wild + wheel of fortune + bonus buy). The session
+// spins + expanding/walking wild + multipliers + bonus buy). The session
 // Spin/Buy click is a real request against app/seed/gangsta_casino.py's
 // config.
 
@@ -8,7 +8,7 @@ const GAME_ID = 'gangsta-casino';
 
 const gameState = {
   sessionId: null,
-  betSteps: [10000, 25000, 50000, 100000, 250000, 500000], // fallback if the backend is unreachable
+  betSteps: [5500, 13750, 27500, 55000, 137500, 275000], // fallback if the backend is unreachable
   betIndex: 3,
   balance: 1_000_000,
   currency: 'FUN',
@@ -25,9 +25,9 @@ function formatNumber(n) {
   return Number(n).toLocaleString('en-US');
 }
 
-// Bonus buy costs 100x the bet (cost_multiplier in the seed) — the price on
+// Bonus buy costs 86x the bet (BUY_COST_MULTIPLIER in the seed) — the price on
 // the chest follows the current bet.
-const BUY_COST_MULTIPLIER = 100;
+const BUY_COST_MULTIPLIER = 86;
 
 function renderBet() {
   const bet = gameState.betSteps[gameState.betIndex];
@@ -71,18 +71,13 @@ async function applySpinResult(data) {
   // Whether this spin enters the bonus from the base game — captured before
   // setFreeSpinsMode flips the mode. Win cells (the scatters landing) play
   // first, then the intro (blackout + bonusSpinsWin popup + reveal) runs.
-  const enteringBonus = document.getElementById('screen').dataset.mode !== 'freespins' && remaining > 0;
+  const wasInRound = document.getElementById('screen').dataset.mode === 'freespins';
+  const enteringBonus = !wasInRound && remaining > 0;
 
+  // Multipliers flip in on their chips first (and fly into the plate when
+  // they count), then the wins play — total_win already includes them.
+  await playMultipliers(data.coin_multiplier, wasInRound);
   playWinCells(data.winning_cells, data.line_wins, data.count_wins);
-
-  // Wheel of Fortune runs BEFORE the bonus-mode switch: when its prize is the
-  // free-spins round, the server has already added those spins to `feature`,
-  // so the wheel has to play out first and the usual blackout + intro popup
-  // then carries the player into the bonus.
-  if (data.wheel_of_fortune) {
-    await celebrateWheelTrigger();
-    await playWheelOfFortune(data.wheel_of_fortune);
-  }
 
   if (remaining > 0) updateFreeSpinsCounter(remaining);
   await setFreeSpinsMode(remaining > 0, remaining);
@@ -112,6 +107,7 @@ async function runSpin(request) {
 
   const spinBtn = document.querySelector('[data-action="spin"]');
   spinBtn.classList.add('is-spinning');
+  if (currentMode() !== 'freespins') resetMultiplierPlate();
   startReelLoop();
 
   try {
@@ -150,7 +146,7 @@ function setupBuyBonusButton() {
     // the wheel, the Spine preview screens or an already open dialog.
     const shown = (id) => { const el = document.getElementById(id); return el && !el.hidden; };
     if (currentMode() !== 'base' || document.getElementById('screenDim').classList.contains('is-active')) return;
-    if (shown('buyDialog') || shown('wofPopup') || shown('featureScreen')) return;
+    if (shown('buyDialog') || shown('featureScreen')) return;
     // Price at the current bet when the balance covers it, else at the
     // highest bet step it does (js/buy-bonus.js).
     const q = BuyBonus.quote({

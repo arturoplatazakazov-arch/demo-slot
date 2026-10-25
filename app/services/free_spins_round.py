@@ -14,6 +14,9 @@ STATE_KEYS = (
     "free_spins_bet_amount",
     # Neon Joker Spins: what is left of round_max_win_multiplier x bet.
     "free_spins_cap_left",
+    # Gangsta Casino: the round's accumulated multiplier (coin_multiplier
+    # round_accumulate / round_sticky).
+    "free_spins_bomb_multiplier",
 )
 
 

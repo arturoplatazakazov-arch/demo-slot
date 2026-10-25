@@ -4,9 +4,17 @@ Art: the designer's PSB "Desk_Gangsta_Slot_OUT" (Miami/Vice: pool terrace in
 the base game, neon strip club in the bonus) plus the "Элементы" symbol cuts.
 Mechanics are Dirty Money / MAFIA's, one to one (product: «механика как у игры
 Дёрти Мани») — app/seed/dirty_money_mafia.py: 5x3, expanding +
-walking wild, scatter free spins, 3x WOF -> wheel of fortune, bonus buy x100.
+walking wild, scatter free spins, bonus buy.
 The delivery is cut for exactly that mechanic set: 4 common (weapons), 4 rare
 (characters), wild (small tile + reel-height art), scatter, wof.
+
+2026-10-20 (product): no Wheel of Fortune any more — the same `wof` chip is a
+MULTIPLIER symbol now (coin_multiplier, no collector): every one that lands
+draws a value; in the base game a spin with a line win pays its line total x
+the sum of the multipliers on screen. In free spins every landed multiplier
+adds to a round multiplier (starts x1, kept to the end of the round) that
+multiplies every winning spin's line pay (round_sticky). Scatter pays are
+never multiplied. RTP: scripts/gangsta_casino_rtp.py.
 
 Symbol codes == the art filenames in front/img/gangsta-casino/symbols/ and are
 a fixed contract with front/js/gangsta-casino/slot.js's SYMBOL_ART.
@@ -35,16 +43,42 @@ CATALOG_DESCRIPTION = "Неоновый Майами, золотые узи и �
 CATALOG_COVER_PATH = "img/gangsta-casino/cover.jpg"
 CATALOG_PLAY_URL = "gangsta-casino.html"
 
-_WOF_PAYS: dict[str, float] = {}
-_COMMON_PAYS = {"3": 2, "4": 5, "5": 10}
-_RARE_PAYS = {"3": 10, "4": 25, "5": 50}
-_WILD_PAYS = {"3": 20, "4": 60, "5": 150}
+# Multiplier symbol: reel weight (of ~117 per reel) and the value table.
+MULTIPLIER_WEIGHT = 3
+# the designer's value art (Desk_Gangsta_Slot_F.psb): x2 / x3 / x5 / x7 / x9
+MULTIPLIER_VALUE_WEIGHTS: dict[str, int] = {"2": 36, "3": 25, "5": 19, "7": 12, "9": 8}
+
+# A bought round averages ~82x the bet (scripts/gangsta_casino_rtp.py) ->
+# x86 keeps the buy at ~96 %.
+BUY_COST_MULTIPLIER = 86
+
+# Free spins: the multiplier lands more often (the round multiplier is the
+# point of the round).
+FS_MULTIPLIER_WEIGHT = 10
+FS_WEIGHT_OVERRIDES = {"wof": FS_MULTIPLIER_WEIGHT}
+
+COIN_MULTIPLIER_PARAMS = {
+    "coin_symbol_code": "wof",
+    "collector_symbol_code": "wof",
+    "requires_collector": False,
+    "value_weights": MULTIPLIER_VALUE_WEIGHTS,
+    "round_accumulate": True,
+    "round_sticky": True,
+}
+
+_MULTIPLIER_PAYS: dict[str, float] = {}
+# Line pays x bet per line. Dirty Money's placeholder table x2.1 — tuned with
+# the multiplier (scripts/gangsta_casino_rtp.py, 1M spins: RTP ~96.2 %, base
+# ~71 %, free spins ~25 %, FS ~1 in 320).
+_COMMON_PAYS = {"3": 4.2, "4": 10.5, "5": 21}
+_RARE_PAYS = {"3": 21, "4": 52.5, "5": 105}
+_WILD_PAYS = {"3": 42, "4": 126, "5": 315}
 _SCATTER_PAYS = {"3": 2, "4": 10, "5": 50}
 
 # code -> (name, symbol_type, tier, reel_weight (all 5 reels), paytable, max_per_reel)
 _SYMBOLS: list[tuple[str, str, str, str, int, dict, int | None]] = [
     ("scatter", "Scatter", SymbolType.SCATTER.value, "low", 3, _SCATTER_PAYS, 1),
-    ("wof", "Wheel of Fortune", SymbolType.BONUS.value, "high", 3, _WOF_PAYS, 1),
+    ("wof", "Multiplier", SymbolType.BONUS.value, "high", MULTIPLIER_WEIGHT, _MULTIPLIER_PAYS, 1),
     ("wild", "Wild", SymbolType.WILD.value, "high", 1, _WILD_PAYS, 1),
     ("rare_purple", "Queen", SymbolType.REGULAR.value, "high", 5, _RARE_PAYS, None),
     ("rare_yellow", "Diva", SymbolType.REGULAR.value, "high", 6, _RARE_PAYS, None),
@@ -54,25 +88,6 @@ _SYMBOLS: list[tuple[str, str, str, str, int, dict, int | None]] = [
     ("common_4", "Pink Glock", SymbolType.REGULAR.value, "low", 20, _COMMON_PAYS, None),
     ("common_3", "Knuckles", SymbolType.REGULAR.value, "low", 22, _COMMON_PAYS, None),
     ("common_1", "Bat", SymbolType.REGULAR.value, "low", 24, _COMMON_PAYS, None),
-]
-
-# Clockwise from 12 o'clock — front/js/gangsta-casino/slot.js labels the drum
-# from the server's list, so only the COUNT (14) is tied to the artwork.
-WHEEL_SEGMENTS: list[dict] = [
-    {"type": "multiplier", "value": 2, "weight": 15},
-    {"type": "multiplier", "value": 5, "weight": 6},
-    {"type": "multiplier", "value": 3, "weight": 11},
-    {"type": "multiplier", "value": 8, "weight": 3},
-    {"type": "multiplier", "value": 4, "weight": 8},
-    {"type": "free_spins", "weight": 2},
-    {"type": "multiplier", "value": 2, "weight": 14},
-    {"type": "multiplier", "value": 6, "weight": 8},
-    {"type": "multiplier", "value": 3, "weight": 11},
-    {"type": "multiplier", "value": 7, "weight": 5},
-    {"type": "multiplier", "value": 4, "weight": 8},
-    {"type": "multiplier", "value": 5, "weight": 6},
-    {"type": "free_spins", "weight": 2},
-    {"type": "multiplier", "value": 10, "weight": 1},
 ]
 
 NUM_REELS = 5
@@ -99,7 +114,7 @@ def build_game_config() -> tuple[Game, GameConfig]:
         max_bet=BET_STEPS[-1],
         bet_step=BET_STEPS[0],
         bet_steps=BET_STEPS,
-        notes="Seed config — Dirty Money math, placeholder (not RTP-validated).",
+        notes="Multiplier math, RTP ~96 % (scripts/gangsta_casino_rtp.py).",
     )
 
     for order, (code, name, symbol_type, tier, weight, pays, max_per_reel) in enumerate(_SYMBOLS):
@@ -130,6 +145,7 @@ def build_game_config() -> tuple[Game, GameConfig]:
             "spins_awarded_by_count": {"3": 10, "4": 15, "5": 20},
             "retrigger_enabled": True,
             "win_multiplier": 1,
+            "reel_weight_overrides": FS_WEIGHT_OVERRIDES,
         },
         display_order=0,
     )
@@ -139,7 +155,7 @@ def build_game_config() -> tuple[Game, GameConfig]:
         enabled=True,
         params={
             "products": [
-                {"buy_id": "free_spins_buy", "cost_multiplier": 100, "target_feature_id": "free_spins"},
+                {"buy_id": "free_spins_buy", "cost_multiplier": BUY_COST_MULTIPLIER, "target_feature_id": "free_spins"},
             ],
         },
         display_order=1,
@@ -159,10 +175,20 @@ def build_game_config() -> tuple[Game, GameConfig]:
     )
     FeatureConfig(
         game_config=config,
-        feature_type=FeatureType.WHEEL_OF_FORTUNE.value,
+        feature_type=FeatureType.COIN_MULTIPLIER.value,
         enabled=True,
-        params={"trigger_symbol_code": "wof", "trigger_count": 3, "segments": WHEEL_SEGMENTS},
+        params=COIN_MULTIPLIER_PARAMS,
         display_order=3,
+    )
+    # The wheel is gone (2026-10-20). sync_config_from_seed never deletes a
+    # feature row the seed stops listing, so it is kept here DISABLED — that
+    # is what switches it off in already-seeded databases (dev, Railway).
+    FeatureConfig(
+        game_config=config,
+        feature_type=FeatureType.WHEEL_OF_FORTUNE.value,
+        enabled=False,
+        params={"trigger_symbol_code": "wof", "trigger_count": 3, "segments": []},
+        display_order=4,
     )
 
     return game, config

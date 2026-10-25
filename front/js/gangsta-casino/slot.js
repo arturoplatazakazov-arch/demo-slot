@@ -1,7 +1,7 @@
 // Gangsta Casino — game-specific wiring. Layout comes from the designer's PSB
 // (Desk_Gangsta_Slot_OUT, 1932x940); mechanics are Dirty Money / MAFIA's
 // (../dirty-money-mafia/slot.js): 5x3 line pay, expanding + walking wild,
-// scatter free spins, 3x WOF -> wheel of fortune, bonus buy.
+// scatter free spins, multipliers (the `wof` chip), bonus buy.
 //
 // Symbols rest as static PNG tiles and play their Spine `win` clip only while
 // winning (img/gangsta-casino/spine/<code>/, one skeleton per symbol); the
@@ -175,6 +175,7 @@ function dropCellInstance(info) {
 function teardownCellInstances() {
   winSequenceEpoch += 1;
   clearWinLines();
+  clearMultiplierBadges();
   if (multiLineSequenceTimeout) {
     clearTimeout(multiLineSequenceTimeout);
     multiLineSequenceTimeout = null;
@@ -336,7 +337,10 @@ function onCellClick(info, col) {
 }
 
 function setCellDimmed(info, dimmed) {
-  info.cell.classList.toggle('is-dimmed', dimmed);
+  const dim = dimmed && !multLitCells.has(info);
+  info.cell.classList.toggle('is-dimmed', dim);
+  const chip = multChips.find((m) => m.info === info && m.inst);
+  if (chip) chip.inst.skeleton.color.set(dim ? 0.4 : 1, dim ? 0.4 : 1, dim ? 0.4 : 1, 1);
 }
 
 let multiLineSequenceTimeout = null;
@@ -903,6 +907,8 @@ function currentMode() {
 }
 
 function applyModeScreen(next) {
+  // A round's multiplier starts at x1 and is gone with the round.
+  if (currentMode() !== next) resetMultiplierPlate();
   document.getElementById('screen').dataset.mode = next;
   document.getElementById('bgLayer').src = bgSrcFor(next);
   syncScene();
@@ -946,133 +952,145 @@ function setFreeSpinsCounter(remaining) {
   });
 }
 
-// --- Wheel of Fortune -------------------------------------------------------
+// --- Multipliers (the `wof` chip) ------------------------------------------
 //
-// The prize is decided server-side (`wheel_of_fortune` in the spin response);
-// the client draws the drum from `segments`, waits for SPIN and eases the drum
-// onto `segment_index`. The pointer sits at 12 o'clock and segment 0 is centred
-// under it at rest, so segment i lands after turning -i * (360 / count).
+// Product 2026-10-20: no wheel any more — the chip is a MULTIPLIER (designer's
+// art from Desk_Gangsta_Slot_F.psb, 2026-10-25). The value is drawn server-side
+// (`coin_multiplier.positions`); the reel tile is the empty chip, and after
+// the reels land each chip plays the Spine `landing` (the value flips in,
+// 0.7 s, skin val_<n>) and holds on it; a chip that counts plays `win` and
+// its value flies into the plate. The plate (#multPlate) is the interface
+// element: base game = the spin's sum when it multiplies a line win, free
+// spins = the round total, which only grows until the round ends.
+const MULT_REVEAL_MS = 700;
+const MULT_FLY_MS = 520;
+const MULT_UI = `${ASSET_ROOT}/ui`;
+const MULT_ART = [2, 3, 5, 7, 9];           // values the art exists for
+let multChips = [];                         // { info, inst, value, el }
+const multLitCells = new Set(); // multiplier cells kept bright over the win dim
 
-const WOF_SPIN_TURNS = 5;
-const WOF_SPIN_MS = 4600;
-const WOF_PRIZE_HOLD_MS = 2200;
-// Purple / magenta alternation of the delivered drum art; free-spins slots go
-// gold so the jackpot slice reads at a glance.
-const WOF_COLORS = ['#5a2a9c', '#c8236e'];
-const WOF_FS_COLOR = '#d9a21c';
-
-async function celebrateWheelTrigger() {
-  const triggers = cellInfos.filter((info) => info && info.symbol === 'wof');
-  if (triggers.length === 0) return;
-  const winSet = new Set(triggers);
-  for (const info of cellInfos) if (info) setCellDimmed(info, !winSet.has(info));
-  await Promise.all(triggers.map((info) => playWinAnimationOnce(info)));
-  if (!stage) await Promise.all(triggers.map((info) => playWinAnimationOnce(info)));
-  for (const info of cellInfos) if (info) setCellDimmed(info, false);
+function multArt(value) {
+  return MULT_ART.includes(value) ? value : null;
 }
 
-function wofSegmentLabel(segment) {
-  return segment.type === 'free_spins' ? 'FREE SPINS' : `x${segment.value}`;
+function getMultiplierResource() {
+  if (!stage) return Promise.reject(new Error('no spine stage'));
+  return loadSpineWithRetry(stage.assetManager, `${SPINE_ROOT}/multiplier`, { premultipliedAlpha: false });
 }
 
-function renderWheel(segments) {
-  const n = Math.max(1, segments.length);
-  const step = 360 / n;
-  // Sector i spans [-step/2, +step/2] around its own angle i*step.
-  const stops = segments.map((seg, i) => {
-    const color = seg.type === 'free_spins' ? WOF_FS_COLOR : WOF_COLORS[i % 2];
-    return `${color} ${i * step}deg ${(i + 1) * step}deg`;
-  });
-  const disk = document.getElementById('wofDisk');
-  disk.style.background =
-    `radial-gradient(circle, transparent 0 58%, rgba(0,0,0,.35) 100%),` +
-    `repeating-conic-gradient(from ${-step / 2}deg, rgba(235,235,245,.85) 0 0.7deg, transparent 0.7deg ${step}deg),` +
-    `conic-gradient(from ${-step / 2}deg, ${stops.join(', ')})`;
-
-  // Marquee bulbs on the rim — static (not on the rotor), built once.
-  const bulbsEl = document.getElementById('wofBulbs');
-  if (bulbsEl && !bulbsEl.childElementCount) {
-    for (let i = 0; i < 28; i++) {
-      const bulb = document.createElement('i');
-      bulb.style.setProperty('--a', `${(i * 360) / 28}deg`);
-      bulbsEl.appendChild(bulb);
-    }
+function clearMultiplierBadges() {
+  for (const m of multChips) {
+    if (m.inst && stage) stage.removeBase(m.inst);
+    if (m.el) m.el.remove();
+    if (m.info.img && m.info.cell.isConnected) m.info.img.style.visibility = '';
   }
-
-  const labelsEl = document.getElementById('wofLabels');
-  labelsEl.innerHTML = '';
-  segments.forEach((segment, i) => {
-    const spoke = document.createElement('div');
-    spoke.className = `wof__label${segment.type === 'free_spins' ? ' wof__label--fs' : ''}`;
-    spoke.style.setProperty('--a', `${i * step}deg`);
-    const text = document.createElement('span');
-    text.textContent = wofSegmentLabel(segment);
-    spoke.appendChild(text);
-    labelsEl.appendChild(spoke);
-  });
+  multChips = [];
+  multLitCells.clear();
 }
 
-function playWheelOfFortune(wheel) {
-  const popup = document.getElementById('wofPopup');
-  const rotor = document.getElementById('wofRotor');
-  const spinBtn = document.getElementById('wofSpin');
-  const prizeEl = document.getElementById('wofPrize');
-  if (!popup || !wheel) return Promise.resolve();
+// Spine chip over the cell (falls back to the value art laid over the tile).
+async function createMultiplierChip(info, value) {
+  const m = { info, value, inst: null, el: null };
+  try {
+    const res = await getMultiplierResource();
+    const inst = res.createInstance();
+    inst.anchorEl = info.anchor;
+    inst.boundsOverride = TILE_BOX;
+    inst.fit = TILE_FIT;
+    const art = multArt(value) || 3;
+    inst.skeleton.setSkinByName(`val_${art}`);
+    inst.skeleton.setSlotsToSetupPose();
+    inst.play('landing', false);
+    stage.addBase(inst);
+    info.img.style.visibility = 'hidden';
+    m.inst = inst;
+  } catch (err) {
+    const el = document.createElement('img');
+    el.className = 'mult-chip-value';
+    el.src = `${MULT_UI}/mult_chip_x${multArt(value) || 3}.png`;
+    info.cell.appendChild(el);
+    m.el = el;
+  }
+  multChips.push(m);
+  return m;
+}
 
-  const segments = wheel.segments || [];
-  renderWheel(segments);
-  prizeEl.hidden = true;
-  prizeEl.classList.remove('is-visible');
-  spinBtn.disabled = false;
-  rotor.style.transition = 'none';
-  rotor.style.setProperty('--wof-angle', '0deg');
-  void rotor.offsetHeight;
+// Every landed multiplier flips its value in, all at once.
+async function revealMultipliers(positions) {
+  const list = (positions || []).map((p) => ({ p, info: cellInfos[p.row * GRID_COLS + p.col] }))
+    .filter(({ info }) => info && info.symbol === 'wof');
+  if (!list.length) return [];
+  const shown = await Promise.all(list.map(({ p, info }) => createMultiplierChip(info, p.value)));
+  Sound.playSfx('wildWin');
+  await wait(MULT_REVEAL_MS);
+  return shown;
+}
 
-  popup.hidden = false;
-  void popup.offsetHeight;
-  popup.classList.add('is-open');
-  Sound.playSfx('popupOpen');
+// The plate: the art + its value — the value art for x2/3/5/7/9, gold text
+// for anything else (round totals; x1 = idle).
+function setMultiplierPlate(value, { lit = false, bump = false } = {}) {
+  const plate = document.getElementById('multPlate');
+  if (!plate) return;
+  const box = document.getElementById('multPlateValue');
+  const art = multArt(value);
+  box.innerHTML = art ? `<img src="${MULT_UI}/mult_plate_x${art}.png" alt="x${value}">` : `<span>x${value}</span>`;
+  plate.classList.toggle('is-lit', lit);
+  if (bump) {
+    box.classList.remove('is-bump');
+    void box.offsetWidth; // restart the keyframes
+    box.classList.add('is-bump');
+  }
+}
 
-  return new Promise((resolve) => {
-    const start = () => {
-      spinBtn.disabled = true;
-      spinBtn.removeEventListener('click', start);
-      Sound.playSfx('wheelSpin');
-      const step = 360 / Math.max(1, segments.length);
-      const target = -(WOF_SPIN_TURNS * 360 + wheel.segment_index * step);
-      rotor.style.transition = `transform ${WOF_SPIN_MS}ms cubic-bezier(0.15, 0.85, 0.2, 1)`;
-      rotor.style.setProperty('--wof-angle', `${target}deg`);
+// A copy of each value flies from its chip into the plate.
+function flyMultipliersToPlate(shown) {
+  const plate = document.getElementById('multPlateValue');
+  if (!plate || !shown.length) return Promise.resolve();
+  const to = plate.getBoundingClientRect();
+  return Promise.all(shown.map(({ info, value }, i) => {
+    const r = info.anchor.getBoundingClientRect();
+    const k = r.width / 200; // stage scale
+    const fly = document.createElement('img');
+    fly.className = 'mult-fly';
+    fly.src = `${MULT_UI}/mult_chip_x${multArt(value) || 3}.png`;
+    fly.style.left = `${r.left + r.width / 2}px`;
+    fly.style.top = `${r.top + r.height / 2}px`;
+    fly.style.height = `${62 * k}px`;
+    document.body.appendChild(fly);
+    const dx = to.left + to.width / 2 - (r.left + r.width / 2);
+    const dy = to.top + to.height / 2 - (r.top + r.height / 2);
+    const anim = fly.animate([
+      { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
+      { transform: `translate(calc(-50% + ${dx * 0.5}px), calc(-50% + ${dy * 0.5 - 60}px)) scale(1.4)`, opacity: 1, offset: 0.45 },
+      { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.8)`, opacity: 0.9 },
+    ], { duration: MULT_FLY_MS, delay: i * 90, easing: 'cubic-bezier(0.45, 0, 0.35, 1)', fill: 'both' });
+    return anim.finished.catch(() => {}).then(() => fly.remove());
+  }));
+}
 
-      let settled = false;
-      const finish = async () => {
-        if (settled) return;
-        settled = true;
-        rotor.removeEventListener('transitionend', onEnd);
-        popup.classList.add('is-landed');
-        const segment = segments[wheel.segment_index];
-        prizeEl.textContent =
-          wheel.prize_type === 'free_spins'
-            ? 'FREE SPINS!'
-            : `${segment ? wofSegmentLabel(segment) : ''} = ${Number(wheel.win_amount).toLocaleString('en-US')}`;
-        prizeEl.hidden = false;
-        void prizeEl.offsetHeight;
-        prizeEl.classList.add('is-visible');
-        Sound.playSfx(wheel.prize_type === 'free_spins' ? 'bigWin' : 'smallWin');
-        await wait(WOF_PRIZE_HOLD_MS);
-        popup.classList.remove('is-open', 'is-landed');
-        Sound.playSfx('popupClose');
-        await wait(DIM_TRANSITION_MS);
-        popup.hidden = true;
-        resolve();
-      };
-      const onEnd = (event) => {
-        if (event.target === rotor && event.propertyName === 'transform') finish();
-      };
-      rotor.addEventListener('transitionend', onEnd);
-      setTimeout(finish, WOF_SPIN_MS + 400);
-    };
-    spinBtn.addEventListener('click', start);
-  });
+// The whole step, between the landing and the win presentation.
+// inRound: this spin was played inside a free-spins round.
+async function playMultipliers(cm, inRound) {
+  if (!cm) return;
+  const shown = await revealMultipliers(cm.positions);
+  const counts = inRound ? shown.length > 0 : cm.applied;
+  if (counts) {
+    for (const m of shown) {
+      multLitCells.add(m.info);
+      if (m.inst) m.inst.play('win', false);
+    }
+    await flyMultipliersToPlate(shown);
+  }
+  if (inRound && cm.round_multiplier != null) {
+    setMultiplierPlate(cm.round_multiplier, { lit: cm.round_multiplier > 1, bump: counts || cm.applied });
+  } else if (cm.applied) {
+    setMultiplierPlate(cm.multiplier_sum, { lit: true, bump: true });
+  }
+}
+
+// A base-game spin starts from x1; a round keeps its total.
+function resetMultiplierPlate() {
+  setMultiplierPlate(1);
 }
 
 // --- Popups (DOM) -----------------------------------------------------------
@@ -1130,6 +1148,24 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = false } = 
   const content = POPUP_CONTENT[key];
   if (!content) return Promise.resolve();
   const run = async () => {
+    if (SPINE_POPUPS[key] && stage) {
+      for (const name of ['hero_man', 'hero_woman', 'hero_man_mob', 'hero_woman_mob']) playSceneClip(name, 'win');
+      if (content.tier === 'spins') playSceneClip('freespins', 'win');
+      if (ownDim) pushScreenDim(false);
+      Sound.playSfx('popupOpen');
+      const done = await runSpinePopup(SPINE_POPUPS[key], async (inst, pin) => {
+        const el = document.createElement('div');
+        el.className = `spop-amount${content.count ? ' spop-amount--count' : ''}`;
+        el.textContent = '0';
+        pin(el, content.count ? 'count' : 'amount', content.count ? 150 : 82);
+        await wait(450);
+        await countUp(el, Number(amount) || 0, content.count ? 500 : POPUP_COUNT_MS, content.count);
+        await wait(holdMs);
+        Sound.playSfx('popupClose');
+      });
+      if (ownDim) popScreenDim(false);
+      if (done) return;
+    }
     const root = document.getElementById('gpop');
     const amountEl = document.getElementById('gpopAmount');
     document.getElementById('gpopTitle').textContent = content.title;
@@ -1162,6 +1198,88 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = false } = 
   return popupBusy;
 }
 
+// --- Spine popups (designer's PSB Desk_Gangsta_Slot_F, 2026-10-25) --------
+//
+// img/gangsta-casino/spine/popups/<slug> (scripts/gc_popups_spine.py): clips
+// intro → idle (loop) → outro. Their own 70 % dim slot is switched off — the
+// game's screen dim does that job in both layouts. The amount / spin count is
+// DOM text pinned every frame to the skeleton's `amount` / `count` bone (its
+// scale 0 → 1 in intro, → 0 in outro). The DOM cards stay as the fallback.
+const SPINE_POPUPS = {
+  bigWin: 'big_win', megaWin: 'mega_win', epicWin: 'epic_win',
+  bonusSpinsWin: 'bonus_spins_win', bonusSpinsTotalWin: 'bonus_spins_total_win', buy: 'buy_free_spins',
+};
+const POPUP_BOX_MOB = { x: -500, y: -470, width: 1000, height: 940 }; // the popup art, not the whole 1932
+const POPUP_OUT_S = 0.5;
+
+function getPopupResource(slug) {
+  if (!stage) return Promise.reject(new Error('no spine stage'));
+  return loadSpineWithRetry(stage.assetManager, `${SPINE_ROOT}/popups/${slug}`, { premultipliedAlpha: false });
+}
+
+// screen px of a bone + its world scale in CSS px per skeleton unit
+function boneOnScreen(inst, name) {
+  const b = inst.skeleton.findBone(name);
+  if (!b) return null;
+  const canvas = document.getElementById('spineCanvas');
+  const r = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  return {
+    x: r.left + (b.worldX + canvas.width / 2) / dpr,
+    y: r.top + (canvas.height / 2 - b.worldY) / dpr,
+    s: b.getWorldScaleX() / dpr,
+  };
+}
+
+// Opens a Spine popup; `body(inst, pin)` runs while it is up and decides when it
+// closes (resolve). pin(el, bone, heightPx) keeps a DOM element on a bone.
+async function runSpinePopup(slug, body) {
+  let res;
+  try { res = await getPopupResource(slug); } catch (err) { console.warn('popup', slug, err); return null; }
+  const inst = res.createInstance();
+  const portrait = isMobileLayout();
+  inst.anchorEl = document.getElementById('stage');
+  inst.boundsOverride = portrait ? POPUP_BOX_MOB : FEATURE_BOX;
+  inst.fit = 1;
+  for (const slot of inst.skeleton.slots) {
+    if (slot.attachment && slot.attachment.name === 'black') slot.setAttachment(null);
+  }
+  const pins = [];
+  const pin = (el, bone, h) => { document.body.appendChild(el); pins.push({ el, bone, h }); };
+  let live = true;
+  const follow = () => {
+    if (!live) return;
+    for (const p of pins) {
+      const o = boneOnScreen(inst, p.bone);
+      if (!o) continue;
+      p.el.style.left = `${o.x}px`;
+      p.el.style.top = `${o.y}px`;
+      if (p.h) p.el.style.fontSize = `${Math.max(0, p.h * o.s)}px`;
+      p.el.style.setProperty('--s', o.s);
+      p.el.style.opacity = o.s > 0.02 ? '' : '0';
+    }
+    requestAnimationFrame(follow);
+  };
+  // swallow clicks on the game underneath while the popup is up
+  const blocker = document.createElement('div');
+  blocker.className = 'spop-block';
+  document.body.appendChild(blocker);
+  document.body.classList.add('is-spine-popup');
+  stage.addOverlay(inst);
+  inst.play('intro', false);
+  inst.queue('idle', true);
+  requestAnimationFrame(follow);
+  const outcome = await body(inst, pin);
+  inst.play('outro', false);
+  await wait(POPUP_OUT_S * 1000 + 40);
+  live = false;
+  stage.removeOverlay(inst);
+  for (const p of pins) p.el.remove();
+  blocker.remove();
+  document.body.classList.remove('is-spine-popup');
+  return { value: outcome };
+}
+
 function playPopup(key, amount = 0, holdMs = 2500) {
   return playPopupSequence(key, amount, holdMs, { ownDim: true });
 }
@@ -1170,7 +1288,48 @@ function playPopup(key, amount = 0, holdMs = 2500) {
 // `note` is a small line under the price ("BET a → b" when the bet had to be
 // lowered — js/buy-bonus.js); `affordable: false` turns the card into a
 // NOT ENOUGH BALANCE notice with only ✗.
-function openBuyDialog(price, { note = '', affordable = true } = {}) {
+function openBuyDialog(price, opts = {}) {
+  if (!stage) return openBuyDialogDom(price, opts);
+  const { note = '', affordable = true } = opts;
+  pushScreenDim(false);
+  Sound.playSfx('popupOpen');
+  return runSpinePopup(SPINE_POPUPS.buy, (inst, pin) => new Promise((resolve) => {
+    const el = document.createElement('div');
+    el.className = `spop-amount spop-amount--price${affordable ? '' : ' is-notice'}`;
+    el.innerHTML = affordable ? `${Number(price).toLocaleString('en-US')}${note ? `<small>${note}</small>` : ''}` : 'NOT ENOUGH BALANCE';
+    pin(el, 'amount', affordable ? 62 : 40);
+    if (!affordable) inst.skeleton.findSlot('accept').setAttachment(null);
+    // invisible hit areas over the art's ✓ / ✗ (they follow the bones)
+    const hit = (bone, label) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'spop-hit';
+      b.setAttribute('aria-label', label);
+      const a = inst.skeleton.getAttachmentByName(bone, bone);
+      b.style.setProperty('--w', a ? a.width : 300);
+      b.style.setProperty('--h', a ? a.height : 95);
+      pin(b, bone, 0);
+      return b;
+    };
+    const yes = affordable ? hit('accept', 'Купить') : null;
+    const no = hit('decline', 'Отмена');
+    const finish = (answer) => {
+      document.removeEventListener('keydown', onKey);
+      Sound.playSfx(answer ? 'click' : 'popupClose');
+      resolve(answer && affordable);
+    };
+    const onKey = (e) => { if (e.key === 'Escape') finish(false); };
+    document.addEventListener('keydown', onKey);
+    if (yes) yes.addEventListener('click', () => finish(true), { once: true });
+    no.addEventListener('click', () => finish(false), { once: true });
+  })).then((r) => {
+    popScreenDim(false);
+    if (r) return r.value;
+    return openBuyDialogDom(price, opts); // the export failed to load
+  });
+}
+
+function openBuyDialogDom(price, { note = '', affordable = true } = {}) {
   const dlg = document.getElementById('buyDialog');
   const priceEl = document.getElementById('buyDialogPrice');
   priceEl.textContent = affordable ? Number(price).toLocaleString('en-US') : 'NOT ENOUGH BALANCE';
@@ -1208,9 +1367,26 @@ function openBuyDialog(price, { note = '', affordable = true } = {}) {
 
 // --- Dev panel --------------------------------------------------------------
 
-const DEV_WHEEL_SEGMENTS = [2, 5, 3, 8, 4, 'fs', 2, 6, 3, 7, 4, 5, 'fs', 10].map((v) =>
-  v === 'fs' ? { type: 'free_spins', value: null } : { type: 'multiplier', value: v },
-);
+// Multiplier demo without the backend: a middle-row win plus two chips (x3,
+// x5). In the base game the plate shows the spin's x8; in free spins the
+// values add to the round total each time (?demomult / ?demomult=fs).
+let devRoundMultiplier = 1;
+async function demoMultipliers() {
+  const inRound = currentMode() === 'freespins';
+  await applyGrid([
+    ['rare_purple', 'rare_blue', 'common_4', 'wof', 'common_3'],
+    ['common_1', 'common_1', 'common_1', 'common_4', 'common_2'],
+    ['rare_yellow', 'rare_green', 'common_2', 'common_3', 'wof'],
+  ]);
+  const positions = [{ row: 0, col: 3, value: 3 }, { row: 2, col: 4, value: 5 }];
+  if (inRound) devRoundMultiplier += 8;
+  await playMultipliers({
+    positions, applied: true, multiplier_sum: 8, round_multiplier: inRound ? devRoundMultiplier : null,
+  }, inRound);
+  const lw = [{ payline: 1, positions: [{ row: 1, col: 0 }, { row: 1, col: 1 }, { row: 1, col: 2 }] }];
+  playWinCells(lw[0].positions, lw, []);
+  showInlineWinAmount(21000 * (inRound ? devRoundMultiplier : 8));
+}
 
 function setupDevPanel() {
   const toggleBtn = document.getElementById('devToggle');
@@ -1227,16 +1403,7 @@ function setupDevPanel() {
     });
   });
   document.getElementById('devBuy').addEventListener('click', () => openBuyDialog(10000000));
-  document.getElementById('devWheel').addEventListener('click', () => {
-    const idx = Math.floor(Math.random() * DEV_WHEEL_SEGMENTS.length);
-    const seg = DEV_WHEEL_SEGMENTS[idx];
-    playWheelOfFortune({
-      segments: DEV_WHEEL_SEGMENTS,
-      segment_index: idx,
-      prize_type: seg.type === 'free_spins' ? 'free_spins' : 'multiplier',
-      win_amount: seg.type === 'free_spins' ? '0' : String(seg.value * 100000),
-    });
-  });
+  document.getElementById('devMult').addEventListener('click', () => demoMultipliers());
   document.getElementById('devBigWild').addEventListener('click', () => previewBigWild(2, false));
   document.getElementById('devFeature').addEventListener('click', () => showFeatureScreen());
 }
@@ -1305,7 +1472,7 @@ function preloadAssets() {
     bgSrcFor('base'),
     bgSrcFor('bonus'),
     ...['frame.png', 'logo.png', 'buy_chest.png', 'buy_cone.png', 'buy_text.png', 'fs_counter.png', 'plate.png', 'chest.png',
-      'buy_title.png', 'wof_wheel.png', 'wof_of_fortune.png', 'scene_people.png',
+      'buy_title.png', 'mult_plate.png', 'scene_people.png',
       ...(isMobileLayout() ? ['logo_mob.png', 'buy_chest_mob.png', 'buy_cone_mob.png', 'buy_text_mob.png', 'frame_mob.png'] : [])].map((f) => `${ASSET_ROOT}/ui/${f}`),
   ].map((src) => track(preloadImage(src))));
   if (stage) {
@@ -1667,6 +1834,11 @@ function init() {
       if (qs.get('screen') === 'bonus') return showBonusScreen(Number(qs.get('spins')) || 10);
       // ?demospin — dev/screenshot: reels spinning at full speed, never land.
       if (qs.has('demospin')) startReelLoop();
+      // ?demomult[=fs] — dev/screenshot: the multiplier reveal (free spins: round total).
+      if (qs.has('demomult')) {
+        if (qs.get('demomult') === 'fs') { applyModeScreen('freespins'); setFreeSpinsCounter(7); }
+        setTimeout(() => demoMultipliers(), 600);
+      }
       // ?demowin — dev/screenshot: a two-line win on a fixed grid.
       if (qs.has('demowin')) {
         applyGrid([['common_1', 'common_2', 'common_2', 'rare_blue', 'common_3'], ['common_2', 'common_2', 'common_3', 'common_4', 'common_1'], ['rare_green', 'common_4', 'common_2', 'common_1', 'scatter']]);

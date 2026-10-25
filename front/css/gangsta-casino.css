@@ -581,6 +581,40 @@ body {
    shares the .spine-canvas class and would drag the live frame/logo over the
    dim. */
 body.is-feature-screen #spineCanvas { position: fixed; z-index: 59; }
+/* Spine popups draw on the top canvas, raised over the frame, logo and bar. */
+body.is-spine-popup #spineCanvas { position: fixed; z-index: 59; }
+.spop-amount {
+  position: fixed;
+  z-index: 60;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  white-space: nowrap;
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  line-height: 1;
+  padding-top: 0.08em;
+  color: #fff;
+  text-shadow: 0 0.04em 0 rgba(0, 0, 0, 0.7), 0 0 0.2em rgba(255, 200, 80, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.spop-amount small { font-size: 0.32em; opacity: 0.8; margin-top: 0.2em; }
+.spop-amount.is-notice { color: #ff8a8a; }
+.spop-amount--count { color: #fff; }
+.spop-block { position: fixed; inset: 0; z-index: 58; }
+.spop-hit {
+  position: fixed;
+  z-index: 61;
+  width: calc(var(--w) * var(--s, 1) * 1px);
+  height: calc(var(--h) * var(--s, 1) * 1px);
+  transform: translate(-50%, -50%);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 14px;
+}
+.spop-hit:hover { box-shadow: 0 0 18px 4px rgba(255, 220, 120, 0.55); }
 body.is-feature-screen .dev-panel,
 body.is-feature-screen .to-catalog-btn { visibility: hidden; }
 
@@ -807,229 +841,74 @@ body.is-feature-screen .to-catalog-btn { visibility: hidden; }
 .buy-dialog__btn:active { transform: scale(0.94); }
 
 /* ================================================================
-   Wheel of Fortune — 14 sectors (the delivered drum art's count).
-   Disk/labels rotate (--wof-angle); rim, bulbs, pointer and hub stay put.
-   Pointer at 12 o'clock; slot.js turns the rotor -i*step to land sector i.
+   Multipliers (slot.js revealMultipliers / setMultiplierPlate): the chip
+   itself is Spine (img/gangsta-casino/spine/multiplier).
    ================================================================ */
-.wof {
+/* Flying copy of a value on its way to the plate (position: fixed, viewport px). */
+.mult-fly {
   position: fixed;
-  inset: 0;
-  z-index: 40;
+  z-index: 60;
+  pointer-events: none;
+  width: auto;
+  filter: drop-shadow(0 0 10px rgba(255, 200, 70, 0.9));
+}
+/* Fallback without WebGL: the value art laid over the empty chip tile. */
+.reel__cell .mult-chip-value { position: absolute; left: 50%; top: 50%; width: auto; height: 62px; transform: translate(-50%, -50%); }
+
+/* The plate on its chains (ui/mult_plate.png 303x256: chains up top, the
+   "MULTIPLIER" plaque below; the value goes in the plaque's window — centre
+   152,207 of the art). Hangs from the top edge on desktop, from the frame's
+   bottom edge in portrait; sways on its chains like the Spine idle (4 s). */
+.mult-plate {
+  left: 1238px;
+  top: -79px;          /* chains run off the top; the plaque sits above the frame */
+  width: 212px;        /* 0.7 of the art */
+  height: 179px;
+  z-index: 1;
+  pointer-events: none;
+  transform-origin: 50% 0;
+  animation: mult-plate-sway 4s ease-in-out infinite;
+}
+.mult-plate__art { position: absolute; inset: 0; width: 100%; height: 100%; }
+.mult-plate__value {
+  position: absolute;
+  left: 50.2%;
+  top: 80.9%;
+  height: 24.2%;       /* 62 px of the 256 px art */
+  transform: translate(-50%, -50%);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1.2vh;
-  background: radial-gradient(circle at 50% 55%, rgba(70, 20, 110, 0.82), rgba(0, 0, 0, 0.92) 70%);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 320ms ease;
 }
-.wof[hidden] { display: none; }
-.wof.is-open { opacity: 1; pointer-events: auto; }
-
-.wof__title {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 0.5vh;
-  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.8));
-}
-.wof__title-a { width: min(16vh, 30vw, 180px); }
-.wof__title-b { width: min(30vh, 56vw, 330px); margin-top: -0.6vh; }
-
-.wof__wheel {
-  position: relative;
-  width: min(58vh, 84vw, 540px);
-  aspect-ratio: 1;
-}
-.wof__glow {
-  position: absolute;
-  inset: -16%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 63, 164, 0.45), rgba(120, 40, 220, 0.2) 45%, transparent 68%);
-  animation: wof-glow 2.4s ease-in-out infinite;
-}
-@keyframes wof-glow { 50% { opacity: 0.55; transform: scale(1.05); } }
-
-.wof__rotor {
-  position: absolute;
-  inset: 7%;
-  border-radius: 50%;
-  transform: rotate(var(--wof-angle, 0deg));
-}
-.wof__disk {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.55);
-}
-.wof__labels { position: absolute; inset: 0; pointer-events: none; }
-.wof__label {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  width: 0;
-  height: 50%;
-  transform-origin: 50% 100%;
-  transform: rotate(var(--a));
-}
-.wof__label > span {
-  position: absolute;
-  top: 20%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+.mult-plate__value img { height: 100%; width: auto; display: block; }
+.mult-plate__value span {
   font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
-  font-size: clamp(14px, 3.3vh, 30px);
-  line-height: 0.95;
-  color: #fff;
-  text-shadow: 0 2px 0 rgba(30, 0, 40, 0.9), 0 0 8px rgba(0, 0, 0, 0.6);
-  white-space: nowrap;
-  text-align: center;
-}
-.wof__label--fs > span {
-  font-size: clamp(9px, 1.6vh, 15px);
-  white-space: normal;
-  width: 5.2ch;
-  color: #2a1200;
-  text-shadow: 0 1px 0 rgba(255, 240, 190, 0.8);
-}
-
-/* Chrome rim: a ring masked out of a conic metal gradient. */
-.wof__rim {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: conic-gradient(#e9edf3, #7d828c, #f6f7fa, #5f646e, #d7dbe2, #868b95, #f2f3f6, #6a6f79, #e9edf3);
-  /* Disk radius = 86% of the wheel's (rotor inset 7%). */
-  -webkit-mask: radial-gradient(circle closest-side, transparent 0 calc(86% - 1px), #000 86%);
-  mask: radial-gradient(circle closest-side, transparent 0 calc(86% - 1px), #000 86%);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-  pointer-events: none;
-}
-.wof__bulbs { position: absolute; inset: 0; pointer-events: none; }
-.wof__bulbs i {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  width: 0;
-  height: 50%;
-  transform-origin: 50% 100%;
-  transform: rotate(var(--a));
-}
-.wof__bulbs i::before {
-  content: '';
-  position: absolute;
-  top: calc(7% - 6px); /* mid-rim */
-  left: -6px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #fff, #ffd76a 45%, #b26b00);
-  box-shadow: 0 0 10px rgba(255, 210, 90, 0.95);
-  animation: bulb 0.9s steps(1) infinite;
-}
-.wof__bulbs i:nth-child(odd)::before { animation-delay: 0.45s; }
-.wof.is-landed .wof__bulbs i::before { animation-duration: 0.25s; }
-@keyframes bulb { 50% { background: radial-gradient(circle at 35% 35%, #fff, #ff7ac6 45%, #8a0a54); box-shadow: 0 0 10px rgba(255, 63, 164, 0.95); } }
-
-.wof__pointer {
-  position: absolute;
-  left: 50%;
-  top: -2.5%;
-  width: 9%;
-  height: 12%;
-  transform: translateX(-50%);
-  background: linear-gradient(90deg, #8c9099, #f7f8fb 45%, #6b7079);
-  clip-path: polygon(0 0, 100% 0, 50% 100%);
-  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.6));
-  z-index: 2;
-}
-.wof__pointer::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 14%;
-  width: 34%;
-  aspect-ratio: 1;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #fff, #ff4fa8 50%, #8a0a54);
-}
-
-.wof__spin {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 22%;
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-  z-index: 3;
-  transition: transform 120ms ease, filter 200ms ease;
-}
-.wof__hub {
-  /* Chrome hub with the brand "G" (the delivered hub PNG is only ~70px). */
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 50% 50%, #1b1f4a 0 52%, transparent 53%),
-    conic-gradient(#f4f6fa, #7b808b, #fbfcfe, #5d626c, #e1e4ea, #8a8f99, #f4f6fa);
-  box-shadow: 0 0 0 3px #3b3f4a, 0 6px 16px rgba(0, 0, 0, 0.6), inset 0 0 0 calc(var(--hub-ring, 6px)) rgba(255, 255, 255, 0.08);
-  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
-  font-style: normal;
-  font-weight: 400;
-  font-size: 300%;
+  font-size: 40px;
   line-height: 1;
-  color: #e9edf3;
-  text-shadow: 0 2px 0 #4a4f5a, 0 0 10px rgba(57, 213, 255, 0.55);
-  pointer-events: none;
-}
-.wof__spin { font-size: clamp(14px, 2.6vh, 24px); }
-.wof__spin span {
-  position: absolute;
-  left: 50%;
-  bottom: -6%;
-  transform: translateX(-50%);
-  padding: 2px 12px 0;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #ff4fa8, #a3105c);
-  box-shadow: 0 0 0 2px #f2d27a, 0 0 14px rgba(255, 63, 164, 0.8);
-  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
-  font-size: clamp(13px, 2.2vh, 22px);
-  color: #fff;
-  letter-spacing: 0.06em;
-}
-.wof__spin:hover { filter: brightness(1.12); }
-.wof__spin:active { transform: translate(-50%, -50%) scale(0.94); }
-.wof__spin:disabled { cursor: default; }
-.wof__spin:disabled span { opacity: 0; transition: opacity 200ms ease; }
-.wof__spin:not(:disabled) { animation: wof-pulse 1.3s ease-in-out infinite; }
-@keyframes wof-pulse {
-  0%, 100% { filter: drop-shadow(0 0 6px rgba(255, 63, 164, 0.5)); }
-  50% { filter: drop-shadow(0 0 22px rgba(255, 63, 164, 0.95)); }
-}
-
-.wof__prize {
-  min-height: 1.2em;
-  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
-  font-size: clamp(24px, 5vh, 58px);
-  color: var(--gold);
-  -webkit-text-stroke: 2px #3b1700;
-  text-shadow: 0 4px 0 #3b1700, 0 0 30px rgba(255, 63, 164, 0.8);
+  padding-top: 4px;
   white-space: nowrap;
-  opacity: 0;
-  transform: scale(0.7);
-  transition: opacity 260ms ease, transform 260ms cubic-bezier(0.2, 1.4, 0.4, 1);
+  background: linear-gradient(180deg, #fff6c4 0%, #ffd75a 45%, #d18a12 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 1px rgba(60, 25, 0, 0.9);
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.7));
 }
-.wof__prize[hidden] { display: none; }
-.wof__prize.is-visible { opacity: 1; transform: scale(1); }
+.mult-plate:not(.is-lit) .mult-plate__value { opacity: 0.55; }
+.mult-plate.is-lit .mult-plate__value { filter: drop-shadow(0 0 8px rgba(255, 200, 70, 0.85)); }
+.mult-plate__value.is-bump { animation: mult-value-pop 600ms cubic-bezier(0.3, 1.4, 0.5, 1); }
+@keyframes mult-value-pop {
+  0% { transform: translate(-50%, -50%) scale(1); }
+  20% { transform: translate(-50%, -50%) scale(0.6); }
+  50% { transform: translate(-50%, -50%) scale(1.25); }
+  75% { transform: translate(-50%, -50%) scale(0.96); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes mult-plate-sway {
+  0%, 50%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(1.2deg); }
+  75% { transform: rotate(-1.2deg); }
+}
 
 /* ---------- Paytable info popup ---------- */
 .info-popup {
@@ -1118,6 +997,9 @@ body.is-feature-screen .to-catalog-btn { visibility: hidden; }
 
   .logo--desk { display: none; }
   .logo--mob { display: block; left: 52px; top: -110px; width: 687px; height: 357px; } /* PSB -60, up 50 */
+  /* Plate centred on the frame's bottom edge, between the heroes. */
+  /* hangs from the frame's bottom edge, between the heroes */
+  .mult-plate { left: 269px; top: 762px; width: 242px; height: 205px; }
 
   .sign-buy-bonus { left: 43px; top: 901px; width: 244px; height: 240px; } /* PSB 941, up 40 (product) */
   .sign-buy-bonus__art--desk { display: none; }

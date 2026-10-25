@@ -35,6 +35,10 @@ class CoinMultiplierFeature(BonusFeature):
         if spin_result.grid is None:
             return False
         coin_code = config.get("coin_symbol_code", "coin")
+        # round_sticky: inside a round the accumulated multiplier applies to
+        # every winning spin, with or without a coin on this grid.
+        if config.get("round_sticky") and spin_result.session_state.get("free_spins_remaining", 0) > 0:
+            return True
         return any(coin_code in column for column in spin_result.grid.reels)
 
     def execute(self, game_state: FeatureContext, config: dict) -> FeatureResult:
@@ -72,12 +76,40 @@ class CoinMultiplierFeature(BonusFeature):
         applied = has_collector and line_pay_total > 0 and not config.get("display_only", False)
         bonus_win = line_pay_total * (multiplier_sum - 1) if applied and multiplier_sum > 0 else Decimal(0)
 
+        # Sugar Blast (GDD-05 §6.2, the GDD-04 accumulator module): inside a
+        # free-spins round the coins of a WINNING spin are added to a round
+        # multiplier that starts at x1 and never resets until the round ends;
+        # that spin's line pay is multiplied by the round total instead of the
+        # spin's own sum. Coins of a spin without a line win are not counted.
+        round_multiplier = None
+        state = game_state.session_state
+        if config.get("round_accumulate") and state.get("free_spins_remaining", 0) > 0:
+            round_multiplier = Decimal(str(state.get("free_spins_bomb_multiplier", "1")))
+            if config.get("round_sticky"):
+                # Gangsta Casino (product): EVERY multiplier that lands adds to
+                # the round total (win or not), and the total multiplies the
+                # line pay of every winning spin until the round ends.
+                if multiplier_sum > 0:
+                    round_multiplier += multiplier_sum
+                    state["free_spins_bomb_multiplier"] = str(round_multiplier)
+                applied = line_pay_total > 0 and round_multiplier > 1
+                bonus_win = line_pay_total * (round_multiplier - 1) if applied else Decimal(0)
+            elif applied and multiplier_sum > 0:
+                round_multiplier += multiplier_sum
+                state["free_spins_bomb_multiplier"] = str(round_multiplier)
+                bonus_win = line_pay_total * (round_multiplier - 1)
+
         return FeatureResult(
             feature_id=self.feature_id,
             triggered=True,
             win_amount=bonus_win,
             state_patch={},
-            details={"coin_positions": positions, "multiplier_sum": str(multiplier_sum), "applied": applied},
+            details={
+                "coin_positions": positions,
+                "multiplier_sum": str(multiplier_sum),
+                "applied": applied,
+                "round_multiplier": str(round_multiplier) if round_multiplier is not None else None,
+            },
         )
 
     @staticmethod
@@ -116,6 +148,16 @@ class CoinMultiplierFeature(BonusFeature):
                     "type": "boolean",
                     "default": False,
                     "description": "True: values are drawn and reported but never multiply a line (Volt Coins).",
+                },
+                "round_accumulate": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "True: in free spins a winning spin's coins add to a round multiplier (start x1).",
+                },
+                "round_sticky": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "With round_accumulate: every landed coin adds to the round multiplier and it applies to every winning spin of the round.",
                 },
                 "jackpot_values": {
                     "type": "object",

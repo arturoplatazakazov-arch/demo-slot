@@ -81,6 +81,9 @@ def coin_multiplier_out(details: dict | None) -> schemas.CoinMultiplierOut | Non
             for p in details["coin_positions"]
         ],
         applied=bool(details["applied"]),
+        round_multiplier=(
+            int(Decimal(details["round_multiplier"])) if details.get("round_multiplier") is not None else None
+        ),
     )
 
 
