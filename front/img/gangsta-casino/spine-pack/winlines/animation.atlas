@@ -1,0 +1,11 @@
+animation.png
+size:328,64
+filter:Linear,Linear
+glow
+bounds:0,0,64,64
+core
+bounds:66,0,64,16
+dot
+bounds:132,0,64,64
+comet
+bounds:198,0,128,32

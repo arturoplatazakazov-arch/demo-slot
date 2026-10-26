@@ -1,0 +1,7 @@
+animation.png
+size:435,256
+filter:Linear,Linear
+plate
+bounds:0,0,303,256
+glow
+bounds:305,0,128,128

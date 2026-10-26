@@ -1,0 +1,7 @@
+animation.png
+size:2048,1024
+filter:Linear,Linear
+slot
+bounds:0,0,1139,795
+shine
+bounds:1141,0,128,512

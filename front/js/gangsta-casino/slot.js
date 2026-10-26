@@ -229,8 +229,19 @@ function loadSpineWithRetry(assetManager, folder, opts, tries = 3) {
   return promise;
 }
 
+// The Spine pack handed to the developers (images optimised by the product,
+// 2026-10-26) — img/gangsta-casino/spine-pack: symbols, scene, screens (one
+// skeleton for desk + mob), popups, multiplier, its plate, win lines.
+// ?pack=old — dev: the game's previous own folders, for comparison.
+const PACK = new URLSearchParams(location.search).get('pack') === 'old' ? null : `${ASSET_ROOT}/spine-pack`;
+// game code -> [pack folder, pma]
+const PACK_SYMBOLS = new Set(['common_1', 'common_2', 'common_3', 'common_4', 'rare_purple', 'rare_yellow', 'rare_blue', 'rare_green', 'scatter', 'wild']);
+const PACK_SCENE = { frame: 'frame', logo: 'logo', hero_man: 'hero_man', hero_woman: 'hero_woman', hero_man_mob: 'hero_man',
+  hero_woman_mob: 'hero_woman', background: 'background', background_mob: 'background_mob', bonus_bg_mob: 'bonus_bg_mob' };
+
 function getSymbolResource(code) {
   if (!stage) return Promise.reject(new Error('no spine stage'));
+  if (PACK && PACK_SYMBOLS.has(code)) return loadSpineWithRetry(stage.assetManager, `${PACK}/${code}`, { premultipliedAlpha: true });
   // Atlases are true premultiplied alpha (pma:true, RGB <= A in every pixel).
   return loadSpineWithRetry(stage.assetManager, `${SPINE_ROOT}/${code}`, { premultipliedAlpha: true });
 }
@@ -404,7 +415,7 @@ function createWinLinesLayer() {
 function getWinLinesInstance() {
   if (winLinesInst) return Promise.resolve(winLinesInst);
   if (!backStage) return Promise.reject(new Error('no back stage'));
-  return loadSpineWithRetry(backStage.assetManager, `${SPINE_ROOT}/${WIN_LINES_CODE}`, { premultipliedAlpha: false })
+  return loadSpineWithRetry(backStage.assetManager, `${PACK || SPINE_ROOT}/${WIN_LINES_CODE}`, { premultipliedAlpha: false })
     .then((resource) => {
       if (winLinesInst) return winLinesInst;
       const inst = resource.createInstance();
@@ -975,7 +986,7 @@ function multArt(value) {
 
 function getMultiplierResource() {
   if (!stage) return Promise.reject(new Error('no spine stage'));
-  return loadSpineWithRetry(stage.assetManager, `${SPINE_ROOT}/multiplier`, { premultipliedAlpha: false });
+  return loadSpineWithRetry(stage.assetManager, `${PACK || SPINE_ROOT}/multiplier`, { premultipliedAlpha: false });
 }
 
 function clearMultiplierBadges() {
@@ -1035,10 +1046,55 @@ function setMultiplierPlate(value, { lit = false, bump = false } = {}) {
   box.innerHTML = `<span>x${value}</span>`;
   plate.classList.toggle('is-lit', lit);
   if (bump) {
-    box.classList.remove('is-bump');
-    void box.offsetWidth; // restart the keyframes
-    box.classList.add('is-bump');
+    if (plateInst) {
+      plateInst.play('update', false);
+      plateInst.queue('idle', true, 0);
+    } else {
+      box.classList.remove('is-bump');
+      void box.offsetWidth; // restart the keyframes
+      box.classList.add('is-bump');
+    }
   }
+}
+
+// The plate itself is Spine (pack multiplier_plate: idle = sway on the chains,
+// update = the value pops) on the back canvas, fitted to the #multPlate box;
+// the value stays DOM text, pinned every frame to the skeleton's `value` bone
+// (position, rotation and the update pop). Falls back to the static art.
+let plateInst = null;
+function setupMultiplierPlate() {
+  const plate = document.getElementById('multPlate');
+  if (!PACK || !backStage || !plate) return;
+  loadSpineWithRetry(backStage.assetManager, `${PACK}/multiplier_plate`, { premultipliedAlpha: false }).then((res) => {
+    const inst = res.createInstance();
+    inst.anchorEl = plate;
+    inst.boundsOverride = res.bounds;
+    inst.fit = 1;
+    inst.play('idle', true);
+    backStage.addOverlay(inst);
+    plateInst = inst;
+    plate.classList.add('is-spine');
+    const box = document.getElementById('multPlateValue');
+    const canvas = document.getElementById('spineBackCanvas');
+    const bone = inst.skeleton.findBone('value');
+    const base = bone.getWorldScaleX() || 1;
+    const follow = () => {
+      requestAnimationFrame(follow);
+      if (!plateInst || plate.offsetParent === null) return;
+      const cr = canvas.getBoundingClientRect(), pr = plate.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const x = cr.left + (bone.worldX + canvas.width / 2) / dpr - pr.left;
+      const y = cr.top + (canvas.height / 2 - bone.worldY) / dpr - pr.top;
+      const k = bone.getWorldScaleX() / base;
+      const rot = -bone.getWorldRotationX();
+      // the box is laid out in stage px; the plate's rect is scaled with the stage
+      const sx = plate.offsetWidth / pr.width;
+      box.style.left = `${x * sx}px`;
+      box.style.top = `${y * sx}px`;
+      box.style.transform = `translate(-50%, -50%) rotate(${rot}deg) scale(${k})`;
+    };
+    requestAnimationFrame(follow);
+  }).catch((err) => console.warn('multiplier plate:', err));
 }
 
 // A copy of each value flies from its chip into the plate.
@@ -1214,7 +1270,7 @@ const POPUP_OUT_S = 0.5;
 function getPopupResource(slug) {
   if (!stage) return Promise.reject(new Error('no spine stage'));
   // one atlas shared by all popups (spine/popups/animation.atlas), a skeleton per popup
-  return loadSpineWithRetry(stage.assetManager, `${SPINE_ROOT}/popups`, { premultipliedAlpha: false, skeleton: slug });
+  return loadSpineWithRetry(stage.assetManager, `${PACK || SPINE_ROOT}/popups`, { premultipliedAlpha: false, skeleton: slug });
 }
 
 // screen px of a bone + its world scale in CSS px per skeleton unit
@@ -1464,7 +1520,7 @@ function preloadAssets() {
   // rest, so it never appeared. The bonus screen isn't needed before the
   // first bonus — it loads after the feature screen (see init).
   const tasks = [];
-  if (stage) tasks.push(track(getSymbolResource(screenCode(FEATURE_SCREEN_CODE))));
+  if (stage) tasks.push(track(getScreenResource(FEATURE_SCREEN_CODE)));
   tasks.push(...[
     ...SYMBOL_CODES.map(symbolSrc),
     ...SYMBOL_CODES.map((c) => `${SYMBOL_ROOT}/blur/${SYMBOL_ART[c]}`),
@@ -1477,7 +1533,8 @@ function preloadAssets() {
   ].map((src) => track(preloadImage(src))));
   if (stage) {
     // Skeletons up front so the first win doesn't wait on a fetch.
-    for (const code of SYMBOL_CODES) tasks.push(track(getSymbolResource(code)));
+    // (pack mode: the old wheel chip's win clip is not part of the exports)
+    for (const code of SYMBOL_CODES) if (!(PACK && code === 'wof')) tasks.push(track(getSymbolResource(code)));
     if (LAND_ENABLED) for (const code of SYMBOL_CODES) tasks.push(track(getLandResource(code)));
   }
   if (backStage) {
@@ -1551,6 +1608,7 @@ function sceneWanted(name) {
 }
 function getSceneResource(name) {
   if (!backStage) return Promise.reject(new Error('no back stage'));
+  if (PACK && PACK_SCENE[name]) return loadSpineWithRetry(backStage.assetManager, `${PACK}/${PACK_SCENE[name]}`, { premultipliedAlpha: false });
   name = SCENE_DIR[name] || name;
   // README: "без premultiplied alpha" — and no pma line in the atlases.
   return loadSpineWithRetry(backStage.assetManager, `${SCENE_ROOT}/${name}`, { premultipliedAlpha: false });
@@ -1587,6 +1645,7 @@ function sceneAnchorFor(name, resource) {
 
 async function setupScene() {
   if (!backStage) return;
+  setupMultiplierPlate();
   try {
     for (const name of SCENE_NAMES) {
       if (!sceneWanted(name)) continue;
@@ -1687,6 +1746,12 @@ const FEATURE_BOX = { x: -966, y: -470, width: 1932, height: 940 };
 // Portrait builds (<code>_mob): the same skeletons re-laid out on the mobile
 // canvas 780x1416 (Mob_Mafia_Slot.psb), origin = its centre.
 const FEATURE_BOX_MOB = { x: -390, y: -708, width: 780, height: 1416 };
+// the screen skeleton for this layout (pack mode: one merged skeleton)
+function getScreenResource(baseCode) {
+  const packBase = PACK ? { [FEATURE_SCREEN_CODE]: 'feature_screen', [BONUS_SCREEN_CODE]: 'bonus_screen' }[baseCode] : null;
+  if (packBase) return loadSpineWithRetry(stage.assetManager, `${PACK}/${packBase}`, { premultipliedAlpha: true });
+  return getSymbolResource(screenCode(baseCode));
+}
 function screenCode(code) {
   return isMobileLayout() ? `${code}_mob` : code;
 }
@@ -1705,8 +1770,21 @@ function showSpineScreen(baseCode, { onFrame = null, onClose = null, onCreate = 
   if (!stage || !root) return Promise.resolve(false);
   const portrait = isMobileLayout(); // the layout is fixed for the screen's lifetime
   const code = portrait ? `${baseCode}_mob` : baseCode;
-  return getSymbolResource(code).then((resource) => new Promise((resolve) => {
+  const packBase = PACK ? { [FEATURE_SCREEN_CODE]: 'feature_screen', [BONUS_SCREEN_CODE]: 'bonus_screen' }[baseCode] : null;
+  const load = getScreenResource(baseCode);
+  let captions = [];
+  return load.then((resource) => new Promise((resolve) => {
     const inst = resource.createInstance();
+    if (packBase) {
+      // one skeleton for both layouts: skin desk / mob (+ the counter skin)
+      const lay = portrait ? 'mob' : 'desk';
+      inst.packLayout = lay;
+      const sk = new spine.Skin('screen');
+      sk.addSkin(resource.skeletonData.findSkin(lay));
+      inst.skeleton.setSkin(sk);
+      inst.skeleton.setSlotsToSetupPose();
+      captions = packCaptions(packBase, lay);
+    }
     if (onCreate) onCreate(inst);
     // Both layouts pin the skeleton's canvas box onto #stage, which is that
     // same design canvas (1932x940 / 780x1416) contain-scaled to the screen.
@@ -1734,6 +1812,7 @@ function showSpineScreen(baseCode, { onFrame = null, onClose = null, onCreate = 
     const frame = () => {
       if (done) return;
       if (onFrame) onFrame(inst, alpha);
+      for (const c of captions) pinCaption(inst, c, alpha);
       requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
@@ -1754,6 +1833,7 @@ function showSpineScreen(baseCode, { onFrame = null, onClose = null, onCreate = 
         if (done) return;
         done = true;
         stage.removeOverlay(inst);
+        for (const c of captions) c.el.remove();
         window.removeEventListener('resize', place);
         root.hidden = true;
         root.style.transition = '';
@@ -1778,6 +1858,36 @@ function showSpineScreen(baseCode, { onFrame = null, onClose = null, onCreate = 
   });
 }
 
+// ?pack=opt screens: the captions are not baked in the export — text on the
+// skeleton's text_<key> bones (text_marks.json), alpha = its empty slot's.
+const PACK_CAPTIONS = {
+  feature_screen: [['text_free_spins', 'FREE SPINS', 206, 66], ['text_expanding_wild', 'EXPANDING WILD', 296, 66],
+    ['text_bonus_wheel', 'MULTIPLIER', 250, 66], ['text_tap_to_continue', 'TAP TO CONTINUE', 259, 58]],
+  bonus_screen: [['text_bonus_game', 'BONUS GAME', 266, 71], ['text_tap_to_start', 'TAP TO START', 211, 58]],
+};
+const PACK_CAPTION_SLOTS = { text_free_spins: 'capL', text_expanding_wild: 'capC', text_bonus_wheel: 'capR',
+  text_tap_to_continue: 'cont', text_bonus_game: 't_bonus', text_tap_to_start: 't_start' };
+function packCaptions(base, lay) {
+  const pre = lay === 'mob' ? 'm_' : '';
+  return (PACK_CAPTIONS[base] || []).map(([bone, text, w, h]) => {
+    const el = document.createElement('div');
+    el.className = 'pack-caption';
+    el.textContent = text;
+    document.body.appendChild(el);
+    return { el, bone: pre + bone, slot: pre + PACK_CAPTION_SLOTS[bone], w, h };
+  });
+}
+function pinCaption(inst, c, alpha) {
+  const o = boneOnScreen(inst, c.bone);
+  if (!o) return;
+  const slot = inst.skeleton.findSlot(c.slot);
+  c.el.style.left = `${o.x}px`;
+  c.el.style.top = `${o.y}px`;
+  c.el.style.fontSize = `${c.h * 0.62 * o.s}px`;
+  c.el.style.maxWidth = `${c.w * o.s}px`;
+  c.el.style.opacity = (slot ? slot.color.a : 1) * alpha * inst.skeleton.color.a;
+}
+
 function showFeatureScreen() {
   return showSpineScreen(FEATURE_SCREEN_CODE);
 }
@@ -1791,8 +1901,9 @@ function showBonusScreen(spins) {
   const digits = String(Math.max(0, Math.min(999, spins))).padStart(3, '0');
   return showSpineScreen(BONUS_SCREEN_CODE, {
     onCreate: (inst) => {
+      const pre = inst.packLayout === 'mob' ? 'm_' : '';
       [...digits].forEach((ch, i) => {
-        try { inst.skeleton.setAttachment(`dig${i + 1}`, `d${ch}`); } catch (err) { /* old export */ }
+        try { inst.skeleton.setAttachment(`${pre}dig${i + 1}`, `d${ch}`); } catch (err) { /* old export */ }
       });
     },
   });
@@ -1826,7 +1937,7 @@ function init() {
     // ?nofs — dev/screenshot convenience: straight into the game.
     const qs = new URLSearchParams(location.search);
     // Warm the bonus screen now that the first screen is up.
-    if (stage) getSymbolResource(screenCode(BONUS_SCREEN_CODE)).catch((err) => console.warn('bonus screen:', err));
+    if (stage) getScreenResource(BONUS_SCREEN_CODE).catch((err) => console.warn('bonus screen:', err));
     if (qs.has('nofs') || qs.has('screen')) {
       document.getElementById('preloader')?.remove();
       // ?screen=feature|bonus — dev/screenshot: open that screen straight away.

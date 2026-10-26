@@ -601,6 +601,18 @@ body.is-spine-popup #spineCanvas { position: fixed; z-index: 59; }
 .spop-amount small { font-size: 0.32em; opacity: 0.8; margin-top: 0.2em; }
 .spop-amount.is-notice { color: #ff8a8a; }
 .spop-amount--count { color: #fff; }
+.pack-caption {
+  position: fixed;
+  z-index: 60;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  white-space: nowrap;
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  line-height: 1;
+  padding-top: 0.08em;
+  color: #fff3c8;
+  text-shadow: 0 0.06em 0 rgba(0, 0, 0, 0.75), 0 0 0.25em rgba(255, 190, 60, 0.55);
+}
 .spop-block { position: fixed; inset: 0; z-index: 58; }
 .spop-hit {
   position: fixed;
@@ -870,6 +882,10 @@ body.is-feature-screen .to-catalog-btn { visibility: hidden; }
   animation: mult-plate-sway 4s ease-in-out infinite;
 }
 .mult-plate__art { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* Spine plate (pack multiplier_plate) draws the art and sways; slot.js pins the value on its bone */
+.mult-plate.is-spine { animation: none; }
+.mult-plate.is-spine .mult-plate__art { visibility: hidden; }
+.mult-plate.is-spine .mult-plate__value.is-bump { animation: none; }
 .mult-plate__value {
   position: absolute;
   left: 50.2%;
