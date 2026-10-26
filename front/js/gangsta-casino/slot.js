@@ -217,7 +217,7 @@ let stage = null; // SpineEngine.SpineStage, null if WebGL/Spine is unavailable
 // a short pause, a couple of times.
 const spineRetryCache = new Map();
 function loadSpineWithRetry(assetManager, folder, opts, tries = 3) {
-  const key = `${folder}|${opts.premultipliedAlpha}`;
+  const key = `${folder}|${opts.premultipliedAlpha}|${opts.skeleton || ''}`;
   if (spineRetryCache.has(key)) return spineRetryCache.get(key);
   const attempt = (n, path) => SpineEngine.SpineResource.load(assetManager, path, opts).catch((err) => {
     if (n + 1 >= tries) throw err;
@@ -1026,14 +1026,13 @@ async function revealMultipliers(positions) {
   return shown;
 }
 
-// The plate: the art + its value — the value art for x2/3/5/7/9, gold text
-// for anything else (round totals; x1 = idle).
+// The plate: the art + its value as gold text (round totals add up).
 function setMultiplierPlate(value, { lit = false, bump = false } = {}) {
   const plate = document.getElementById('multPlate');
   if (!plate) return;
+  // always text: in free spins the values add up (x17, x33 …)
   const box = document.getElementById('multPlateValue');
-  const art = multArt(value);
-  box.innerHTML = art ? `<img src="${MULT_UI}/mult_plate_x${art}.png" alt="x${value}">` : `<span>x${value}</span>`;
+  box.innerHTML = `<span>x${value}</span>`;
   plate.classList.toggle('is-lit', lit);
   if (bump) {
     box.classList.remove('is-bump');
@@ -1214,7 +1213,8 @@ const POPUP_OUT_S = 0.5;
 
 function getPopupResource(slug) {
   if (!stage) return Promise.reject(new Error('no spine stage'));
-  return loadSpineWithRetry(stage.assetManager, `${SPINE_ROOT}/popups/${slug}`, { premultipliedAlpha: false });
+  // one atlas shared by all popups (spine/popups/animation.atlas), a skeleton per popup
+  return loadSpineWithRetry(stage.assetManager, `${SPINE_ROOT}/popups`, { premultipliedAlpha: false, skeleton: slug });
 }
 
 // screen px of a bone + its world scale in CSS px per skeleton unit

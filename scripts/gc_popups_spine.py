@@ -14,9 +14,17 @@ button (accept / decline). The amount ("1 000 000 USD") and the spin count
 ("99") are NOT baked — they are drawn by code at bones `amount` / `count`
 (the type layer's centre; bone scale 0 -> 1 in intro, so text can follow it).
 
+All six popups share ONE atlas (rays, coins, money and plates repeat between
+them — identical layers are packed once): <out_root>/popups/animation.atlas +
+pages, and one skeleton file per popup, popups/<slug>.json (load with the
+skeleton name, e.g. SpineResource.load(am, 'popups', {skeleton: 'big_win'})).
+popups/text_marks.json = {slug: marks}.
+
 Usage: python scripts/gc_popups_spine.py <extract_dir> <out_root>
 """
+import hashlib
 import json, math, os, sys
+import numpy as np
 from PIL import Image
 
 SRC, OUT_ROOT = sys.argv[1], sys.argv[2]
@@ -88,10 +96,33 @@ def pack(images, max_w=2048):
     flush()
     return pages
 
+SHARED = {}        # pixel hash -> region name
+SHARED_IMGS = []   # (region, image)
+
+RAYS = []  # (region, image): soft ray layers, reused stretched
+
+def region_for(slug, name, im, ray=False):
+    """Atlas region for a layer: identical pixels -> the same region; a ray
+    layer that is another popup's ray art stretched to a new size (the PSB
+    reuses the same rays at different widths) -> that region, drawn at this
+    layer's size (mean difference < 3/255, i.e. just resampling)."""
+    if ray:
+        a = np.asarray(im, np.float32)
+        for reg, base in RAYS:
+            b = np.asarray(base.resize(im.size, Image.LANCZOS), np.float32)
+            if np.abs(a - b).mean() < 3.0:
+                return reg
+    h = hashlib.md5(im.tobytes() + str(im.size).encode()).hexdigest()
+    if h not in SHARED:
+        SHARED[h] = f'{slug}/{name}'
+        SHARED_IMGS.append((SHARED[h], im))
+        if ray: RAYS.append((SHARED[h], im))
+    return SHARED[h]
+
 def build(slug):
     d = os.path.join(SRC, slug)
     layers = json.load(open(os.path.join(d, 'layout.json')))['layers']
-    out = os.path.join(OUT_ROOT, f'popup_{slug}'); os.makedirs(out, exist_ok=True)
+    out = os.path.join(OUT_ROOT, 'popups'); os.makedirs(out, exist_ok=True)
     bones, slots, skin, imgs = [{'name': 'root'}], [], {}, []
     roles, marks = {}, {}
     for e in layers:
@@ -116,18 +147,8 @@ def build(slug):
         slot = {'name': bn, 'bone': bn, 'attachment': bn}
         if a < 255: slot['color'] = f'ffffff{a:02x}'
         slots.append(slot)
-        skin[bn] = {bn: {'width': im.width, 'height': im.height}}
+        skin[bn] = {bn: {'path': region_for(slug, bn, im, ray=(r == 'ray')), 'width': im.width, 'height': im.height}}
         imgs.append((bn, im)); roles[bn] = r
-    imgs.append(('black', Image.new('RGBA', (8, 8), (255, 255, 255, 255))))
-    # atlas (straight alpha)
-    lines = []
-    for i, (page, regs) in enumerate(pack(imgs)):
-        pn = 'animation.png' if i == 0 else f'animation-p{i + 1}.png'
-        page.save(os.path.join(out, pn), optimize=True)
-        lines += [pn, f'size:{page.width},{page.height}', 'filter:Linear,Linear']
-        for n, x, y, w, h in regs: lines += [n, f'bounds:{x},{y},{w},{h}']
-        lines.append('')
-    open(os.path.join(out, 'animation.atlas'), 'w').write('\n'.join(lines))
 
     B = {b['name']: b for b in bones}
     rest_a = {s['name']: (int(s.get('color', 'ffffffff')[6:], 16) / 255, s.get('color', 'ffffffff')[:6]) for s in slots}
@@ -197,9 +218,20 @@ def build(slug):
     J = {'skeleton': {'spine': '4.1.24', 'x': -W / 2, 'y': -H / 2, 'width': W, 'height': H},
          'bones': bones, 'slots': slots, 'skins': [{'name': 'default', 'attachments': skin}],
          'animations': {'intro': intro, 'idle': idle, 'outro': outro}}
-    json.dump(J, open(os.path.join(out, 'animation.json'), 'w'), separators=(',', ':'))
-    json.dump(marks, open(os.path.join(out, 'text_marks.json'), 'w'), ensure_ascii=False, indent=1)
-    print(f'popup_{slug}', 'layers', len(imgs) - 1, 'json KB', os.path.getsize(os.path.join(out, 'animation.json')) // 1024, 'marks', list(marks))
+    json.dump(J, open(os.path.join(out, f'{slug}.json'), 'w'), separators=(',', ':'))
+    print(slug, 'layers', len(imgs), 'json KB', os.path.getsize(os.path.join(out, f'{slug}.json')) // 1024, 'marks', list(marks))
+    return marks
 
-for s in POPUPS:
-    build(s)
+ALL_MARKS = {s: build(s) for s in POPUPS}
+SHARED_IMGS.append(('black', Image.new('RGBA', (8, 8), (255, 255, 255, 255))))
+out = os.path.join(OUT_ROOT, 'popups')
+lines = []
+for i, (page, regs) in enumerate(pack(SHARED_IMGS)):
+    pn = 'animation.png' if i == 0 else f'animation-p{i + 1}.png'
+    page.save(os.path.join(out, pn), optimize=True)
+    lines += [pn, f'size:{page.width},{page.height}', 'filter:Linear,Linear']
+    for n, x, y, w, h in regs: lines += [n, f'bounds:{x},{y},{w},{h}']
+    lines.append('')
+open(os.path.join(out, 'animation.atlas'), 'w').write('\n'.join(lines))
+json.dump(ALL_MARKS, open(os.path.join(out, 'text_marks.json'), 'w'), ensure_ascii=False, indent=1)
+print('shared atlas: regions', len(SHARED_IMGS), 'pages', len([l for l in lines if l.endswith('.png')]))

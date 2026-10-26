@@ -9,7 +9,8 @@ multiplier       — the reel symbol, 200x200 tile around the cell centre.
 multiplier_plate — the "MULTIPLIER" plate on chains (UI).
                    idle (4 s loop): a slow sway on the chains;
                    update (0.6 s): the value pops (new total), a flash.
-Value = skin val_2 / val_3 / val_5 / val_7 / val_9 (setSkinByName).
+                   The value is text drawn by the game at bone `value`.
+Chip value = skin val_2 / val_3 / val_5 / val_7 / val_9 (setSkinByName).
 
 Usage: python scripts/gc_multiplier_spine.py <assets_dir> <out_root>
 """
@@ -144,37 +145,36 @@ def symbol():
     print('multiplier ok')
 
 # ---- the UI plate --------------------------------------------------------------
+# The value is TEXT drawn by the game (free-spins totals add up: x17, x33 …), so
+# the skeleton only carries the plate and an empty bone `value` at the centre of
+# the plate's window (scale pops in `update`; text follows the bone).
 def plate():
     out = os.path.join(OUT_ROOT, 'multiplier_plate'); os.makedirs(out, exist_ok=True)
     pl = Image.open(os.path.join(A, 'mult_multiplier.png')).convert('RGBA')
-    vals = {v: Image.open(os.path.join(A, f'mult_x{v}.png')).convert('RGBA') for v in VALUES}
-    tiles = [('plate', pl)] + [(f'value_x{v}', vals[v]) for v in VALUES] + [('glow', radial(128, 1.6))]
-    write_atlas(out, tiles)
+    write_atlas(out, [('plate', pl), ('glow', radial(128, 1.6))])
     W, H = pl.size
-    origin = ((PLATE_BOX[0] + PLATE_BOX[2]) / 2, (PLATE_BOX[1] + PLATE_BOX[3]) / 2)  # skeleton (0,0) = plate centre
+    origin = ((PLATE_BOX[0] + PLATE_BOX[2]) / 2, (PLATE_BOX[1] + PLATE_BOX[3]) / 2)
     top = (0, H / 2)                                     # sway pivot: where the chains hang from
+    # window centre = centre of the value art boxes (they all share it)
     vx, vy = centre(PVAL_BOX[3], origin, -W / 2, H / 2)
     bones = [{'name': 'root'}, {'name': 'hang', 'parent': 'root', 'x': top[0], 'y': top[1]},
              {'name': 'value', 'parent': 'hang', 'x': round(vx - top[0], 2), 'y': round(vy - top[1], 2)}]
     slots = [{'name': 'plate', 'bone': 'hang', 'attachment': 'plate'},
-             {'name': 'value', 'bone': 'value', 'attachment': 'value'},
              {'name': 'flash', 'bone': 'value', 'attachment': 'glow', 'color': 'fff0be00', 'blend': 'additive'}]
     skin = {'plate': {'plate': {'x': 0, 'y': -H / 2, 'width': W, 'height': H}},
             'flash': {'glow': {'width': 200, 'height': 140}}}
-    extra = skins_for('value', 'mult', PVAL_BOX, origin, (vx, vy), -W / 2, H / 2)
-    skin['value'] = {'value': dict(extra[1]['attachments']['value']['value'])}
     idle = {'bones': {'hang': {'rotate': keys([(0, 0), (1.0, 1.2), (2.0, 0), (3.0, -1.2), (4.0, 0)], 'rotate')}}}
     update = {'bones': {
         'value': {'scale': keys([(0, 1, 1), (0.12, 0.6, 0.6), (0.3, 1.25, 1.25), (0.45, 0.96, 0.96), (0.6, 1, 1)], 'scale')},
         'hang': {'scale': keys([(0, 1, 1), (0.2, 1.05, 1.05), (0.6, 1, 1)], 'scale')}},
         'slots': {'flash': {'rgba': rgba('fff0be', [(0, 0), (0.25, 0.9), (0.6, 0)])}}}
     J = {'skeleton': {'spine': '4.1.24', 'x': -W / 2, 'y': -H / 2, 'width': W, 'height': H},
-         'bones': bones, 'slots': slots, 'skins': [{'name': 'default', 'attachments': skin}] + extra,
+         'bones': bones, 'slots': slots, 'skins': [{'name': 'default', 'attachments': skin}],
          'animations': {'idle': idle, 'update': update}}
     json.dump(J, open(os.path.join(out, 'animation.json'), 'w'), separators=(',', ':'))
-    st = pl.copy()
-    st.alpha_composite(vals[3], (round(W / 2 + vx - vals[3].width / 2), round(H / 2 - vy - vals[3].height / 2)))
-    st.save(os.path.join(out, 'static.png'), optimize=True)
+    pl.save(os.path.join(out, 'static.png'), optimize=True)   # the plate without a value
+    h = PVAL_BOX[3][3] - PVAL_BOX[3][1]
+    json.dump({'value': {'text': 'x17', 'box': [200, h]}}, open(os.path.join(out, 'text_marks.json'), 'w'), indent=1)
     print('multiplier_plate ok')
 
 symbol(); plate()

@@ -38,14 +38,14 @@ async def main():
                 await cdp(ws, 'Emulation.setDeviceMetricsOverride', {'width': int(w), 'height': int(h), 'deviceScaleFactor': 1, 'mobile': False})
                 await cdp(ws, 'Emulation.setDefaultBackgroundColorOverride', {'color': {'r': 0, 'g': 0, 'b': 0, 'a': 0}})
                 pma = '1' if v['pma'] else '0'
-                await cdp(ws, 'Page.navigate', {'url': f'http://localhost:4199/spine-static-render.html?folder=spine-export/gangsta-casino/{name}&pma={pma}&clip=idle&t=0&box={x},{y},{w},{h}&_={time.time()}'})
+                await cdp(ws, 'Page.navigate', {'url': f'http://localhost:4199/spine-static-render.html?folder=spine-export/gangsta-casino/{v.get('folder', name)}&skeleton={v.get('skeleton', '')}&pma={pma}&clip=idle&t=0&box={x},{y},{w},{h}&_={time.time()}'})
                 for _ in range(60):
                     r = await cdp(ws, 'Runtime.evaluate', {'expression': 'window.ready', 'awaitPromise': True, 'returnByValue': True})
                     if r.get('result', {}).get('value'): break
                     await asyncio.sleep(0.5)
                 await asyncio.sleep(1.0)
                 shot = await cdp(ws, 'Page.captureScreenshot', {'format': 'png'})
-                open(os.path.join(out_dir, name + '.png') if out_dir else os.path.join(DST, name, 'static.png'), 'wb').write(base64.b64decode(shot['data']))
+                open(os.path.join(out_dir, name + '.png') if out_dir else (os.path.join(DST, v['folder'], f"{v['skeleton']}_static.png") if v.get('skeleton') else os.path.join(DST, name, 'static.png')), 'wb').write(base64.b64decode(shot['data']))
                 print('static', name, int(w), 'x', int(h))
             urllib.request.urlopen(f'http://127.0.0.1:{port}/json/close/{tab["id"]}')
     finally:

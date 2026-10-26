@@ -56,20 +56,24 @@ class SpineResource {
 
   // version (опционально): ?v= к atlas/json, чтобы пересобранный скелет не
   // брался из кэша браузера/Telegram. Без него — как раньше.
-  static load(assetManager, folderPath, { premultipliedAlpha = true, version = '' } = {}) {
-    if (spineResourceCache.has(folderPath)) return spineResourceCache.get(folderPath);
+  // skeleton (optional): the skeleton file of a folder whose atlas is shared by
+  // several skeletons (e.g. 'big_win' -> big_win.json next to animation.atlas);
+  // the atlas (and its textures) is then loaded once for all of them.
+  static load(assetManager, folderPath, { premultipliedAlpha = true, version = '', skeleton = '' } = {}) {
+    const key = skeleton ? `${folderPath}#${skeleton}` : folderPath;
+    if (spineResourceCache.has(key)) return spineResourceCache.get(key);
     const q = version ? `?v=${version}` : '';
     const promise = (async () => {
       const [atlas, json] = await Promise.all([
         spineLoadTextureAtlas(assetManager, `${folderPath}/animation.atlas${q}`),
-        spineLoadJson(assetManager, `${folderPath}/animation.json${q}`),
+        spineLoadJson(assetManager, `${folderPath}/${skeleton || 'animation'}.json${q}`),
       ]);
       const atlasLoader = new spine.AtlasAttachmentLoader(atlas);
       const skeletonJson = new spine.SkeletonJson(atlasLoader);
       const skeletonData = skeletonJson.readSkeletonData(json);
       return new SpineResource(skeletonData, premultipliedAlpha);
     })();
-    spineResourceCache.set(folderPath, promise);
+    spineResourceCache.set(key, promise);
     return promise;
   }
 

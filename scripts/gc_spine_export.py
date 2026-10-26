@@ -532,15 +532,19 @@ for out, box in (('bonus_bg', [-966, -470, 1932, 940]), ('bonus_bg_mob', [-400, 
 # assets_src/gangsta-casino-popups by scripts/gc_popups_extract.py
 _sp.run([_sys.executable, os.path.join(os.path.dirname(__file__), 'gc_popups_spine.py'),
          os.path.join(os.path.dirname(__file__), '..', 'assets_src', 'gangsta-casino-popups'), DST], check=True)
-for out in sorted(x for x in os.listdir(DST) if x.startswith('popup_')):
-    J = json.load(open(os.path.join(DST, out, 'animation.json')))
-    marks = json.load(open(os.path.join(DST, out, 'text_marks.json')))
-    pages = sorted(x for x in os.listdir(os.path.join(DST, out)) if x.startswith('animation') and x.endswith('.png'))
-    scene_report[out] = {'clips': {k: duration(v) for k, v in J['animations'].items()}, 'pages': pages,
+POP = os.path.join(DST, 'popups')
+all_marks = json.load(open(os.path.join(POP, 'text_marks.json')))
+pages = sorted(x for x in os.listdir(POP) if x.startswith('animation') and x.endswith('.png'))
+for slug in sorted(x[:-5] for x in os.listdir(POP) if x.endswith('.json') and x != 'text_marks.json'):
+    J = json.load(open(os.path.join(POP, f'{slug}.json')))
+    marks = all_marks.get(slug, {})
+    scene_report[f'popup_{slug}'] = {'clips': {k: duration(v) for k, v in J['animations'].items()}, 'pages': pages,
                          'pma': False, 'box': [-966, -470, 1932, 940], 'static': 'render', 'issues': [], 'popup': True,
-                         'marks': marks,
-                         'notes': ['intro → idle (цикл) → outro; последний кадр intro = первый и последний кадр idle = первый кадр outro',
+                         'folder': 'popups', 'skeleton': slug, 'marks': marks,
+                         'notes': ['общий атлас всех попапов: popups/animation.atlas + страницы, скелет popups/' + slug + '.json',
+                                   'intro → idle (цикл) → outro; последний кадр intro = первый и последний кадр idle = первый кадр outro',
                                    'сумма / число не запечены: рисует код в кости ' + ' / '.join(f'«{m}»' for m in marks) + ' (её масштаб 0→1 в intro, →0 в outro)']}
+
 # generated: the multiplier (new art from Desk_Gangsta_Slot_F.psb) — reel symbol + UI plate
 _sp.run([_sys.executable, os.path.join(os.path.dirname(__file__), 'gc_multiplier_spine.py'),
          os.path.join(os.path.dirname(__file__), '..', 'assets_src', 'gangsta-casino-multiplier'), DST], check=True)
@@ -552,9 +556,10 @@ report['multiplier'] = {'clips': {k: duration(v) for k, v in J['animations'].ite
 J = json.load(open(os.path.join(DST, 'multiplier_plate', 'animation.json')))
 s0 = J['skeleton']
 scene_report['multiplier_plate'] = {'clips': {k: duration(v) for k, v in J['animations'].items()}, 'pages': ['animation.png'],
-    'pma': False, 'box': [s0['x'], s0['y'], s0['width'], s0['height']], 'static': 'ui/multiplier', 'issues': [], 'skins': [f'val_{v}' for v in (2, 3, 5, 7, 9)],
+    'pma': False, 'box': [s0['x'], s0['y'], s0['width'], s0['height']], 'static': 'ui/multiplier', 'issues': [],
+    'marks': json.load(open(os.path.join(DST, 'multiplier_plate', 'text_marks.json'))),
     'notes': ['idle 4 с: плашка покачивается на цепях; update 0.6 с: значение «выпрыгивает» (новый итог)',
-              'значение = скин val_2 … val_9; итог раунда больше 9 — цифры дорисует код в кости value (или нужны ещё ассеты)']}
+              'значение — ТЕКСТ (во фриспинах множители суммируются: x17, x33…): рисует код в кости «value», её масштаб пульсирует в update']}
 report['_scene'] = scene_report
 json.dump(report, open(os.path.join(DST, 'report.json'), 'w'), ensure_ascii=False, indent=1)
 
