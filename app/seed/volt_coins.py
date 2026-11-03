@@ -10,7 +10,8 @@ coils (client art direction, Oct 2026). Symbol set strictly per the GDD:
     base game already showing a face value (x1..x15 of the bet) or a jackpot
     tier (MINI/MINOR/MAJOR); THREE COINS IN A LINE (any of the 5 paylines)
     open Hold & Win;
-  * seven / diamond / ingot / bell (high), bar / star / horseshoe (low).
+  * diamond / ingot / bell (high H1-H3), seven / bar / star / horseshoe
+    (low L1-L4) — client paytable 2026-10-22, see _PAYS.
 
 Hold & Win is the feature's classic mode: every coin on the triggering grid
 stays, with the face it showed in the base game (`initial_from_base_coins`);
@@ -38,8 +39,9 @@ GAME_CODE = "volt-coins"
 GAME_NAME = "Volt Coins"
 CATALOG_BADGE = "Hold & Win"
 CATALOG_DESCRIPTION = "Сейф под напряжением: катушки Теслы, монеты и Hold & Win 3x3 с джекпотом GRAND за 9/9."
-CATALOG_COVER_PATH = "img/volt-coins/img/cover.jpg"
-CATALOG_PLAY_URL = "volt-coins.html"
+CATALOG_COVER_PATH = "img/volt-coins-v3/img/cover.jpg"
+# V3 (designer PSB) is the only build since 2026-11-03; V1/V2 are archived.
+CATALOG_PLAY_URL = "volt-coins-v3.html"
 
 NUM_REELS = 3
 NUM_ROWS = 3
@@ -76,15 +78,19 @@ JACKPOT_VALUES = {"mini": 20, "minor": 50, "major": 250, "grand": 1000}
 # 0.24 / 0.36 / 0.51 under the old anywhere-trigger. Re-measure after
 # touching any weight (COIN_WEIGHT drives both the trigger and line pay).
 _PAYS = {
-    "horseshoe": {"3": 7},
-    "star": {"3": 10},
-    "bar": {"3": 13},
-    "bell": {"3": 20},
-    "ingot": {"3": 31},
-    "diamond": {"3": 55},
-    "seven": {"3": 140},
-    # Three wilds on a line pay as the top symbol would.
-    "wild": {"3": 150},
+    # Client paytable (2026-10-22), in TOTAL bets: horseshoe 2x, star 2.5x,
+    # BAR 3.5x, seven 5x, bell 8x, ingot 12x, diamond 20x, WILD 25x. The
+    # engine pays per LINE (x bet/5), so each is stored x5. Bet steps are
+    # multiples of 10 -> the line bet is even and the .5 pays stay whole.
+    "horseshoe": {"3": 10},
+    "star": {"3": 12.5},
+    "bar": {"3": 17.5},
+    "seven": {"3": 25},
+    "bell": {"3": 40},
+    "ingot": {"3": 60},
+    "diamond": {"3": 100},
+    # Three wilds on a line.
+    "wild": {"3": 125},
     # COIN never pays through the line engine — it only opens Hold & Win.
     "coin": {},
 }
@@ -103,14 +109,17 @@ COIN_FACE_WEIGHTS = {
 
 # code -> (display name, symbol type, tier, weight per reel)
 _SYMBOLS: list[tuple[str, str, str, str, int]] = [
-    ("horseshoe", "Подкова", SymbolType.REGULAR.value, "low", 30),
-    ("star", "Звезда", SymbolType.REGULAR.value, "low", 27),
-    ("bar", "BAR", SymbolType.REGULAR.value, "low", 24),
-    ("bell", "Колокол", SymbolType.REGULAR.value, "high", 19),
-    ("ingot", "Слиток", SymbolType.REGULAR.value, "high", 15),
-    ("diamond", "Бриллиант", SymbolType.REGULAR.value, "high", 10),
-    ("seven", "Семёрка", SymbolType.REGULAR.value, "high", 7),
-    ("wild", "Wild", SymbolType.WILD.value, "special", 6),
+    # Weights follow the paytable (cheaper = more frequent). Wild 6 -> 4: it
+    # substitutes into the dear lines and alone pushed line RTP to ~0.66.
+    # Total stays 158, so P(coin) and the round are unchanged.
+    ("horseshoe", "Подкова", SymbolType.REGULAR.value, "low", 29),
+    ("star", "Звезда", SymbolType.REGULAR.value, "low", 26),
+    ("bar", "BAR", SymbolType.REGULAR.value, "low", 22),
+    ("seven", "Семёрка", SymbolType.REGULAR.value, "low", 19),
+    ("bell", "Колокол", SymbolType.REGULAR.value, "high", 16),
+    ("ingot", "Слиток", SymbolType.REGULAR.value, "high", 13),
+    ("diamond", "Бриллиант", SymbolType.REGULAR.value, "high", 9),
+    ("wild", "Wild", SymbolType.WILD.value, "special", 4),
     # P(coin in a cell) = 8/146 ~ 5.5% -> 3+ of nine ~ 1 spin in 85.
     ("coin", "Монета", SymbolType.BONUS.value, "special", COIN_WEIGHT),
 ]
@@ -120,7 +129,7 @@ _SYMBOLS: list[tuple[str, str, str, str, int]] = [
 # draws, so a bought round is worth ~45x the bet including that spin's line
 # pay (60k bought rounds x4 seeds: 45.0 / 45.6 / 43.9 / 44.9) — sold at the
 # game's own RTP -> 46x. Mirrors BUY_BONUS_COST_MULTIPLIER
-# in front/js/volt-coins/app.js (display only; the server charges this).
+# in front/js/volt-coins-v3/app.js (display only; the server charges this).
 BONUS_BUY_COST_MULTIPLIER = 46
 
 
@@ -231,6 +240,7 @@ _CATALOG = CatalogMeta(
     description=CATALOG_DESCRIPTION,
     cover_path=CATALOG_COVER_PATH,
     play_url=CATALOG_PLAY_URL,
+    force=True,   # existing rows still point at volt-coins.html / the V1 cover
 )
 
 

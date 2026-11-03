@@ -1,0 +1,40 @@
+{
+ "art": {
+  "seven_v3": "seven",
+  "bar_v3": "bar",
+  "star_v3": "star",
+  "horseshoe_v3": "horseshoe",
+  "bell_v3": "bell",
+  "ingot_battery": "battery",
+  "diamond": "diamond",
+  "wild": "wild",
+  "coin_x1": "coin_x1",
+  "coin_x2": "coin_x2",
+  "coin_x3": "coin_x3",
+  "coin_x5": "coin_x5",
+  "coin_x10": "coin_x10",
+  "coin_x15": "coin_x15",
+  "coin_mini": "coin_mini",
+  "coin_minor": "coin_minor",
+  "coin_major": "coin_major"
+ },
+ "dur": {
+  "seven": 1.0,
+  "bar": 1.0,
+  "star": 1.0,
+  "horseshoe": 1.0,
+  "bell": 1.2,
+  "battery": 1.2,
+  "diamond": 1.2,
+  "wild": 1.4,
+  "coin_x1": 1.2,
+  "coin_x2": 1.2,
+  "coin_x3": 1.2,
+  "coin_x5": 1.2,
+  "coin_x10": 1.2,
+  "coin_x15": 1.2,
+  "coin_mini": 1.2,
+  "coin_minor": 1.2,
+  "coin_major": 1.2
+ }
+}
