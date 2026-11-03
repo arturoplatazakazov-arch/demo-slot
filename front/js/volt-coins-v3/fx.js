@@ -213,8 +213,9 @@
     const sr = scr.getBoundingClientRect();
     const br = bg.getBoundingClientRect();
     const h = coilHead(c);
-    // искра на катушке
+    // искра на катушке + жужжание электричества
     c.inst.play('spin', false);
+    if (window.Sound) Sound.playSfx('coilBuzz');
     c.inst.queue('off', true);
     for (let i = 0; i < 2 + Math.floor(Math.random() * 2); i++) {
       const ang = Math.random() * Math.PI * 2;
@@ -375,6 +376,7 @@
   // --- hooks from slot.js -------------------------------------------------------
 
   VoltFx.spinStart = function spinStart() {
+    if (window.Sound && Sound.stopSfx) Sound.stopSfx('coilBuzz');
     // GDD: «нажатие спина — короткий заряд ~0.5 с»
     if (anticOn || bigOn) return;
     coilsPlay('spin');
@@ -386,6 +388,8 @@
     if (on === anticOn) return;
     anticOn = on;
     if (on) {
+      // в антиципации — только её мелодия, без треска искры катушки
+      if (window.Sound && Sound.stopSfx) Sound.stopSfx('coilBuzz');
       // GDD: «постепенный заряд, дуги растут вместе со звуком»
       for (const c of coils) {
         c.inst.play('charge', false);

@@ -1745,6 +1745,35 @@ function setupDevPanel() {
       }
     });
   }
+  // Спин с антиципацией: локально, без сервера и без ставки — на случайной
+  // линии две монеты на 1-м и 2-м барабанах, 3-й крутится с антиципацией
+  // (звук + заряд катушек), чаще всего мимо (near-miss), иногда третья монета.
+  const antic = document.getElementById('devAntic');
+  if (antic) {
+    antic.addEventListener('click', async () => {
+      if (gameState.isSpinning || reelsBusy) return;
+      gameState.isSpinning = true;
+      try {
+        const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+        const line = pick(PAYLINES);
+        const grid = [0, 1, 2].map(() => [0, 1, 2].map(() => pick(FILLER_CODES.filter((c) => c !== 'wild'))));
+        const faces = [];
+        for (const col of [0, 1]) {
+          grid[line[col]][col] = 'coin';
+          faces.push({ row: line[col], col, kind: 'value', value: pick([1, 2, 3, 5]) });
+        }
+        if (Math.random() < 0.25) {
+          grid[line[2]][2] = 'coin';
+          faces.push({ row: line[2], col: 2, kind: 'value', value: pick([1, 2, 5]) });
+        }
+        startReelLoop();
+        await wait(350);
+        await landReels(grid, { positions: faces });
+      } finally {
+        gameState.isSpinning = false;
+      }
+    });
+  }
   const lines = document.getElementById('devLines');
   if (lines) {
     lines.addEventListener('click', () => {

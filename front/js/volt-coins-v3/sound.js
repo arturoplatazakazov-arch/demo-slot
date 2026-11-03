@@ -4,6 +4,22 @@
 // from the sound designer, 2026-10-20).
 const VC = 'sound/volt-coins/';
 
+// примерка посадки монеты: ?coin=1..6 → sound/volt-coins/coin_try/ (2026-11-03)
+const COIN_TRY = {
+  1: 'coin_1_metal_tap', 2: 'coin_2_chip_clack', 3: 'coin_3_heavy_drop',
+  4: 'coin_4_electric_drop', 5: 'coin_5_short_ting', 6: 'coin_6_soft_thud',
+}[new URLSearchParams(location.search).get('coin')];
+
+// примерка разряда под искру катушки: ?zap=1..6 → sound/volt-coins/zap_try/
+const ZAP_TRY = {
+  1: 'zap_1_snap_zap', 2: 'zap_2_tesla_arc', 3: 'zap_3_charge_release',
+  4: 'zap_4_spark_shower', 5: 'zap_5_zap_sweep', 6: 'zap_6_thunder_strike',
+}[new URLSearchParams(location.search).get('zap')];
+
+const ANTIC_TRY = {
+  1: 'antic_1_tempo', 2: 'antic_2_speedup', 3: 'antic_3_cut_middle', 4: 'antic_4_no_intro', 5: 'antic_5_tempo_trim',
+}[new URLSearchParams(location.search).get('antic')];
+
 const SOUND_FILES = {
   // wins
   smallWin: VC + 'WIN_Smallwin.mp3',
@@ -15,7 +31,9 @@ const SOUND_FILES = {
   spinStart: VC + 'UI_Spin.mp3',
   reelStop: VC + 'REELS_Reelstop.mp3',
   finalReelStop: VC + 'REELS_Finalstop.mp3',
-  anticipation: VC + 'REELS_Anticipation_Nearhit.mp3',
+  // на 1 с короче: выбран вариант 2 «ускорение» (= antic_try/antic_2_speedup, 2026-11-03);
+  // ?antic=1..5 — примерка остальных (только локально)
+  anticipation: ANTIC_TRY ? `${VC}antic_try/${ANTIC_TRY}.wav` : VC + 'REELS_Anticipation_short.wav',
   // symbols on a win line
   sym_seven: VC + 'SYMBOL_Seven.mp3',
   sym_bar: VC + 'SYMBOL_BAR.mp3',
@@ -25,7 +43,12 @@ const SOUND_FILES = {
   sym_horseshoe: VC + 'SYMBOL_Horseshoe.mp3',
   sym_star: VC + 'SYMBOL_Star.mp3',
   sym_wild: VC + 'SYMBOL_Wild.mp3',
-  coinLand: VC + 'SYMBOL_Coin_Landing.mp3',
+  // проще, без звона (scripts/volt_coins_v3_sfx.py; было SYMBOL_Coin_Landing.mp3)
+  // выбран вариант 4 «электро-капля» (2026-11-03); ?coin=N — примерка остальных
+  coinLand: COIN_TRY ? `${VC}coin_try/${COIN_TRY}.wav` : VC + 'SYMBOL_Coin_Landing_v3.wav',   // = coin_try/coin_4
+  // жужжание электричества под искру катушки в простое (fx.js ambientGlow)
+  // выбран разряд 2 «дуга Теслы», вдвое тише (2026-11-03); ?zap=N — примерка
+  coilBuzz: ZAP_TRY ? `${VC}zap_try/${ZAP_TRY}.wav` : VC + 'SFX_CoilArc.wav',
   // Hold & Win
   holdWinTrigger: VC + 'HOLDWIN_Trigger.mp3',
   baseToBonus: VC + 'TRANSITION_BaseToBonus.mp3',
@@ -70,7 +93,7 @@ const AMBIENCE_FILES = {
   base: VC + 'AMBIENT_Baseambience.mp3',
   bonus: VC + 'AMBIENT_Bonusambience.mp3',
 };
-const AMBIENCE_VOLUME = 0.22;
+const AMBIENCE_VOLUME = 0.22 / 3;   // искры фона в 3 раза тише (2026-11-03)
 
 const SFX_VOLUME = 0.7;
 const MUSIC_VOLUME = 0.35;
@@ -116,14 +139,37 @@ for (const [name, src] of Object.entries(SOUND_FILES)) {
   sfxCache[name] = audio;
 }
 
+const playing = {};   // name -> Set({source, gain}) — звучащие сейчас
+
+// Погасить звучащий эффект (30 мс), напр. искру катушки, когда началась
+// антиципация или спин.
+function stopSfx(name) {
+  const live = playing[name];
+  if (!live || !sfxCtx) return;
+  const t = sfxCtx.currentTime;
+  for (const { source, g } of live) {
+    g.gain.setValueAtTime(g.gain.value, t);
+    g.gain.linearRampToValueAtTime(0, t + 0.03);
+    try { source.stop(t + 0.04); } catch (e) { /* уже остановлен */ }
+  }
+  live.clear();
+}
+
 function playSfx(name) {
   if (muted) return;
   if (sfxCtx && sfxBuffers[name]) {
     if (sfxCtx.state === 'suspended') sfxCtx.resume();
     const source = sfxCtx.createBufferSource();
     source.buffer = sfxBuffers[name];
-    source.connect(sfxGain);
+    // свой гейн на каждый проигрыш — чтобы stopSfx мог его быстро погасить
+    const g = sfxCtx.createGain();
+    source.connect(g);
+    g.connect(sfxGain);
     source.start();
+    const live = (playing[name] = playing[name] || new Set());
+    const item = { source, g };
+    live.add(item);
+    source.onended = () => live.delete(item);
     return;
   }
   const cached = sfxCache[name];
@@ -210,6 +256,7 @@ window.addEventListener('keydown', unlockMusic, { once: true });
 
 const Sound = {
   playSfx,
+  stopSfx,
   playMusic,
   setMuted,
   toggleMuted,
