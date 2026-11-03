@@ -1747,7 +1747,8 @@ function setupDevPanel() {
   }
   // Спин с антиципацией: локально, без сервера и без ставки — на случайной
   // линии две монеты на 1-м и 2-м барабанах, 3-й крутится с антиципацией
-  // (звук + заряд катушек), чаще всего мимо (near-miss), иногда третья монета.
+  // (звук + заряд катушек) и всегда мимо (near-miss): третья монета тут
+  // выглядела бы как триггер, а Hold & Win без сервера не запустится.
   const antic = document.getElementById('devAntic');
   if (antic) {
     antic.addEventListener('click', async () => {
@@ -1761,10 +1762,6 @@ function setupDevPanel() {
         for (const col of [0, 1]) {
           grid[line[col]][col] = 'coin';
           faces.push({ row: line[col], col, kind: 'value', value: pick([1, 2, 3, 5]) });
-        }
-        if (Math.random() < 0.25) {
-          grid[line[2]][2] = 'coin';
-          faces.push({ row: line[2], col: 2, kind: 'value', value: pick([1, 2, 5]) });
         }
         startReelLoop();
         await wait(350);
