@@ -9,16 +9,16 @@
 //   - Готовые игры (READY_CODES): tg.html, the bot's public catalog.
 //   - Project tabs on games.html, each behind its own password (ROOMS in
 //     games.html):
-//       - Illuminator: ILLUMINATOR_CODES + the NJS / Olympus subsections.
+//       - Illuminator: ILLUMINATOR_CARDS (hand-ordered, one card per variant page).
 //       - Uniqorn: unicorn games (uniqorn-*, mr-president-unicorn).
-//       - Spin Factory: SPIN_FACTORY_CODES (was «В работе»).
+//       - Spin Factory: SPIN_FACTORY_CODES (was «В работе») + SPIN_FACTORY_EXTRA_CARDS.
 //       - Secret Room: Cre8Pics analogues (CRE8_CODES: provider2 + provider3
 //         + earlier ones; the section ids are still cre8*).
 //     On localhost games.html opens every tab without passwords, plus Ready.
 // A game in no list is shown nowhere — add its code to a room's list.
 // The lists are explicit codes rather than "first N by created_at", so a
-// newly seeded game doesn't shift others between rooms. Within a section,
-// cards go newest first (GET /catalog lists by created_at ascending, so the
+// newly seeded game doesn't shift others between rooms. Within a code-set
+// section, cards go newest first (GET /catalog lists by created_at ascending, so the
 // order is reversed here). A game not yet live on a given backend simply
 // isn't in `entries` and is skipped. A section with zero cards hides itself
 // (including its heading) rather than showing an empty title.
@@ -27,38 +27,69 @@ const READY_CODES = new Set([
   'neon-reels', 'party-of-goods', 'sugar-galaxy', 'wild-western-story',
   'multi-fruits-story', 'lucky-joker-3h3', 'gangsta-casino',
 ]);
-const ILLUMINATOR_CODES = new Set([
-  'gold-of-baku', 'gold-of-baku-2', 'volt-coins', 'neon-joker-spins', 'savannah-kings',
-  'olympus-thunder', 'olympus-thunder-v2', 'olympus-thunder-v3',
-]);
-
-// Illuminator games shipped in several front-end layouts over one backend
-// game get their own sub-section (heading + one card per variant) instead of
-// a single card. Each variant overrides the play page, badge, name and
-// description; the cover falls back to the game's catalog cover.
-const VARIANT_GROUPS = {
-  'savannah-kings': {
-    title: 'Savannah Kings',
-    variants: [
-      { url: 'savannah-kings-v3.html', badge: '1', name: 'Savannah Kings',
-        desc: 'Закатная саванна, каменная рамка: лестница джекпотов с GRAND в центре, медальоны покупки и выигрыша.',
-        cover: 'img/savannah-kings/cover_v3.jpg' },
-      { url: 'lions-reign.html', badge: '2', name: "Lion's Reign",
-        desc: 'Королевская версия: базальт с золотой филигранью и рубинами, символы в геральдических щитах, лев в короне.',
-        cover: 'img/lions-reign/cover.jpg' },
-      { url: 'golden-savannah.html', badge: '3', name: 'Golden Savannah',
-        desc: 'Графичная версия: африканский ар-деко и бумажная аппликация, узоры кенте, символы в ромбах.',
-        cover: 'img/golden-savannah/cover.jpg' },
-      { url: 'savannah-kings.html', badge: '4', name: 'Savannah Kings · Classic',
-        desc: 'Первая сборка: оригинальный арт, нижний бар управления, плашка выигрыша на барабанах.',
-        cover: 'img/savannah-kings/cover_v1.jpg' },
-      { url: 'savannah-kings-v2.html', badge: '5', name: 'Savannah Kings · Pride Rock',
-        desc: 'Альтернативная раскладка UI: скала гордости, панель управления сбоку от барабанов.',
-        cover: 'img/savannah-kings/cover_v2.jpg' },
-    ],
-  },
+// Games shipped in several front-end layouts over one backend game: one
+// page per variant. A card can point at any of them (overrides below).
+const NJS_VARIANTS = {
+  original: { page: 'neon-joker-spins.html', name: 'Neon Joker Spins · Original', badge: 'Оригинал', cover: 'img/neon-joker-spins/img/cover.jpg' },
+  a: { page: 'neon-joker-spins-a.html', name: 'Neon Joker Spins · A', badge: 'Neon Sign',
+    cover: 'img/neon-joker-spins/skins/a/img/cover.jpg',
+    desc: 'Плоский неон 80-х: светящиеся трубки, мокрый асфальт, неоновая рама.' },
+  b: { page: 'neon-joker-spins-b.html', name: 'Neon Joker Spins · B', badge: 'Glossy Show',
+    cover: 'img/neon-joker-spins/skins/b/img/cover.jpg',
+    desc: 'Глянцевое шоу: объёмные символы, золотая рама с лампочками, сцена.' },
+  c: { page: 'neon-joker-spins-c.html', name: 'Neon Joker Spins · C', badge: 'Rock Chrome',
+    cover: 'img/neon-joker-spins/skins/c/img/cover.jpg',
+    desc: 'Рок-клуб: сталь и хром, Джокер-панк, молнии вместо линий выигрыша.' },
+  d: { page: 'neon-joker-spins-d.html', name: 'Neon Joker Spins · D', badge: 'Retro 80s',
+    cover: 'img/neon-joker-spins/skins/d/img/cover.jpg',
+    desc: 'Автомат 80-х: хромированный корпус, барабаны под стеклом, лампы и рычаг.' },
 };
+const SAVANNAH_VARIANTS = {
+  v3: { page: 'savannah-kings-v3.html', name: 'Savannah Kings',
+    desc: 'Закатная саванна, каменная рамка: лестница джекпотов с GRAND в центре, медальоны покупки и выигрыша.',
+    cover: 'img/savannah-kings/cover_v3.jpg' },
+  lions: { page: 'lions-reign.html', name: "Lion's Reign",
+    desc: 'Королевская версия: базальт с золотой филигранью и рубинами, символы в геральдических щитах, лев в короне.',
+    cover: 'img/lions-reign/cover.jpg' },
+  golden: { page: 'golden-savannah.html', name: 'Golden Savannah',
+    desc: 'Графичная версия: африканский ар-деко и бумажная аппликация, узоры кенте, символы в ромбах.',
+    cover: 'img/golden-savannah/cover.jpg' },
+  classic: { page: 'savannah-kings.html', name: 'Savannah Kings · Classic',
+    desc: 'Первая сборка: оригинальный арт, нижний бар управления, плашка выигрыша на барабанах.',
+    cover: 'img/savannah-kings/cover_v1.jpg' },
+  prideRock: { page: 'savannah-kings-v2.html', name: 'Savannah Kings · Pride Rock',
+    desc: 'Альтернативная раскладка UI: скала гордости, панель управления сбоку от барабанов.',
+    cover: 'img/savannah-kings/cover_v2.jpg' },
+};
+const njs = (key, extra) => ({ code: 'neon-joker-spins', ...NJS_VARIANTS[key], ...extra });
+const savannah = (key, extra) => ({ code: 'savannah-kings', ...SAVANNAH_VARIANTS[key], ...extra });
+
+// Illuminator: hand-ordered cards (first card first). A card is a game code
+// or { code, page, name, badge, desc, cover } overriding the /catalog entry;
+// badge: null keeps the game's own badge.
+const ILLUMINATOR_CARDS = [
+  'volt-coins',
+  njs('c', { name: 'Neon Joker Spins', badge: null, desc: null }),
+  'olympus-thunder',
+  'olympus-thunder-v2',
+  savannah('golden', { badge: null }),
+];
+// Spin Factory: its own games newest first, then the variants moved out of
+// Illuminator, in this order.
 const SPIN_FACTORY_CODES = new Set(['big-catch', 'caesars-fortune', 'ice-spin-deluxe', 'tesla-spins']);
+const SPIN_FACTORY_EXTRA_CARDS = [
+  'gold-of-baku',
+  'gold-of-baku-2',
+  njs('original'),
+  njs('a'),
+  njs('b'),
+  njs('d'),
+  'olympus-thunder-v3',
+  savannah('v3'),
+  savannah('lions'),
+  savannah('classic'),
+  savannah('prideRock'),
+];
 const CRE8_CODES = new Set([
   // provider2
   'rad-raiders', 'jade-paws', 'ghoul-groove', 'gummy-gold-rush', 'whisker-noir',
@@ -72,50 +103,8 @@ const CRE8_CODES = new Set([
   'deep-fortune', 'mariachi-muertos', 'monster-factory',
 ]);
 
-// Neon Joker Spins и его скины (A/B/C/D — сравнение арт-дирекшена по ГДД):
-// одна игра на бэкенде (код neon-joker-spins), четыре страницы. В Illuminator
-// они живут отдельной подкатегорией #njsGrid — карточки строятся из одной
-// записи /catalog. Нет подкатегории на странице — NJS идёт в Illuminator как раньше.
-const NJS_CODE = 'neon-joker-spins';
-const NJS_VARIANTS = [
-  { page: 'neon-joker-spins.html', name: 'Neon Joker Spins', badge: 'Оригинал', cover: 'img/neon-joker-spins/img/cover.jpg' },
-  {
-    page: 'neon-joker-spins-a.html', name: 'Neon Joker Spins · A', badge: 'Neon Sign',
-    cover: 'img/neon-joker-spins/skins/a/img/cover.jpg',
-    desc: 'Плоский неон 80-х: светящиеся трубки, мокрый асфальт, неоновая рама.',
-  },
-  {
-    page: 'neon-joker-spins-b.html', name: 'Neon Joker Spins · B', badge: 'Glossy Show',
-    cover: 'img/neon-joker-spins/skins/b/img/cover.jpg',
-    desc: 'Глянцевое шоу: объёмные символы, золотая рама с лампочками, сцена.',
-  },
-  {
-    page: 'neon-joker-spins-c.html', name: 'Neon Joker Spins · C', badge: 'Rock Chrome',
-    cover: 'img/neon-joker-spins/skins/c/img/cover.jpg',
-    desc: 'Рок-клуб: сталь и хром, Джокер-панк, молнии вместо линий выигрыша.',
-  },
-  {
-    page: 'neon-joker-spins-d.html', name: 'Neon Joker Spins · D', badge: 'Retro 80s',
-    cover: 'img/neon-joker-spins/skins/d/img/cover.jpg',
-    desc: 'Автомат 80-х: хромированный корпус, барабаны под стеклом, лампы и рычаг.',
-  },
-];
-
-function njsEntries(entry) {
-  return NJS_VARIANTS.map((v) => ({
-    ...entry,
-    name: v.name,
-    catalog_badge: v.badge,
-    catalog_play_url: v.page,
-    catalog_cover_path: v.cover || entry.catalog_cover_path,
-    catalog_description: v.desc || entry.catalog_description,
-  }));
-}
 
 const isUnicornGame = (code) => /uniqorn|unicorn/.test(code);
-// Olympus Thunder and its design variants (olympus-thunder-v2, -v3, ...): a
-// subsection of Illuminator (#olympusGrid), original first.
-const isOlympusGame = (code) => /^olympus-thunder(-v\d+)?$/.test(code);
 
 const PLAY_ICON = '<svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4Z" fill="currentColor"/></svg>';
 const ADMIN_ICON = '<svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2-1.5-2-3.4-2.4 1a7.7 7.7 0 0 0-1.7-1L15 3h-4l-.3 2.5a7.7 7.7 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.5 7.5 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a7.7 7.7 0 0 0 1.7 1L11 21h4l.3-2.5a7.7 7.7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="13" cy="12" r="2.6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
@@ -155,28 +144,34 @@ function appendCard(gridEl, entry) {
   gridEl.appendChild(li);
 }
 
-// A sub-section inside a section's grid: spans the full row, own heading,
-// own grid of variant cards.
-function appendVariantGroup(gridEl, entry, group) {
-  const li = document.createElement('li');
-  li.className = 'catalog-sub';
-  li.innerHTML = `<h3 class="catalog-sub__title">${group.title}</h3><ul class="game-grid catalog-sub__grid"></ul>`;
-  const sub = li.querySelector('ul');
-  for (const v of group.variants) {
-    appendCard(sub, {
+// Builds the card entries of a hand-ordered list from the /catalog entries;
+// games not live on this backend are skipped.
+function resolveCards(cards, byCode) {
+  return cards.flatMap((card) => {
+    const spec = typeof card === 'string' ? { code: card } : card;
+    const entry = byCode.get(spec.code);
+    if (!entry) return [];
+    return [{
       ...entry,
-      name: v.name,
-      catalog_badge: v.badge,
-      catalog_description: v.desc,
-      catalog_play_url: v.url,
-      catalog_cover_path: v.cover || entry.catalog_cover_path,
-    });
+      name: spec.name || entry.name,
+      catalog_badge: spec.badge === undefined || spec.badge === null ? entry.catalog_badge : spec.badge,
+      catalog_play_url: spec.page || entry.catalog_play_url,
+      catalog_cover_path: spec.cover || entry.catalog_cover_path,
+      catalog_description: spec.desc || entry.catalog_description,
+      fallbackCover: entry.catalog_cover_path,
+    }];
+  });
+}
+
+function appendCards(gridEl, entries) {
+  for (const entry of entries) {
+    appendCard(gridEl, entry);
+    // Variant covers are optional screenshots: fall back to the game cover.
+    const img = gridEl.lastElementChild.querySelector('.game-card__img');
+    if (entry.fallbackCover && img) {
+      img.addEventListener('error', () => { img.src = entry.fallbackCover; }, { once: true });
+    }
   }
-  // Variant covers are optional screenshots: fall back to the game cover.
-  for (const img of sub.querySelectorAll('.game-card__img')) {
-    img.addEventListener('error', () => { img.src = entry.catalog_cover_path; }, { once: true });
-  }
-  gridEl.appendChild(li);
 }
 
 // Hides a section (heading included) when its grid ended up empty — e.g. no
@@ -192,35 +187,20 @@ async function renderCatalog() {
   const spinFactoryGrid = document.getElementById('spinFactoryGrid');
   const uniqornGrid = document.getElementById('uniqornGrid');
   const cre8Grid = document.getElementById('cre8Grid');
-  const njsGrid = document.getElementById('njsGrid');
-  const olympusGrid = document.getElementById('olympusGrid');
   const grids = [readyGrid, illuminatorGrid, spinFactoryGrid, uniqornGrid, cre8Grid].filter(Boolean);
 
   try {
     const entries = (await apiGet('/catalog')).reverse();
-    const ready = entries.filter((e) => READY_CODES.has(e.code));
-    const illuminator = entries.filter((e) => ILLUMINATOR_CODES.has(e.code) && !(njsGrid && e.code === NJS_CODE)
-      && !(olympusGrid && isOlympusGame(e.code)));
-    const njs = njsGrid ? entries.filter((e) => e.code === NJS_CODE).flatMap(njsEntries) : [];
-    // Olympus Thunder and its design variants: Illuminator's own subsection
-    // (#olympusGrid), v1 first; pages without one keep them in Illuminator
-    const olympus = olympusGrid ? entries.filter((e) => isOlympusGame(e.code)).sort((a, b) => a.code.localeCompare(b.code)) : [];
-    const spinFactory = entries.filter((e) => SPIN_FACTORY_CODES.has(e.code));
-    const uniqorn = entries.filter((e) => isUnicornGame(e.code));
-    const cre8 = entries.filter((e) => CRE8_CODES.has(e.code));
+    const byCode = new Map(entries.map((e) => [e.code, e]));
 
-    if (readyGrid) for (const entry of ready) appendCard(readyGrid, entry);
-    if (illuminatorGrid) {
-      for (const entry of illuminator) {
-        if (VARIANT_GROUPS[entry.code]) appendVariantGroup(illuminatorGrid, entry, VARIANT_GROUPS[entry.code]);
-        else appendCard(illuminatorGrid, entry);
-      }
+    if (readyGrid) appendCards(readyGrid, entries.filter((e) => READY_CODES.has(e.code)));
+    if (illuminatorGrid) appendCards(illuminatorGrid, resolveCards(ILLUMINATOR_CARDS, byCode));
+    if (spinFactoryGrid) {
+      appendCards(spinFactoryGrid, entries.filter((e) => SPIN_FACTORY_CODES.has(e.code)));
+      appendCards(spinFactoryGrid, resolveCards(SPIN_FACTORY_EXTRA_CARDS, byCode));
     }
-    if (njsGrid) for (const entry of njs) appendCard(njsGrid, entry);
-    if (olympusGrid) for (const entry of olympus) appendCard(olympusGrid, entry);
-    if (spinFactoryGrid) for (const entry of spinFactory) appendCard(spinFactoryGrid, entry);
-    if (uniqornGrid) for (const entry of uniqorn) appendCard(uniqornGrid, entry);
-    if (cre8Grid) for (const entry of cre8) appendCard(cre8Grid, entry);
+    if (uniqornGrid) appendCards(uniqornGrid, entries.filter((e) => isUnicornGame(e.code)));
+    if (cre8Grid) appendCards(cre8Grid, entries.filter((e) => CRE8_CODES.has(e.code)));
   } catch (err) {
     const li = document.createElement('li');
     li.innerHTML = `<div class="game-card"><div class="game-card__body"><p class="game-card__desc">Не удалось загрузить каталог: ${err.message}</p></div></div>`;
@@ -228,14 +208,7 @@ async function renderCatalog() {
   }
 
   if (readyGrid) toggleSection('readySection', readyGrid);
-  if (njsGrid) toggleSection('njsSubsection', njsGrid);
-  if (olympusGrid) toggleSection('olympusSection', olympusGrid);
-  if (illuminatorGrid) {
-    toggleSection('illuminatorSection', illuminatorGrid);
-    // секция видна, если есть хотя бы подкатегория NJS
-    if (njsGrid && njsGrid.children.length) document.getElementById('illuminatorSection').hidden = false;
-    if (olympusGrid && olympusGrid.children.length) document.getElementById('illuminatorSection').hidden = false;
-  }
+  if (illuminatorGrid) toggleSection('illuminatorSection', illuminatorGrid);
   if (spinFactoryGrid) toggleSection('spinFactorySection', spinFactoryGrid);
   if (uniqornGrid) toggleSection('uniqornSection', uniqornGrid);
   if (cre8Grid) toggleSection('cre8Section', cre8Grid);
