@@ -1,38 +1,47 @@
 <!doctype html>
+<!-- Общий каталог (ссылка открыта всем): вкладки проектов Illuminator,
+     Uniqorn, Spin Factory, Secret Room — у каждой свой пароль (ROOMS ниже,
+     раскладка игр по секциям в games-catalog.js). Пароль подходит к любой
+     вкладке: введён пароль другой комнаты — откроется она. Секции комнаты
+     лежат в <template> и попадают в DOM только после её пароля. Пароль
+     комнаты заодно выставляет общий код API (X-Access-Code), так что код демо
+     клиенту не нужен. Всё сверяется прямо в браузере: это ширма от случайных
+     зрителей, а не защита — игры по-прежнему отдаёт GET /catalog.
+     Прямые ссылки: #key=<пароль> (открыть комнату), #room=<id> (выбрать вкладку).
+     На localhost — внутренний каталог: все вкладки без паролей + «Ready»,
+     служебные карточки и кнопки «Админка» (?locked=1 — вид клиента). С ?from=tg (карточка в tg.html)
+     или внутри Telegram — режим портфолио: без «Админки», «назад» в tg.html. -->
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Каталог игр — demo</title>
+<title>Game Catalog</title>
 <link rel="stylesheet" href="css/fonts.css">
-<link rel="stylesheet" href="css/games.css?v=7">
+<link rel="stylesheet" href="css/games.css?v=9">
 </head>
 <body>
 
   <div class="lobby">
+    <a class="lobby__back" id="backLink" href="tg.html" hidden>← Back</a>
     <div class="lobby__header">
-      <h1 class="lobby__title">Каталог игр</h1>
-      <p class="lobby__subtitle">Выберите слот, чтобы начать демо-игру</p>
+      <h1 class="lobby__title">Game Catalog</h1>
+      <p class="lobby__subtitle">Choose a project</p>
     </div>
 
-    <ul class="game-grid">
-      <li class="static-card">
-        <a class="game-card secret-card" href="secret-room.html">
-          <div class="game-card__media">
-            <span class="game-card__badge">Private</span>
-            <svg class="secret-card__lock" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="4.5" y="10" width="15" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="15.5" r="1.6" fill="currentColor"/></svg>
-          </div>
-          <div class="game-card__body">
-            <h2 class="game-card__name">Secret Room</h2>
-            <p class="game-card__desc">Комнаты проектов — вход по паролю</p>
-            <span class="game-card__play">
-              <svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4Z" fill="currentColor"/></svg>
-              В Secret Room
-            </span>
-          </div>
-        </a>
-      </li>
+    <nav class="room-tabs" id="roomTabs" role="tablist"></nav>
 
+    <form class="secret-gate" id="roomGate" autocomplete="off" hidden>
+      <svg class="secret-gate__lock" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="4.5" y="10" width="15" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="15.5" r="1.6" fill="currentColor"/></svg>
+      <p class="secret-gate__title" id="roomGateTitle"></p>
+      <input class="secret-gate__input" id="roomPassword" type="password"
+             placeholder="Password" aria-label="Password" autocapitalize="characters">
+      <button class="game-card__play" type="submit">Enter</button>
+      <p class="secret-gate__error" id="roomError" role="alert"></p>
+    </form>
+
+    <div id="roomPanels"></div>
+
+    <ul class="game-grid" id="serviceCards">
       <li class="static-card">
         <a class="game-card" href="builder/new.html">
           <div class="game-card__media">
@@ -66,17 +75,195 @@
       </li>
     </ul>
 
-    <!-- Заполняется games-catalog.js из GET /catalog: открыты только готовые
-         игры, всё остальное разложено по комнатам проектов за паролем на
-         secret-room.html. Секция скрывается, если в ней нет карточек. -->
-    <section class="catalog-section" id="readySection">
-      <h2 class="catalog-section__title">Готовые игры</h2>
-      <ul class="game-grid" id="readyGrid"></ul>
-    </section>
+    <!-- Секции вкладок; заполняются games-catalog.js из GET /catalog, секция
+         без карточек скрывается. -->
+    <template id="room-ready">
+      <section class="catalog-section" id="readySection" hidden>
+        <ul class="game-grid" id="readyGrid"></ul>
+      </section>
+    </template>
+    <template id="room-illuminator">
+      <section class="catalog-section" id="illuminatorSection" hidden>
+        <ul class="game-grid" id="illuminatorGrid"></ul>
+        <div class="catalog-subsection" id="njsSubsection" hidden>
+          <h3 class="catalog-subsection__title">Neon Joker Spins · 5 art versions</h3>
+          <ul class="game-grid" id="njsGrid"></ul>
+        </div>
+        <div class="catalog-subsection" id="olympusSection" hidden>
+          <h3 class="catalog-subsection__title">Olympus Thunder · variants</h3>
+          <ul class="game-grid" id="olympusGrid"></ul>
+        </div>
+      </section>
+    </template>
+    <template id="room-uniqorn">
+      <section class="catalog-section" id="uniqornSection" hidden>
+        <ul class="game-grid" id="uniqornGrid"></ul>
+      </section>
+    </template>
+    <template id="room-spin-factory">
+      <section class="catalog-section" id="spinFactorySection" hidden>
+        <ul class="game-grid" id="spinFactoryGrid"></ul>
+      </section>
+    </template>
+    <template id="room-secret">
+      <section class="catalog-section" id="cre8Section" hidden>
+        <ul class="game-grid" id="cre8Grid"></ul>
+      </section>
+    </template>
   </div>
 
+  <script>
+    window.CATALOG_MANUAL_RENDER = true;
+    if (new URLSearchParams(location.search).get('from') === 'tg') window.CATALOG_PORTFOLIO = true;
+  </script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="js/telegram.js?v=3"></script>
   <script src="js/config.js?v=2"></script>
-  <script src="js/api.js"></script>
-  <script src="js/games-catalog.js?v=15"></script>
+  <script src="js/api.js?v=2"></script>
+  <script src="js/games-catalog.js?v=17"></script>
+  <script>
+    (async function () {
+      // Вкладки по порядку. sha — SHA-256 пароля (сами пароли в репо не
+      // хранятся; вводятся без учёта регистра), access — код API,
+      // зашифрованный этим паролем (XOR с SHA-256('access:' + пароль)).
+      // localOnly — вкладка только во внутреннем каталоге на localhost.
+      const ROOMS = [
+        { id: 'ready', title: 'Ready', localOnly: true },
+        { id: 'illuminator', title: 'Illuminator',
+          sha: 'e6722426de7e8d2d79da8c63107bba472a0f2495287fad8f2db0dd7d420ae2bf', access: '38ed3b677bb95f5c8250e4' },
+        { id: 'uniqorn', title: 'Uniqorn',
+          sha: '708b3fc1ac41f54a4e794a2d8154aa935fbbe70ae32d7d3ed285b5b214859516', access: 'b5b5183d2d5aa4ffef3130' },
+        { id: 'spin-factory', title: 'Spin Factory',
+          sha: 'ffea793b9d2b3d782a4d2a3c02bd2dde87f89067429b333c184b5826e7ddd792', access: '71953b7b740865eaf87614' },
+        { id: 'secret', title: 'Secret Room',
+          sha: '56516915c4cc68bfe3654e3c29d7260761b4576801e49eef445d750f415158d3', access: '2b395099636974a3a984aa' },
+      ];
+      const UNLOCK_KEY = 'catalog.rooms';
+      const TAB_KEY = 'catalog.tab';
+      const LOCK_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="4.5" y="10" width="15" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="15.5" r="1.6" fill="currentColor"/></svg>';
+
+      // ?locked=1 на localhost — посмотреть каталог глазами клиента, с паролями.
+      const isLocal = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)
+        && !new URLSearchParams(location.search).has('locked');
+      if (window.IS_TELEGRAM) window.CATALOG_PORTFOLIO = true;
+      if (window.CATALOG_PORTFOLIO) document.getElementById('backLink').hidden = false;
+      // «Админка» — только во внутреннем каталоге.
+      if (!isLocal) window.CATALOG_PORTFOLIO = true;
+      // «Back» из игры возвращает сюда, на ту же вкладку (см. telegram.js).
+      try { sessionStorage.setItem('catalogHome', 'games.html' + location.search); } catch { /* storage off */ }
+
+      const rooms = ROOMS.filter((r) => isLocal || !r.localOnly);
+      const tabsEl = document.getElementById('roomTabs');
+      const panelsEl = document.getElementById('roomPanels');
+      const gate = document.getElementById('roomGate');
+      const gateTitle = document.getElementById('roomGateTitle');
+      const input = document.getElementById('roomPassword');
+      const error = document.getElementById('roomError');
+      // Служебные карточки — только во внутреннем каталоге (.game-grid перебивает [hidden]).
+      if (!isLocal || window.CATALOG_PORTFOLIO) document.getElementById('serviceCards').remove();
+
+      async function sha256Bytes(text) {
+        return new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)));
+      }
+      async function sha256(text) {
+        return Array.from(await sha256Bytes(text), (b) => b.toString(16).padStart(2, '0')).join('');
+      }
+      async function decryptAccess(password, hex) {
+        const key = await sha256Bytes('access:' + password);
+        return String.fromCharCode(...hex.match(/../g).map((h, i) => parseInt(h, 16) ^ key[i]));
+      }
+
+      // Открытые комнаты храним хэшами паролей: смена пароля в ROOMS сама
+      // закрывает комнату у тех, кто входил по старому.
+      function loadUnlocked() {
+        try { return JSON.parse(localStorage.getItem(UNLOCK_KEY)) || []; } catch { return []; }
+      }
+      const isOpen = (room) => isLocal || (room.sha && loadUnlocked().includes(room.sha));
+
+      let active = null;
+      try { active = sessionStorage.getItem(TAB_KEY); } catch { /* storage off */ }
+      const hashParams = new URLSearchParams(location.hash.slice(1));
+      if (hashParams.get('room')) active = hashParams.get('room');
+      if (!rooms.some((r) => r.id === active)) active = (rooms.find(isOpen) || rooms[0]).id;
+
+      // Секции всех открытых комнат строятся заново одним renderCatalog
+      // (он дописывает карточки в гриды — повторный вызов поверх дал бы дубли).
+      function renderPanels() {
+        panelsEl.replaceChildren(...rooms.filter(isOpen).map((r) => {
+          const panel = document.createElement('div');
+          panel.className = 'room-panel';
+          panel.dataset.room = r.id;
+          panel.append(document.getElementById(`room-${r.id}`).content.cloneNode(true));
+          return panel;
+        }));
+        if (panelsEl.children.length) renderCatalog();
+      }
+
+      function showTab(id) {
+        active = id;
+        try { sessionStorage.setItem(TAB_KEY, id); } catch { /* storage off */ }
+        const room = rooms.find((r) => r.id === id);
+        for (const btn of tabsEl.children) {
+          const r = rooms.find((x) => x.id === btn.dataset.room);
+          btn.setAttribute('aria-selected', String(r.id === id));
+          btn.classList.toggle('room-tab--locked', !isOpen(r));
+        }
+        for (const panel of panelsEl.children) panel.hidden = panel.dataset.room !== id;
+        const open = isOpen(room);
+        gate.hidden = open;
+        if (!open) {
+          gateTitle.textContent = room.title;
+          input.value = '';
+          error.textContent = '';
+          input.focus();
+        }
+      }
+
+      tabsEl.replaceChildren(...rooms.map((r) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'room-tab';
+        btn.setAttribute('role', 'tab');
+        btn.dataset.room = r.id;
+        btn.innerHTML = `<span class="room-tab__lock">${LOCK_ICON}</span>${r.title}`;
+        btn.addEventListener('click', () => showTab(r.id));
+        return btn;
+      }));
+
+      // Пароль подходит к любой вкладке: открывает свою комнату и переключает на неё.
+      async function tryKey(key) {
+        const password = key.trim().toUpperCase();
+        const hash = await sha256(password);
+        const room = rooms.find((r) => r.sha === hash);
+        if (!room) return false;
+        setAccessCode(await decryptAccess(password, room.access));
+        try {
+          localStorage.setItem(UNLOCK_KEY, JSON.stringify([...new Set([...loadUnlocked(), hash])]));
+        } catch { /* storage off */ }
+        renderPanels();
+        showTab(room.id);
+        return true;
+      }
+
+      // Прямая ссылка: #key=<пароль> (в боте — startapp=room_<пароль>, см.
+      // tg.html). Фрагмент не уходит на сервер и стирается после входа.
+      const urlKey = hashParams.get('key');
+      if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+      if (!(urlKey && await tryKey(urlKey))) {
+        renderPanels();
+        showTab(active);
+      }
+
+      gate.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (await tryKey(input.value)) return;
+        error.textContent = 'Wrong password';
+        input.select();
+        gate.classList.remove('secret-gate--shake');
+        void gate.offsetWidth;
+        gate.classList.add('secret-gate--shake');
+      });
+    })();
+  </script>
 </body>
 </html>

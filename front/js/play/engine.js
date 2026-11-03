@@ -346,7 +346,7 @@ async function init() {
     if (betIndex < betConfig.steps.length - 1) { betIndex += 1; updateBetUI(); updateSpinButtonUI(); }
   });
   const homeBtn = document.querySelector('[data-action="home"]');
-  if (homeBtn) homeBtn.addEventListener('click', () => { window.location.href = 'games.html'; });
+  if (homeBtn) homeBtn.addEventListener('click', () => { window.location.href = window.CATALOG_URL || 'games.html'; });
   window.addEventListener('resize', () => {
     const nextDevice = pickDevice();
     if (nextDevice !== device) { device = nextDevice; renderCurrentScreen(); }

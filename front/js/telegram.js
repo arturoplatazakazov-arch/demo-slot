@@ -1,7 +1,7 @@
-// Telegram Mini App bootstrap, shared by every game page and (later) the
-// tg.html portfolio catalog. Safe to include anywhere: outside Telegram the
-// SDK reports platform 'unknown' with empty initData, and this file does
-// nothing beyond setting window.IS_TELEGRAM = false.
+// Telegram Mini App bootstrap, shared by every game page and the catalogs.
+// Safe to include anywhere: outside Telegram the SDK reports platform
+// 'unknown' with empty initData, and this file only sets
+// window.IS_TELEGRAM = false and the "to catalog" target.
 //
 // The official SDK (https://telegram.org/js/telegram-web-app.js) must be
 // loaded BEFORE this script — see the <script> block at the bottom of
@@ -15,19 +15,26 @@
   const inTelegram = forced || (!!tg && (tg.initData !== '' || tg.platform !== 'unknown'));
 
   window.IS_TELEGRAM = inTelegram;
+
+  // "To catalog" leads back to the catalog page the game was opened from
+  // (games.html with its project tabs, or tg.html — each stores itself in
+  // sessionStorage 'catalogHome', games.html keeps ?from=tg). Without one: tg.html inside
+  // Telegram (the portfolio catalog: games only), else the hardcoded
+  // games.html. Covers the top-left overlay button here and the V3 bar's /
+  // play.html's home button via window.CATALOG_URL (see ui-bar-v3.js).
+  let home = null;
+  try { home = sessionStorage.getItem('catalogHome'); } catch { /* storage off */ }
+  if (!home && inTelegram) home = 'tg.html';
+  if (home) {
+    window.CATALOG_URL = home;
+    document.querySelectorAll('.to-catalog-btn').forEach((el) => {
+      el.setAttribute('href', home);
+    });
+  }
+
   if (!inTelegram) return;
 
   document.documentElement.classList.add('in-telegram');
-
-  // Inside Telegram all "to catalog" navigation leads to tg.html (the
-  // portfolio catalog: games only) instead of games.html, which still links
-  // to the builder/anim-lab/admin utility pages. Covers the top-left overlay
-  // button here and the V3 bar's home button via window.CATALOG_URL (see
-  // ui-bar-v3.js).
-  window.CATALOG_URL = 'tg.html';
-  document.querySelectorAll('.to-catalog-btn').forEach((el) => {
-    el.setAttribute('href', 'tg.html');
-  });
 
   if (!tg || forced && tg.platform === 'unknown') return; // browser test run
 

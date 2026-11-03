@@ -5,14 +5,16 @@
 // js/api.js (loaded before this script) for the same base-URL resolution as
 // the play pages.
 //
-// The public catalogs (games.html, tg.html) show only «Готовые игры»
-// (READY_CODES). Every other game lives in a project room on
-// secret-room.html: one password field, and the password picks the room
-// (ROOMS in secret-room.html). Rooms and their sections here:
-//   - illuminator: ILLUMINATOR_CODES + the NJS / Olympus subsections.
-//   - spin-factory: SPIN_FACTORY_CODES («В работе», was Spin Factory Portfolio).
-//   - uniqorn: unicorn games (uniqorn-*, mr-president-unicorn).
-//   - cre8: Cre8Pics analogues (CRE8_CODES: provider2 + provider3 + earlier ones).
+// Where each section is shown:
+//   - Готовые игры (READY_CODES): tg.html, the bot's public catalog.
+//   - Project tabs on games.html, each behind its own password (ROOMS in
+//     games.html):
+//       - Illuminator: ILLUMINATOR_CODES + the NJS / Olympus subsections.
+//       - Uniqorn: unicorn games (uniqorn-*, mr-president-unicorn).
+//       - Spin Factory: SPIN_FACTORY_CODES (was «В работе»).
+//       - Secret Room: Cre8Pics analogues (CRE8_CODES: provider2 + provider3
+//         + earlier ones; the section ids are still cre8*).
+//     On localhost games.html opens every tab without passwords, plus Ready.
 // A game in no list is shown nowhere — add its code to a room's list.
 // The lists are explicit codes rather than "first N by created_at", so a
 // newly seeded game doesn't shift others between rooms. Within a section,
@@ -239,6 +241,6 @@ async function renderCatalog() {
   if (cre8Grid) toggleSection('cre8Section', cre8Grid);
 }
 
-// secret-room.html calls renderCatalog() itself once a room's password is in
-// (only the unlocked room's sections are in its DOM by then).
-if (!window.CATALOG_SECRET_ROOM) renderCatalog();
+// games.html calls renderCatalog() itself once a tab's password is in (only
+// the unlocked tabs' sections are in its DOM then).
+if (!window.CATALOG_MANUAL_RENDER) renderCatalog();
