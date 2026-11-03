@@ -7,7 +7,8 @@
      комнаты заодно выставляет общий код API (X-Access-Code), так что код демо
      клиенту не нужен. Всё сверяется прямо в браузере: это ширма от случайных
      зрителей, а не защита — игры по-прежнему отдаёт GET /catalog.
-     Прямые ссылки: #key=<пароль> (открыть комнату), #room=<id> (выбрать вкладку).
+     Вход: логин test + пароль комнаты; админский логин открывает все
+     вкладки сразу (ADMIN ниже). Прямые ссылки: #key=<пароль> (открыть комнату), #room=<id> (выбрать вкладку).
      На localhost — внутренний каталог: все вкладки без паролей + «Ready»,
      служебные карточки и кнопки «Админка» (?locked=1 — вид клиента). С ?from=tg (карточка в tg.html)
      или внутри Telegram — режим портфолио: без «Админки», «назад» в tg.html. -->
@@ -30,11 +31,13 @@
 
     <nav class="room-tabs" id="roomTabs" role="tablist"></nav>
 
-    <form class="secret-gate" id="roomGate" autocomplete="off" hidden>
+    <form class="secret-gate" id="roomGate" hidden>
       <svg class="secret-gate__lock" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="4.5" y="10" width="15" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="15.5" r="1.6" fill="currentColor"/></svg>
       <p class="secret-gate__title" id="roomGateTitle"></p>
-      <input class="secret-gate__input" id="roomPassword" type="password"
-             placeholder="Password" aria-label="Password" autocapitalize="characters">
+      <input class="secret-gate__input" id="roomLogin" type="text" name="username"
+             placeholder="Login" aria-label="Login" autocomplete="username" autocapitalize="none" spellcheck="false">
+      <input class="secret-gate__input" id="roomPassword" type="password" name="password"
+             placeholder="Password" aria-label="Password" autocomplete="current-password" autocapitalize="characters">
       <button class="game-card__play" type="submit">Enter</button>
       <p class="secret-gate__error" id="roomError" role="alert"></p>
     </form>
@@ -130,6 +133,13 @@
         { id: 'secret', title: 'Secret Room',
           sha: '56516915c4cc68bfe3654e3c29d7260761b4576801e49eef445d750f415158d3', access: '2b395099636974a3a984aa' },
       ];
+      // Админ: логин + пароль открывают все вкладки; sha — SHA-256 от
+      // '<логин>:<ПАРОЛЬ>' (логин в нижнем регистре, пароль в верхнем).
+      const ADMIN = {
+        sha: 'de6b3c0ef695af3540d8da9f59d1091f13ce5122bdabeda2c6bfbed28653c470', access: '6b9e051bb03dd88a15e783',
+      };
+      // Логин для паролей комнат.
+      const ROOM_LOGIN = 'test';
       const UNLOCK_KEY = 'catalog.rooms';
       const TAB_KEY = 'catalog.tab';
       const LOCK_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="4.5" y="10" width="15" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="15.5" r="1.6" fill="currentColor"/></svg>';
@@ -150,6 +160,7 @@
       const gate = document.getElementById('roomGate');
       const gateTitle = document.getElementById('roomGateTitle');
       const input = document.getElementById('roomPassword');
+      const loginInput = document.getElementById('roomLogin');
       const error = document.getElementById('roomError');
       // Служебные карточки — только во внутреннем каталоге (.game-grid перебивает [hidden]).
       if (!isLocal || window.CATALOG_PORTFOLIO) document.getElementById('serviceCards').remove();
@@ -170,7 +181,13 @@
       function loadUnlocked() {
         try { return JSON.parse(localStorage.getItem(UNLOCK_KEY)) || []; } catch { return []; }
       }
-      const isOpen = (room) => isLocal || (room.sha && loadUnlocked().includes(room.sha));
+      const isOpen = (room) => isLocal || loadUnlocked().includes(ADMIN.sha)
+        || (room.sha && loadUnlocked().includes(room.sha));
+      function addUnlocked(hash) {
+        try {
+          localStorage.setItem(UNLOCK_KEY, JSON.stringify([...new Set([...loadUnlocked(), hash])]));
+        } catch { /* storage off */ }
+      }
 
       let active = null;
       try { active = sessionStorage.getItem(TAB_KEY); } catch { /* storage off */ }
@@ -207,7 +224,7 @@
           gateTitle.textContent = room.title;
           input.value = '';
           error.textContent = '';
-          input.focus();
+          (loginInput.value ? input : loginInput).focus();
         }
       }
 
@@ -222,18 +239,29 @@
         return btn;
       }));
 
-      // Пароль подходит к любой вкладке: открывает свою комнату и переключает на неё.
+      // Пароль комнаты подходит к любой вкладке: открывает свою комнату и
+      // переключает на неё.
       async function tryKey(key) {
         const password = key.trim().toUpperCase();
         const hash = await sha256(password);
         const room = rooms.find((r) => r.sha === hash);
         if (!room) return false;
         setAccessCode(await decryptAccess(password, room.access));
-        try {
-          localStorage.setItem(UNLOCK_KEY, JSON.stringify([...new Set([...loadUnlocked(), hash])]));
-        } catch { /* storage off */ }
+        addUnlocked(hash);
         renderPanels();
         showTab(room.id);
+        return true;
+      }
+
+      async function tryLogin(login, key) {
+        login = login.trim().toLowerCase();
+        if (login === ROOM_LOGIN) return tryKey(key);
+        const password = key.trim().toUpperCase();
+        if (await sha256(`${login}:${password}`) !== ADMIN.sha) return false;
+        setAccessCode(await decryptAccess(password, ADMIN.access));
+        addUnlocked(ADMIN.sha);
+        renderPanels();
+        showTab(active);
         return true;
       }
 
@@ -248,8 +276,8 @@
 
       gate.addEventListener('submit', async (e) => {
         e.preventDefault();
-        if (await tryKey(input.value)) return;
-        error.textContent = 'Wrong password';
+        if (await tryLogin(loginInput.value, input.value)) return;
+        error.textContent = 'Wrong login or password';
         input.select();
         gate.classList.remove('secret-gate--shake');
         void gate.offsetWidth;
