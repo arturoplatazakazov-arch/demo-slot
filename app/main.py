@@ -19,6 +19,7 @@ from app.seed.gangsta_casino import get_or_seed_active_config as get_or_seed_gan
 from app.seed.gold_of_baku import get_or_seed_active_config as get_or_seed_gold_of_baku
 from app.seed.gold_of_baku_2 import get_or_seed_active_config as get_or_seed_gold_of_baku_2
 from app.seed.golden_caravan import get_or_seed_active_config as get_or_seed_golden_caravan
+from app.seed.great_uniqorn import get_or_seed_active_config as get_or_seed_great_uniqorn
 from app.seed.ice_spin_deluxe import get_or_seed_active_config as get_or_seed_ice_spin_deluxe
 from app.seed.lucky_joker_3h3 import get_or_seed_active_config as get_or_seed_lucky_joker_3h3
 from app.seed.mr_president_unicorn import get_or_seed_active_config as get_or_seed_mr_president_unicorn
@@ -71,6 +72,7 @@ async def lifespan(app: FastAPI):
         await get_or_seed_gold_of_baku(db)
         await get_or_seed_gold_of_baku_2(db)
         await get_or_seed_golden_caravan(db)
+        await get_or_seed_great_uniqorn(db)
         await get_or_seed_ice_spin_deluxe(db)
         await get_or_seed_lucky_joker_3h3(db)
         await get_or_seed_mr_president_unicorn(db)

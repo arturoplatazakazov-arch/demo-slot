@@ -10,8 +10,9 @@
 //   - Project tabs on games.html, each behind its own password (ROOMS in
 //     games.html):
 //       - Illuminator: ILLUMINATOR_CARDS (hand-ordered, one card per variant page).
-//       - Uniqorn, three blocks top to bottom: «Игры с маскотом»
-//         (UNIQORN_MASCOT_CODES), «Готовые игры» (READY_CARDS again), «Архив»
+//       - Uniqorn, four blocks top to bottom: «Игры с маскотом»
+//         (UNIQORN_MASCOT_CODES), «В работе» (UNIQORN_WIP_CODES), «Готовые
+//         игры» (READY_CARDS again), «Архив»
 //         (every other unicorn game: uniqorn-*, mr-president-unicorn) —
 //         the archive always goes last.
 //       - Spin Factory: SPIN_FACTORY_CODES (was «В работе») + SPIN_FACTORY_EXTRA_CARDS.
@@ -109,7 +110,8 @@ const CRE8_CODES = new Set([
 ]);
 
 
-const UNIQORN_MASCOT_CODES = new Set(['great-uniqorn']);
+const UNIQORN_MASCOT_CODES = new Set([]);
+const UNIQORN_WIP_CODES = new Set(['great-uniqorn']);
 const isUnicornGame = (code) => /uniqorn|unicorn/.test(code);
 
 const PLAY_ICON = '<svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4Z" fill="currentColor"/></svg>';
@@ -192,6 +194,7 @@ async function renderCatalog() {
   const illuminatorGrid = document.getElementById('illuminatorGrid');
   const spinFactoryGrid = document.getElementById('spinFactoryGrid');
   const uniqornMascotGrid = document.getElementById('uniqornMascotGrid');
+  const uniqornWipGrid = document.getElementById('uniqornWipGrid');
   const uniqornReadyGrid = document.getElementById('uniqornReadyGrid');
   const uniqornGrid = document.getElementById('uniqornGrid');
   const cre8Grid = document.getElementById('cre8Grid');
@@ -208,9 +211,10 @@ async function renderCatalog() {
       appendCards(spinFactoryGrid, resolveCards(SPIN_FACTORY_EXTRA_CARDS, byCode));
     }
     if (uniqornMascotGrid) appendCards(uniqornMascotGrid, entries.filter((e) => UNIQORN_MASCOT_CODES.has(e.code)));
+    if (uniqornWipGrid) appendCards(uniqornWipGrid, entries.filter((e) => UNIQORN_WIP_CODES.has(e.code)));
     if (uniqornReadyGrid) appendCards(uniqornReadyGrid, resolveCards(READY_CARDS, byCode));
     if (uniqornGrid) {
-      appendCards(uniqornGrid, entries.filter((e) => isUnicornGame(e.code) && !UNIQORN_MASCOT_CODES.has(e.code)));
+      appendCards(uniqornGrid, entries.filter((e) => isUnicornGame(e.code) && !UNIQORN_MASCOT_CODES.has(e.code) && !UNIQORN_WIP_CODES.has(e.code)));
     }
     if (cre8Grid) appendCards(cre8Grid, entries.filter((e) => CRE8_CODES.has(e.code)));
   } catch (err) {
@@ -224,10 +228,11 @@ async function renderCatalog() {
   if (spinFactoryGrid) toggleSection('spinFactorySection', spinFactoryGrid);
   if (uniqornGrid) {
     toggleSection('uniqornMascotSection', uniqornMascotGrid);
+    toggleSection('uniqornWipSection', uniqornWipGrid);
     toggleSection('uniqornReadySection', uniqornReadyGrid);
     toggleSection('uniqornArchiveSection', uniqornGrid);
-    // секция видна, если непуст хоть один из трёх блоков
-    document.getElementById('uniqornSection').hidden = ![uniqornMascotGrid, uniqornReadyGrid, uniqornGrid]
+    // секция видна, если непуст хоть один из блоков
+    document.getElementById('uniqornSection').hidden = ![uniqornMascotGrid, uniqornWipGrid, uniqornReadyGrid, uniqornGrid]
       .some((grid) => grid && grid.children.length);
   }
   if (cre8Grid) toggleSection('cre8Section', cre8Grid);

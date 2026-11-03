@@ -1,0 +1,694 @@
+/* Great Uniqorn — сверстан по макету Figma дизайнера (файл uniqorn-presedent,
+   секции final_design / slot/ui_elements / pop-ap / items).
+
+   Вся сцена — .stage в координатах макета: десктоп 1932x940 («Horizontal
+   View»), портрет 780x1416 («Max Vertical View»). Каждая цифра ниже снята с
+   макета (get_metadata), а не подобрана на глаз; slot.js (layoutStage)
+   масштабирует кадр одним transform'ом. Герой нарисован прямо в фоне, поэтому
+   на десктопе фон живёт ВНУТРИ сцены — иначе object-fit: cover увёл бы его
+   от рамки на любом соотношении сторон, кроме макетного.
+
+   Подача — PNG + CSS, без спайна (как вся линейка uniqorn-*). Механика —
+   Amy's Fruit Farm с вайлдом-множителем (см. app/seed/great_uniqorn.py). */
+
+:root {
+  --navy: #0d1d4f;
+  --navy-deep: #060d29;
+  --gold: #ffd56a;
+  --gold-dark: #b8791c;
+  --red: #d8222a;
+  --red-dark: #7d0d12;
+  --cream: #fff6e2;
+  --ui-border: rgba(255, 213, 106, 0.28);
+
+  /* layoutStage пишет сюда масштаб и сдвиг кадра. */
+  --stage-s: 1;
+  --stage-x: 0px;
+  --stage-y: 0px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--navy-deep);
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  color: var(--cream);
+}
+
+/* ---------- Back-to-catalog button ---------- */
+.to-catalog-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 110;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(6, 13, 41, 0.78);
+  border: 1px solid rgba(255, 213, 106, 0.55);
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(4px);
+}
+.to-catalog-btn:hover { background: rgba(6, 13, 41, 0.94); border-color: var(--gold); }
+.to-catalog-btn svg { width: 14px; height: 14px; }
+
+/* ---------- Dev panel (temporary) ---------- */
+.dev-panel {
+  position: fixed;
+  top: 52px;
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 260px;
+  align-items: center;
+}
+.dev-btn {
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #222;
+  color: #ddd;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.dev-btn:hover { opacity: 1; }
+.dev-hint {
+  font-size: 10px;
+  color: #999;
+  width: 100%;
+  text-align: right;
+}
+
+/* ---------- Screen / stage ---------- */
+.screen {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--navy-deep);
+}
+
+/* Летербокс на десктопе (вьюпорт уже/шире кадра 1932x940): тот же фон,
+   размытый и притемнённый, чтобы поля по краям не читались чёрными полосами. */
+.bg-fill {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(18px) brightness(0.55);
+  transform: scale(1.08);
+}
+
+.stage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1932px;
+  height: 940px;
+  transform-origin: 0 0;
+  transform: translate(var(--stage-x), var(--stage-y)) scale(var(--stage-s));
+}
+
+.stage__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Логотип: инстанс 354x115 в (1057, 12). Экспорт логотипа несёт ещё 7px
+   тени вокруг узла 385x125, отсюда сдвиг на -7 * 354/385 и ширина 399 * 0.9195. */
+.logo {
+  position: absolute;
+  left: 1050.6px;
+  top: 5.6px;
+  width: 366.9px;
+  z-index: 8;
+  pointer-events: none;
+}
+
+/* ---------- Reel ----------
+   Группа «slot» макета: рамка 806x550, подложка барабанов 753x485 в (28, 30).
+   На десктопе та же группа стоит в (713, 58) размером 1042x711 = x1.2928. */
+.reel {
+  position: absolute;
+  left: 713px;
+  top: 58px;
+  width: 806px;
+  height: 550px;
+  transform-origin: 0 0;
+  transform: scale(1.29280);
+}
+
+.reel__bg {
+  position: absolute;
+  left: 28px;
+  top: 30px;
+  width: 753px;
+  height: 485px;
+}
+
+.reel__frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 6;
+  pointer-events: none;
+}
+
+/* Сетка во внутренних единицах: ряд = 200 + 10 зазор (ReelMath.ROW_STEP, на
+   нём держится анимация ленты), колонка = 208 без зазора. 5 x 208 = 1040 ->
+   ровно 753 макета при scale 0.72404, поэтому оси колонок совпадают с
+   разделителями, впечатанными в подложку (шаг 150.6). По высоте 620 -> 449,
+   ряды макета идут с шагом 150 от y = 17.5 подложки. */
+.reel__grid {
+  position: absolute;
+  left: 28px;
+  top: 47.5px;
+  width: 1040px;
+  height: 620px;
+  transform-origin: 0 0;
+  transform: scale(0.72404);
+  display: flex;
+  flex-direction: row;
+  z-index: 2;
+}
+
+/* Колонка = видимое окно ленты: вся высота подложки (485 макета = 670
+   внутренних, т.е. по 24px сверху и снизу сетки). Режем только по вертикали:
+   clip-path с отрицательным горизонтальным инсетом даёт символу (самолёт,
+   бургер) и пульсу выигрыша вылезать на соседние колонки. */
+.reel__col {
+  position: relative;
+  width: 208px;
+  height: 668px;
+  margin-top: -24px;
+  clip-path: inset(0 -80px);
+  transition: filter 200ms ease;
+}
+.reel__col.is-anticipating {
+  z-index: 2;
+  filter: drop-shadow(0 0 16px rgba(255, 213, 106, 0.95));
+}
+.reel__strip {
+  position: absolute;
+  top: 24px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Символ макета — 133 в ячейке 150.6x150 (по центру). Во внутренних единицах
+   это 183.7; PNG нарезаны с полями 16/127 вокруг узла символа (под вылеты
+   самолёта и бургера), поэтому картинка 230x230, центр — центр ячейки. */
+.reel__cell {
+  position: relative;
+  width: 208px;
+  height: 200px;
+  flex: 0 0 auto;
+}
+.reel__cell img {
+  position: absolute;
+  left: -11px;
+  top: -15px;
+  width: 230px;
+  height: 230px;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+.reel__cell.is-dimmed img { opacity: 0.32; }
+.reel__cell-anchor {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  pointer-events: none;
+}
+
+/* ---------- Inline win amount (small wins, no popup) ---------- */
+.reel-win-amount {
+  position: absolute;
+  left: 28px;
+  top: 30px;
+  width: 753px;
+  height: 485px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 7;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.reel-win-amount.is-visible { opacity: 1; }
+.reel-win-amount::before {
+  content: attr(data-amount);
+  font-family: 'Montserrat', 'Segoe UI', system-ui, sans-serif;
+  font-weight: 900;
+  font-size: 48px;
+  color: #fff;
+  white-space: nowrap;
+  padding: 4px 26px 6px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(17, 38, 104, 0.92), rgba(6, 13, 41, 0.92));
+  box-shadow: 0 0 0 2px var(--gold-dark), 0 0 0 4px rgba(255, 213, 106, 0.4), 0 8px 26px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
+}
+
+/* ---------- BUY BONUS / FS LEFT plates ----------
+   Обе плашки — кнопка из макета («button» 282x58 в (1093, 723) на десктопе,
+   321x66 в (227, 635) в портрете), наезжает на нижний край рамки. */
+.plate-btn {
+  position: absolute;
+  left: 1093px;
+  top: 723px;
+  width: 282px;
+  height: 58px;
+  padding: 0;
+  border: 0;
+  background: none;
+  z-index: 9;
+}
+.plate-btn img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+  pointer-events: none;
+}
+
+.sign-buy-bonus {
+  cursor: pointer;
+  transition: transform 120ms ease, filter 160ms ease;
+}
+.sign-buy-bonus:hover { filter: brightness(1.12); }
+.sign-buy-bonus:active { transform: scale(0.96); }
+.screen[data-mode="freespins"] .sign-buy-bonus { display: none; }
+
+/* Плашка FS LEFT пришла с впечатанным «FS LEFT: 100» — текст стёрт из
+   картинки, счётчик живой. Начертание — как в макете: белый жирный гротеск
+   с тёмно-красной обводкой. */
+.fs-counter { display: none; }
+.screen[data-mode="freespins"] .fs-counter { display: block; }
+/* Блочный, а не flex: во flex-контейнере текст «FS LEFT: » и число стали бы
+   отдельными элементами, и пробел между ними схлопнулся бы. */
+.fs-counter__label {
+  position: absolute;
+  inset: 0;
+  display: block;
+  text-align: center;
+  line-height: 56px;
+  font-family: 'Montserrat', 'Segoe UI', system-ui, sans-serif;
+  font-weight: 900;
+  font-size: 29px;
+  letter-spacing: 0.01em;
+  color: #fff;
+  -webkit-text-stroke: 3px var(--red-dark);
+  paint-order: stroke fill;
+  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ---------- Screen dim ----------
+   Внутри сцены (поверх всего, кроме попапов), но далеко за её краями, чтобы
+   накрыть и летербокс. */
+.screen-dim {
+  position: absolute;
+  inset: -3000px;
+  background: rgba(3, 7, 24, 0.74);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  z-index: 25;
+}
+.screen-dim.is-active { opacity: 1; }
+/* Нижний бар стоит вне сцены (fixed поверх неё) — под попапом гасим и его. */
+.v3-bar { transition: filter 320ms ease; }
+body.is-screen-dimmed .v3-bar { filter: brightness(0.3); pointer-events: none; }
+.screen-dim.is-opaque { background: #000; }
+
+/* Missing-asset placeholder (dev-time only). */
+img.is-missing {
+  outline: 2px dashed rgba(255, 213, 106, 0.5);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* ---------- Paytable info popup ---------- */
+.info-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 20px;
+}
+.info-popup[hidden] { display: none; }
+
+.info-popup__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(720px, 90vh);
+  overflow-y: auto;
+  background: linear-gradient(180deg, #13296b, var(--navy-deep));
+  border: 3px solid var(--gold-dark);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.info-popup__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--cream);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.info-popup__close:hover { background: rgba(0, 0, 0, 0.55); }
+.info-popup__title {
+  margin: 0 0 10px;
+  color: var(--gold);
+  font-weight: 800;
+  font-size: 24px;
+  text-align: center;
+}
+.info-popup__note {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.35;
+  text-align: center;
+  opacity: 0.9;
+}
+.info-popup__multipliers {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: -6px 0 16px;
+}
+.info-popup__multipliers img { width: 54px; height: 54px; }
+.info-popup__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.info-popup__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.info-popup__row img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.info-popup__row-name {
+  flex: 1 1 auto;
+  min-width: 90px;
+  font-weight: 700;
+}
+.info-popup__row-pays {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+}
+.info-popup__row-pays span { white-space: nowrap; opacity: 0.9; }
+.info-popup__row-pays b { color: var(--gold); }
+
+/* ================================================================
+   Portrait — «Max Vertical View» 780x1416
+   ================================================================ */
+@media (orientation: portrait) {
+  .stage {
+    width: 780px;
+    height: 1416px;
+  }
+  /* Сцена привязана к ширине телефона, а он выше кадра макета, поэтому фон —
+     это .bg-fill на весь экран (cover, низом к бару: стол с героем в макете
+     стоит прямо над панелью управления). */
+  .stage__bg { display: none; }
+  .bg-fill {
+    filter: none;
+    transform: none;
+    object-position: 50% 100%;
+  }
+
+  /* Логотип 385x125 в (197, 57), плюс те же 7px тени экспорта. */
+  .logo {
+    left: 190px;
+    top: 50px;
+    width: 399px;
+  }
+
+  /* Рамка в макете шире кадра (806 при 780) и стоит в (-13, 129): завитки по
+     бокам срезаны краем экрана — так и задумано. */
+  .reel {
+    left: -13px;
+    top: 129px;
+    transform: none;
+  }
+
+  .plate-btn {
+    left: 227px;
+    top: 635px;
+    width: 321px;
+    height: 66px;
+  }
+  .fs-counter__label { font-size: 33px; line-height: 64px; }
+}
+
+/* ---------- Boot preloader theme (структура в css/preloader.css) ---------- */
+.preloader {
+  --pl-bg: #070f30;
+  --pl-accent-a: #e2333b;
+  --pl-accent-b: #ffd56a;
+  --pl-glow-a: rgba(226, 51, 59, 0.35);
+  --pl-glow-b: rgba(255, 213, 106, 0.14);
+  --pl-border: rgba(255, 213, 106, 0.45);
+  --pl-shadow: rgba(255, 213, 106, 0.55);
+}
+
+/* ============================================================================
+   Motion (PNG-подача без спайна). Длительности продублированы константами в
+   slot.js (WIN_PULSE_MS, LAND_BOUNCE_MS, WILD_REVEAL_MS, POPUP_*) — менять
+   вместе.
+   ============================================================================ */
+
+/* wild и scatter «дышат» всё время, остальные стоят, пока не выиграют. */
+@keyframes symbol-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.045); }
+}
+.reel__cell.is-special img {
+  animation: symbol-breathe 2.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(255, 213, 106, 0.45));
+}
+
+@keyframes symbol-land {
+  0%   { transform: translateY(-6%) scaleY(1.06) scaleX(0.96); }
+  55%  { transform: translateY(0) scaleY(0.94) scaleX(1.05); }
+  100% { transform: translateY(0) scale(1); }
+}
+.reel__cell.is-landing img {
+  animation: symbol-land 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes symbol-win {
+  0%   { transform: scale(1);    filter: drop-shadow(0 0 0 rgba(255, 213, 106, 0)); }
+  35%  { transform: scale(1.16); filter: drop-shadow(0 0 22px rgba(255, 213, 106, 0.95)) brightness(1.18); }
+  70%  { transform: scale(1.05); filter: drop-shadow(0 0 16px rgba(255, 213, 106, 0.7)) brightness(1.08); }
+  100% { transform: scale(1);    filter: drop-shadow(0 0 0 rgba(255, 213, 106, 0)); }
+}
+.reel__cell.is-winning img {
+  animation: symbol-win 620ms ease-in-out;
+  animation-fill-mode: both;
+}
+.reel__cell.is-winning { z-index: 3; }
+
+/* ---------- WILD -> множитель ----------
+   Упавший WILD сжимается во вспышку, подменяет картинку на xN и выпрыгивает
+   обратно с золотым ореолом (slot.js revealWildMultiplier). Кольцо-вспышка —
+   ::after ячейки, поверх символа. */
+@keyframes wild-squeeze {
+  0%   { transform: scale(1) rotate(0deg); filter: brightness(1); }
+  100% { transform: scale(0.2) rotate(-14deg); filter: brightness(2.4); }
+}
+@keyframes wild-pop {
+  0%   { transform: scale(0.2) rotate(10deg); filter: brightness(2.4) drop-shadow(0 0 30px #fff2b8); }
+  60%  { transform: scale(1.22) rotate(-3deg); filter: brightness(1.3) drop-shadow(0 0 26px rgba(255, 213, 106, 0.95)); }
+  100% { transform: scale(1) rotate(0deg); filter: brightness(1) drop-shadow(0 0 12px rgba(255, 213, 106, 0.6)); }
+}
+@keyframes wild-burst {
+  0%   { opacity: 0.95; transform: translate(-50%, -50%) scale(0.2); }
+  100% { opacity: 0;    transform: translate(-50%, -50%) scale(1.5); }
+}
+.reel__cell.is-wild-squeeze img { animation: wild-squeeze 220ms ease-in forwards; }
+.reel__cell.is-wild-pop img { animation: wild-pop 460ms cubic-bezier(0.3, 1.5, 0.5, 1) both; }
+.reel__cell.is-wild-pop::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 230px;
+  height: 230px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 246, 210, 0.95) 0%, rgba(255, 213, 106, 0.6) 35%, rgba(255, 213, 106, 0) 70%);
+  animation: wild-burst 520ms ease-out forwards;
+  pointer-events: none;
+  z-index: 4;
+}
+/* Множитель на сетке горит ярче простого WILD. */
+.reel__cell.is-multiplier img {
+  filter: drop-shadow(0 0 14px rgba(255, 213, 106, 0.8));
+}
+
+/* ---------- Win line ---------- */
+.win-line {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 4;
+}
+.win-line path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.win-line__glow {
+  stroke: rgba(255, 196, 64, 0.65);
+  stroke-width: 20;
+  filter: blur(6px);
+}
+.win-line__core {
+  stroke: #fff4cf;
+  stroke-width: 6;
+}
+@keyframes win-line-draw {
+  0%   { stroke-dashoffset: 1; opacity: 0.2; }
+  45%  { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+.win-line.is-playing path {
+  stroke-dasharray: 1;
+  animation: win-line-draw 620ms ease-out;
+}
+
+/* ---------- Popups ----------
+   Каждый попап — один PNG 1020x1616: кадр 780x1416 из секции pop-ap макета
+   плюс поля 120/100 под вылетающие конфетти и купюры. Всё нарисовано
+   дизайнером, кроме суммы — она DOM-текстом в коробке текстового слоя макета.
+   В портрете кадр попапа совпадает с кадром сцены (макет), на десктопе он по
+   центру сцены и чуть выше её по высоте. */
+.game-popup {
+  position: absolute;
+  left: 966px;
+  top: 452px;
+  width: 1020px;
+  height: 1616px;
+  transform: translate(-50%, -50%) scale(calc(var(--pop-s) * 0.7));
+  opacity: 0;
+  pointer-events: none;
+  z-index: 30;
+  --pop-s: 0.66;
+  transition: transform 420ms cubic-bezier(0.34, 1.5, 0.5, 1), opacity 420ms ease;
+}
+.game-popup.is-in  { transform: translate(-50%, -50%) scale(var(--pop-s)); opacity: 1; }
+.game-popup.is-out {
+  transform: translate(-50%, -50%) scale(calc(var(--pop-s) * 0.88));
+  opacity: 0;
+  transition-duration: 260ms;
+}
+.game-popup__art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+/* Медленное «дыхание» всего арта, пока попап висит. */
+@keyframes popup-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.025); }
+}
+.game-popup.is-in .game-popup__art { animation: popup-breathe 2.4s ease-in-out 420ms infinite; }
+
+/* Коробки текстовых слоёв макета (+120/+100 полей арта):
+   big/epic/mega  «1 000 000» + «USD»  (121, 744) 539x55
+   total win      «10 000» + «USD»      (120, 837) 541x74
+   free spins     «9» в круге           центр (389, 748.5) */
+.game-popup__amount {
+  position: absolute;
+  left: 241px;
+  top: 834px;
+  width: 539px;
+  height: 75px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.28em;
+  font-family: 'Montserrat', 'Segoe UI', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 56px;
+  line-height: 75px;
+  color: #fff;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), 0 0 18px rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+}
+.game-popup__cur { font-size: 0.78em; }
+.game-popup.is-total .game-popup__amount {
+  left: 240px;
+  top: 931px;
+  width: 541px;
+  height: 86px;
+  line-height: 86px;
+  font-size: 72px;
+}
+.game-popup.is-spins .game-popup__amount {
+  left: 449px;
+  top: 788.5px;
+  width: 120px;
+  height: 120px;
+  line-height: 120px;
+  font-size: 96px;
+}
+
+/* Попап на телефоне — ровно кадр макета. */
+@media (orientation: portrait) {
+  .game-popup {
+    left: 390px;
+    top: 708px;
+    --pop-s: 1;
+  }
+}
