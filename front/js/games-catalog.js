@@ -6,11 +6,14 @@
 // the play pages.
 //
 // Where each section is shown:
-//   - Готовые игры (READY_CODES): tg.html, the bot's public catalog.
+//   - Готовые игры (READY_CARDS): tg.html, the bot's public catalog.
 //   - Project tabs on games.html, each behind its own password (ROOMS in
 //     games.html):
 //       - Illuminator: ILLUMINATOR_CARDS (hand-ordered, one card per variant page).
-//       - Uniqorn: unicorn games (uniqorn-*, mr-president-unicorn).
+//       - Uniqorn, three blocks top to bottom: «Игры с маскотом»
+//         (UNIQORN_MASCOT_CODES), «Готовые игры» (READY_CARDS again), «Архив»
+//         (every other unicorn game: uniqorn-*, mr-president-unicorn) —
+//         the archive always goes last.
 //       - Spin Factory: SPIN_FACTORY_CODES (was «В работе») + SPIN_FACTORY_EXTRA_CARDS.
 //       - Secret Room: Cre8Pics analogues (CRE8_CODES: provider2 + provider3
 //         + earlier ones; the section ids are still cre8*).
@@ -22,11 +25,13 @@
 // order is reversed here). A game not yet live on a given backend simply
 // isn't in `entries` and is skipped. A section with zero cards hides itself
 // (including its heading) rather than showing an empty title.
-const READY_CODES = new Set([
-  'amys-fruit-farm', 'dirty-money-mafia', 'east-discovery', 'golden-caravan',
-  'neon-reels', 'party-of-goods', 'sugar-galaxy', 'wild-western-story',
-  'multi-fruits-story', 'lucky-joker-3h3', 'gangsta-casino',
-]);
+// Готовые игры in a fixed order, newest first (the same on every backend,
+// whatever the created_at in its DB).
+const READY_CARDS = [
+  'gangsta-casino', 'lucky-joker-3h3', 'multi-fruits-story', 'wild-western-story',
+  'sugar-galaxy', 'party-of-goods', 'neon-reels', 'golden-caravan',
+  'east-discovery', 'dirty-money-mafia', 'amys-fruit-farm',
+];
 // Games shipped in several front-end layouts over one backend game: one
 // page per variant. A card can point at any of them (overrides below).
 const NJS_VARIANTS = {
@@ -104,6 +109,7 @@ const CRE8_CODES = new Set([
 ]);
 
 
+const UNIQORN_MASCOT_CODES = new Set(['great-uniqorn']);
 const isUnicornGame = (code) => /uniqorn|unicorn/.test(code);
 
 const PLAY_ICON = '<svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4Z" fill="currentColor"/></svg>';
@@ -185,6 +191,8 @@ async function renderCatalog() {
   const readyGrid = document.getElementById('readyGrid');
   const illuminatorGrid = document.getElementById('illuminatorGrid');
   const spinFactoryGrid = document.getElementById('spinFactoryGrid');
+  const uniqornMascotGrid = document.getElementById('uniqornMascotGrid');
+  const uniqornReadyGrid = document.getElementById('uniqornReadyGrid');
   const uniqornGrid = document.getElementById('uniqornGrid');
   const cre8Grid = document.getElementById('cre8Grid');
   const grids = [readyGrid, illuminatorGrid, spinFactoryGrid, uniqornGrid, cre8Grid].filter(Boolean);
@@ -193,13 +201,17 @@ async function renderCatalog() {
     const entries = (await apiGet('/catalog')).reverse();
     const byCode = new Map(entries.map((e) => [e.code, e]));
 
-    if (readyGrid) appendCards(readyGrid, entries.filter((e) => READY_CODES.has(e.code)));
+    if (readyGrid) appendCards(readyGrid, resolveCards(READY_CARDS, byCode));
     if (illuminatorGrid) appendCards(illuminatorGrid, resolveCards(ILLUMINATOR_CARDS, byCode));
     if (spinFactoryGrid) {
       appendCards(spinFactoryGrid, entries.filter((e) => SPIN_FACTORY_CODES.has(e.code)));
       appendCards(spinFactoryGrid, resolveCards(SPIN_FACTORY_EXTRA_CARDS, byCode));
     }
-    if (uniqornGrid) appendCards(uniqornGrid, entries.filter((e) => isUnicornGame(e.code)));
+    if (uniqornMascotGrid) appendCards(uniqornMascotGrid, entries.filter((e) => UNIQORN_MASCOT_CODES.has(e.code)));
+    if (uniqornReadyGrid) appendCards(uniqornReadyGrid, resolveCards(READY_CARDS, byCode));
+    if (uniqornGrid) {
+      appendCards(uniqornGrid, entries.filter((e) => isUnicornGame(e.code) && !UNIQORN_MASCOT_CODES.has(e.code)));
+    }
     if (cre8Grid) appendCards(cre8Grid, entries.filter((e) => CRE8_CODES.has(e.code)));
   } catch (err) {
     const li = document.createElement('li');
@@ -210,7 +222,14 @@ async function renderCatalog() {
   if (readyGrid) toggleSection('readySection', readyGrid);
   if (illuminatorGrid) toggleSection('illuminatorSection', illuminatorGrid);
   if (spinFactoryGrid) toggleSection('spinFactorySection', spinFactoryGrid);
-  if (uniqornGrid) toggleSection('uniqornSection', uniqornGrid);
+  if (uniqornGrid) {
+    toggleSection('uniqornMascotSection', uniqornMascotGrid);
+    toggleSection('uniqornReadySection', uniqornReadyGrid);
+    toggleSection('uniqornArchiveSection', uniqornGrid);
+    // секция видна, если непуст хоть один из трёх блоков
+    document.getElementById('uniqornSection').hidden = ![uniqornMascotGrid, uniqornReadyGrid, uniqornGrid]
+      .some((grid) => grid && grid.children.length);
+  }
   if (cre8Grid) toggleSection('cre8Section', cre8Grid);
 }
 

@@ -350,6 +350,7 @@ body {
 .room-tab--locked .room-tab__lock { display: inline-block; }
 
 .room-panel[hidden] { display: none; }
+.room-panel .catalog-section > .catalog-subsection:first-child { margin-top: 0; }
 
 .secret-gate--shake { animation: secret-shake 0.35s; }
 
