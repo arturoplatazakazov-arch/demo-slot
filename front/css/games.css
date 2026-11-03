@@ -227,7 +227,7 @@ body {
 }
 
 /* Secret Room: карточка-вход в каталоге (games.html / tg.html) и гейт с
-   паролем на secret-room.html, за которым живут игры в разработке. */
+   паролем на secret-room.html, за которым живут комнаты проектов. */
 .secret-card .game-card__media {
   display: grid;
   place-items: center;
@@ -302,6 +302,25 @@ body {
   font-size: 13px;
   color: #ff7a6b;
 }
+
+.secret-gate[hidden] { display: none; }
+
+/* «Ввести другой пароль» под открытыми комнатами: открывает ещё одну. */
+.secret-more {
+  display: block;
+  margin: 32px auto 0;
+  padding: 8px 16px;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: none;
+  color: rgba(255, 246, 223, 0.65);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.secret-more:hover { color: var(--gold); border-color: var(--gold); }
+.secret-more[hidden] { display: none; }
 
 .secret-gate--shake { animation: secret-shake 0.35s; }
 

@@ -10,7 +10,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Каталог игр</title>
 <link rel="stylesheet" href="css/fonts.css">
-<link rel="stylesheet" href="css/games.css?v=6">
+<link rel="stylesheet" href="css/games.css?v=7">
 </head>
 <body>
 
@@ -29,7 +29,7 @@
           </div>
           <div class="game-card__body">
             <h2 class="game-card__name">Secret Room</h2>
-            <p class="game-card__desc">Игры в разработке — вход по паролю</p>
+            <p class="game-card__desc">Комнаты проектов — вход по паролю</p>
             <span class="game-card__play">
               <svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4Z" fill="currentColor"/></svg>
               В Secret Room
@@ -43,25 +43,6 @@
       <h2 class="catalog-section__title">Готовые игры</h2>
       <ul class="game-grid" id="readyGrid"></ul>
     </section>
-
-    <section class="catalog-section" id="illuminatorSection">
-      <h2 class="catalog-section__title">Illuminator</h2>
-      <ul class="game-grid" id="illuminatorGrid"></ul>
-      <!-- Подкатегория: оригинал + три скина A/B/C (одна игра на бэкенде). -->
-      <div class="catalog-subsection" id="njsSubsection" hidden>
-        <h3 class="catalog-subsection__title">Neon Joker Spins · 5 версий арта</h3>
-        <ul class="game-grid" id="njsGrid"></ul>
-      </div>
-      <div class="catalog-subsection" id="olympusSection" hidden>
-        <h3 class="catalog-subsection__title">Olympus Thunder — варианты</h3>
-        <ul class="game-grid" id="olympusGrid"></ul>
-      </div>
-    </section>
-
-    <section class="catalog-section" id="spinFactorySection">
-      <h2 class="catalog-section__title">В работе</h2>
-      <ul class="game-grid" id="spinFactoryGrid"></ul>
-    </section>
   </div>
 
   <script>window.CATALOG_PORTFOLIO = true;</script>
@@ -69,6 +50,22 @@
   <script src="js/telegram.js?v=2"></script>
   <script src="js/config.js?v=2"></script>
   <script src="js/api.js?v=2"></script>
-  <script src="js/games-catalog.js?v=14"></script>
+  <script>
+    // Ссылка на комнату из бота: t.me/<бот>/<app>?startapp=room_<пароль> →
+    // сразу в Secret Room с этим ключом. start_param живёт всю сессию
+    // мини-аппа, поэтому переход делаем один раз (иначе «в каталог» снова
+    // уводил бы в комнату).
+    (function () {
+      const tg = window.Telegram && window.Telegram.WebApp;
+      const param = tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param;
+      if (!param || !param.startsWith('room_')) return;
+      try {
+        if (sessionStorage.getItem('secretRoom.startHandled') === param) return;
+        sessionStorage.setItem('secretRoom.startHandled', param);
+      } catch { /* storage off */ }
+      location.replace('secret-room.html?from=tg#key=' + encodeURIComponent(param.slice(5)));
+    })();
+  </script>
+  <script src="js/games-catalog.js?v=15"></script>
 </body>
 </html>

@@ -5,23 +5,21 @@
 // js/api.js (loaded before this script) for the same base-URL resolution as
 // the play pages.
 //
-// The catalog is split into four sections, same as the Telegram bot's menu,
-// in this order on the page:
-//   - Готовые игры: a fixed hand-picked list (READY_CODES).
-//   - Illuminator: a fixed hand-picked showcase (ILLUMINATOR_CODES).
-//   - В работе (was Spin Factory Portfolio): a fixed hand-picked list (SPIN_FACTORY_CODES).
-//   - Игры в разработке: every other published game. These live only on
-//     secret-room.html (behind a password), not in the public catalog —
-//     each page renders just the sections it has grids for.
+// The public catalogs (games.html, tg.html) show only «Готовые игры»
+// (READY_CODES). Every other game lives in a project room on
+// secret-room.html: one password field, and the password picks the room
+// (ROOMS in secret-room.html). Rooms and their sections here:
+//   - illuminator: ILLUMINATOR_CODES + the NJS / Olympus subsections.
+//   - spin-factory: SPIN_FACTORY_CODES («В работе», was Spin Factory Portfolio).
+//   - uniqorn: unicorn games (uniqorn-*, mr-president-unicorn).
+//   - cre8: Cre8Pics analogues (CRE8_CODES: provider2 + provider3 + earlier ones).
+// A game in no list is shown nowhere — add its code to a room's list.
 // The lists are explicit codes rather than "first N by created_at", so a
-// newly seeded game lands in "в разработке" instead of shifting others
-// between sections. Within a section, cards go newest first (GET /catalog
-// lists by created_at ascending, so the order is reversed here). A game not
-// yet live on a given backend simply isn't in `entries` and is skipped.
-// Exception: in «Игры в разработке» the unicorn games (uniqorn-*,
-// mr-president-unicorn) go after all the others, each group newest first.
-// A section with zero cards hides itself (including its heading) rather
-// than showing an empty title.
+// newly seeded game doesn't shift others between rooms. Within a section,
+// cards go newest first (GET /catalog lists by created_at ascending, so the
+// order is reversed here). A game not yet live on a given backend simply
+// isn't in `entries` and is skipped. A section with zero cards hides itself
+// (including its heading) rather than showing an empty title.
 const READY_CODES = new Set([
   'amys-fruit-farm', 'dirty-money-mafia', 'east-discovery', 'golden-caravan',
   'neon-reels', 'party-of-goods', 'sugar-galaxy', 'wild-western-story',
@@ -59,6 +57,18 @@ const VARIANT_GROUPS = {
   },
 };
 const SPIN_FACTORY_CODES = new Set(['big-catch', 'caesars-fortune', 'ice-spin-deluxe', 'tesla-spins']);
+const CRE8_CODES = new Set([
+  // provider2
+  'rad-raiders', 'jade-paws', 'ghoul-groove', 'gummy-gold-rush', 'whisker-noir',
+  'cogwork-skies', 'hex-hollow', 'bayou-bedlam', 'jaguar-eclipse', 'trident-vs-titan',
+  // provider3
+  'gladiator-gig', 'pyramid-pals', 'piggy-bankers', 'grit-and-gold', 'barnyard-bonanza',
+  'stone-age-stash', 'tnt-tunnels', 'vault-runners', 'big-top-bonkers', 'parrot-plunder',
+  'skull-harbor', 'sugar-rush-dj', 'pup-fishermen', 'pharaoh-hippo', 'bison-thunder',
+  'evolve-rush', 'cash-kingpin',
+  // earlier Cre8Pics reskins
+  'deep-fortune', 'mariachi-muertos', 'monster-factory',
+]);
 
 // Neon Joker Spins и его скины (A/B/C/D — сравнение арт-дирекшена по ГДД):
 // одна игра на бэкенде (код neon-joker-spins), четыре страницы. В Illuminator
@@ -178,10 +188,11 @@ async function renderCatalog() {
   const readyGrid = document.getElementById('readyGrid');
   const illuminatorGrid = document.getElementById('illuminatorGrid');
   const spinFactoryGrid = document.getElementById('spinFactoryGrid');
-  const devGrid = document.getElementById('devGrid');
+  const uniqornGrid = document.getElementById('uniqornGrid');
+  const cre8Grid = document.getElementById('cre8Grid');
   const njsGrid = document.getElementById('njsGrid');
   const olympusGrid = document.getElementById('olympusGrid');
-  const grids = [readyGrid, illuminatorGrid, spinFactoryGrid, devGrid].filter(Boolean);
+  const grids = [readyGrid, illuminatorGrid, spinFactoryGrid, uniqornGrid, cre8Grid].filter(Boolean);
 
   try {
     const entries = (await apiGet('/catalog')).reverse();
@@ -193,9 +204,8 @@ async function renderCatalog() {
     // (#olympusGrid), v1 first; pages without one keep them in Illuminator
     const olympus = olympusGrid ? entries.filter((e) => isOlympusGame(e.code)).sort((a, b) => a.code.localeCompare(b.code)) : [];
     const spinFactory = entries.filter((e) => SPIN_FACTORY_CODES.has(e.code));
-    const dev = entries.filter((e) => !READY_CODES.has(e.code)
-      && !ILLUMINATOR_CODES.has(e.code) && !SPIN_FACTORY_CODES.has(e.code));
-    dev.sort((a, b) => isUnicornGame(a.code) - isUnicornGame(b.code));
+    const uniqorn = entries.filter((e) => isUnicornGame(e.code));
+    const cre8 = entries.filter((e) => CRE8_CODES.has(e.code));
 
     if (readyGrid) for (const entry of ready) appendCard(readyGrid, entry);
     if (illuminatorGrid) {
@@ -207,7 +217,8 @@ async function renderCatalog() {
     if (njsGrid) for (const entry of njs) appendCard(njsGrid, entry);
     if (olympusGrid) for (const entry of olympus) appendCard(olympusGrid, entry);
     if (spinFactoryGrid) for (const entry of spinFactory) appendCard(spinFactoryGrid, entry);
-    if (devGrid) for (const entry of dev) appendCard(devGrid, entry);
+    if (uniqornGrid) for (const entry of uniqorn) appendCard(uniqornGrid, entry);
+    if (cre8Grid) for (const entry of cre8) appendCard(cre8Grid, entry);
   } catch (err) {
     const li = document.createElement('li');
     li.innerHTML = `<div class="game-card"><div class="game-card__body"><p class="game-card__desc">Не удалось загрузить каталог: ${err.message}</p></div></div>`;
@@ -224,8 +235,10 @@ async function renderCatalog() {
     if (olympusGrid && olympusGrid.children.length) document.getElementById('illuminatorSection').hidden = false;
   }
   if (spinFactoryGrid) toggleSection('spinFactorySection', spinFactoryGrid);
-  if (devGrid) toggleSection('devSection', devGrid);
+  if (uniqornGrid) toggleSection('uniqornSection', uniqornGrid);
+  if (cre8Grid) toggleSection('cre8Section', cre8Grid);
 }
 
-// secret-room.html calls renderCatalog() itself once the password is in.
+// secret-room.html calls renderCatalog() itself once a room's password is in
+// (only the unlocked room's sections are in its DOM by then).
 if (!window.CATALOG_SECRET_ROOM) renderCatalog();
