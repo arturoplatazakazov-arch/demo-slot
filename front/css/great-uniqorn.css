@@ -610,19 +610,21 @@ img.is-missing {
      3:         опора у правого края — левая часть сцены уезжает влево
                 (~80px кадра у героя), правый край на месте. */
   .stage__bg { transition: transform 300ms ease; }
-  /* 2 / бонус: макушка героя в фоне на y≈183, низ логотипа — 245; герой
-     опущен на ~140 и сдвинут влево (~40) сдвигом + масштабом 1.1, чтобы
-     между ними было ≥60 ед. кадра (~50px экрана). Открывшуюся сверху полосу
-     закрывает неподвижная копия того же фона на самой .stage, край
-     сдвинутого слоя растушёван — стык почти целиком под логотипом и рамкой. */
+  /* 2 / бонус: герой должен помещаться в полный рост между логотипом (низ
+     y 245) и нижней панелью (~800). В фоне он от макушки y≈183 до ног
+     y≈800, поэтому слой фона уменьшен (x0.76) и сдвинут: макушка ~309
+     (≥60 ед. ≈ 50px экрана от логотипа), ноги ~778, герой под логотипом.
+     Всё вокруг уменьшенного слоя закрывает неподвижная копия того же фона
+     на самой #stage; правый край слоя (x≈1518) — под рамкой, нижний (≈884)
+     — под панелью, верхний (y 170) растушёван и спрятан за логотипом. */
   .screen[data-layout="2"][data-mode="freespins"] #stage {
     background: url('../img/great-uniqorn/img/bg_desk_bonus.jpg') 0 0 / 1932px 940px no-repeat;
   }
   .screen[data-layout="2"][data-mode="freespins"] .stage__bg {
     transform-origin: 0 0;
-    transform: translate(-80px, 115px) scale(1.1);
-    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 90px);
-    mask-image: linear-gradient(180deg, transparent 0, #000 90px);
+    transform: translate(50px, 170px) scale(0.76);
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 24px, #000 calc(100% - 60px), transparent 100%);
+    mask-image: linear-gradient(180deg, transparent 0, #000 24px, #000 calc(100% - 60px), transparent 100%);
   }
   .screen[data-layout="3"] .stage__bg { transform-origin: 100% 50%; transform: scale(1.05); }
 
