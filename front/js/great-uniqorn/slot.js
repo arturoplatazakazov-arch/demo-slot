@@ -38,7 +38,6 @@ const SPECIAL_SYMBOLS = new Set(['scatter', 'wild']);
 // resolved this from the Spine clip's own duration; with CSS we own both ends,
 // so the two numbers just have to agree.
 const WIN_PULSE_MS = 620;
-const LAND_BOUNCE_MS = 260;
 // Popup in/out durations — must match the .game-popup transitions. The
 // skeleton's own intro is 1.2s; the plate has popped by POPUP_AMOUNT_DELAY_MS
 // (matches --amount-delay in the stylesheet), so the amount appears then.
@@ -283,7 +282,7 @@ function clearCellAnimation(info) {
     clearTimeout(info.winLoopTimeout);
     info.winLoopTimeout = null;
   }
-  info.cell.classList.remove('is-winning', 'is-win-active', 'is-landing', 'is-wild-squeeze', 'is-wild-pop');
+  info.cell.classList.remove('is-winning', 'is-win-active', 'is-wild-squeeze', 'is-wild-pop');
 }
 
 function teardownCellInstances() {
@@ -314,15 +313,6 @@ function setCellSymbol(info, code, mult = 1) {
   info.img.style.visibility = '';
   applyStaticContentOffset(info.img, code);
   return Promise.resolve();
-}
-
-// The little squash-and-settle a symbol does as its reel stops.
-function playLandBounce(info) {
-  if (!info) return;
-  info.cell.classList.remove('is-landing');
-  void info.cell.offsetWidth; // restart the keyframes
-  info.cell.classList.add('is-landing');
-  setTimeout(() => info.cell.classList.remove('is-landing'), LAND_BOUNCE_MS);
 }
 
 function playWinAnimationOnce(info) {
@@ -659,7 +649,8 @@ function settleColumnCells(cellEls, col, finalCodes) {
     const info = { symbol: code, mult: 1, cell, img, anchor, winLoopTimeout: null };
     cell.addEventListener('click', () => onCellClick(info));
     cellInfos[row * GRID_COLS + col] = info;
-    tasks.push(setCellSymbol(info, code).then(() => playLandBounce(info)));
+    // No landing squash: the product wants symbols to just settle (2026-11-04).
+    tasks.push(setCellSymbol(info, code));
   }
   return Promise.all(tasks);
 }
