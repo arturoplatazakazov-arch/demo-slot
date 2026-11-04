@@ -334,7 +334,7 @@ body {
 .screen-dim {
   position: absolute;
   inset: -3000px;
-  background: rgba(3, 7, 24, 0.74);
+  background: rgba(3, 7, 24, 0.82);
   opacity: 0;
   pointer-events: none;
   transition: opacity 320ms ease;
@@ -607,51 +607,72 @@ img.is-missing {
 }
 
 /* ---------- Popups ----------
-   Каждый попап — один PNG 1020x1616: кадр 780x1416 из секции pop-ap макета
-   плюс поля 120/100 под вылетающие конфетти и купюры. Всё нарисовано
-   дизайнером, кроме суммы — она DOM-текстом в коробке текстового слоя макета.
-   В портрете кадр попапа совпадает с кадром сцены (макет), на десктопе он по
-   центру сцены и чуть выше её по высоте. */
-.game-popup {
-  position: absolute;
-  left: 966px;
-  top: 452px;
-  width: 1020px;
-  height: 1616px;
-  transform: translate(-50%, -50%) scale(calc(var(--pop-s) * 0.7));
-  opacity: 0;
-  pointer-events: none;
-  z-index: 30;
-  --pop-s: 0.66;
-  transition: transform 420ms cubic-bezier(0.34, 1.5, 0.5, 1), opacity 420ms ease;
-}
-.game-popup.is-in  { transform: translate(-50%, -50%) scale(var(--pop-s)); opacity: 1; }
-.game-popup.is-out {
-  transform: translate(-50%, -50%) scale(calc(var(--pop-s) * 0.88));
-  opacity: 0;
-  transition-duration: 260ms;
-}
-.game-popup__art {
+   Анимирует попап Spine-скелет (front/img/great-uniqorn/popups/<попап>_<desk|mob>,
+   генератор scripts/great_uniqorn_popups.py), нарисованный на #spineCanvas.
+   DOM-узел .game-popup — это кадр попапа из макета (780x1416), к которому
+   slot.js привязывает скелет, и сумма поверх плашки. На десктопе кадр по
+   центру сцены (x0.74), в портрете совпадает с кадром сцены.
+
+   Без WebGL/спайна (.is-static) кадр показывает прежний цельный PNG
+   (1020x1616 = кадр + поля 120/100) и масштабируется сам. */
+.spine-canvas {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  z-index: 2;
+  pointer-events: none;
 }
-/* Медленное «дыхание» всего арта, пока попап висит. */
-@keyframes popup-breathe {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.025); }
+.stage { z-index: 1; }
+.stage--top {
+  z-index: 3;
+  pointer-events: none;
 }
-.game-popup.is-in .game-popup__art { animation: popup-breathe 2.4s ease-in-out 420ms infinite; }
 
-/* Коробки текстовых слоёв макета (+120/+100 полей арта):
+/* Центрируется не кадр 780x1416, а сама композиция попапа (макушка героя ..
+   низ плашки): в кадре она сидит выше середины, её центр ~y 515, т.е. на
+   --pop-content-dy = 708 - 515 выше центра кадра. Десктоп: центр композиции =
+   центр экрана (центр экрана в координатах сцены всегда (966, 470) — сцена
+   отцентрована, см. layoutStage). */
+.game-popup {
+  position: absolute;
+  left: 966px;
+  top: calc(470px + var(--pop-content-dy) * var(--pop-s));
+  width: 780px;
+  height: 1416px;
+  --pop-s: 0.74;
+  --pop-content-dy: 193px;
+  transform: translate(-50%, -50%) scale(var(--pop-s));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+.game-popup.is-in { opacity: 1; }
+.game-popup.is-out { opacity: 0; transition-duration: 260ms; }
+
+.game-popup__art {
+  position: absolute;
+  left: -120px;
+  top: -100px;
+  width: 1020px;
+  height: 1616px;
+}
+.game-popup.is-static {
+  transform: translate(-50%, -50%) scale(calc(var(--pop-s) * 0.7));
+  transition: transform 420ms cubic-bezier(0.34, 1.5, 0.5, 1), opacity 420ms ease;
+}
+.game-popup.is-static.is-in { transform: translate(-50%, -50%) scale(var(--pop-s)); }
+.game-popup.is-static.is-out { transform: translate(-50%, -50%) scale(calc(var(--pop-s) * 0.88)); }
+
+/* Коробки текстовых слоёв макета (координаты кадра 780x1416):
    big/epic/mega  «1 000 000» + «USD»  (121, 744) 539x55
    total win      «10 000» + «USD»      (120, 837) 541x74
-   free spins     «9» в круге           центр (389, 748.5) */
+   free spins     «9» в круге           центр (389, 748.5)
+   В спайне сумма проявляется, когда плашка уже выпрыгнула (--amount-delay). */
 .game-popup__amount {
   position: absolute;
-  left: 241px;
-  top: 834px;
+  left: 121px;
+  top: 734px;
   width: 539px;
   height: 75px;
   display: flex;
@@ -665,30 +686,42 @@ img.is-missing {
   color: #fff;
   text-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), 0 0 18px rgba(0, 0, 0, 0.35);
   white-space: nowrap;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 220ms ease, transform 320ms cubic-bezier(0.34, 1.6, 0.5, 1);
 }
+.game-popup.is-in .game-popup__amount {
+  opacity: 1;
+  transform: none;
+  transition-delay: var(--amount-delay, 0ms);
+}
+.game-popup.is-spine { --amount-delay: 720ms; }
+.game-popup.is-spine.is-spins { --amount-delay: 900ms; }
 .game-popup__cur { font-size: 0.78em; }
 .game-popup.is-total .game-popup__amount {
-  left: 240px;
-  top: 931px;
+  left: 120px;
+  top: 831px;
   width: 541px;
   height: 86px;
   line-height: 86px;
   font-size: 72px;
 }
 .game-popup.is-spins .game-popup__amount {
-  left: 449px;
-  top: 788.5px;
+  left: 329px;
+  top: 688.5px;
   width: 120px;
   height: 120px;
   line-height: 120px;
   font-size: 96px;
 }
 
-/* Попап на телефоне — ровно кадр макета. */
+/* Телефон: по ширине — на всю ширину экрана, по центру; по высоте центр
+   композиции на 40% высоты экрана (отступ снизу 60%). Сцена здесь прижата к
+   верху, --view-h — высота экрана в единицах сцены (layoutStage). */
 @media (orientation: portrait) {
   .game-popup {
     left: 390px;
-    top: 708px;
+    top: calc(var(--view-h, 1416px) * 0.4 + var(--pop-content-dy));
     --pop-s: 1;
   }
 }

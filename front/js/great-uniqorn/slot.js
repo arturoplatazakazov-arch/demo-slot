@@ -39,9 +39,12 @@ const SPECIAL_SYMBOLS = new Set(['scatter', 'wild']);
 // so the two numbers just have to agree.
 const WIN_PULSE_MS = 620;
 const LAND_BOUNCE_MS = 260;
-// Popup in/out durations — must match the .game-popup transitions.
+// Popup in/out durations — must match the .game-popup transitions. The
+// skeleton's own intro is 1.2s; the plate has popped by POPUP_AMOUNT_DELAY_MS
+// (matches --amount-delay in the stylesheet), so the amount appears then.
 const POPUP_ENTER_MS = 420;
 const POPUP_EXIT_MS = 260;
+const POPUP_AMOUNT_DELAY_MS = 720;
 
 // Attract-mode layout shown before the first real spin — the grid from the
 // Figma mockup, including its x5 wild (ATTRACT_MULTIPLIERS). Also fixes the
@@ -61,12 +64,17 @@ const GRID_COLS = SYMBOL_LAYOUT[0].length;
 // of the free-spins popup. The free-spins round end has two arts — FREE SPINS
 // TOTAL WIN for a round won from scatters, BONUS SPINS TOTAL WIN for a bought
 // one (see app.js gameState.boughtBonus).
+//
+// Each popup is a Spine skeleton (scripts/great_uniqorn_popups.py) — `spine` /
+// `boughtSpine` name its folder under popups/, one per layout (_desk/_mob).
+// `art` / `boughtArt` is the flat designer PNG, kept as the fallback when
+// WebGL or the skeleton isn't available.
 const POPUP_CONFIG = {
-  bigWin: { art: 'pop_big', kind: 'win' },
-  epicWin: { art: 'pop_epic', kind: 'win' },
-  megaWin: { art: 'pop_mega', kind: 'win' },
-  bonusSpinsWin: { art: 'pop_fswin', kind: 'spins' },
-  bonusSpinsTotalWin: { art: 'pop_fstotal', boughtArt: 'pop_bstotal', kind: 'total' },
+  bigWin: { art: 'pop_big', spine: 'big', kind: 'win' },
+  epicWin: { art: 'pop_epic', spine: 'epic', kind: 'win' },
+  megaWin: { art: 'pop_mega', spine: 'mega', kind: 'win' },
+  bonusSpinsWin: { art: 'pop_fswin', spine: 'fswin', kind: 'spins' },
+  bonusSpinsTotalWin: { art: 'pop_fstotal', boughtArt: 'pop_bstotal', spine: 'fstotal', boughtSpine: 'bstotal', kind: 'total' },
 };
 
 const DIM_TRANSITION_MS = 320;
@@ -844,19 +852,95 @@ function formatPopupAmount(n) {
   return Math.round(Number(n)).toLocaleString('en-US').replace(/,/g, '\u00a0');
 }
 
+// --- Spine popups -------------------------------------------------------------
+//
+// One shared WebGL canvas (#spineCanvas) over the whole scene. A popup's
+// skeleton is anchored to its DOM frame (.game-popup, the mockup's 780x1416
+// popup frame) — the skeleton is authored on exactly that frame (origin at its
+// centre), so fit=1 + these bounds put every layer where the mockup has it.
+const POPUP_SPINE_VERSION = '1';
+const POPUP_FRAME_BOUNDS = { x: -390, y: -708, width: 780, height: 1416 };
+// How long a popup may wait for its skeleton before falling back to the PNG.
+const POPUP_SPINE_WAIT_MS = 1500;
+let spineStage = null;
+
+function ensureSpineStage() {
+  if (spineStage) return spineStage;
+  if (!window.spine || !window.SpineEngine) return null;
+  try {
+    spineStage = new SpineEngine.SpineStage(document.getElementById('spineCanvas'));
+  } catch (err) {
+    console.warn('Spine popups unavailable, using the flat PNGs:', err);
+    spineStage = null;
+  }
+  return spineStage;
+}
+
+function popupSpineFolder(cfg, bought) {
+  const name = bought && cfg.boughtSpine ? cfg.boughtSpine : cfg.spine;
+  return `${ASSET_ROOT}/popups/${name}_${isMobileLayout() ? 'mob' : 'desk'}`;
+}
+
+function loadPopupResource(folder) {
+  const stage = ensureSpineStage();
+  if (!stage) return Promise.reject(new Error('no spine stage'));
+  return SpineEngine.SpineResource.load(stage.assetManager, folder, {
+    premultipliedAlpha: true, // the kit writes PMA atlases
+    version: POPUP_SPINE_VERSION,
+  });
+}
+
+// Resolves to the resource, or null if it isn't ready in time / failed.
+function popupResourceOrNull(folder) {
+  return Promise.race([loadPopupResource(folder).catch(() => null), wait(POPUP_SPINE_WAIT_MS).then(() => null)]);
+}
+
+function mountPopupSpine(resource, node) {
+  const inst = resource.createInstance();
+  inst.anchorEl = node;
+  inst.fit = 1;
+  inst.boundsOverride = POPUP_FRAME_BOUNDS;
+  inst.play('intro', false);
+  inst.queue('idle', true);
+  spineStage.addOverlay(inst);
+  return inst;
+}
+
+// Fades the skeleton out alongside the DOM frame's own opacity transition.
+function fadeOutPopupSpine(inst, ms) {
+  return new Promise((resolve) => {
+    const start = performance.now();
+    const tick = (now) => {
+      const k = Math.min(1, (now - start) / ms);
+      inst.skeleton.color.a = 1 - k;
+      if (k < 1) requestAnimationFrame(tick);
+      else resolve();
+    };
+    requestAnimationFrame(tick);
+  }).finally(() => spineStage && spineStage.removeOverlay(inst));
+}
+
+// Thousands split with spaces, as on the mockup's plates («1 000 000 USD»).
+function formatPopupAmount(n) {
+  return Math.round(Number(n)).toLocaleString('en-US').replace(/,/g, '\u00a0');
+}
+
 // Built fresh per showing rather than kept around: a popup is on screen for a
 // couple of seconds a few times a session, so there is nothing to cache, and a
-// node that isn't in the DOM can't leave a stale amount behind.
-function buildPopupNode(key, amount, { bought = false } = {}) {
+// node that isn't in the DOM can't leave a stale amount behind. `withArt`
+// adds the flat PNG (fallback when there is no skeleton).
+function buildPopupNode(key, amount, { bought = false, withArt = false } = {}) {
   const cfg = POPUP_CONFIG[key];
   const root = document.createElement('div');
-  root.className = `game-popup is-${cfg.kind}`;
+  root.className = `game-popup is-${cfg.kind} ${withArt ? 'is-static' : 'is-spine'}`;
 
-  const art = document.createElement('img');
-  art.className = 'game-popup__art';
-  art.src = `${ASSET_ROOT}/img/${bought && cfg.boughtArt ? cfg.boughtArt : cfg.art}.png`;
-  art.alt = '';
-  root.appendChild(art);
+  if (withArt) {
+    const art = document.createElement('img');
+    art.className = 'game-popup__art';
+    art.src = `${ASSET_ROOT}/img/${bought && cfg.boughtArt ? cfg.boughtArt : cfg.art}.png`;
+    art.alt = '';
+    root.appendChild(art);
+  }
 
   const amountEl = document.createElement('div');
   amountEl.className = 'game-popup__amount';
@@ -875,15 +959,16 @@ function buildPopupNode(key, amount, { bought = false } = {}) {
   return root;
 }
 
-// Win amounts count up from zero while the popup is on screen.
+// Win amounts count up from zero while the popup is on screen (after
+// `delayMs` — the skeleton's plate pops in first).
 const POPUP_COUNT_UP_MS = 1100;
-function countUpPopupAmount(node, amount) {
+function countUpPopupAmount(node, amount, delayMs = 0) {
   const value = node.querySelector('.game-popup__value');
   if (!value) return;
-  const start = performance.now();
+  const start = performance.now() + delayMs;
   const tick = (now) => {
     if (!node.isConnected) return;
-    const t = Math.min(1, (now - start) / POPUP_COUNT_UP_MS);
+    const t = Math.max(0, Math.min(1, (now - start) / POPUP_COUNT_UP_MS));
     const eased = 1 - Math.pow(1 - t, 3);
     value.textContent = formatPopupAmount(amount * eased);
     if (t < 1) requestAnimationFrame(tick);
@@ -921,6 +1006,7 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
     // popup is built, so anything that throws in between must not be able to
     // leave the screen dimmed forever with no popup on it.
     let node = null;
+    let inst = null;
     let dimmed = false;
     let done = false;
     const finish = () => {
@@ -928,31 +1014,39 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
       done = true;
       clearTimeout(safetyTimer);
       if (node) node.remove();
+      if (inst && spineStage) spineStage.removeOverlay(inst);
       if (dimmed) popScreenDim(opaque);
       resolve();
     };
     const safetyTimer = setTimeout(finish, holdMs + 8000);
 
     (async () => {
+      const cfg = POPUP_CONFIG[key];
+      // Start fetching the skeleton while the dim fades in.
+      const resourcePromise = popupResourceOrNull(popupSpineFolder(cfg, bought));
       Sound.playSfx('popupOpen');
       if (ownDim) {
         pushScreenDim(opaque);
         dimmed = true;
         await wait(DIM_TRANSITION_MS);
       }
+      const resource = await resourcePromise;
 
-      node = buildPopupNode(key, amount, { bought });
-      document.getElementById('stage').appendChild(node);
+      node = buildPopupNode(key, amount, { bought, withArt: !resource });
+      document.getElementById('stageTop').appendChild(node);
       fitPopupText(node, amount);
+      if (resource) inst = mountPopupSpine(resource, node);
       void node.offsetWidth; // commit the pre-enter state before transitioning
       node.classList.add('is-in');
-      countUpPopupAmount(node, amount);
+      countUpPopupAmount(node, amount, resource ? POPUP_AMOUNT_DELAY_MS : 0);
 
       await wait(POPUP_ENTER_MS + holdMs);
       Sound.playSfx('popupClose');
       node.classList.remove('is-in');
       node.classList.add('is-out');
-      await wait(POPUP_EXIT_MS);
+      if (inst) await fadeOutPopupSpine(inst, POPUP_EXIT_MS);
+      else await wait(POPUP_EXIT_MS);
+      inst = null;
       finish();
     })().catch((err) => {
       console.error(`popup "${key}" failed — closing it so the screen isn't left dimmed:`, err);
@@ -1023,6 +1117,8 @@ function layoutStage() {
   root.setProperty('--stage-s', String(s));
   root.setProperty('--stage-x', `${x}px`);
   root.setProperty('--stage-y', `${y}px`);
+  // Viewport height in stage units — the portrait popup is placed against it.
+  root.setProperty('--view-h', `${vh / s}px`);
 }
 
 function bgSrcFor(mode) {
@@ -1075,10 +1171,16 @@ function preloadAssets() {
   }
   tasks.push(track(preloadImage(bgSrcFor('base'))));
   tasks.push(track(preloadImage(bgSrcFor('freespins'))));
-  // Popup arts are heavy (~1MB each) and only needed later — warm them in the
+  // Popup skeletons are only needed later — warm this layout's six in the
   // background instead of holding the preloader on them.
-  const popupArts = ['pop_big', 'pop_epic', 'pop_mega', 'pop_fswin', 'pop_fstotal', 'pop_bstotal'];
-  setTimeout(() => popupArts.forEach((name) => preloadImage(`${ASSET_ROOT}/img/${name}.png`)), 1500);
+  setTimeout(() => {
+    for (const cfg of Object.values(POPUP_CONFIG)) {
+      for (const bought of [false, true]) {
+        if (bought && !cfg.boughtSpine) continue;
+        loadPopupResource(popupSpineFolder(cfg, bought)).catch(() => {});
+      }
+    }
+  }, 1500);
   for (const p of Sound.preloadPromises || []) tasks.push(track(p));
 
   return Promise.race([Promise.all(tasks), wait(PRELOAD_TIMEOUT_MS)]);
@@ -1087,6 +1189,7 @@ function preloadAssets() {
 async function init() {
   await SlotCalibration.load(); // must resolve before buildReelGrid's applyStaticContentOffset
   Sound.playMusic('base');
+  ensureSpineStage();
   layoutStage();
   updateBgForLayout();
   window.addEventListener('resize', () => {
