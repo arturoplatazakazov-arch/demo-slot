@@ -445,6 +445,215 @@ img.is-missing {
 .info-popup__row-pays span { white-space: nowrap; opacity: 0.9; }
 .info-popup__row-pays b { color: var(--gold); }
 
+/* ---------- Buy bonus dialog ----------
+   Кадр попапа 780x1416 (как .game-popup): на десктопе по центру экрана с
+   масштабом 0.74, на телефоне — кадр сцены. Координаты слоёв — из попапа
+   BONUS SPINS TOTAL WIN макета (герой, плашка тоталов). */
+/* Композиция диалога (герой y 113 .. кнопки y 1092 кадра) выше и длиннее,
+   чем у попапов выигрыша, а снизу её перекрыл бы бар — поэтому центр кадра
+   ставится в центр сцены: вся композиция ложится в верхние ~80% экрана. */
+.buy-dialog {
+  position: absolute;
+  left: 966px;
+  top: 470px;
+  width: 780px;
+  height: 1416px;
+  transform: translate(-50%, -50%) scale(0.74);
+  z-index: 40;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.buy-dialog.is-open { opacity: 1; }
+.buy-dialog > * { pointer-events: auto; }
+.buy-dialog[hidden] { display: none; }
+@keyframes buy-hero-in {
+  from { transform: translateY(60px) scale(0.9); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+.buy-dialog__hero {
+  position: absolute;
+  left: 100px;
+  top: 113px;
+  width: 563px;
+  pointer-events: none;
+}
+.buy-dialog.is-open .buy-dialog__hero { animation: buy-hero-in 420ms cubic-bezier(0.3, 1.4, 0.5, 1) both; }
+.buy-dialog__title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 600px;
+  text-align: center;
+  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
+  font-size: 104px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  background: linear-gradient(180deg, #fff4c2 0%, #ffd56a 38%, #e09a1f 62%, #ffcf5c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-stroke: 4px #0d1d4f;
+  paint-order: stroke fill;
+  filter: drop-shadow(0 6px 0 #0a1640) drop-shadow(0 10px 18px rgba(0, 0, 0, 0.55));
+  pointer-events: none;
+}
+.buy-dialog__spins {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 722px;
+  text-align: center;
+  font: 800 44px/1 'Montserrat', 'Segoe UI', system-ui, sans-serif;
+  color: #fff;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 0 18px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+.buy-dialog__plate {
+  position: absolute;
+  left: 76px;
+  top: 789px;
+  width: 631px;
+  height: 169px;
+  pointer-events: none;
+}
+.buy-dialog__plate img { width: 100%; height: 100%; display: block; }
+.buy-dialog__price {
+  position: absolute;
+  left: 44px;
+  right: 44px;
+  top: 40px;
+  bottom: 40px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.28em;
+  font: 800 72px/89px 'Montserrat', 'Segoe UI', system-ui, sans-serif;
+  color: #fff;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+}
+.buy-dialog__cur { font-size: 0.78em; }
+.buy-dialog__note {
+  position: absolute;
+  left: 40px;
+  right: 40px;
+  top: 975px;
+  text-align: center;
+  font: 700 30px/1.2 'Montserrat', 'Segoe UI', system-ui, sans-serif;
+  color: #ffd2d2;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+.buy-dialog__note[hidden] { display: none; }
+.buy-dialog__buttons {
+  position: absolute;
+  left: 60px;
+  right: 60px;
+  top: 1030px;
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+}
+.buy-dialog__btn {
+  position: relative;
+  width: 300px;
+  height: 62px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transition: transform 120ms ease, filter 160ms ease;
+}
+.buy-dialog__btn img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.buy-dialog__btn span {
+  position: relative;
+  font: 900 34px/62px 'Montserrat', 'Segoe UI', system-ui, sans-serif;
+  color: #fff;
+  -webkit-text-stroke: 3px #7d0d12;
+  paint-order: stroke fill;
+}
+/* CANCEL — та же плашка, но приглушённая, чтобы BUY читался главным. */
+.buy-dialog__btn:not(.buy-dialog__btn--ok) img { filter: saturate(0.25) brightness(0.75); }
+.buy-dialog__btn:hover { filter: brightness(1.12); }
+.buy-dialog__btn:active { transform: scale(0.96); }
+.buy-dialog__btn:focus-visible { outline: 3px solid #fff; outline-offset: 4px; border-radius: 14px; }
+.buy-dialog__btn:disabled { cursor: not-allowed; filter: grayscale(1) brightness(0.7); }
+
+@media (orientation: portrait) {
+  .buy-dialog {
+    left: 390px;
+    /* центр композиции (y 602 кадра) — на 42% высоты экрана */
+    top: calc(var(--view-h, 1416px) * 0.42 + 106px);
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* ================================================================
+   Desktop layout variants (кнопка «Варианты», slot.js setLayoutVariant)
+   ================================================================
+   1 — макет final_design (выше): рамка справа, логотип над ней.
+   2 — рамка крупнее (x1.44 к мобильной группе 806x550) справа, логотип над
+       героем слева. Координаты сняты с присланных скринов (поиском рамки,
+       логотипа и кнопки по цвету, 1280px скрин -> кадр 1932).
+   3 — рамка как в 1, но по центру кадра, логотип над ней.
+   Только ландшафт: в портрете раскладка одна. */
+@media (orientation: landscape) {
+  .screen[data-layout="2"] .reel { left: 635.4px; top: 30.2px; transform: scale(1.4401); }
+  .screen[data-layout="2"] .logo { left: 117.7px; top: 64.9px; width: 516.2px; }
+  .screen[data-layout="2"] .plate-btn { left: 1073.2px; top: 739.6px; }
+
+  /* Герой нарисован прямо в фоне (в макете фон — одна картинка), поэтому
+     двигается он масштабом фона вокруг нужной опоры — так края кадра
+     остаются закрыты и щелей не появляется:
+     2 / бонус: опора у верхнего края над героем — герой опускается (~60px
+                кадра) и отходит от логотипа;
+     3:         опора у правого края — левая часть сцены уезжает влево
+                (~80px кадра у героя), правый край на месте. */
+  .stage__bg { transition: transform 300ms ease; }
+  .screen[data-layout="2"][data-mode="freespins"] .stage__bg { transform-origin: 17% 0; transform: scale(1.22); }
+  .screen[data-layout="3"] .stage__bg { transform-origin: 100% 50%; transform: scale(1.05); }
+
+  .screen[data-layout="3"] .reel { left: 445.3px; top: 58px; }
+  .screen[data-layout="3"] .logo { left: 782.5px; top: 0; }
+  .screen[data-layout="3"] .plate-btn { left: 825px; top: 723px; }
+}
+
+/* Переключатель вариантов — только на десктопе. Внизу слева над балансом:
+   сверху он наезжал бы на логотип варианта 2, а справа — на рамку. */
+.layout-switch {
+  position: fixed;
+  bottom: 64px;
+  left: 12px;
+  z-index: 110;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 4px 4px 12px;
+  border-radius: 999px;
+  background: rgba(6, 13, 41, 0.78);
+  border: 1px solid rgba(255, 213, 106, 0.55);
+  color: var(--gold);
+  font: 700 13px/1 'Baloo 2', system-ui, sans-serif;
+  backdrop-filter: blur(4px);
+}
+.layout-switch__label { margin-right: 4px; }
+.layout-switch button {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 213, 106, 0.35);
+  background: transparent;
+  color: var(--gold);
+  font: inherit;
+  cursor: pointer;
+}
+.layout-switch button:hover { background: rgba(255, 213, 106, 0.14); }
+.layout-switch button:focus-visible { outline: 2px solid var(--cream); outline-offset: 2px; }
+.layout-switch button[aria-pressed="true"] { background: var(--gold); color: var(--navy-deep); border-color: var(--gold); }
+@media (orientation: portrait) {
+  .layout-switch { display: none; }
+}
+
 /* ================================================================
    Portrait — «Max Vertical View» 780x1416
    ================================================================ */

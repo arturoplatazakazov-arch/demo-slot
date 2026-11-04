@@ -19,6 +19,9 @@ const gameState = {
   boughtBonus: false,
 };
 
+// How long the scatter win plays over the grid before the bonus intro starts.
+const SCATTER_WIN_LEAD_MS = 1100;
+
 const WIN_TIER_SOUNDS = { bigWin: 'bigWin', epicWin: 'epicWin', megaWin: 'megaWin', bonusSpinsTotalWin: 'bonusTotalWin' };
 
 function formatNumber(n) {
@@ -69,6 +72,14 @@ async function applySpinResult(data) {
   const enteringBonus = document.getElementById('screen').dataset.mode !== 'freespins' && remaining > 0;
 
   playWinCells(data.winning_cells, data.line_wins, data.count_wins);
+
+  // Free spins won from burgers (not bought): the scatter win plays over the
+  // pulsing scatters before the bonus intro blacks the screen out.
+  const scatterTrigger = data.popup && data.popup.type === 'bonusSpinsWin' && !(enteringBonus && gameState.boughtBonus);
+  if (scatterTrigger) {
+    Sound.playSfx('scatterWin');
+    if (enteringBonus) await new Promise((r) => setTimeout(r, SCATTER_WIN_LEAD_MS));
+  }
 
   await setFreeSpinsMode(remaining > 0, remaining);
   if (remaining > 0) updateFreeSpinsCounter(remaining);
@@ -128,15 +139,60 @@ function setupSpinButton() {
   });
 }
 
+// Bonus buy terms — the seed's bonus_buy product (app/seed/great_uniqorn.py):
+// the session-start response doesn't carry them, so they live here.
+const BUY_COST_MULTIPLIER = 100;
+const BUY_SPINS = 10;
+
+// BUY BONUS opens a confirmation with the price; only BUY sends the purchase.
+// It used to buy straight away, and at the default bet (55 000 -> 5.5M)
+// the server refused for lack of balance with nothing on screen — now the
+// dialog says so and keeps BUY disabled.
 function setupBuyBonusButton() {
   const buyBtn = document.querySelector('.sign-buy-bonus');
-  if (!buyBtn) return;
+  const dialog = document.getElementById('buyDialog');
+  if (!buyBtn || !dialog) return;
+  const confirmBtn = document.getElementById('buyConfirm');
+  let open = false;
+
+  const close = (playSound = true) => {
+    if (!open) return;
+    open = false;
+    if (playSound) Sound.playSfx('popupClose');
+    dialog.classList.remove('is-open');
+    popScreenDim();
+    setTimeout(() => { if (!open) dialog.hidden = true; }, 220);
+  };
+
   buyBtn.addEventListener('click', () => {
-    if (gameState.freeSpinsRemaining > 0 || gameState.isSpinning) return;
+    if (open || gameState.freeSpinsRemaining > 0 || gameState.isSpinning || !gameState.sessionId) return;
+    const bet = gameState.betSteps[gameState.betIndex];
+    const price = bet * BUY_COST_MULTIPLIER;
+    const affordable = price <= gameState.balance;
+    document.getElementById('buySpins').textContent = BUY_SPINS;
+    document.getElementById('buyPrice').textContent = formatPopupAmount(price);
+    document.getElementById('buyCur').textContent = gameState.currency;
+    document.getElementById('buyNote').hidden = affordable;
+    confirmBtn.disabled = !affordable;
+    open = true;
+    Sound.playSfx('popupOpen');
+    pushScreenDim();
+    dialog.hidden = false;
+    void dialog.offsetWidth;
+    dialog.classList.add('is-open');
+    (affordable ? confirmBtn : document.getElementById('buyCancel')).focus({ preventScroll: true });
+  });
+
+  document.getElementById('buyCancel').addEventListener('click', () => close());
+  confirmBtn.addEventListener('click', () => {
+    if (confirmBtn.disabled) return;
+    close(false);
+    Sound.playSfx('click');
     const betAmount = gameState.betSteps[gameState.betIndex];
     gameState.boughtBonus = true;
     runSpin(() => Api.buyFeature(gameState.sessionId, 'free_spins_buy', betAmount));
   });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
 }
 
 async function bootstrapSession() {
@@ -162,9 +218,26 @@ async function bootstrapSession() {
   }
 }
 
+// Every control of the bar has its own sound; anything not listed clicks.
+const UI_SOUNDS = [
+  ['[data-action="bet-plus"]', 'betPlus'],
+  ['[data-action="bet-minus"]', 'betMinus'],
+  ['#v3MenuBtn', 'menu'],
+  ['#v3AutoBtn', 'autospin'],
+  ['.v3-chip', 'autospin'],
+  ['#v3TurboBtn', 'turbo'],
+];
+
 function setupClickSounds() {
+  const claimed = new Set();
+  for (const [sel, name] of UI_SOUNDS) {
+    document.querySelectorAll(sel).forEach((btn) => {
+      claimed.add(btn);
+      btn.addEventListener('click', () => Sound.playSfx(name));
+    });
+  }
   document.querySelectorAll('.ui-icon-btn, .ui-spin-btn').forEach((btn) => {
-    btn.addEventListener('click', () => Sound.playSfx('click'));
+    if (!claimed.has(btn)) btn.addEventListener('click', () => Sound.playSfx('click'));
   });
 }
 

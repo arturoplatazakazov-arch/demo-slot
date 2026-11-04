@@ -500,6 +500,7 @@ let reelClearDone = Promise.resolve();
 
 function startReelLoop() {
   Sound.playSfx('spinStart');
+  scatterLandCount = 0;
   teardownCellInstances();
   const gen = ++reelLoopGeneration;
   for (const { stripEl } of reelCols) {
@@ -561,7 +562,8 @@ const ANTICIPATION_PREROLL_FILLER_COUNT = 16;
 
 function landReel(colIndex, finalCodes, delayMs, isAnticipating = false, fillerCodeFn = randomSymbolCode) {
   const { stripEl } = reelCols[colIndex];
-  const stopSound = colIndex === GRID_COLS - 1 ? 'finalReelStop' : 'reelStop';
+  // Reels 1-4 each stop on their own note, the last on the closing chord.
+  const stopSound = colIndex === GRID_COLS - 1 ? 'finalReelStop' : `reelStop${colIndex + 1}`;
   const prerollCount = isAnticipating ? ANTICIPATION_PREROLL_FILLER_COUNT : 0;
 
   return new Promise((resolve) => {
@@ -638,8 +640,17 @@ function landReel(colIndex, finalCodes, delayMs, isAnticipating = false, fillerC
   });
 }
 
+// Scatters landed so far this spin: the 1st/2nd/3rd each get their own,
+// rising sound (scatter1..3). Reset by startReelLoop.
+let scatterLandCount = 0;
+
 function settleColumnCells(cellEls, col, finalCodes) {
   const tasks = [];
+  const scatters = finalCodes.filter((c) => c === 'scatter').length;
+  for (let i = 0; i < scatters && scatterLandCount < 3; i++) {
+    scatterLandCount += 1;
+    Sound.playSfx(`scatter${scatterLandCount}`);
+  }
   for (let row = 0; row < GRID_ROWS; row++) {
     const code = finalCodes[row];
     const cell = cellEls[row];
@@ -817,6 +828,7 @@ const BONUS_INTRO_HOLD_MS = 3000;
 // the real scatter trigger (app.js) and the dev mode toggle, since both enter
 // the bonus through setFreeSpinsMode below.
 async function enterBonusTransition(amount = 0) {
+  Sound.playSfx('bonusEnter');
   pushScreenDim(true); // opaque blackout in
   await wait(DIM_TRANSITION_MS);
   await playPopupSequence('bonusSpinsWin', amount, BONUS_INTRO_HOLD_MS, { ownDim: false });
@@ -835,6 +847,7 @@ function setFreeSpinsMode(active, amount = 0) {
   // Entering the bonus gets the full intro moment (blackout + popup + reveal);
   // leaving it keeps the plain opaque dim swap.
   if (next === 'freespins') return enterBonusTransition(amount);
+  Sound.playSfx('bonusExit');
 
   return withScreenDim(
     async () => {
@@ -966,12 +979,19 @@ function countUpPopupAmount(node, amount, delayMs = 0) {
   const value = node.querySelector('.game-popup__value');
   if (!value) return;
   const start = performance.now() + delayMs;
+  // The cash counter loops for exactly as long as the number runs.
+  let stopCash = null;
   const tick = (now) => {
-    if (!node.isConnected) return;
+    if (!node.isConnected) {
+      if (stopCash) stopCash();
+      return;
+    }
     const t = Math.max(0, Math.min(1, (now - start) / POPUP_COUNT_UP_MS));
+    if (t > 0 && !stopCash) stopCash = Sound.startLoop('cashLoop');
     const eased = 1 - Math.pow(1 - t, 3);
     value.textContent = formatPopupAmount(amount * eased);
     if (t < 1) requestAnimationFrame(tick);
+    else if (stopCash) stopCash();
   };
   requestAnimationFrame(tick);
 }
@@ -1091,6 +1111,37 @@ function setupDevPanel() {
 const DESK_W = 1932;
 const DESK_H = 940;
 const DESK_SAFE_W = 1612;
+// Desktop layout variants (the «Варианты» switch): the horizontal span of the
+// frame that must stay on screen. Variant 2's bigger frame reaches x≈1800
+// and its logo starts at x≈118, past the mockup's 160px croppable strips.
+const LAYOUT_SAFE_W = { 1: DESK_SAFE_W, 2: 1712, 3: DESK_SAFE_W };
+const LAYOUT_KEY = 'great-uniqorn.layout';
+
+function currentLayout() {
+  return document.getElementById('screen').dataset.layout || '1';
+}
+
+function setLayoutVariant(v) {
+  const next = ['1', '2', '3'].includes(String(v)) ? String(v) : '1';
+  document.getElementById('screen').dataset.layout = next;
+  document.querySelectorAll('#layoutSwitch [data-layout]').forEach((b) => {
+    b.setAttribute('aria-pressed', String(b.dataset.layout === next));
+  });
+  try { localStorage.setItem(LAYOUT_KEY, next); } catch (e) { /* private mode — fine */ }
+  layoutStage();
+}
+
+function setupLayoutSwitch() {
+  let saved = '1';
+  try { saved = localStorage.getItem(LAYOUT_KEY) || '1'; } catch (e) { /* ignore */ }
+  setLayoutVariant(saved);
+  document.querySelectorAll('#layoutSwitch [data-layout]').forEach((b) => {
+    b.addEventListener('click', () => {
+      Sound.playSfx('click');
+      setLayoutVariant(b.dataset.layout);
+    });
+  });
+}
 const MOB_W = 780;
 const MOB_H = 1416;
 
@@ -1110,7 +1161,7 @@ function layoutStage() {
     x = (vw - MOB_W * s) / 2;
     y = 0;
   } else {
-    s = Math.min(vw / DESK_SAFE_W, vh / DESK_H);
+    s = Math.min(vw / (LAYOUT_SAFE_W[currentLayout()] || DESK_SAFE_W), vh / DESK_H);
     x = (vw - DESK_W * s) / 2;
     y = (vh - DESK_H * s) / 2;
   }
@@ -1190,6 +1241,7 @@ async function init() {
   await SlotCalibration.load(); // must resolve before buildReelGrid's applyStaticContentOffset
   Sound.playMusic('base');
   ensureSpineStage();
+  setupLayoutSwitch();
   layoutStage();
   updateBgForLayout();
   window.addEventListener('resize', () => {

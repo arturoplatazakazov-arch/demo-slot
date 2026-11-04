@@ -1,42 +1,58 @@
-// Great Uniqorn (copied from Uniqorn Scandal) — central sound manager, same mechanics as the other
-// games' sound.js (overlappable one-shot SFX, crossfading looped music
-// unlocked on first user gesture). Assets split two ways (see
-// front/sound/README.md): repeating SFX shared by every game live in
-// sound/common/; this theme's win tiers, background music and the wild-scale
-// SFX are delivered (all .mp3). Each background level plays TWO looped layers
-// at once — the music track plus an environment/atmosphere bed under it (see
-// MUSIC_FILES). The scatter win and the longer wild-win bed aren't delivered
-// yet, so those GAME paths still 404 harmlessly until the files land.
-const COMMON = 'sound/common/';
-// TODO: собственных звуков у темы пока нет — временно играем вестерновские.
-const GAME = 'sound/wild-western-story/';
+// Great Uniqorn — central sound manager (copied from Uniqorn Scandal): one-shot
+// SFX through WebAudio, looping music unlocked on the first user gesture.
+//
+// The game's own pack lives in sound/great-uniqorn/: synthesized in code by
+// scripts/great_uniqorn_audio.py, three takes of each sound, the product's
+// picks copied here under these names (the rest stay in _audition/ for
+// reference).
+const GAME = 'sound/great-uniqorn/';
 
 const SOUND_FILES = {
-  // unique to this game — delivered
-  smallWin: GAME + 'WIN_Small.mp3',
+  // wins
+  smallWin: GAME + 'WIN_Line.mp3',          // a line pays (no popup)
   bigWin: GAME + 'WIN_Big.mp3',
   megaWin: GAME + 'WIN_Mega.mp3',
   epicWin: GAME + 'WIN_Epic.mp3',
-  wildGrow: GAME + 'WILD_Scale.mp3', // wild -> multiplier reveal beat
-  scatterWin: GAME + 'SCATTER_win.mp3',
-  bonusTotalWin: GAME + 'BONUS_SPINS_TOTAL_WIN.mp3', // free-spins-round-end total payout popup
-  // shared / repeating (already present in sound/common/)
-  click: COMMON + 'Click_UI.mp3',
-  spinStart: COMMON + 'reel-start.mp3',
-  reelStop: COMMON + 'Reel_stop_slot.mp3',
-  finalReelStop: COMMON + 'REELS_final_stop.mp3',
-  anticipation: COMMON + 'REELS_anticipation.mp3',
-  popupOpen: COMMON + 'Popup-open.mp3',
-  popupClose: COMMON + 'Popup-close.mp3',
+  bonusTotalWin: GAME + 'WIN_Big.mp3',      // free-spins round total — no own take, BIG WIN's
+  cashLoop: GAME + 'WIN_CashLoop.mp3',      // seamless loop while a popup's amount counts up
+  // scatters: the 1st/2nd/3rd burger to land in a spin, then the trigger
+  scatter1: GAME + 'SCATTER_1.mp3',
+  scatter2: GAME + 'SCATTER_2.mp3',
+  scatter3: GAME + 'SCATTER_3.mp3',
+  scatterWin: GAME + 'SCATTER_Win.mp3',
+  wildGrow: GAME + 'WILD_Multiplier.mp3',   // wild -> multiplier reveal
+  bonusEnter: GAME + 'BONUS_Enter.mp3',
+  bonusExit: GAME + 'BONUS_Exit.mp3',
+  // ui
+  click: GAME + 'UI_Click.mp3',
+  popupOpen: GAME + 'UI_PopupOpen.mp3',
+  popupClose: GAME + 'UI_PopupClose.mp3',
+  autospin: GAME + 'UI_Autospin.mp3',
+  betPlus: GAME + 'UI_BetPlus.mp3',
+  betMinus: GAME + 'UI_BetMinus.mp3',
+  menu: GAME + 'UI_Menu.mp3',
+  turbo: GAME + 'UI_Turbo.mp3',
+  // reels: each of reels 1-4 stops on its own rising note (a little melody
+  // per spin), the 5th lands on the resolving chord
+  spinStart: GAME + 'REEL_SpinStart.mp3',
+  reelStop1: GAME + 'REEL_Stop_1.mp3',
+  reelStop2: GAME + 'REEL_Stop_2.mp3',
+  reelStop3: GAME + 'REEL_Stop_3.mp3',
+  reelStop4: GAME + 'REEL_Stop_4.mp3',
+  finalReelStop: GAME + 'REEL_StopLast.mp3',
+  anticipation: GAME + 'REEL_Anticipation.mp3',
 };
 
-// Product, this session: no music at all is better than wild-western-story's
-// reused track — silent until this theme's own BG_Base/BG_Bonus are delivered.
-const MUSIC_FILES = {};
+// One seamless loop per level (the files are rendered with the reverb tail
+// folded back onto the start), played as a WebAudio buffer loop: an <audio
+// loop> leaves a short gap at the mp3 boundary.
+const MUSIC_FILES = {
+  base: { music: GAME + 'BG_Base.mp3' },
+  bonus: { music: GAME + 'BG_Bonus.mp3' },
+};
 
 const SFX_VOLUME = 0.7;
 const MUSIC_VOLUME = 0.35; // main background track
-const ENV_VOLUME = 0.25; // environment/atmosphere layer — sits under the music
 
 let muted = localStorage.getItem('slot.muted') === '1';
 let currentLayers = []; // [{ audio, vol }] — music + environment played together
@@ -100,6 +116,24 @@ function playSfx(name) {
   audio.play().catch(() => {}); // autoplay-blocked / missing file — fine to ignore
 }
 
+// --- music: WebAudio buffer loop, <audio loop> as the fallback ---------------
+const musicGain = sfxCtx ? sfxCtx.createGain() : null;
+if (musicGain) {
+  musicGain.gain.value = muted ? 0 : MUSIC_VOLUME;
+  musicGain.connect(sfxCtx.destination);
+}
+const musicBuffers = {};
+function loadMusicBuffer(key) {
+  if (!sfxCtx || !MUSIC_FILES[key]) return Promise.resolve(null);
+  if (!musicBuffers[key]) {
+    musicBuffers[key] = fetch(MUSIC_FILES[key].music)
+      .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()))
+      .then((ab) => sfxCtx.decodeAudioData(ab))
+      .catch(() => null);
+  }
+  return musicBuffers[key];
+}
+
 function startLayer(src, vol) {
   const audio = new Audio(src);
   audio.loop = true;
@@ -108,17 +142,62 @@ function startLayer(src, vol) {
   return { audio, vol };
 }
 
+function stopLayers() {
+  for (const layer of currentLayers) {
+    if (layer.audio) layer.audio.pause();
+    if (layer.node) { try { layer.node.stop(); } catch (e) { /* already stopped */ } }
+  }
+  currentLayers = [];
+}
+
 function playMusic(key) {
   pendingMusicKey = key;
   if (!musicUnlocked || currentMusicKey === key) return;
-  for (const layer of currentLayers) layer.audio.pause();
-  currentLayers = [];
-
-  const set = MUSIC_FILES[key];
-  if (!set) return;
-  currentLayers.push(startLayer(set.music, MUSIC_VOLUME));
-  if (set.env) currentLayers.push(startLayer(set.env, ENV_VOLUME));
+  stopLayers();
   currentMusicKey = key;
+  if (!MUSIC_FILES[key]) return;
+  if (!sfxCtx) {
+    currentLayers.push(startLayer(MUSIC_FILES[key].music, MUSIC_VOLUME));
+    return;
+  }
+  loadMusicBuffer(key).then((buf) => {
+    if (currentMusicKey !== key) return; // switched again while decoding
+    if (!buf) {
+      currentLayers.push(startLayer(MUSIC_FILES[key].music, MUSIC_VOLUME));
+      return;
+    }
+    if (sfxCtx.state === 'suspended') sfxCtx.resume();
+    const node = sfxCtx.createBufferSource();
+    node.buffer = buf;
+    node.loop = true;
+    node.connect(musicGain);
+    node.start();
+    currentLayers.push({ node, vol: MUSIC_VOLUME });
+  });
+}
+
+// --- looping SFX (cash counter) -------------------------------------------------
+// Returns a stop() — safe to call more than once.
+function startLoop(name) {
+  if (muted || !sfxCtx || !sfxBuffers[name]) return () => {};
+  if (sfxCtx.state === 'suspended') sfxCtx.resume();
+  const node = sfxCtx.createBufferSource();
+  node.buffer = sfxBuffers[name];
+  node.loop = true;
+  const g = sfxCtx.createGain();
+  g.gain.value = 1;
+  node.connect(g);
+  g.connect(sfxGain);
+  node.start();
+  let stopped = false;
+  return () => {
+    if (stopped) return;
+    stopped = true;
+    const now = sfxCtx.currentTime;
+    g.gain.setValueAtTime(1, now);
+    g.gain.linearRampToValueAtTime(0, now + 0.08); // no click on the cut
+    try { node.stop(now + 0.1); } catch (e) { /* ignore */ }
+  };
 }
 
 function unlockMusic() {
@@ -135,7 +214,8 @@ function updateSoundIcon() {
 function setMuted(next) {
   muted = next;
   localStorage.setItem('slot.muted', muted ? '1' : '0');
-  for (const layer of currentLayers) layer.audio.volume = muted ? 0 : layer.vol;
+  for (const layer of currentLayers) if (layer.audio) layer.audio.volume = muted ? 0 : layer.vol;
+  if (musicGain) musicGain.gain.value = muted ? 0 : MUSIC_VOLUME;
   updateSoundIcon();
 }
 
@@ -143,12 +223,15 @@ function toggleMuted() {
   setMuted(!muted);
 }
 
+setTimeout(() => { loadMusicBuffer('base'); loadMusicBuffer('bonus'); }, 500);
+
 window.addEventListener('pointerdown', unlockMusic, { once: true });
 window.addEventListener('keydown', unlockMusic, { once: true });
 
 const Sound = {
   playSfx,
   playMusic,
+  startLoop,
   preloadPromises: sfxLoadPromises,
   setMuted,
   toggleMuted,
