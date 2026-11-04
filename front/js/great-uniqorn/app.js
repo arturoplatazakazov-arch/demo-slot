@@ -20,7 +20,7 @@ const gameState = {
 };
 
 // How long the scatter win plays over the grid before the bonus intro starts.
-const SCATTER_WIN_LEAD_MS = 1100;
+const SCATTER_WIN_LEAD_MS = 2300;
 
 const WIN_TIER_SOUNDS = { bigWin: 'bigWin', epicWin: 'epicWin', megaWin: 'megaWin', bonusSpinsTotalWin: 'bonusTotalWin' };
 

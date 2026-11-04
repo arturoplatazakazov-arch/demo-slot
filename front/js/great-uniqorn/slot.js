@@ -287,6 +287,11 @@ function clearCellAnimation(info) {
     info.winLoopTimeout = null;
   }
   info.cell.classList.remove('is-winning', 'is-win-active', 'is-wild-squeeze', 'is-wild-pop');
+  const spineInst = scatterSpines.get(info);
+  if (spineInst) {
+    const cur = spineInst.animationState.getCurrent(0);
+    if (cur && cur.animation && cur.animation.name === 'win') spineInst.play('idle', true);
+  }
 }
 
 function teardownCellInstances() {
@@ -301,11 +306,13 @@ function teardownCellInstances() {
     info.cell.classList.remove('is-dimmed');
     info.cell.style.opacity = '';
     clearCellAnimation(info);
+    applyScatterDim(info);
   }
 }
 
 function setCellSymbol(info, code, mult = 1) {
   clearCellAnimation(info);
+  unmountScatterSpine(info);
   info.symbol = code;
   info.mult = mult;
   info.cell.dataset.symbol = code;
@@ -320,6 +327,11 @@ function setCellSymbol(info, code, mult = 1) {
 }
 
 function playWinAnimationOnce(info) {
+  const spineInst = scatterSpines.get(info);
+  if (spineInst) {
+    spineInst.play('win', false).queue('idle', true);
+    return wait(SCATTER_SPINE_WIN_MS);
+  }
   info.cell.classList.remove('is-winning');
   void info.cell.offsetWidth;
   info.cell.classList.add('is-winning');
@@ -364,6 +376,7 @@ function setCellActive(info, active) {
 
 function setCellDimmed(info, dimmed) {
   info.cell.classList.toggle('is-dimmed', dimmed);
+  applyScatterDim(info);
 }
 
 let multiLineSequenceTimeout = null;
@@ -415,6 +428,7 @@ async function applyGrid(grid) {
     }
   }
   await Promise.all(tasks);
+  for (const info of cellInfos) if (info && info.symbol === 'scatter') mountScatterSpine(info, 'idle');
 }
 
 function buildWinGroups(lineWins, countWins) {
@@ -495,6 +509,7 @@ let reelClearDone = Promise.resolve();
 function startReelLoop() {
   Sound.playSfx('spinStart');
   scatterLandCount = 0;
+  unmountAllScatterSpines();
   teardownCellInstances();
   const gen = ++reelLoopGeneration;
   for (const { stripEl } of reelCols) {
@@ -654,9 +669,88 @@ function settleColumnCells(cellEls, col, finalCodes) {
     cell.addEventListener('click', () => onCellClick(info));
     cellInfos[row * GRID_COLS + col] = info;
     // No landing squash: the product wants symbols to just settle (2026-11-04).
-    tasks.push(setCellSymbol(info, code));
+    tasks.push(setCellSymbol(info, code).then(() => {
+      if (code === 'scatter') mountScatterSpine(info, 'land');
+    }));
   }
   return Promise.all(tasks);
+}
+
+// --- Spine scatter ---------------------------------------------------------
+//
+// The burger SCATTER is a Spine skeleton (scripts/great_uniqorn_scatter_spine.py)
+// drawn on the shared #spineCanvas over its cell: `land` when its reel stops,
+// `idle` while it sits on the grid, `win` (burger bursts into its layers and
+// slams back) when scatters pay or trigger the bonus. The static PNG stays in
+// the cell, hidden while the skeleton covers it, and comes back whenever the
+// skeleton can't run (no WebGL, failed load) or the reels spin off.
+const SCATTER_SPINE_DIR = `${ASSET_ROOT}/spine/scatter`;
+const SCATTER_SPINE_VERSION = '1';
+const SCATTER_SPINE_WIN_MS = 2600;
+let scatterResource = null;
+const scatterSpines = new Map(); // info -> SpineInstance
+
+function loadScatterResource() {
+  const stage = ensureSpineStage();
+  if (!stage) return Promise.resolve(null);
+  return SpineEngine.SpineResource.load(stage.assetManager, SCATTER_SPINE_DIR, { version: SCATTER_SPINE_VERSION })
+    .then((res) => (scatterResource = res))
+    .catch((err) => { console.warn('scatter skeleton unavailable, static PNG stays:', err); return null; });
+}
+
+// Box of the skeleton's 190x198 tile inside the cell (cell units): the
+// scatter PNG puts that tile at x 30..450, y 3..441 of its 477 canvas, and
+// the <img> is 230px at (-11, -15).
+function scatterSpineAnchor(info) {
+  let el = info.cell.querySelector('.reel__cell-spine');
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'reel__cell-spine';
+    info.cell.appendChild(el);
+  }
+  return el;
+}
+
+function mountScatterSpine(info, anim = 'idle') {
+  unmountScatterSpine(info);
+  if (!scatterResource || !spineStage || info.symbol !== 'scatter') return;
+  const inst = scatterResource.createInstance();
+  inst.anchorEl = scatterSpineAnchor(info);
+  inst.fit = 2; // skeleton bounds are 2x the tile (room for the win burst)
+  if (anim === 'idle') inst.play('idle', true);
+  else inst.play(anim, false).queue('idle', true);
+  spineStage.addBase(inst);
+  info.img.style.visibility = 'hidden';
+  scatterSpines.set(info, inst);
+  applyScatterDim(info);
+}
+
+function unmountScatterSpine(info) {
+  const inst = scatterSpines.get(info);
+  if (!inst) return;
+  scatterSpines.delete(info);
+  if (spineStage) spineStage.removeBase(inst);
+  if (info.img) info.img.style.visibility = '';
+}
+
+function unmountAllScatterSpines() {
+  for (const info of [...scatterSpines.keys()]) unmountScatterSpine(info);
+}
+
+function applyScatterDim(info) {
+  const inst = scatterSpines.get(info);
+  if (inst) inst.skeleton.color.a = info.cell.classList.contains('is-dimmed') ? 0.32 : 1;
+}
+
+// Base skeletons (the scatters) live on the same canvas as the popups and the
+// full-screen intro screens, above the DOM dim — so they follow the dim by
+// hand: tinted under a popup's dim, gone under the opaque blackout and the
+// Spine screens.
+function refreshSpineBase() {
+  if (!spineStage) return;
+  spineStage.baseHidden = opaqueDimActiveCount > 0 || spineScreenOpen;
+  spineStage.setBaseDim(dimActiveCount > 0);
+  for (const info of scatterSpines.keys()) applyScatterDim(info);
 }
 
 // --- Wild -> multiplier ----------------------------------------------------
@@ -779,6 +873,7 @@ function pushScreenDim(opaque = false) {
     // stacking order and the one class does the whole job.
     document.getElementById('screenDim').classList.add('is-opaque');
   }
+  refreshSpineBase();
 }
 
 function popScreenDim(opaque = false) {
@@ -793,6 +888,7 @@ function popScreenDim(opaque = false) {
       document.getElementById('screenDim').classList.remove('is-opaque');
     }
   }
+  refreshSpineBase();
 }
 
 async function withScreenDim(mutateFn, { opaque = false } = {}) {
@@ -1281,6 +1377,7 @@ function showSpineScreen(kind, { bgMode = 'base', onFrame = null, autoCloseMs = 
     mount(resource, null);
     window.addEventListener('resize', onResize);
     document.body.classList.add('is-feature-screen');
+    refreshSpineBase();
     root.hidden = false;
     void root.offsetWidth;
     root.classList.add('is-open');
@@ -1302,6 +1399,7 @@ function showSpineScreen(kind, { bgMode = 'base', onFrame = null, autoCloseMs = 
       root.style.transition = '';
       document.body.classList.remove('is-feature-screen');
       spineScreenOpen = false;
+      refreshSpineBase();
       resolve(true);
     };
     const close = () => {
@@ -1332,6 +1430,7 @@ function showSpineScreen(kind, { bgMode = 'base', onFrame = null, autoCloseMs = 
     console.warn(`${kind} screen failed:`, err);
     spineScreenOpen = false;
     document.body.classList.remove('is-feature-screen');
+    refreshSpineBase();
     root.hidden = true;
     return false;
   });
@@ -1407,6 +1506,7 @@ function preloadAssets() {
   for (const name of ['frame.png?v=2', 'slotbg_base', 'slotbg_bonus', 'logo.png?v=2', 'btn_buy.png?v=2', 'btn_fs']) {
     tasks.push(track(preloadImage(`${ASSET_ROOT}/img/${name.includes('.png') ? name : `${name}.png`}`)));
   }
+  tasks.push(track(loadScatterResource()));
   tasks.push(track(preloadImage(bgSrcFor('base'))));
   tasks.push(track(preloadImage(bgSrcFor('freespins'))));
   // Popup skeletons are only needed later — warm this layout's six in the
@@ -1441,6 +1541,7 @@ async function init() {
 
   await preloadAssets();
   await Promise.all(cellInfos.map((info) => setCellSymbol(info, info.symbol, info.mult)));
+  for (const info of cellInfos) if (info.symbol === 'scatter') mountScatterSpine(info, 'idle');
 
   if (window.Preloader) window.Preloader.done();
 

@@ -236,6 +236,17 @@ body {
   transition: opacity 200ms ease;
 }
 .reel__cell.is-dimmed img { opacity: 0.32; }
+/* Якорь Spine-скаттера: тайл скелета 190x198 внутри ячейки (slot.js
+   scatterSpineAnchor) — по PNG скаттера, где тайл занимает x 30..450,
+   y 3..441 холста 477 при img 230px в (-11, -15). */
+.reel__cell-spine {
+  position: absolute;
+  left: 3.47px;
+  top: -13.55px;
+  width: 202.5px;
+  height: 211.1px;
+  pointer-events: none;
+}
 .reel__cell-anchor {
   position: absolute;
   top: 50%;
