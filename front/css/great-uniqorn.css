@@ -352,6 +352,68 @@ img.is-missing {
   background: rgba(0, 0, 0, 0.3);
 }
 
+/* ---------- Feature preview / bonus screens ----------
+   Art is a Spine skeleton on #spineCanvas (scripts/great_uniqorn_screens.py);
+   this layer is the game's own background (cover) with a navy vignette, it
+   sits over the whole game and the bar and catches the tap that closes it. */
+.fscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 58;
+  background: var(--navy-deep);
+  opacity: 0;
+  transition: opacity 420ms ease;
+  cursor: pointer;
+  overflow: hidden;
+}
+.fscreen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--fs-bg) center / cover no-repeat;
+  /* strong blur: the game bg has its hero baked in, and the screen puts a
+     sharp hero of its own on top — the bg one must read as ambience only */
+  filter: blur(9px) brightness(0.7);
+  transform: scale(1.06);
+}
+.fscreen.is-open::before { animation: fscreen-zoom 1.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes fscreen-zoom { from { transform: scale(1.14); } }
+.fscreen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(6, 13, 41, 0.2) 0%, rgba(6, 13, 41, 0.55) 62%, rgba(3, 7, 24, 0.9) 100%),
+    linear-gradient(rgba(6, 13, 41, 0.35), rgba(6, 13, 41, 0.35));
+}
+.fscreen[hidden] { display: none; }
+.fscreen.is-open { opacity: 1; }
+/* .screen is position: fixed — its own stacking context — so while a screen
+   is up the whole .screen goes above the bar (z 20), and inside it the
+   canvas goes above the bg layer. */
+body.is-feature-screen .screen { z-index: 57; }
+body.is-feature-screen #spineCanvas { position: fixed; z-index: 59; }
+body.is-feature-screen .dev-panel,
+body.is-feature-screen .to-catalog-btn,
+body.is-feature-screen .layout-switch { visibility: hidden; }
+
+/* Live free-spins count inside the bonus screen's round badge. */
+.fscreen-count {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 60;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  font-family: 'Montserrat', 'Segoe UI', system-ui, sans-serif;
+  font-weight: 900;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.4), 0 0 18px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+}
+.fscreen-count[hidden] { display: none; }
+
 /* ---------- Paytable info popup ---------- */
 .info-popup {
   position: fixed;

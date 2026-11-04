@@ -6,7 +6,7 @@
 <title>Great Uniqorn — demo</title>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/preloader.css?v=1">
-<link rel="stylesheet" href="css/great-uniqorn.css?v=10">
+<link rel="stylesheet" href="css/great-uniqorn.css?v=11">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 </head>
 <body>
@@ -36,6 +36,8 @@
   <!-- DEV-ONLY панель: переключение режима и ручной запуск анимаций без бэкенда. -->
   <div class="dev-panel">
     <button class="dev-btn" id="devToggle" type="button">mode: base</button>
+    <button class="dev-btn" id="devFeatureScreen" type="button">Feature screen</button>
+    <button class="dev-btn" id="devBonusScreen" type="button">Bonus screen</button>
     <button class="dev-btn" data-popup="bigWin" type="button">Big Win</button>
     <button class="dev-btn" data-popup="epicWin" type="button">Epic Win</button>
     <button class="dev-btn" data-popup="megaWin" type="button">Mega Win</button>
@@ -100,6 +102,12 @@
     <!-- Верхний слой в тех же координатах макета, что и .stage: здесь живёт
          DOM попапа — кадр-якорь для скелета и сумма поверх плашки, — чтобы
          сумма лежала НАД канвасом. -->
+    <!-- Превью фич / бонус-экран: фон игры под Spine-канвасом, ловит тап.
+         Внутри #screen: канвас живёт в его контексте наложения, поэтому слой
+         экрана и счётчик должны быть там же (см. body.is-feature-screen). -->
+    <div class="fscreen" id="featureScreen" hidden></div>
+    <div class="fscreen-count" id="fscreenCount" hidden></div>
+
     <div class="stage stage--top" id="stageTop">
       <!-- Покупка бонуса: подтверждение с ценой (в макете этого попапа нет —
            собран из слоёв попапов дизайнера: герой с книгой, плашка тоталов,
@@ -242,7 +250,7 @@
   <script src="js/reel-math.js?v=6"></script>
   <script src="vendor/spine-webgl.js"></script>
   <script src="js/spine-engine.js?v=5"></script>
-  <script src="js/great-uniqorn/slot.js?v=7"></script>
+  <script src="js/great-uniqorn/slot.js?v=8"></script>
   <script src="js/great-uniqorn/app.js?v=4"></script>
   <!-- Поведение нижнего бара V3: флайаут, тултипы, заглушки авто/турбо. -->
   <script src="js/ui-bar-v3.js?v=4"></script>
