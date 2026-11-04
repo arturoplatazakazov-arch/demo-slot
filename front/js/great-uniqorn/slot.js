@@ -19,9 +19,13 @@ const SYMBOL_CODES = ['wild', 'scatter', 'jet', 'docs', 'hair', 'a', 'k', 'q', '
 // the server might send falls back to the plain WILD art.
 const WILD_MULTIPLIERS = [2, 3, 5, 7, 9];
 
+// Bumped when a symbol PNG is re-cut, so browsers/Telegram drop the cached one
+// (v2: the WILD's «D» had a see-through hole from the alpha recovery).
+const SYMBOL_VERSION = '2';
+
 function symbolSrc(code, mult = 1) {
-  if (code === 'wild' && WILD_MULTIPLIERS.includes(mult)) return `${ASSET_ROOT}/symbols/x${mult}.png`;
-  return `${ASSET_ROOT}/symbols/${code}.png`;
+  if (code === 'wild' && WILD_MULTIPLIERS.includes(mult)) return `${ASSET_ROOT}/symbols/x${mult}.png?v=${SYMBOL_VERSION}`;
+  return `${ASSET_ROOT}/symbols/${code}.png?v=${SYMBOL_VERSION}`;
 }
 
 // Codes eligible as random spin-loop filler — excludes scatter (a trigger
@@ -1208,8 +1212,8 @@ function preloadAssets() {
   for (const code of SYMBOL_CODES) tasks.push(track(preloadImage(symbolSrc(code))));
   // The xN arts swap in mid-reveal — a late fetch would flash an empty cell.
   for (const mult of WILD_MULTIPLIERS) tasks.push(track(preloadImage(symbolSrc('wild', mult))));
-  for (const name of ['frame', 'slotbg_base', 'slotbg_bonus', 'logo', 'btn_buy', 'btn_fs']) {
-    tasks.push(track(preloadImage(`${ASSET_ROOT}/img/${name}.png`)));
+  for (const name of ['frame', 'slotbg_base', 'slotbg_bonus', 'logo', 'btn_buy.png?v=2', 'btn_fs']) {
+    tasks.push(track(preloadImage(`${ASSET_ROOT}/img/${name.includes('.png') ? name : `${name}.png`}`)));
   }
   tasks.push(track(preloadImage(bgSrcFor('base'))));
   tasks.push(track(preloadImage(bgSrcFor('freespins'))));

@@ -6,7 +6,12 @@ connected to the image border, plus large enclosed pockets of it (inside of the
 frame, holes in letters). Pixels within EDGE px of that region get GIMP-style
 colour-to-alpha against the known background; everything else stays opaque.
 
-usage: python3 scripts/great_uniqorn_matte.py <edge_px> <file>...   (in place)
+usage: python3 scripts/great_uniqorn_matte.py <edge_px> [--no-pockets] <file>...   (in place)
+
+--no-pockets: only background connected to the image border is removed. Use
+it for art whose own light areas (white lettering, a white shirt) match the
+export background — the pocket rule cut a see-through hole into the «O» of
+BUY BONUS and into the WILD's «D» (2026-11-04).
 """
 import sys
 
@@ -17,7 +22,7 @@ from scipy import ndimage
 BG = 245.0
 
 
-def matte(path: str, edge: int) -> None:
+def matte(path: str, edge: int, pockets: bool = True) -> None:
     im = np.asarray(Image.open(path).convert("RGB")).astype(np.float32)
     diff = np.abs(im - BG).max(axis=2)
     near = diff <= 3
@@ -25,7 +30,7 @@ def matte(path: str, edge: int) -> None:
     border = set(np.unique(np.concatenate([labels[0], labels[-1], labels[:, 0], labels[:, -1]]))) - {0}
     sizes = ndimage.sum(near, labels, index=np.arange(1, n + 1))
     min_pocket = max(400, int(im.shape[0] * im.shape[1] * 0.0004))
-    keep = [i for i in range(1, n + 1) if i in border or sizes[i - 1] >= min_pocket]
+    keep = [i for i in range(1, n + 1) if i in border or (pockets and sizes[i - 1] >= min_pocket)]
     bg = np.isin(labels, keep)
     band = ndimage.binary_dilation(bg, iterations=edge) & ~bg
 
@@ -45,6 +50,8 @@ def matte(path: str, edge: int) -> None:
 
 if __name__ == "__main__":
     edge = int(sys.argv[1])
-    for p in sys.argv[2:]:
-        matte(p, edge)
+    args = sys.argv[2:]
+    pockets = "--no-pockets" not in args
+    for p in [a for a in args if a != "--no-pockets"]:
+        matte(p, edge, pockets)
         print("matted", p)
