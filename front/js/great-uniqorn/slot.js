@@ -21,7 +21,7 @@ const WILD_MULTIPLIERS = [2, 3, 5, 7, 9];
 
 // Bumped when a symbol PNG is re-cut, so browsers/Telegram drop the cached one
 // (v2: the WILD's «D» had a see-through hole from the alpha recovery).
-const SYMBOL_VERSION = '2';
+const SYMBOL_VERSION = '3';
 
 function symbolSrc(code, mult = 1) {
   if (code === 'wild' && WILD_MULTIPLIERS.includes(mult)) return `${ASSET_ROOT}/symbols/x${mult}.png?v=${SYMBOL_VERSION}`;
@@ -1195,7 +1195,7 @@ function updateBgForLayout() {
 // shows the game's own background under the canvas and catches the tap. Same
 // contract as Multi Fruits Story / Neon Reels.
 const SCREEN_ROOT = `${ASSET_ROOT}/screens`;
-const SCREEN_VERSION = '3';
+const SCREEN_VERSION = '4';
 const SCREEN_BOX = {
   desk: { x: -966, y: -470, width: 1932, height: 940 },
   mob: { x: -390, y: -708, width: 780, height: 1416 },
@@ -1404,7 +1404,7 @@ function preloadAssets() {
   for (const code of SYMBOL_CODES) tasks.push(track(preloadImage(symbolSrc(code))));
   // The xN arts swap in mid-reveal — a late fetch would flash an empty cell.
   for (const mult of WILD_MULTIPLIERS) tasks.push(track(preloadImage(symbolSrc('wild', mult))));
-  for (const name of ['frame', 'slotbg_base', 'slotbg_bonus', 'logo', 'btn_buy.png?v=2', 'btn_fs']) {
+  for (const name of ['frame.png?v=2', 'slotbg_base', 'slotbg_bonus', 'logo.png?v=2', 'btn_buy.png?v=2', 'btn_fs']) {
     tasks.push(track(preloadImage(`${ASSET_ROOT}/img/${name.includes('.png') ? name : `${name}.png`}`)));
   }
   tasks.push(track(preloadImage(bgSrcFor('base'))));

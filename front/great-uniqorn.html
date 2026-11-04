@@ -14,7 +14,7 @@
   <!-- Boot preloader: статичная разметка (видна с первого кадра), прогресс
        ведёт js/preloader.js, задачи считает preloadAssets в slot.js игры. -->
   <div class="preloader" id="preloader">
-    <div class="preloader__logo" id="preloaderLogo"><img src="img/great-uniqorn/img/logo.png" alt="" onerror="this.remove()"></div>
+    <div class="preloader__logo" id="preloaderLogo"><img src="img/great-uniqorn/img/logo.png?v=2" alt="" onerror="this.remove()"></div>
     <div class="preloader__bar"><div class="preloader__fill" id="preloaderFill"></div></div>
     <div class="preloader__pct" id="preloaderPct">0%</div>
   </div>
@@ -63,7 +63,7 @@
 
       <img class="stage__bg" id="bgLayer" src="img/great-uniqorn/img/bg_desk_base.jpg" alt="">
 
-      <img class="logo" src="img/great-uniqorn/img/logo.png" alt="Great Uniqorn">
+      <img class="logo" src="img/great-uniqorn/img/logo.png?v=2" alt="Great Uniqorn">
 
       <!-- Слот = рамка 806x550 из макета (мобильный размер; на десктопе та же
            группа масштабирована в 1042x711). Подложка барабанов и рамка —
@@ -71,7 +71,7 @@
       <div class="reel">
         <img class="reel__bg" id="slotBg" src="img/great-uniqorn/img/slotbg_base.png" alt="">
         <div class="reel__grid" id="reelGrid"></div>
-        <img class="reel__frame" src="img/great-uniqorn/img/frame.png" alt="">
+        <img class="reel__frame" src="img/great-uniqorn/img/frame.png?v=2" alt="">
         <!-- Small wins never get a popup — this is the only place their
              amount is shown. -->
         <div class="reel-win-amount" id="reelWinAmount"></div>
@@ -250,7 +250,7 @@
   <script src="js/reel-math.js?v=6"></script>
   <script src="vendor/spine-webgl.js"></script>
   <script src="js/spine-engine.js?v=5"></script>
-  <script src="js/great-uniqorn/slot.js?v=8"></script>
+  <script src="js/great-uniqorn/slot.js?v=9"></script>
   <script src="js/great-uniqorn/app.js?v=4"></script>
   <!-- Поведение нижнего бара V3: флайаут, тултипы, заглушки авто/турбо. -->
   <script src="js/ui-bar-v3.js?v=4"></script>
