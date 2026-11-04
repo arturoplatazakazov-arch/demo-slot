@@ -39,7 +39,7 @@ GAME_CODE = "volt-coins"
 GAME_NAME = "Volt Coins"
 CATALOG_BADGE = "Hold & Win"
 CATALOG_DESCRIPTION = "Сейф под напряжением: катушки Теслы, монеты и Hold & Win 3x3 с джекпотом GRAND за 9/9."
-CATALOG_COVER_PATH = "img/volt-coins-v3/img/cover.jpg"
+CATALOG_COVER_PATH = "img/volt-coins-v3/img/cover_banner.jpg"   # баннер, 2026-11-04
 # V3 (designer PSB) is the only build since 2026-11-03; V1/V2 are archived.
 CATALOG_PLAY_URL = "volt-coins-v3.html"
 

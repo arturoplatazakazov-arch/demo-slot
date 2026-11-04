@@ -1,13 +1,13 @@
-animation.png?v=27f7bda1
+animation.png?v=9d97918a
 size:2034,852
 filter:Linear,Linear
 pma:true
 rays
 bounds:0,0,560,560
-glow
-bounds:562,0,256,256
 t_hw
-bounds:820,0,700,233
+bounds:562,0,700,314
+glow
+bounds:1264,0,256,256
 c_x5
 bounds:1522,0,200,199
 c_mini
@@ -27,4 +27,4 @@ bounds:669,763,87,87
 tap_start
 bounds:758,763,330,78
 respins
-bounds:1090,763,173,61
+bounds:1090,763,192,68
