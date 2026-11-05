@@ -124,3 +124,64 @@ body.is-buying .demo-panel { display: none; }
 
 /* ?shot=1 (layouts.js): clean frames for exports — no demo/switch chrome. */
 body.is-shot .demo-panel, body.is-shot .layout-switch, body.is-shot .preloader { display: none !important; }
+
+/* --- Win-line candidates (slot.js showWinLine, ?line=a|b|c / DEMO panel) --- */
+.win-line path, .win-line circle, .win-line rect { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+/* A · Silk: a smooth glowing thread, white-hot core, light pulses running
+   along it; paying cells get a soft pulsing ring. */
+.wl-a-glow { stroke: rgba(255, 176, 64, 0.55); stroke-width: 30; filter: blur(9px); }
+.wl-a-body { stroke: #ffc94d; stroke-width: 11; filter: drop-shadow(0 0 6px rgba(255, 190, 70, 0.9)); }
+.wl-a-core { stroke: #fffbe8; stroke-width: 3; }
+.wl-a-glow, .wl-a-body, .wl-a-core {
+  stroke-dasharray: 1 1; stroke-dashoffset: 1;
+  animation: wl-draw 0.55s cubic-bezier(.22, 1, .36, 1) forwards;
+}
+.wl-a-pulse {
+  stroke: #ffffff; stroke-width: 7; stroke-dasharray: 0.07 0.93; stroke-dashoffset: 0.07;
+  filter: drop-shadow(0 0 8px #fff3b0) drop-shadow(0 0 16px #ffb540);
+  animation: wl-run 1.4s linear 0.45s infinite;
+}
+.wl-a-pulse--2 { animation-delay: 1.15s; }
+.wl-a-ring {
+  stroke: #fff0b8; stroke-width: 8; opacity: 0; transform-box: fill-box; transform-origin: center;
+  filter: drop-shadow(0 0 10px rgba(255, 200, 80, 1)) drop-shadow(0 0 22px rgba(255, 160, 40, 0.8));
+  animation: wl-ring 1.2s ease-out infinite;
+}
+@keyframes wl-draw { to { stroke-dashoffset: 0; } }
+@keyframes wl-run { from { stroke-dashoffset: 0.07; } to { stroke-dashoffset: -0.93; } }
+@keyframes wl-ring {
+  0% { opacity: 0; transform: scale(0.82); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.08); }
+}
+
+/* B · Coin beads: a string of gold beads that rolls in left to right;
+   paying cells get a big glowing orb. */
+.wl-b-reveal { stroke: #fff; stroke-width: 80; fill: none; stroke-dasharray: 1 1; stroke-dashoffset: 1;
+  animation: wl-draw 0.7s cubic-bezier(.3, .8, .4, 1) forwards; }
+.wl-b-shadow { stroke: rgba(40, 14, 0, 0.75); stroke-width: 30; stroke-dasharray: 0 38; }
+.wl-b-bead { stroke: #f5b400; stroke-width: 22; stroke-dasharray: 0 38;
+  filter: drop-shadow(0 0 5px rgba(255, 190, 60, 0.8)); }
+.wl-b-shine { stroke: #fff6c8; stroke-width: 8; stroke-dasharray: 0 38; transform: translate(-3px, -4px); }
+.wl-b-orb, .wl-b-orb-glow { transform-box: fill-box; transform-origin: center; opacity: 0; animation: wl-orb 0.5s cubic-bezier(.2, 1.6, .4, 1) forwards; }
+.win-line .wl-b-orb { fill: #fff3b0; stroke: #a86a00; stroke-width: 4; }
+.win-line .wl-b-orb-glow { fill: rgba(255, 190, 60, 0.55); filter: blur(6px); }
+@keyframes wl-orb { from { opacity: 0; transform: scale(0.2); } to { opacity: 1; transform: scale(1); } }
+
+/* C · Flow ribbon: a dark translucent ribbon with gold rails, light dashes
+   streaming in the paying direction; paying cells get a marching gold frame. */
+.wl-c-edge { stroke: #ffcf4a; stroke-width: 24; filter: drop-shadow(0 0 8px rgba(255, 180, 50, 0.75)); }
+.wl-c-bed { stroke: rgba(30, 10, 0, 0.82); stroke-width: 17; }
+.wl-c-flow { stroke: #ffe9a6; stroke-width: 7; stroke-dasharray: 14 26; animation: wl-flow 0.6s linear infinite; }
+.wl-c-glint { stroke: rgba(255, 255, 255, 0.35); stroke-width: 2; transform: translateY(-6px); }
+.wl-c-edge, .wl-c-bed, .wl-c-glint { animation: wl-fade 0.35s ease-out both; }
+.wl-c-box {
+  stroke: #ffd75a; stroke-width: 6; stroke-dasharray: 0.08 0.04;
+  filter: drop-shadow(0 0 6px rgba(255, 200, 70, 0.9));
+  animation: wl-march 1.6s linear infinite, wl-fade 0.3s ease-out both;
+}
+@keyframes wl-flow { to { stroke-dashoffset: -40; } }
+@keyframes wl-march { to { stroke-dashoffset: -0.12; } }
+@keyframes wl-fade { from { opacity: 0; } to { opacity: 1; } }
+.demo-btn.is-on { border-color: #fff4dc; box-shadow: 0 0 0 2px rgba(255, 215, 90, 0.6); }

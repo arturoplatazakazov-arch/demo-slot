@@ -213,33 +213,86 @@ function cellCentre(row, col) {
   return { x: col * CELL + CELL / 2, y: row * CELL + CELL / 2 };
 }
 
+// Win-line look: 'classic' (the original polyline with diamond gems) unless
+// the page sets window.SK_WIN_LINE — the five art variants use 'a' (silk
+// glow). 'b' (coin beads) and 'c' (flow ribbon) stay for comparison via ?line=.
+function winLineStyle() {
+  return new URLSearchParams(location.search).get('line') || window.SK_WIN_LINE || 'classic';
+}
+
+function svgEl(tag, attrs) {
+  const el = document.createElementNS(WIN_LINE_NS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v);
+  return el;
+}
+
+// Catmull-Rom through the cell centres, run on past both ends of the window
+// so the line enters and leaves the reels instead of stopping mid-cell.
+function smoothLinePath(pts) {
+  const p = [{ x: pts[0].x - CELL * 0.55, y: pts[0].y }, ...pts, { x: pts[pts.length - 1].x + CELL * 0.55, y: pts[pts.length - 1].y }];
+  let d = `M${p[0].x} ${p[0].y}`;
+  for (let i = 0; i < p.length - 1; i++) {
+    const p0 = p[i - 1] || p[i], p1 = p[i], p2 = p[i + 1], p3 = p[i + 2] || p2;
+    const t = 0.5 / 3;
+    d += ` C${p1.x + (p2.x - p0.x) * t} ${p1.y + (p2.y - p0.y) * t} ${p2.x - (p3.x - p1.x) * t} ${p2.y - (p3.y - p1.y) * t} ${p2.x} ${p2.y}`;
+  }
+  return d;
+}
+
 function showWinLine(win) {
   hideWinLine();
   const positions = (win && win.positions) || [];
   if (positions.length < 2) return;
   const gridEl = document.getElementById('reelGrid');
-  const svg = document.createElementNS(WIN_LINE_NS, 'svg');
-  svg.setAttribute('class', 'win-line');
-  svg.setAttribute('viewBox', `0 0 ${GRID_COLS * CELL} ${GRID_ROWS * CELL}`);
+  const style = winLineStyle();
+  const svg = svgEl('svg', { class: `win-line win-line--${style}`, viewBox: `0 0 ${GRID_COLS * CELL} ${GRID_ROWS * CELL}` });
   // The line runs across the WHOLE payline (all five reels) so the player
-  // reads which line paid; the paying part is drawn brighter on top.
+  // reads which line paid; the paying cells are marked on top.
   const rows = PAYLINES[(win.payline || 0) - 1];
   const line = rows ? rows.map((row, col) => ({ row, col })) : positions;
   const pts = line.slice().sort((a, b) => a.col - b.col).map(({ row, col }) => cellCentre(row, col));
-  const d = pts.map((p, i) => `${i ? 'L' : 'M'}${p.x} ${p.y}`).join(' ');
-  for (const cls of ['win-line__shadow', 'win-line__glow', 'win-line__ribbon', 'win-line__core', 'win-line__spark']) {
-    const path = document.createElementNS(WIN_LINE_NS, 'path');
-    path.setAttribute('class', cls);
-    path.setAttribute('d', d);
-    svg.appendChild(path);
-  }
-  // A gem node on each paying cell, so the line reads as "these pay".
-  for (const { row, col } of positions) {
-    const c = cellCentre(row, col);
-    const gem = document.createElementNS(WIN_LINE_NS, 'path');
-    gem.setAttribute('class', 'win-line__gem');
-    gem.setAttribute('d', `M${c.x} ${c.y - 11}L${c.x + 11} ${c.y}L${c.x} ${c.y + 11}L${c.x - 11} ${c.y}Z`);
-    svg.appendChild(gem);
+  if (style === 'classic') {
+    const d = pts.map((p, i) => `${i ? 'L' : 'M'}${p.x} ${p.y}`).join(' ');
+    for (const cls of ['win-line__shadow', 'win-line__glow', 'win-line__ribbon', 'win-line__core', 'win-line__spark']) {
+      svg.appendChild(svgEl('path', { class: cls, d }));
+    }
+    // A gem node on each paying cell, so the line reads as "these pay".
+    for (const { row, col } of positions) {
+      const c = cellCentre(row, col);
+      svg.appendChild(svgEl('path', { class: 'win-line__gem', d: `M${c.x} ${c.y - 11}L${c.x + 11} ${c.y}L${c.x} ${c.y + 11}L${c.x - 11} ${c.y}Z` }));
+    }
+  } else {
+    const d = smoothLinePath(pts);
+    const uid = `wl${Date.now() % 1e6}`;
+    const layers = {
+      a: ['wl-a-glow', 'wl-a-body', 'wl-a-core', 'wl-a-pulse', 'wl-a-pulse wl-a-pulse--2'],
+      b: ['wl-b-shadow', 'wl-b-bead', 'wl-b-shine'],
+      c: ['wl-c-edge', 'wl-c-bed', 'wl-c-flow', 'wl-c-glint'],
+    }[style] || [];
+    const group = svgEl('g');
+    if (style === 'b') {
+      // Beads appear left to right under a mask that draws itself on.
+      const mask = svgEl('mask', { id: `${uid}m`, maskUnits: 'userSpaceOnUse', x: -400, y: -400, width: GRID_COLS * CELL + 800, height: GRID_ROWS * CELL + 800 });
+      mask.appendChild(svgEl('path', { class: 'wl-b-reveal', d, pathLength: 1 }));
+      svg.appendChild(mask);
+      group.setAttribute('mask', `url(#${uid}m)`);
+    }
+    // Silk measures its draw-on and pulses in path fractions (pathLength 1).
+    for (const cls of layers) group.appendChild(svgEl('path', style === 'a' ? { class: cls, d, pathLength: 1 } : { class: cls, d }));
+    svg.appendChild(group);
+    positions.forEach(({ row, col }, i) => {
+      const c = cellCentre(row, col);
+      const delay = `${0.12 + i * 0.09}s`;
+      if (style === 'a') {
+        svg.appendChild(svgEl('circle', { class: 'wl-a-ring', cx: c.x, cy: c.y, r: CELL * 0.44, style: `animation-delay:${delay}` }));
+      } else if (style === 'b') {
+        svg.appendChild(svgEl('circle', { class: 'wl-b-orb-glow', cx: c.x, cy: c.y, r: 40, style: `animation-delay:${delay}` }));
+        svg.appendChild(svgEl('circle', { class: 'wl-b-orb', cx: c.x, cy: c.y, r: 22, style: `animation-delay:${delay}` }));
+      } else if (style === 'c') {
+        const h = CELL * 0.46;
+        svg.appendChild(svgEl('rect', { class: 'wl-c-box', x: c.x - h, y: c.y - h, width: 2 * h, height: 2 * h, rx: 18, pathLength: 1, style: `animation-delay:${delay}` }));
+      }
+    });
   }
   gridEl.appendChild(svg);
   winLineSvg = svg;
