@@ -1,0 +1,79 @@
+/* Savannah Kings art variants (carved / canyon / toon / timber / crisp):
+   desktop layout options picked with the «Варианты» switch
+   (js/savannah-kings/layouts.js sets .screen[data-layout]).
+
+     1  as designed: jackpot ladder in one row above the reels, Buy medallion
+        left, Win medallion right.
+     2  jackpots on two floors above the reels: GRAND on top, MINI · MINOR ·
+        MAJOR under it; the reels step down and shrink a little to make room.
+     3  side columns: logo, then the WIN counter, then BUY BONUS down the left;
+        reels in the middle; jackpots down the right, ascending bottom-to-top
+        (MINI at the bottom, GRAND on top).
+
+   Stage coordinates are the 1920x1080 design frame. Portrait is untouched:
+   every rule is scoped to body:not(.is-portrait). A variant whose frame art
+   is taller than usual tunes --l2-reel-top / --l2-reel-scale /
+   --l3-reel-scale in its own stylesheet. */
+
+/* --- Switch (same pill as Great Uniqorn) --------------------------------- */
+
+.layout-switch {
+  position: fixed; left: 12px; bottom: 12px; z-index: 110;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 4px 4px 12px; border-radius: 999px;
+  background: rgba(10, 6, 4, 0.78);
+  border: 1px solid rgba(255, 213, 106, 0.55);
+  color: #ffd75a;
+  font: 700 13px/1 system-ui, sans-serif;
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+}
+.layout-switch__label { margin-right: 4px; }
+.layout-switch button {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid rgba(255, 213, 106, 0.35);
+  background: transparent; color: #ffd75a; font: inherit; cursor: pointer;
+}
+.layout-switch button:hover { background: rgba(255, 213, 106, 0.14); }
+.layout-switch button:focus-visible { outline: 2px solid #fff4dc; outline-offset: 2px; }
+.layout-switch button[aria-pressed="true"] { background: #ffd75a; color: #1a0b06; border-color: #ffd75a; }
+body.is-portrait .layout-switch,
+body.is-buying .layout-switch { display: none; }
+
+/* --- 2: jackpots on two floors ------------------------------------------- */
+
+body:not(.is-portrait) .screen[data-layout="2"] .crown--ladder {
+  top: 14px; left: 50%; right: auto; width: 820px; transform: translateX(-50%);
+  flex-wrap: wrap; justify-content: center; align-items: flex-end;
+  gap: 6px 14px; z-index: 5;
+}
+body:not(.is-portrait) .screen[data-layout="2"] .crown--ladder .crown__top {
+  order: -1; flex-basis: 100%; display: flex; justify-content: center;
+}
+body:not(.is-portrait) .screen[data-layout="2"] .crown--ladder .jp { width: 250px; font-size: 24px; }
+body:not(.is-portrait) .screen[data-layout="2"] .crown--ladder .jp--grand { width: 320px; font-size: 32px; }
+body:not(.is-portrait) .screen[data-layout="2"] .reel {
+  top: var(--l2-reel-top, 392px);
+  transform: scale(var(--l2-reel-scale, 0.9)); transform-origin: 50% 0;
+}
+
+/* --- 3: side columns ----------------------------------------------------- */
+
+/* Left column, reel size and the ladder geometry: js/savannah-kings/layouts.js. */
+
+/* Reels: no crown above them any more, so they grow and rise a little. */
+body:not(.is-portrait) .screen[data-layout="3"] .reel {
+  top: var(--l3-reel-top, 300px);
+  transform: scale(var(--l3-reel-scale, 1.05)); transform-origin: 50% 50%;
+}
+
+/* Right column: the ladder stands up, MINI at the bottom, GRAND on top
+   (DOM order is MINI MINOR MAJOR GRAND, so column-reverse). */
+body:not(.is-portrait) .screen[data-layout="3"] .crown--ladder {
+  top: 556px; left: auto; right: 32px; width: 360px;
+  transform: translateY(-50%);
+  flex-direction: column-reverse; align-items: center; justify-content: flex-start;
+  gap: 14px; z-index: 5;
+}
+body:not(.is-portrait) .screen[data-layout="3"] .crown--ladder .jp { width: 310px; font-size: 26px; }
+body:not(.is-portrait) .screen[data-layout="3"] .crown--ladder .jp--grand { width: 350px; font-size: 32px; }
+body:not(.is-portrait) .screen[data-layout="3"] .crown__top::before { width: 120%; height: 160%; }

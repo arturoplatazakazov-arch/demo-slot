@@ -66,6 +66,21 @@ const SAVANNAH_VARIANTS = {
   prideRock: { page: 'savannah-kings-v2.html', name: 'Savannah Kings · Pride Rock',
     desc: 'Альтернативная раскладка UI: скала гордости, панель управления сбоку от барабанов.',
     cover: 'img/savannah-kings/cover_v2.jpg' },
+  carved: { page: 'savannah-carved.html', name: 'Savannah Kings · Carved', badge: 'Sunset',
+    desc: 'Закат и резное бирюзовое дерево: живописные 2.5D-звери в цветных медальонах.',
+    cover: 'img/savannah-carved/cover.jpg' },
+  canyon: { page: 'savannah-canyon.html', name: 'Savannah Kings · Canyon', badge: 'Midday',
+    desc: 'Яркий полдень в красном каньоне: каменные колонны с племенным орнаментом.',
+    cover: 'img/savannah-canyon/cover.jpg' },
+  toon: { page: 'savannah-toon.html', name: 'Savannah Kings · Toon', badge: 'Oasis',
+    desc: 'Глянцевый мульт-3D: зелёный оазис, бирюзовая каменная рамка с цветами.',
+    cover: 'img/savannah-toon/cover.jpg' },
+  timber: { page: 'savannah-timber.html', name: 'Savannah Kings · Timber', badge: 'Lodge',
+    desc: 'Веранда сафари-лоджа в сумерках: лакированное красное дерево, латунь, фонари.',
+    cover: 'img/savannah-timber/cover.jpg' },
+  crisp: { page: 'savannah-crisp.html', name: 'Savannah Kings · Crisp', badge: 'Morning',
+    desc: 'Пастельное утро в тумане: белая жемчужная рама с ледяными кристаллами, фламинго.',
+    cover: 'img/savannah-crisp/cover.jpg' },
 };
 const njs = (key, extra) => ({ code: 'neon-joker-spins', ...NJS_VARIANTS[key], ...extra });
 const savannah = (key, extra) => ({ code: 'savannah-kings', ...SAVANNAH_VARIANTS[key], ...extra });
@@ -79,6 +94,11 @@ const ILLUMINATOR_CARDS = [
   'olympus-thunder',
   'olympus-thunder-v2',
   savannah('golden', { badge: null }),
+  savannah('carved'),
+  savannah('canyon'),
+  savannah('toon'),
+  savannah('timber'),
+  savannah('crisp'),
 ];
 // Spin Factory: its own games newest first, then the variants moved out of
 // Illuminator, in this order.

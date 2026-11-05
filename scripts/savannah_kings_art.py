@@ -290,7 +290,8 @@ def job_frame():
     row = a[cy] > 40
     # Top/bottom are measured a quarter in from the left: a crest hanging
     # into the window at the centre would otherwise shrink it.
-    col = a[:, w // 4] > 40
+    # SK_FRAME_COL moves that column when a tuft or gem sits at w/4.
+    col = a[:, int(w * float(os.environ.get('SK_FRAME_COL', 0.25)))] > 40
     # Scan from each edge inwards: past the wall to the first clear pixel.
     # (Scanning out from the centre would stop at painted cell dividers.)
     def inner(profile):
@@ -391,7 +392,9 @@ def job_wheel():
     rim_im = isolate(rgba, full, rim, pad=2)
     save_png(rim_im, IMG / 'wheel_rim.png', max_w=1100)
     if len(pieces) == 3:
-        small = sorted(pieces[1:], key=lambda p: p['box'][1])
+        # SK_WHEEL_ROW=1: rim, hub, pointer laid out left to right in one row.
+        key = 0 if os.environ.get('SK_WHEEL_ROW') else 1
+        small = sorted(pieces[1:], key=lambda p: p['box'][key])
         hub_im, pointer_im = (isolate(rgba, full, p) for p in small)
     else:
         # The hub's bottom gem touches the pointer: cut at the narrowest row
@@ -418,8 +421,12 @@ def job_wheel():
 
 
 def job_titles():
-    for src, names in (('titles_win', ['big', 'mega', 'epic']),
-                       ('titles_more', ['freespins', 'totalwin', 'jackpot', 'buybonus'])):
+    sheets = (('titles_win', ['big', 'mega', 'epic']),
+              ('titles_more', ['freespins', 'totalwin', 'jackpot', 'buybonus']))
+    if any((SRC / f'titles.{e}').exists() for e in ('png', 'webp')):
+        # one sheet with all seven titles stacked top to bottom
+        sheets = (('titles', ['big', 'mega', 'epic', 'freespins', 'totalwin', 'jackpot', 'buybonus']),)
+    for src, names in sheets:
         try:
             rgba = load(src)
         except FileNotFoundError as e:
