@@ -43,7 +43,7 @@ const FILLER_CODES = SYMBOL_CODES.filter((code) => code !== 'coin');
 // показывается пустой эмалью с номиналом поверх, поэтому код 'coin' ведёт
 // на coin_value.
 // Версия картинок символов: поднимать при замене арта (новый уайлд — 2, слиток — 3, 4, бриллиант — 5).
-const SYM_V = 27;  // V3: Wild из PSD дизайнера (2026-11-03)
+const SYM_V = 29;  // V3: монеты из PSB №2 (2026-11-05)
 // V2: слиток подменяется выбранным вариантом (review.js, data-ingot).
 function artCode(code) {
   if (code === 'coin') return 'coin_value';
@@ -584,12 +584,60 @@ function enamelArcs() {
   return wrap;
 }
 
+// V3, PSB №2 (scripts/volt_coins_v3_coins2.py): номинал — картинка дизайнера
+// на холсте тайла (labels/x5.png), у тиров слово уже в арте монеты; вокруг
+// монеты с номиналом — кольцо молний, два кадра перещёлкиваются (CSS).
+const COIN_LABELS = new Set(['x1', 'x2', 'x3', 'x5', 'x10', 'x15', 'x25']);
+
+function coinAura() {
+  const aura = document.createElement('span');
+  aura.className = 'coin-aura';
+  aura.innerHTML = [1, 2].map((i) => `<img class="coin-aura__f${i}" src="${ASSET_ROOT}/symbols/coin_aura_${i}.png?v=${SYM_V}" alt="">`).join('');
+  return aura;
+}
+
+// Вид монеты по иерархии на ячейку/элемент: размер (--coin-k), сила кольца
+// (--aura-p) и его выход из-под монеты (--aura-b) — как в лабе.
+function applyCoinLook(el, face) {
+  const t = typeof coinTier === 'function' ? coinTier(face) : null;
+  if (!t) return;
+  const power = t[1];
+  el.style.setProperty('--coin-k', String(coinSizeK(face)));
+  el.style.setProperty('--aura-p', String(Math.min(1, 1.3 * power)));
+  el.style.setProperty('--aura-b', String(0.93 + 0.14 * power));
+}
+
+function coinSparks(el, face) {
+  const t = typeof coinTier === 'function' ? coinTier(face) : null;
+  const n = t ? t[2] : 0;
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = 0.36 * Math.sqrt(0.15 + Math.random() * 0.85);   // доля от центра, внутри монеты
+    const sp = document.createElement('span');
+    sp.className = 'coin-spark';
+    sp.style.left = `${50 + Math.cos(a) * r * 100 * (381 / 480)}%`;
+    sp.style.top = `${50 + Math.sin(a) * r * 100}%`;
+    sp.style.animationDelay = `${-(3 - (3 * i) / n - Math.random() * 0.3).toFixed(2)}s`;
+    el.appendChild(sp);
+  }
+}
+
 function makeCoinFace(face) {
   const el = document.createElement('span');
   el.className = face.cls ? `coin-face ${face.cls}` : 'coin-face';
-  if (face.word) {
-    const bolts = jackpotBolts(face.word);
-    if (bolts) el.appendChild(bolts);
+  if (face.word || (face.digits && COIN_LABELS.has(face.digits))) {
+    // V3 иерархия: кольцо молний (маской «под монетой»), номинал/слово, искры
+    el.classList.add('is-baked');
+    el.appendChild(coinAura());
+    if (!face.word) {
+      const img = document.createElement('img');
+      img.className = 'coin-face__label';
+      img.src = `${ASSET_ROOT}/labels/${face.digits}.png?v=${SYM_V}`;
+      img.alt = '';
+      el.appendChild(img);
+    }
+    coinSparks(el, face);
+    return el;
   }
   const chars = face.word ? [face.word] : (face.digits ? [...face.digits] : null);
   if (chars && chars.every((ch) => GLYPHS[ch])) {
@@ -621,6 +669,7 @@ function showCoinFace(info, face) {
   if (wcls) info.cell.classList.add(wcls);
   info.coinK = typeof coinSizeK === 'function' ? coinSizeK(face) : 1;
   info.cell.style.setProperty('--coin-k', String(info.coinK));
+  applyCoinLook(info.cell, face);
 }
 
 // --- Показ выигрыша ----------------------------------------------------------
@@ -635,7 +684,8 @@ function playWinAnimationOnce(info) {
     const inst = fx('symbol', info.cell, clip);
     if (inst && info.symbol === 'wild') inst.fit = wildScale();
     if (inst && info.symbol === 'diamond') inst.fit = DIAMOND_SCALE;
-    if (inst && info.coinFace && info.coinK) inst.fit = info.coinK;
+    // монета: размер по иерархии уже в скелете (fx/sym_coin_<номинал>)
+    if (inst && info.coinFace) inst.fit = 1;
     // V3 деск: символы на 10% крупнее (по макету), Spine-копия — так же
     // (тот же body.v3, что и у CSS-правила, — иначе в портрете копия мельче статики)
     if (inst && document.body.classList.contains('v3') && !info.coinFace && info.symbol !== 'wild') inst.fit = V3_SYM_SCALE[info.symbol] || V3_SYM_K;
@@ -926,6 +976,7 @@ function landReel(colIndex, finalCodes, delayMs, isAnticipating = false, faces =
         if (face) {
           img.src = symbolSrc(face.art);
           cell.appendChild(makeCoinFace(face));
+          applyCoinLook(cell, face);
         }
         stripEl.appendChild(cell);
         return cell;
@@ -1240,7 +1291,34 @@ const POPUP_ART_KEY = {
   holdWinIntro: 'hold_and_win', holdWinTotal: 'total_win',
 };
 
+// V3, PSB №2: попап из слоёв дизайнера, Spine (js/volt-coins-v3/popup-fx.js).
+// Узел = «ядро» (заголовок + панель), лучи и монеты Spine рисует вокруг.
+function v3PopWidth(m) {
+  const [w, h] = m.core;
+  const ar = w / h;
+  return isMobileLayout()
+    ? `min(${Math.round(w * 0.9)}px, ${ar > 1.5 ? 78 : 72}vw, ${(44 * ar).toFixed(1)}vh)`
+    : `min(${Math.round(w * 0.95)}px, ${((w / 1932) * 100).toFixed(1)}vw, ${(50 * ar).toFixed(1)}vh)`;
+}
+
+function v3PopupNode(key, text, extraClass = '') {
+  const root = document.createElement('div');
+  root.className = `game-popup is-art is-v3pop ${extraClass}`.trim();
+  const m = VoltPop.dress(root, key);
+  root.style.width = v3PopWidth(m);
+  root.insertAdjacentHTML('beforeend', `<div class="game-popup__panel" style="${VoltPop.box(m.panel)}"><span class="game-popup__value"></span></div>`);
+  root.querySelector('.game-popup__value').textContent = text;
+  root._popKey = key;
+  return root;
+}
+
+// Попап выехал: Spine-копия под узлом (если есть); handle.hide() — на выходе.
+function popFxShow(node) {
+  return node && node._popKey && window.VoltPop ? VoltPop.show(node._popKey, node) : null;
+}
+
 function artPopupNode(artKey, text, extraClass = '') {
+  if (window.VoltPop && VoltPop.has(artKey)) return v3PopupNode(artKey, text, extraClass);
   const a = POPUP_ART[artKey];
   const root = document.createElement('div');
   root.className = `game-popup is-art ${extraClass}`.trim();
@@ -1322,10 +1400,12 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
       document.getElementById('screen').appendChild(node);
       void node.offsetWidth;
       node.classList.add('is-in');
+      const popFx = popFxShow(node);
       // GDD: Big Win — дуги катушек на пике счётчика.
       if (BIG_WIN_KEYS.has(key)) fx('bigWin', true);
-      await wait(POPUP_ENTER_MS + holdMs);
+      await wait(POPUP_ENTER_MS + holdMs + (popFx ? 400 : 0));
       Sound.playSfx('popupClose');
+      if (popFx) popFx.hide();
       node.classList.remove('is-in');
       node.classList.add('is-out');
       await wait(POPUP_EXIT_MS);
@@ -1375,7 +1455,10 @@ function playJackpotAward(tier) {
       if (tier === 'grand') fx('grandDischarge');
       pushScreenDim(false);
       await wait(DIM_TRANSITION_MS);
-      if (POPUP_ART[`jp_${tier}`]) {
+      if (window.VoltPop && VoltPop.has(`jp_${tier}`)) {
+        // V3, PSB №2: GRAND JACKPOT! в арте, в панели — только сумма.
+        node = v3PopupNode(`jp_${tier}`, formatAmount(value * jackpotBet));
+      } else if (POPUP_ART[`jp_${tier}`]) {
         // V2: плашка тира из ряда джекпотов (имя тира на ярлыке), JACKPOT + сумма — в панели.
         node = artPopupNode(`jp_${tier}`, formatAmount(value * jackpotBet), 'is-jackpot');
       } else {
@@ -1394,7 +1477,9 @@ function playJackpotAward(tier) {
       document.getElementById('screen').appendChild(node);
       void node.offsetWidth;
       node.classList.add('is-in');
-      await wait(POPUP_ENTER_MS + JACKPOT_AWARD_HOLD_MS);
+      const popFx = popFxShow(node);
+      await wait(POPUP_ENTER_MS + JACKPOT_AWARD_HOLD_MS + (popFx ? 600 : 0));
+      if (popFx) popFx.hide();
       node.classList.remove('is-in');
       node.classList.add('is-out');
       await wait(POPUP_EXIT_MS);
@@ -1418,9 +1503,28 @@ function showBuyBonusDialog({ betSteps, betIndex, costMultiplier, currency, bala
     pushScreenDim(false);
     Sound.playSfx('popupOpen');
     const node = document.createElement('div');
-    node.className = POPUP_ART.buy_bonus ? 'buy-dialog is-art' : 'buy-dialog';
+    const v3 = window.VoltPop && VoltPop.has('buy_bonus');
+    node.className = v3 ? 'buy-dialog is-art is-v3pop' : POPUP_ART.buy_bonus ? 'buy-dialog is-art' : 'buy-dialog';
     const bp = POPUP_ART.buy_bonus && POPUP_ART.buy_bonus.panel;
-    node.innerHTML = bp ? `
+    if (v3) {
+      // V3, PSB №2: BUY BONUS · Hold'n'Win, в тёмной панели — цена и ставка,
+      // ✕/✓ нарисованы в арте, поверх — прозрачные кнопки.
+      const m = VoltPop.dress(node, 'buy_bonus');
+      node.style.width = v3PopWidth(m);
+      node._popKey = 'buy_bonus';
+      node.insertAdjacentHTML('beforeend', `
+        <div class="buy-dialog__panel" style="${VoltPop.box(m.panel)}">
+          <div class="buy-dialog__price" data-price></div>
+          <div class="buy-dialog__bet">
+            <button class="buy-dialog__step" data-step="-1" type="button" aria-label="Уменьшить ставку">−</button>
+            <span class="buy-dialog__bet-value" data-bet></span>
+            <button class="buy-dialog__step" data-step="1" type="button" aria-label="Увеличить ставку">+</button>
+          </div>
+        </div>
+        <span class="buy-dialog__note" data-note hidden></span>
+        <button class="buy-dialog__hit" data-answer="0" type="button" aria-label="Отмена" style="${VoltPop.box(m.decline)}"></button>
+        <button class="buy-dialog__hit" data-answer="1" type="button" aria-label="Купить раунд" style="${VoltPop.box(m.accept)}"></button>`);
+    } else node.innerHTML = bp ? `
       <div class="buy-dialog__banner" style="--art-ar:${POPUP_ART.buy_bonus.w} / ${POPUP_ART.buy_bonus.h}">
         <img class="game-popup__art" src="${ASSET_ROOT}/popups/buy_bonus.webp?v=2" alt="">
         <div class="buy-dialog__panel" style="left:${bp.l * 100}%;top:${bp.t * 100}%;width:${bp.w * 100}%;height:${bp.h * 100}%">
@@ -1454,6 +1558,7 @@ function showBuyBonusDialog({ betSteps, betIndex, costMultiplier, currency, bala
     document.getElementById('screen').appendChild(node);
     void node.offsetWidth;
     node.classList.add('is-in');
+    const popFx = popFxShow(node);
     const render = () => {
       const bet = betSteps[index];
       const cost = bet * costMultiplier;
@@ -1473,6 +1578,7 @@ function showBuyBonusDialog({ betSteps, betIndex, costMultiplier, currency, bala
       if (answered) return;
       answered = true;
       Sound.playSfx('click');
+      if (popFx) popFx.hide();
       node.classList.remove('is-in');
       setTimeout(() => {
         node.remove();
@@ -1573,6 +1679,7 @@ function spinCellTo(info, code, delayMs, face = null) {
         if (i === 0 && face) {
           item.appendChild(makeCoinFace(face));
           item.style.position = 'relative';
+          applyCoinLook(item, face);
         }
         item.className = 'cell-spinner__item';
         if (itemCode !== 'blank') {
@@ -2062,7 +2169,7 @@ function getScreenStage() {
   return screenStage;
 }
 
-const SCREEN_V = 13;
+const SCREEN_V = 14;
 function getScreenResource(kind, variant = screenVariant()) {
   const key = `${kind}_${variant}`;
   if (!screenResourceCache[key]) {

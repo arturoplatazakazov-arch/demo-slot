@@ -16,7 +16,8 @@
   "coin_x15": "coin_x15",
   "coin_mini": "coin_mini",
   "coin_minor": "coin_minor",
-  "coin_major": "coin_major"
+  "coin_major": "coin_major",
+  "coin_x25": "coin_x25"
  },
  "dur": {
   "seven": 1.0,
@@ -35,6 +36,7 @@
   "coin_x15": 1.2,
   "coin_mini": 1.2,
   "coin_minor": 1.2,
-  "coin_major": 1.2
+  "coin_major": 1.2,
+  "coin_x25": 1.2
  }
 }

@@ -194,13 +194,22 @@ function coinWeightClass(face) {
   return 'is-val-lo';
 }
 
-// Размер монеты по номиналу (продукт): каждая ступень на 2% крупнее —
-// x1 < x2 < x3 < x5 < x10 < x15 < MINI < MINOR < MAJOR, чтобы номинал ловился
-// взглядом; шкала вокруг обычного размера (x1 −8%, MAJOR +8%).
-const COIN_SIZE_ORDER = ['x1', 'x2', 'x3', 'x5', 'x10', 'x15', 'mini', 'minor', 'major'];
+// Иерархия монет (2026-11-05, лаба: scripts/volt_coins_v3_coin_tiers.py LADDER):
+// диаметр монеты — доля высоты ячейки (x1 72% … MAJOR 95%), сила кольца
+// молний 0..1 (у x1 нет) и число искр. coinSizeK — множитель к прежнему
+// размеру монеты (монета в тайле 338/381 × scale 1.1 = 0.9757 ячейки).
+const COIN_LADDER = {
+  x1: [0.72, 0, 0], x2: [0.745, 0.18, 1], x3: [0.77, 0.32, 1], x5: [0.795, 0.46, 2],
+  x10: [0.82, 0.6, 2], x15: [0.845, 0.72, 3], x25: [0.87, 0.84, 3],
+  mini: [0.89, 0.92, 4], minor: [0.92, 1, 5], major: [0.95, 1, 6],
+};
+const COIN_BASE_FRAC = (338 / 381) * 1.1;
+function coinTier(face) {
+  return (face && COIN_LADDER[face.word || face.digits]) || null;
+}
 function coinSizeK(face) {
-  const i = face ? COIN_SIZE_ORDER.indexOf(face.word || face.digits) : -1;
-  return i < 0 ? 1 : 0.92 + 0.02 * i;   // x1 0.92 … MAJOR 1.08
+  const t = coinTier(face);
+  return t ? t[0] / COIN_BASE_FRAC : 1;
 }
 
 // Центр/радиус виньетки = прямоугольник барабанов (в % экрана).

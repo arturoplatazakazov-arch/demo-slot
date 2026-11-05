@@ -2508,3 +2508,142 @@ html body.v3 .bg-reveal { filter: brightness(1.9) saturate(1.2); background-repe
 .v3-flash { position: absolute; z-index: 1; pointer-events: none; }
 .v3-flash img { position: absolute; opacity: 0; pointer-events: none; }
 body.lights-off .v3-flash { display: none; }
+
+/* ---------- Монеты из PSB №2 (2026-11-05, scripts/volt_coins_v3_coins2.py) ----------
+   Номинал — картинка на холсте тайла (ровно поверх монеты), у тиров слово в
+   арте. Кольцо молний вокруг монеты с номиналом: холст 1.3 тайла, два кадра
+   перещёлкиваются — дрожь разряда, без вращения. */
+.coin-face.is-baked { display: block; }
+.coin-face.is-baked > .coin-face__label {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: contain; filter: none;
+}
+/* кольцо молний — см. «Иерархия монет» ниже */
+
+/* ---------- Попапы из PSB №2 (Spine: js/volt-coins-v3/popup-fx.js) ----------
+   Узел = ядро попапа (заголовок + панель) в пропорциях макета. Арт рисует
+   свой канвас #fxPopup прямо под узлом; статичная картинка — запасной вариант
+   (без WebGL), прячется, как только играет Spine. Сумма — живой текст. */
+.fx-canvas--popup { z-index: 29; pointer-events: none; }
+.game-popup.is-v3pop,
+.buy-dialog.is-v3pop {
+  padding: 0;
+  clip-path: none;
+  border: 0;
+  background: none;
+  aspect-ratio: var(--art-ar);
+  filter: none;
+  transform: translate(-50%, -50%) scale(0.8);
+}
+.game-popup.is-v3pop::before,
+.buy-dialog.is-v3pop::before { display: none; }
+.game-popup.is-v3pop.is-in,
+.buy-dialog.is-v3pop.is-in { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.is-v3pop .pop-art { position: absolute; max-width: none; pointer-events: none; }
+.is-v3pop.is-spine { transform: translate(-50%, -50%); transition: opacity 260ms ease; }
+.is-v3pop.is-spine .pop-art { visibility: hidden; }
+.is-v3pop.is-spine .game-popup__panel,
+.is-v3pop.is-spine .buy-dialog__panel { opacity: 0; animation: v3pop-text 300ms ease 450ms forwards; }
+@keyframes v3pop-text { from { opacity: 0; transform: scale(0.7); } to { opacity: 1; transform: none; } }
+.is-v3pop .game-popup__value,
+.is-v3pop .buy-dialog__price {
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  background: linear-gradient(180deg, #fff6c8 0%, #ffd34d 45%, #e79a12 60%, #ffe27a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 2px 0 #3a1d00) drop-shadow(0 0 8px rgba(255, 190, 60, 0.45));
+}
+.is-v3pop .game-popup__value { font-size: min(64cqh, 13cqw); }
+.buy-dialog.is-v3pop .buy-dialog__panel { gap: 0; padding: 0; }
+.buy-dialog.is-v3pop .buy-dialog__price { margin: 4cqh 0 5cqh; font-size: min(40cqh, 10cqw); }
+.buy-dialog.is-v3pop .buy-dialog__bet { margin: 0; gap: 3cqw; }
+.buy-dialog.is-v3pop .buy-dialog__bet-value { font-size: 20cqh; min-width: 0; color: #bff0ff; }
+.buy-dialog.is-v3pop .buy-dialog__step { width: 26cqh; height: 26cqh; font-size: 20cqh; line-height: 1; padding: 0; }
+.buy-dialog__hit {
+  position: absolute;
+  border: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+.buy-dialog__hit:disabled { background: radial-gradient(closest-side, rgba(3, 6, 20, 0.6) 80%, transparent); cursor: not-allowed; }
+.buy-dialog__hit:focus-visible { outline: 3px solid #39d8ff; outline-offset: -6px; }
+/* дождь монет: падающая часть — над попапом и суммой (z ставит popup-fx.js) */
+.fx-canvas--popup-top { z-index: 31; pointer-events: none; }
+
+/* ---------- Иерархия монет (2026-11-05, лаба: scripts/volt_coins_v3_coin_tiers.py) ----------
+   Размер, сила кольца молний и искры растут от x1 к MAJOR (--coin-k, --aura-p,
+   --aura-b ставит slot.js applyCoinLook). Кольцо «Проявление + поворот»: два
+   рисунка по очереди вспыхивают, каждая вспышка повёрнута дальше и выходит
+   из-под монеты (маска закрывает кольцо внутри монеты — как слой под ней).
+   Выигрыш — Spine fx/sym_coin_<номинал> с тем же размером. */
+.coin-aura {
+  position: absolute; inset: -15%; pointer-events: none;
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 41.6%, #000 43.2%);
+  mask-image: radial-gradient(circle at 50% 50%, transparent 41.6%, #000 43.2%);
+}
+.coin-aura::before {
+  content: ''; position: absolute; inset: 8%; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(90, 200, 255, 0.55), rgba(90, 200, 255, 0) 100%);
+  opacity: calc(0.45 * var(--aura-p, 0));
+}
+.coin-aura img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; }
+.coin-aura__f1 { animation: coin-ring-1 3s linear infinite; }
+.coin-aura__f2 { animation: coin-ring-2 3s linear infinite; animation-delay: -2.625s; }
+@keyframes coin-ring-1 {
+  0.00% { opacity: 0; scale: calc(var(--aura-b) * 0.9); rotate: 40deg; animation-timing-function: ease-in; }
+  6.25% { opacity: var(--aura-p); animation-timing-function: ease-out; }
+  15.00% { scale: var(--aura-b); }
+  24.90% { opacity: 0; scale: var(--aura-b); rotate: 48deg; }
+  25.00% { opacity: 0; scale: calc(var(--aura-b) * 0.9); rotate: 63deg; animation-timing-function: ease-in; }
+  31.25% { opacity: var(--aura-p); animation-timing-function: ease-out; }
+  40.00% { scale: var(--aura-b); }
+  49.90% { opacity: 0; scale: var(--aura-b); rotate: 71deg; }
+  50.00% { opacity: 0; scale: calc(var(--aura-b) * 0.9); rotate: 86deg; animation-timing-function: ease-in; }
+  56.25% { opacity: var(--aura-p); animation-timing-function: ease-out; }
+  65.00% { scale: var(--aura-b); }
+  74.90% { opacity: 0; scale: var(--aura-b); rotate: 94deg; }
+  75.00% { opacity: 0; scale: calc(var(--aura-b) * 0.9); rotate: 109deg; animation-timing-function: ease-in; }
+  81.25% { opacity: var(--aura-p); animation-timing-function: ease-out; }
+  90.00% { scale: var(--aura-b); }
+  99.90% { opacity: 0; scale: var(--aura-b); rotate: 117deg; }
+}
+@keyframes coin-ring-2 {
+  0.00% { opacity: 0; scale: calc(var(--aura-b) * 0.9); rotate: 80deg; animation-timing-function: ease-in; }
+  6.25% { opacity: var(--aura-p); animation-timing-function: ease-out; }
+  15.00% { scale: var(--aura-b); }
+  24.90% { opacity: 0; scale: var(--aura-b); rotate: 88deg; }
+  25.00% { opacity: 0; scale: calc(var(--aura-b) * 0.9); rotate: 103deg; animation-timing-function: ease-in; }
+  31.25% { opacity: var(--aura-p); animation-timing-function: ease-out; }
+  40.00% { scale: var(--aura-b); }
+  49.90% { opacity: 0; scale: var(--aura-b); rotate: 111deg; }
+  50.00% { opacity: 0; scale: calc(var(--aura-b) * 0.9); rotate: 126deg; animation-timing-function: ease-in; }
+  56.25% { opacity: var(--aura-p); animation-timing-function: ease-out; }
+  65.00% { scale: var(--aura-b); }
+  74.90% { opacity: 0; scale: var(--aura-b); rotate: 134deg; }
+  75.00% { opacity: 0; scale: calc(var(--aura-b) * 0.9); rotate: 149deg; animation-timing-function: ease-in; }
+  81.25% { opacity: var(--aura-p); animation-timing-function: ease-out; }
+  90.00% { scale: var(--aura-b); }
+  99.90% { opacity: 0; scale: var(--aura-b); rotate: 157deg; }
+}
+.coin-spark {
+  position: absolute; width: 34%; aspect-ratio: 1; translate: -50% -50%; pointer-events: none;
+  background: url(../img/volt-coins-v3/symbols/coin_spark.png) center / contain no-repeat;
+  opacity: 0; animation: coin-spark 3s linear infinite; mix-blend-mode: screen;
+}
+@keyframes coin-spark {
+  0% { opacity: 0; scale: 0.4; rotate: 0deg; }
+  9% { opacity: 1; scale: 1.2; }
+  18% { opacity: 0; scale: 0.4; rotate: 120deg; }
+  100% { opacity: 0; scale: 0.4; rotate: 120deg; }
+}
+/* старое свечение монеты по номиналу — теперь вместо него кольцо и искры */
+html body .reel__cell.is-coin:not(.is-winning) > img { filter: none; animation: none; }
+.reel__cell.is-dimmed .coin-aura, .reel__cell.is-dimmed .coin-spark { opacity: 0.3; animation-play-state: paused; }

@@ -1,0 +1,23 @@
+{
+ "w": 1000,
+ "h": 520,
+ "loop": 3.0,
+ "tiers": {
+  "big": {
+   "coins": 12,
+   "life_max": 2.26
+  },
+  "mega": {
+   "coins": 24,
+   "life_max": 2.08
+  },
+  "epic": {
+   "coins": 38,
+   "life_max": 2.08
+  },
+  "grand": {
+   "coins": 56,
+   "life_max": 2.13
+  }
+ }
+}
