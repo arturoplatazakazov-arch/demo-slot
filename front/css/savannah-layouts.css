@@ -2,13 +2,12 @@
    desktop layout options picked with the «Варианты» switch
    (js/savannah-kings/layouts.js sets .screen[data-layout]).
 
-     1  as designed: jackpot ladder in one row above the reels, Buy medallion
-        left, Win medallion right.
+     1  (main) one-line title banner on the frame, WIN and BUY BONUS on the
+        left, jackpots on the right 10px off the frame; slot centred.
      2  jackpots on two floors above the reels: GRAND on top, MINI · MINOR ·
-        MAJOR under it; the reels step down and shrink a little to make room.
-     3  side columns: logo, then the WIN counter, then BUY BONUS down the left;
-        reels in the middle; jackpots down the right, ascending bottom-to-top
-        (MINI at the bottom, GRAND on top).
+        MAJOR under it, resting on the frame's top border.
+     3  logo top centre, GRAND MAJOR MINOR MINI in one row on the frame.
+   Geometry for 1-3 is computed in js/savannah-kings/layouts.js.
 
    Stage coordinates are the 1920x1080 design frame. Portrait is untouched:
    every rule is scoped to body:not(.is-portrait). A variant whose frame art
@@ -56,24 +55,24 @@ body:not(.is-portrait) .screen[data-layout="2"] .reel {
   transform: scale(var(--l2-reel-scale, 0.9)); transform-origin: 50% 0;
 }
 
-/* --- 3: side columns ----------------------------------------------------- */
+/* --- 1 (main): side columns ----------------------------------------------------- */
 
 /* Left column, reel size and the ladder geometry: js/savannah-kings/layouts.js. */
 
 /* Reels: no crown above them any more, so they grow and rise a little. */
-body:not(.is-portrait) .screen[data-layout="3"] .reel {
+body:not(.is-portrait) .screen[data-layout="1"] .reel {
   top: var(--l3-reel-top, 300px);
   transform: scale(var(--l3-reel-scale, 1.05)); transform-origin: 50% 50%;
 }
 
 /* Right column: the ladder stands up, MINI at the bottom, GRAND on top
    (DOM order is MINI MINOR MAJOR GRAND, so column-reverse). */
-body:not(.is-portrait) .screen[data-layout="3"] .crown--ladder {
+body:not(.is-portrait) .screen[data-layout="1"] .crown--ladder {
   top: 556px; left: auto; right: 32px; width: 360px;
   transform: translateY(-50%);
   flex-direction: column-reverse; align-items: center; justify-content: flex-start;
   gap: 14px; z-index: 5;
 }
-body:not(.is-portrait) .screen[data-layout="3"] .crown--ladder .jp { width: 310px; font-size: 26px; }
-body:not(.is-portrait) .screen[data-layout="3"] .crown--ladder .jp--grand { width: 350px; font-size: 32px; }
-body:not(.is-portrait) .screen[data-layout="3"] .crown__top::before { width: 120%; height: 160%; }
+body:not(.is-portrait) .screen[data-layout="1"] .crown--ladder .jp { width: 310px; font-size: 26px; }
+body:not(.is-portrait) .screen[data-layout="1"] .crown--ladder .jp--grand { width: 350px; font-size: 32px; }
+body:not(.is-portrait) .screen[data-layout="1"] .crown__top::before { width: 120%; height: 160%; }

@@ -39,7 +39,16 @@ def load(name):
         if p.exists():
             im = Image.open(p).convert('RGBA')
             a = np.array(im)
-            a[..., 3][a[..., 3] < ALPHA_FLOOR] = 0
+            # SK_ALPHA_FLOOR: a sheet that came back with a translucent
+            # backdrop (alpha ~50-70 everywhere) is cut at that level and the
+            # rest of the alpha re-stretched, so the haze is gone but soft
+            # edges stay soft.
+            floor = int(os.environ.get('SK_ALPHA_FLOOR', ALPHA_FLOOR))
+            al = a[..., 3].astype(np.float32)
+            if floor > ALPHA_FLOOR:
+                al = np.clip((al - floor) * 255 / (255 - floor), 0, 255)
+            al[al < ALPHA_FLOOR] = 0
+            a[..., 3] = al.astype(np.uint8)
             return a
     raise FileNotFoundError(f'{name} not in {SRC}')
 

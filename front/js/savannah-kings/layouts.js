@@ -8,9 +8,9 @@
 //   2  GRAND over MINI · MINOR · MAJOR, sitting on the frame's top border;
 //      the reels grow until the frame meets the control pill, and the
 //      plaques never reach down into the symbol window.
-//   1  logo top centre, GRAND MAJOR MINOR MINI in one row on the frame's
+//   3  logo top centre, GRAND MAJOR MINOR MINI in one row on the frame's
 //      top border, reels as large as layout 2's.
-//   3  one-line title banner on the frame, WIN/BUY left, jackpots right,
+//   1  (main) one-line title banner on the frame, WIN/BUY left, jackpots right,
 //      the frame centred on x at 45% of the stage height
 //      (60% of it below); the left column (logo, WIN, BUY BONUS) and the
 //      right column (jackpots, MINI at the bottom) are exactly as tall as the
@@ -19,7 +19,7 @@
   const screen = document.getElementById('screen');
   const sw = document.getElementById('layoutSwitch');
   if (!screen || !sw) return;
-  const KEY = `savannah.layout.${location.pathname.split('/').pop()}`;
+  const KEY = `savannah.layout.v2.${location.pathname.split('/').pop()}`;
 
   const W = 1920, H = 1080;
   const WIN_W = 880, WIN_H = 528, REEL_LEFT = 520;
@@ -90,7 +90,7 @@
     Object.assign(ladder.style, { top: `${crownTop}px` });
   }
 
-  // --- 3: title banner on the frame, WIN/BUY left, jackpots right --------
+  // --- 1 (main): title banner on the frame, WIN/BUY left, jackpots right --------
   // The jackpots (GRAND JP_W wide) stand JP_FRAME_GAP right of the frame;
   // the frame is centred, so it is as wide as that leaves on both sides.
   // The one-line logo (logo_wide.webp) rests on the frame's top border and
@@ -103,8 +103,9 @@
   const GAP = 16;              // between items in a column
   const JP_W = 360;            // GRAND width (1.5x the old 240 column)
   const BANNER_K = 0.8;        // logo banner width vs the frame width
+  const L3_MEDAL_W = 200;      // WIN / BUY BONUS disc width
 
-  function layout3() {
+  function layoutSides() {
     const f = frameBox();
     buy.style.zoom = '1';
     const ps = plaqueRatios();
@@ -136,37 +137,38 @@
       zIndex: '7',   // over the frame's crest
     });
 
-    // Left: WIN and BUY BONUS, as wide as the room allows, centred on the frame.
-    const room = fLeft - JP_FRAME_GAP - EDGE;
-    const md0 = 256, medalH0 = buy.offsetHeight;
-    const wC = Math.min(room, JP_W * 0.8, ((fH - GAP) / 2) * (md0 / medalH0));
-    const k = wC / md0, medalH = medalH0 * k;
-    const lcx = (EDGE + fLeft - JP_FRAME_GAP) / 2;
-    const lTop = L3_CY - (2 * medalH + GAP) / 2;
-    const place = (el, y) => Object.assign(el.style, {
-      zoom: String(k), left: `${(lcx - wC / 2) / k}px`, right: 'auto', top: `${y / k}px`,
-    });
-    place(status, lTop);
-    place(buy, lTop + medalH + GAP);
-
     // Right: jackpots, MINI at the bottom, JP_FRAME_GAP from the frame.
     ps.forEach((q) => sizePlaque(q, q.grand ? JP_W : JP_W / GRAND_K));
     const stackH = ps.reduce((a, q) => a + q.r * (q.grand ? JP_W : JP_W / GRAND_K), 0) + 3 * GAP;
+    const stackTop = L3_CY - stackH / 2;
     Object.assign(ladder.style, {
       left: `${fRight + JP_FRAME_GAP}px`, right: 'auto', width: `${JP_W}px`,
-      top: `${L3_CY - stackH / 2}px`, height: `${stackH}px`, transform: 'none',
-      justifyContent: 'center', alignItems: 'flex-start', gap: `${GAP}px`, zIndex: '6',
+      top: `${stackTop}px`, height: `${stackH}px`, transform: 'none',
+      justifyContent: 'center', alignItems: 'center', gap: `${GAP}px`, zIndex: '6',   // one centre axis: GRAND over MAJOR
     });
+
+    // Left: WIN and BUY BONUS spanning exactly the jackpot block's height:
+    // WIN's top on GRAND's top, BUY's chip bottom on MINI's bottom.
+    const room = fLeft - JP_FRAME_GAP - EDGE;
+    const md0 = 256, medalH0 = buy.offsetHeight;
+    const wC = Math.min(room, L3_MEDAL_W, ((stackH - GAP) / 2) * (md0 / medalH0));
+    const k = wC / md0, medalH = medalH0 * k;
+    const lcx = (EDGE + fLeft - JP_FRAME_GAP) / 2;
+    const place = (el, y) => Object.assign(el.style, {
+      zoom: String(k), left: `${(lcx - wC / 2) / k}px`, right: 'auto', top: `${y / k}px`,
+    });
+    place(status, stackTop);
+    place(buy, stackTop + stackH - medalH);
 
     // The system buttons move off the jackpot column, next to the pill.
     Object.assign(sys.style, { top: `${PILL_TOP + 12}px`, right: '48px' });
   }
 
-  // --- 1: logo on top, then GRAND MAJOR MINOR MINI in one row on the frame
+  // --- 3: logo on top, then GRAND MAJOR MINOR MINI in one row on the frame
   // The layout-2 recipe with one floor of plaques and the logo above them:
   // the plaques rest on the frame's top border, never on the symbols, and
   // the reels grow until the frame meets the pill.
-  function layout1() {
+  function layoutTop() {
     const f = frameBox();
     const ps = plaqueRatios();
     const logoW = 230, logoTop = 6;
@@ -190,8 +192,8 @@
     if (document.body.classList.contains('is-portrait')) return;
     const v = screen.dataset.layout;
     if (v === '2') layout2();
-    else if (v === '3') layout3();
-    else layout1();
+    else if (v === '3') layoutTop();
+    else layoutSides();
   }
 
   function set(v) {
