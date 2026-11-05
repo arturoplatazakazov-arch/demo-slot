@@ -64,9 +64,8 @@ const GRID_COLS = SYMBOL_LAYOUT[0].length;
 // Popups are the designer's art (one PNG per popup, see the stylesheet) with
 // only the amount in the DOM. `kind` picks which text box of the mockup the
 // amount sits in: a win plate, the larger total-win plate, or the round badge
-// of the free-spins popup. The free-spins round end has two arts — FREE SPINS
-// TOTAL WIN for a round won from scatters, BONUS SPINS TOTAL WIN for a bought
-// one (see app.js gameState.boughtBonus).
+// of the free-spins popup. Every free-spins round ends on BONUS SPINS TOTAL
+// WIN, won from scatters or bought (FREE SPINS TOTAL WIN dropped 2026-11-05).
 //
 // Each popup is a Spine skeleton (scripts/great_uniqorn_popups.py) — `spine` /
 // `boughtSpine` name its folder under popups/, one per layout (_desk/_mob).
@@ -77,7 +76,7 @@ const POPUP_CONFIG = {
   epicWin: { art: 'pop_epic', spine: 'epic', kind: 'win' },
   megaWin: { art: 'pop_mega', spine: 'mega', kind: 'win' },
   bonusSpinsWin: { art: 'pop_fswin', spine: 'fswin', kind: 'spins' },
-  bonusSpinsTotalWin: { art: 'pop_fstotal', boughtArt: 'pop_bstotal', spine: 'fstotal', boughtSpine: 'bstotal', kind: 'total' },
+  bonusSpinsTotalWin: { art: 'pop_bstotal', spine: 'bstotal', kind: 'total' },
 };
 
 const DIM_TRANSITION_MS = 320;
@@ -965,7 +964,7 @@ function formatPopupAmount(n) {
 // skeleton is anchored to its DOM frame (.game-popup, the mockup's 780x1416
 // popup frame) — the skeleton is authored on exactly that frame (origin at its
 // centre), so fit=1 + these bounds put every layer where the mockup has it.
-const POPUP_SPINE_VERSION = '1';
+const POPUP_SPINE_VERSION = '7';
 const POPUP_FRAME_BOUNDS = { x: -390, y: -708, width: 780, height: 1416 };
 // How long a popup may wait for its skeleton before falling back to the PNG.
 const POPUP_SPINE_WAIT_MS = 1500;
@@ -1291,7 +1290,7 @@ function updateBgForLayout() {
 // shows the game's own background under the canvas and catches the tap. Same
 // contract as Multi Fruits Story / Neon Reels.
 const SCREEN_ROOT = `${ASSET_ROOT}/screens`;
-const SCREEN_VERSION = '4';
+const SCREEN_VERSION = '7';
 const SCREEN_BOX = {
   desk: { x: -966, y: -470, width: 1932, height: 940 },
   mob: { x: -390, y: -708, width: 780, height: 1416 },

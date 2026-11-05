@@ -51,11 +51,11 @@ bounds:1233,754,168,71
 fl_bill_flat
 bounds:1403,754,110,71
 fl_ribbon_blue
-bounds:1515,754,57,69
+bounds:1515,754,58,69
 fl_bill_curl
-bounds:1574,754,77,68
+bounds:1575,754,77,65
 tap
-bounds:1653,754,282,33
+bounds:1654,754,282,33
 p2_c1
 bounds:0,861,579,27
 p1_c1

@@ -190,7 +190,7 @@ class Screen:
 
 def wild_panel(s, cx, cy, pw, ph, t0):
     """Panel: title, a big WILD cycling into x2..x9, the row of multipliers, captions."""
-    panel = nine_slice(layer('plate_total'), pw, ph)
+    panel = nine_slice(load(os.path.join(LAYERS + '_v1', 'plate_total.png')), pw, ph)
     pbx, pby = s.place('p1', 'panel_w', panel, cx, cy)
     s.pop_in('p1', t0, t0 + 0.5, pbx, pby, rise=60, start=0.6)
     t = title('WILD MULTIPLIER', 62 if pw > 560 else 54)
@@ -235,7 +235,7 @@ def wild_panel(s, cx, cy, pw, ph, t0):
 
 
 def fs_panel(s, cx, cy, pw, ph, t0):
-    panel = nine_slice(layer('plate_total'), pw, ph)
+    panel = nine_slice(load(os.path.join(LAYERS + '_v1', 'plate_total.png')), pw, ph)
     pbx, pby = s.place('p2', 'panel_f', panel, cx, cy)
     s.pop_in('p2', t0, t0 + 0.5, pbx, pby, rise=60, start=0.6)
     s.place('p2_title', 'p2_title', title('FREE SPINS', 66 if pw > 560 else 58), cx, cy - ph / 2 + 58)
@@ -308,21 +308,25 @@ def build_bonus(variant):
     ttl = layer('fswin_txt')
     line = caption('EVERY WILD CAN BECOME x2 – x9', 34, 'ffffff')
     line2 = caption('MORE BURGERS = MORE SPINS', 30, 'ffd56a')
+    # FREESPINS WIN is two lines since the 2026-11-05 pack: its top stays where
+    # the old one-liner's was (just under the badge's middle) and the captions
+    # follow its bottom.
+    tsc = 1.0
     if variant == 'desk':
         hcx, hcy, hsc = 560, 470, 0.95
         bcx, bcy = 1290, 330
-        tcx, tcy = 1290, 560
-        l1y = 690
+        tcx, ttop = 1290, 450
         rays_at = (1290, 360)
-        tap_y = 885
+        tap_y = 900
     else:
         # the designer's FREE SPINS WIN popup composition, as on the mockup
         hcx, hcy, hsc = 69 + 300, 112 + 436.5, 1.0
         bcx, bcy = 238 + 152.5, 601 + 145
-        tcx, tcy = 24 + 366, 820 + 95.5
-        l1y = 1060
+        tcx, ttop = 24 + 366, 820
         rays_at = (390, 600)
-        tap_y = 1300
+        tap_y = 1320
+    tcy = ttop + ttl.height * tsc / 2
+    l1y = ttop + ttl.height * tsc + 22
     s.glow_rays(*rays_at, 1500 if variant == 'desk' else 1300)
     s.place('hero', 'hero', hero, hcx, hcy, w=hero.width * hsc)
     s.sk.both('hero', 'translate', lambda t: (s.X(hcx), s.Y(hcy) - seg(t, 0.0, 0.6, 180, 0, ease=out_cubic)), lambda t: (s.X(hcx), s.Y(hcy)))
@@ -335,7 +339,7 @@ def build_bonus(variant):
     s.sk.both('badge', 'alpha', lambda t: seg(t, 0.9, 1.0, 0, 1), lambda t: 1)
     s.sk.bone('count', parent='badge', x=0, y=-4)
     # title slams down like the popups'
-    s.place('title', 'title', ttl, tcx, tcy, w=ttl.width * (1.15 if variant == 'desk' else 1.0))
+    s.place('title', 'title', ttl, tcx, tcy, w=ttl.width * tsc)
 
     def slam(t):
         if t < 0.5:
@@ -346,12 +350,12 @@ def build_bonus(variant):
     s.sk.both('title', 'scale', lambda t: (slam(t),) * 2, lambda t: (1 + 0.02 * (1 - math.cos(2 * math.pi * t / 2.0)) / 2,) * 2)
     s.sk.both('title', 'alpha', lambda t: seg(t, 0.5, 0.6, 0, 1), lambda t: 1)
     s.sk.image('title_sheen', flash_of(ttl))
-    s.sk.slot('title_sheen', 'title', 'title_sheen', w=ttl.width * (1.15 if variant == 'desk' else 1.0), blend='additive')
+    s.sk.slot('title_sheen', 'title', 'title_sheen', w=ttl.width * tsc, blend='additive')
     s.sk.both('title_sheen', 'alpha', lambda t: 0 if t < 0.7 else seg(t, 0.7, 1.1, 0.8, 0),
               lambda t: 0.3 * max(0.0, math.sin(2 * math.pi * (t / 4.0 - 0.1))) ** 24)
     lx = tcx
     s.place('l1', 'l1', line, lx, l1y)
-    s.place('l2', 'l2', line2, lx, l1y + 50)
+    s.place('l2', 'l2', line2, lx, l1y + 46)
     for n, d in (('l1', 0), ('l2', 0.15)):
         s.sk.both(n, 'alpha', lambda t, d=d: seg(t, 1.6 + d, 2.0 + d, 0, 1), lambda t: 1)
     s.tap_hint('TAP TO START', tap_y, 36)

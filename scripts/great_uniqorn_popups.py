@@ -45,6 +45,10 @@ from spine_screen_kit import (  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, 'front/img/great-uniqorn/src/popup_layers')
+# The first layer pack (2026-11-04). The coordinates in POPUPS were measured
+# on it; the designer's second pack (2026-11-05) changed some sizes, so a
+# replaced layer keeps the old one's centre (heroes: old width and top).
+SRC_V1 = os.path.join(ROOT, 'front/img/great-uniqorn/src/popup_layers_v1')
 OUT = os.path.join(ROOT, 'front/img/great-uniqorn/popups')
 
 FW, FH = 780, 1416
@@ -98,21 +102,29 @@ POPUPS = {
                 tint=(255, 214, 120)),
     'epic': dict(hero=('epic_hero', 131, 166), txt=('epic_txt', 36, 531), plate=('plate_purple', 76, 707),
                  backdrop=('epic_backdrop', 0, 317),
-                 particles=['bill_curl', 'bill_flat', 'coin', 'gold_ribbon', 'gold_ribbon_s', 'bill_flat'],
+                 particles=['bill_curl', 'bill_flat', 'coin', 'gold_ribbon', 'gold_ribbon_s', 'coin2'],
                  tint=(214, 150, 255)),
     'mega': dict(hero=('mega_hero', 95, 128), txt=('mega_txt', 23, 508), plate=('plate_red', 76, 707),
                  backdrop=('mega_backdrop', 0, 0),
-                 particles=['bill_curl', 'bill_flat', 'coin', 'coin', 'gold_ribbon', 'gold_ribbon_s'],
+                 particles=['bill_curl', 'bill_flat', 'coin', 'coin2', 'gold_ribbon', 'gold_ribbon_s'],
                  tint=(255, 150, 110)),
-    'bstotal': dict(hero=('bstotal_hero', 100, 113), txt=('bstotal_txt', 72, 550), plate=('plate_total', 76, 789),
+    'bstotal': dict(hero=('fstotal_hero', 69, 141), txt=('bstotal_txt', 72, 550), plate=('plate_total', 76, 789),
                     particles=['ticket_a', 'ticket_b', 'ribbon_red', 'ribbon_blue', 'ribbon_white', 'ribbon_red_s'],
                     tint=(255, 214, 120)),
-    'fstotal': dict(hero=('fstotal_hero', 69, 141), txt=('fstotal_txt', 94, 538), plate=('plate_total', 76, 789),
-                    particles=['ticket_a', 'ticket_b', 'bill_flat', 'bill_curl', 'gold_ribbon', 'gold_ribbon_s'],
-                    tint=(255, 214, 120)),
+    # FREE SPINS TOTAL WIN was dropped (2026-11-05): every round ends on
+    # BONUS SPINS TOTAL WIN, which took over its money-waving hero.
     'fswin': dict(hero=('fswin_hero', 69, 112), txt=('fswin_txt', 24, 820), plate=('fswin_badge', 238, 601),
-                  particles=['ticket_a', 'ticket_b', 'gold_ribbon', 'gold_ribbon_s', 'coin'],
+                  particles=['ticket_a', 'ticket_b', 'gold_ribbon', 'gold_ribbon_s', 'coin', 'coin2'],
                   tint=(255, 214, 120)),
+}
+
+# Hero vs. title, measured on the designer's static popups (2026-11-05):
+# visible hero width and how far the horn tip sits above the title, in units.
+HERO_FIT = {
+    'big': (386, 417),
+    'epic': (567, 427),
+    'mega': (543, 403),
+    'bstotal': (530, 427),
 }
 
 # Largest side of a particle on screen, per depth band (units).
@@ -133,11 +145,13 @@ FALL_TOP, FALL_BOTTOM = 900, -900   # past the frame top/bottom (±708) + the bi
 
 
 def particle_images():
-    P = {k: load(f'p_{k}') for k in ['bill_curl', 'bill_flat', 'coin', 'ticket_a', 'ticket_b', 'ribbon_blue',
+    P = {k: load(f'p_{k}') for k in ['bill_curl', 'bill_flat', 'coin', 'coin2', 'ticket_a', 'ticket_b', 'ribbon_blue',
                                       'ribbon_red_s', 'ribbon_white', 'ribbon_red', 'ribbon_blue_s',
                                       'ribbon_white_s']}
-    P['gold_ribbon'] = gold(P['ribbon_white'])
-    P['gold_ribbon_s'] = gold(P['ribbon_white_s'])
+    # The second pack ships real gold ribbons (the first had only white ones,
+    # recoloured by gold()).
+    P['gold_ribbon'] = load('p_ribbon_gold')
+    P['gold_ribbon_s'] = load('p_ribbon_gold_s')
     return P
 
 
@@ -152,7 +166,34 @@ def build(pop, layout):
     def place(key):
         name, fx, fy = cfg[key]
         im = load(name)
-        cx, cy = X(fx + im.width / 2), Y(fy + im.height / 2)
+        old = os.path.join(SRC_V1, f'{name}.png')
+        ow, oh = Image.open(old).size if os.path.exists(old) else im.size
+        cx = X(fx + ow / 2)
+        if key == 'hero' and pop in HERO_FIT:
+            # The second pack's heroes are full figures: sized and lifted so
+            # they peek over the title exactly as on the designer's static
+            # frames — visible width, and horn tip -> title top, in units.
+            vis_w, peek = HERO_FIT[pop]
+            bb = im.getchannel('A').point(lambda v: 255 if v > 24 else 0).getbbox()
+            k = vis_w / (bb[2] - bb[0])
+            im = im.resize((round(im.width * k), round(im.height * k)), Image.LANCZOS)
+            tname, tfx, tfy = cfg['txt']
+            tim = load(tname)
+            tow, toh = Image.open(os.path.join(SRC_V1, f'{tname}.png')).size
+            ttop = tfy + toh / 2 - tim.height / 2 + tim.getchannel('A').point(lambda v: 255 if v > 24 else 0).getbbox()[1]
+            top = ttop - peek - bb[1] * k
+            cx = X(fx + ow / 2) - ((bb[0] + bb[2]) / 2 * k - im.width / 2)
+            cy = Y(top + im.height / 2)
+        elif key == 'hero':
+            if im.width != ow:
+                im = im.resize((round(ow), round(im.height * ow / im.width)), Image.LANCZOS)
+            cy = Y(fy + im.height / 2)
+        elif pop == 'fswin' and key == 'txt':
+            # FREESPINS WIN became two lines: keep its top under the badge
+            # and let it grow downwards, or it swallows the badge's count.
+            cy = Y(fy + im.height / 2)
+        else:
+            cy = Y(fy + oh / 2)
         return name, im, cx, cy
 
     hero_name, hero_im, hx, hy = place('hero')
