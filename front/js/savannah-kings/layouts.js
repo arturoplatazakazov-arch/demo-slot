@@ -90,11 +90,11 @@
   const GAP = 16;              // minimum gap between items in a column
 
   // The frame and the left column are sized as one width wC (the slot as
-  // large as possible while wC >= COL_MIN_W). The jackpots then take all the
-  // room right of the frame: all four one width, from JP_GAP past the frame
-  // to JP_EDGE short of the stage edge.
+  // large as possible while wC >= COL_MIN_W); the jackpots are JP_K times
+  // that and may lie over the frame's right border.
   const COL_MIN_W = 240;
-  const JP_GAP = 14, JP_EDGE = 14;
+  const JP_EDGE = 14;
+  const JP_K = 1.5;            // jackpot plaques vs the column width
   function plan3(f, frameH) {
     const s = frameH / f.h;
     const fW = f.w * s;
@@ -107,8 +107,7 @@
       (frameH - 2 * GAP) / (logoR + (2 * medalH0) / md0),
       (frameH - 3 * GAP) / rightUnit,
     );
-    const wJ = W / 2 - fW / 2 - JP_GAP - JP_EDGE;
-    return { frameH, s, fW, logoR, medalH0, md0, ps, wC, wJ, fits: wC >= COL_MIN_W };
+    return { frameH, s, fW, logoR, medalH0, md0, ps, wC, fits: wC >= COL_MIN_W };
   }
 
   function layout3() {
@@ -142,17 +141,19 @@
     place(status, lTop + logoH + g);
     place(buy, lTop + logoH + g + medalH + g);
 
-    // Right: jackpots, MINI at the bottom, all four wJ wide; tight equal
-    // gaps, the stack centred on the frame.
-    const wJ = p.wJ;
-    const x0 = fRight + JP_GAP;
-    p.ps.forEach((q) => sizePlaque(q, wJ));
-    const stackH = p.ps.reduce((a, q) => a + q.r * wJ, 0) + 3 * GAP;
+    // Right: jackpots 1.5x the column width (GRAND = JP_K * wC, the others
+    // that / GRAND_K), MINI at the bottom, tight equal gaps, centred on the
+    // frame. Pinned to the stage's right edge; whatever is wider than the
+    // room beside the frame lies over the frame's right border.
+    const wG = JP_K * wC;
+    const x1 = W - JP_EDGE;
+    p.ps.forEach((q) => sizePlaque(q, q.grand ? wG : wG / GRAND_K));
+    const stackH = p.ps.reduce((a, q) => a + q.r * (q.grand ? wG : wG / GRAND_K), 0) + 3 * GAP;
     const colH = Math.max(frameH, stackH);
     Object.assign(ladder.style, {
-      left: `${x0}px`, right: 'auto', width: `${wJ}px`,
+      left: `${x1 - wG}px`, right: 'auto', width: `${wG}px`,
       top: `${L3_CY - colH / 2}px`, height: `${colH}px`, transform: 'none',
-      justifyContent: 'center', gap: `${GAP}px`,
+      justifyContent: 'center', alignItems: 'flex-end', gap: `${GAP}px`, zIndex: '6',
     });
 
     // The system buttons move off the jackpot column, next to the pill.
