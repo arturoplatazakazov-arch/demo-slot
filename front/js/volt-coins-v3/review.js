@@ -119,6 +119,12 @@ function wildScale() {
 
 function setupVariantsPanel() {
   for (const key of Object.keys(REVIEW_VARIANTS)) document.body.dataset[key] = reviewGet(key);
+  // панель «Варианты» снята (2026-11-05): выбранные варианты применяются, кнопки нет
+  if (!new URLSearchParams(location.search).has('variants')) {
+    for (const key of Object.keys(REVIEW_VARIANTS)) reviewSet(key, document.body.dataset[key]);
+    applyFrameVariant();
+    return;
+  }
   const panel = document.createElement('details');
   panel.className = 'variants';
   panel.innerHTML = '<summary>Варианты</summary>' + Object.entries(REVIEW_VARIANTS).map(([key, v]) =>

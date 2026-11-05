@@ -2647,3 +2647,22 @@ body.lights-off .v3-flash { display: none; }
 /* старое свечение монеты по номиналу — теперь вместо него кольцо и искры */
 html body .reel__cell.is-coin:not(.is-winning) > img { filter: none; animation: none; }
 .reel__cell.is-dimmed .coin-aura, .reel__cell.is-dimmed .coin-spark { opacity: 0.3; animation-play-state: paused; }
+
+/* ---------- Тест-панель (вместо «Варианты», видна и в боте) ---------- */
+.test-panel {
+  position: fixed; left: 10px; top: 10px; z-index: 120;
+  font: 600 12px/1.2 system-ui, sans-serif; color: #dfeaff;
+}
+.test-panel summary {
+  display: inline-block; padding: 6px 12px; border-radius: 999px; cursor: pointer; list-style: none;
+  background: rgba(7, 11, 38, 0.85); border: 1px solid rgba(57, 216, 255, 0.6);
+}
+.test-panel summary::-webkit-details-marker { display: none; }
+.test-panel__col { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; width: max-content; }
+.test-panel__col button {
+  padding: 6px 10px; border-radius: 8px; text-align: left; cursor: pointer; font: inherit;
+  border: 1px solid #2c3766; background: rgba(18, 26, 64, 0.9); color: #cfe;
+}
+.test-panel__col button:hover { border-color: var(--cyan); color: #fff; }
+.test-panel__col button[data-test="combo"],
+.test-panel__col button[data-test="coins"] { border-color: rgba(255, 201, 60, 0.6); }

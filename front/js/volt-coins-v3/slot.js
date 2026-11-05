@@ -1244,7 +1244,8 @@ async function enterBonusMode() {
   v3NeonLoop(true);
   const shown = await showBonusScreen(RESPIN_COUNT);
   Sound.playSfx('holdWinStart');
-  if (!shown) await playPopupSequence('holdWinIntro', 0, BONUS_INTRO_HOLD_MS, { ownDim: false });
+  // попап HOLD & WIN снят (2026-11-05): вход — только бонус-экран
+  if (!shown) await wait(600);
   await wait(DIM_TRANSITION_MS);
   popScreenDim(true);
 }
@@ -1270,6 +1271,7 @@ const POPUP_CONFIG = {
   megaWin: { title: 'MEGA WIN' },
   epicWin: { title: 'EPIC WIN' },
   holdWinIntro: { title: 'HOLD & WIN', sub: '3 RESPINS', hideAmount: true, coin: 'coin' },
+  grandWin: { title: 'GRAND JACKPOT' },
   holdWinTotal: { title: 'TOTAL WIN', sub: 'HOLD & WIN' },
 };
 
@@ -1288,7 +1290,7 @@ const POPUP_ART = {"big_win":{"w":651,"h":311,"panel":{"l":0.1014,"t":0.4823,"w"
   "jp_grand":{"w":1304,"h":552,"panel":{"l":0.0567,"t":0.1739,"w":0.8873,"h":0.7627}}};
 const POPUP_ART_KEY = {
   bigWin: 'big_win', megaWin: 'mega_win', epicWin: 'epic_win',
-  holdWinIntro: 'hold_and_win', holdWinTotal: 'total_win',
+  holdWinIntro: 'hold_and_win', holdWinTotal: 'total_win', grandWin: 'jp_grand',
 };
 
 // V3, PSB №2: попап из слоёв дизайнера, Spine (js/volt-coins-v3/popup-fx.js).
@@ -1371,7 +1373,7 @@ function buildPopupNode(key, amount) {
   return root;
 }
 
-const BIG_WIN_KEYS = new Set(['bigWin', 'megaWin', 'epicWin']);
+const BIG_WIN_KEYS = new Set(['bigWin', 'megaWin', 'epicWin', 'grandWin']);
 
 function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaque = false } = {}) {
   if (!POPUP_CONFIG[key]) return Promise.resolve();
@@ -1431,9 +1433,19 @@ const TIER_COLORS = {
   grand: ['#bfefff', '#ffffff'],
 };
 
+// Попапы MINI / MINOR / MAJOR сняты (2026-11-05, продукт): джекпот-монета —
+// только звук и вспышка своей плашки, попап остаётся у GRAND (9/9).
+const JACKPOT_PLATE_FLASH_MS = 1100;
+
 function playJackpotAward(tier) {
   const value = JACKPOT_VALUE_BY_TIER[tier];
   if (!value) return Promise.resolve();
+  if (tier !== 'grand') {
+    const plate = document.querySelector(`.jp--${tier}`);
+    Sound.playSfx(`jackpot_${tier}`);
+    if (plate) plate.classList.add('is-won');
+    return wait(JACKPOT_PLATE_FLASH_MS).then(() => { if (plate) plate.classList.remove('is-won'); });
+  }
   return new Promise((resolve) => {
     let node = null;
     let done = false;
@@ -1815,16 +1827,22 @@ async function runHoldAndWinSequence(result, locked, baseGrid = null) {
   // выплаты раунда — выигрыш: неон ×2.5 до выхода в базу
   v3NeonSpeed(2.5);
   for (const tier of wonTiers) await playJackpotAward(tier);
-  // 9/9: GRAND сверху суммы монет — полный разряд обеих катушек.
-  if (result.full_grid_jackpot) {
+  // 9/9: полный разряд обеих катушек; попап GRAND — итогом раунда (ниже)
+  const grand = Boolean(result.full_grid_jackpot);
+  if (grand) {
     Sound.playSfx('gridComplete');
+    fx('grandDischarge');
     await wait(900);
-    await playJackpotAward(result.full_grid_jackpot);
   }
 
+  // Итог раунда (2026-11-05, продукт): вместо TOTAL WIN — попап по сумме за
+  // режим в ставках: x1–x5 BIG, x6–x25 MEGA, x26+ EPIC; поле 9/9 — GRAND.
   Sound.playSfx('coinCollect');
-  Sound.playSfx('roundTotalWin');
-  await playPopup('holdWinTotal', result.total_win, 3000);
+  if (grand) {
+    Sound.playSfx('jackpotReveal');
+    setTimeout(() => Sound.playSfx('jackpot_grand'), 350);
+  } else Sound.playSfx('roundTotalWin');
+  await playPopup(holdWinResultPopup(result.total_win, grand), result.total_win, 3000);
   holdAndWinLocked = null;
   if (baseGrid) {
     await applyGrid(baseGrid);
@@ -1832,6 +1850,91 @@ async function runHoldAndWinSequence(result, locked, baseGrid = null) {
   }
   await leaveBonusMode();
   showTotalWin(result.total_win);
+}
+
+function holdWinResultPopup(total, grand) {
+  if (grand) return 'grandWin';
+  const x = total / (jackpotBet || 10);
+  return x > 25 ? 'epicWin' : x > 5 ? 'megaWin' : 'bigWin';
+}
+
+// --- Тест-панель (2026-11-05): столбик кнопок вместо «Варианты», видна и в боте ---
+// Buy Bonus, все попапы, «Комбинация» (центральная линия, по нажатию — следующий
+// по дороговизне символ) и «Все монеты» (9 монет x1 … MAJOR). Спины тут
+// локальные: без сервера и без ставки, баланс не меняется.
+const TEST_COMBO = ['horseshoe', 'star', 'bar', 'seven', 'bell', 'ingot', 'diamond', 'wild'];
+// выплата за 3 в линию, в ставках (= сид, client paytable 2026-10-22)
+const TEST_COMBO_PAY = { horseshoe: 2, star: 2.5, bar: 3.5, seven: 5, bell: 8, ingot: 12, diamond: 20, wild: 25 };
+const TEST_COMBO_NAME = { horseshoe: 'Подкова', star: 'Звезда', bar: 'BAR', seven: '7', bell: 'Колокол', ingot: 'Батарейка', diamond: 'Бриллиант', wild: 'Wild' };
+let testComboIndex = 0;
+
+function testBet() {
+  return typeof currentBet === 'function' ? currentBet() : 10;
+}
+
+async function testSpin(grid, faces = [], lineWins = null) {
+  if (gameState.isSpinning || reelsBusy) return;
+  gameState.isSpinning = true;
+  try {
+    teardownCellInstances();
+    if (typeof hideWinHud === 'function') hideWinHud();
+    for (const info of cellInfos) if (info) clearCoinFace(info);
+    startReelLoop();
+    await wait(350);
+    await landReels(grid, { positions: faces }, { anticipate: false });
+    if (lineWins) {
+      Sound.playSfx('winPresent');
+      playWinCells(lineWins);
+    }
+  } finally {
+    gameState.isSpinning = false;
+  }
+}
+
+function setupTestPanel() {
+  const panel = document.createElement('details');
+  panel.className = 'test-panel';
+  // на телефоне столбик закрыл бы барабаны: свёрнута, открывается тапом по «Тест»
+  panel.open = !isMobileLayout();
+  const B = (id, label) => `<button type="button" data-test="${id}">${label}</button>`;
+  panel.innerHTML = '<summary>Тест</summary><div class="test-panel__col">' + [
+    B('buy', 'Buy Bonus'),
+    B('pop:bigWin', 'Big Win'), B('pop:megaWin', 'Mega Win'), B('pop:epicWin', 'Epic Win'),
+    B('jp:grand', 'Grand Jackpot'),
+    B('combo', `Комбинация · ${TEST_COMBO_NAME[TEST_COMBO[0]]}`),
+    B('coins', 'Все монеты'),
+  ].join('') + '</div>';
+  document.body.appendChild(panel);
+  const comboBtn = panel.querySelector('[data-test="combo"]');
+  panel.addEventListener('click', async (e) => {
+    const b = e.target.closest('button[data-test]');
+    if (!b) return;
+    const [kind, arg] = b.dataset.test.split(':');
+    const bet = testBet();
+    if (kind === 'buy') document.getElementById('buyBonusBtn')?.click();
+    else if (kind === 'pop') {
+      if (gameState.isSpinning) return;
+      const mult = { bigWin: 15, megaWin: 30, epicWin: 60, holdWinTotal: 42 }[arg] || 0;
+      playPopup(arg, bet * mult, 2500);
+    } else if (kind === 'jp') {
+      if (gameState.isSpinning) return;
+      playJackpotAward(arg);
+    } else if (kind === 'combo') {
+      // центральная линия из одного символа, остальное — случайный наполнитель
+      const code = TEST_COMBO[testComboIndex];
+      const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+      const fill = FILLER_CODES.filter((c) => c !== code && c !== 'wild');
+      const grid = [0, 1, 2].map((r) => [0, 1, 2].map(() => (r === 1 ? code : pick(fill))));
+      // столбец не должен случайно собрать ту же тройку на других линиях
+      await testSpin(grid, [], [{ payline: 1, amount: bet * TEST_COMBO_PAY[code], positions: [0, 1, 2].map((col) => ({ row: 1, col })) }]);
+      testComboIndex = (testComboIndex + 1) % TEST_COMBO.length;
+      comboBtn.textContent = `Комбинация · ${TEST_COMBO_NAME[TEST_COMBO[testComboIndex]]}`;
+    } else if (kind === 'coins') {
+      const faces = [['value', 1], ['value', 3], ['value', 5], ['value', 10], ['value', 15], ['value', 25], ['mini', 0], ['minor', 0], ['major', 0]]
+        .map(([k, v], i) => ({ row: Math.floor(i / 3), col: i % 3, kind: k, value: v }));
+      await testSpin([0, 1, 2].map(() => ['coin', 'coin', 'coin']), faces);
+    }
+  });
 }
 
 // --- Dev ---------------------------------------------------------------------
@@ -2105,6 +2208,7 @@ async function init() {
   setBackground();
   setupDevPanel();
   setupVariantsPanel();
+  setupTestPanel();
   setupLightsToggle();
   await preloadAssets();
   if (window.Preloader) window.Preloader.done();
