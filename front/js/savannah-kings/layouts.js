@@ -89,29 +89,33 @@
   const COL_GAP = 24;          // between a column and the frame
   const GAP = 16;              // minimum gap between items in a column
 
-  // Jackpots are JP_W wide (GRAND; the others JP_W/GRAND_K) — twice the old
-  // 240 column. The frame is the largest that leaves JP_W beside it on both
-  // sides (it stays centred); the left items get whatever width lets them
-  // stack inside the frame height, up to that same side room.
-  const JP_W = 480;
-  function plan3(f) {
-    const fWmax = W - 2 * (JP_W + COL_GAP + EDGE);
-    const frameH = Math.max(L3_FRAME_MIN * 0.75, Math.min(L3_FRAME_MAX, fWmax * f.h / f.w));
+  // The frame and the left column are sized as one width wC (the slot as
+  // large as possible while wC >= COL_MIN_W). The jackpots then take all the
+  // room right of the frame: all four one width, from JP_GAP past the frame
+  // to JP_EDGE short of the stage edge.
+  const COL_MIN_W = 240;
+  const JP_GAP = 14, JP_EDGE = 14;
+  function plan3(f, frameH) {
     const s = frameH / f.h;
     const fW = f.w * s;
     const logoR = ratio(logo, 0.6), medalH0 = buy.offsetHeight, md0 = 256;
     const ps = plaqueRatios();
+    const rightUnit = ps.reduce((a, p) => a + p.r * (p.grand ? 1 : 1 / GRAND_K), 0);
     const side = W / 2 - fW / 2 - COL_GAP - EDGE;
-    const wC = Math.min(side, (frameH - 2 * GAP) / (logoR + (2 * medalH0) / md0));
-    const wJ = Math.min(JP_W, side);
-    return { frameH, s, fW, logoR, medalH0, md0, ps, wC, wJ };
+    const wC = Math.min(
+      side,
+      (frameH - 2 * GAP) / (logoR + (2 * medalH0) / md0),
+      (frameH - 3 * GAP) / rightUnit,
+    );
+    const wJ = W / 2 - fW / 2 - JP_GAP - JP_EDGE;
+    return { frameH, s, fW, logoR, medalH0, md0, ps, wC, wJ, fits: wC >= COL_MIN_W };
   }
 
   function layout3() {
     const f = frameBox();
     buy.style.zoom = '1';
-    const p = plan3(f);
-    const frameH = p.frameH;
+    let frameH = L3_FRAME_MAX, p = plan3(f, frameH);
+    while (!p.fits && frameH > L3_FRAME_MIN) { frameH -= 4; p = plan3(f, frameH); }
     const fLeft = W / 2 - p.fW / 2, fRight = W / 2 + p.fW / 2;
     const wC = p.wC;
 
@@ -138,15 +142,15 @@
     place(status, lTop + logoH + g);
     place(buy, lTop + logoH + g + medalH + g);
 
-    // Right: jackpots, MINI at the bottom, GRAND wJ wide; tight equal gaps,
-    // the stack centred on the frame (it may run a little past its height).
+    // Right: jackpots, MINI at the bottom, all four wJ wide; tight equal
+    // gaps, the stack centred on the frame.
     const wJ = p.wJ;
-    const rcx = (fRight + COL_GAP + W - EDGE) / 2;
-    p.ps.forEach((q) => sizePlaque(q, q.grand ? wJ : wJ / GRAND_K));
-    const stackH = p.ps.reduce((a, q) => a + q.r * (q.grand ? wJ : wJ / GRAND_K), 0) + 3 * GAP;
+    const x0 = fRight + JP_GAP;
+    p.ps.forEach((q) => sizePlaque(q, wJ));
+    const stackH = p.ps.reduce((a, q) => a + q.r * wJ, 0) + 3 * GAP;
     const colH = Math.max(frameH, stackH);
     Object.assign(ladder.style, {
-      left: `${rcx - wJ / 2}px`, right: 'auto', width: `${wJ}px`,
+      left: `${x0}px`, right: 'auto', width: `${wJ}px`,
       top: `${L3_CY - colH / 2}px`, height: `${colH}px`, transform: 'none',
       justifyContent: 'center', gap: `${GAP}px`,
     });
