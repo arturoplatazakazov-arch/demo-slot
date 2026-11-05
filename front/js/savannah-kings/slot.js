@@ -214,10 +214,13 @@ function cellCentre(row, col) {
 }
 
 // Win-line look: 'classic' (the original polyline with diamond gems) unless
-// the page sets window.SK_WIN_LINE — the five art variants use 'a' (silk
-// glow). 'b' (coin beads) and 'c' (flow ribbon) stay for comparison via ?line=.
+// the page sets window.SK_WIN_LINE — the five art variants default to 'a'
+// (silk glow). The DEMO panel can switch to 'b' (coin beads), 'c' (flow
+// ribbon) or back (kept in localStorage); ?line= overrides both.
 function winLineStyle() {
-  return new URLSearchParams(location.search).get('line') || window.SK_WIN_LINE || 'classic';
+  let saved = null;
+  try { saved = localStorage.getItem('savannah.winline'); } catch (e) { /* ignore */ }
+  return new URLSearchParams(location.search).get('line') || saved || window.SK_WIN_LINE || 'classic';
 }
 
 function svgEl(tag, attrs) {
