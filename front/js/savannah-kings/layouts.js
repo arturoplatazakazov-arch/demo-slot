@@ -235,6 +235,7 @@
     arrange();
   }
 
+  if (new URLSearchParams(location.search).has('shot')) document.body.classList.add('is-shot');
   let saved = new URLSearchParams(location.search).get('layout');
   if (!saved) { try { saved = localStorage.getItem(KEY); } catch (e) { /* ignore */ } }
   set(saved || '1');

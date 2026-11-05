@@ -121,3 +121,6 @@ body.is-portrait .wheel-award__art { width: 800px; }
 .demo-panel__toggle::-webkit-details-marker { display: none; }
 .demo-panel.is-busy .demo-btn:not(.demo-panel__toggle) { opacity: 0.5; pointer-events: none; }
 body.is-buying .demo-panel { display: none; }
+
+/* ?shot=1 (layouts.js): clean frames for exports — no demo/switch chrome. */
+body.is-shot .demo-panel, body.is-shot .layout-switch, body.is-shot .preloader { display: none !important; }
