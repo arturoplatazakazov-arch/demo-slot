@@ -40,7 +40,10 @@ CSS = ROOT / "front/css"
 SYMBOLS = ["wild", "coin", "scatter", "seven", "bell", "star", "cherry", "lemon",
            "plum", "grape", "collector", "blank"]
 # C: the logo's lightning tail drops onto the MAJOR crown — clear it before cutting
-UI_ERASE = {"c": [(470, 440, 730, 504)]}
+# C: the logo's lightning tail reaches down to the plates' crowns, so the profile
+# cut lands inside "SPINS". Cut the sheet at a fixed line instead (letters end
+# at y~506, crowns start at y~512) and let _isolate drop the tail scraps.
+UI_SPLIT = {"c": 511}
 LOW = {"cherry", "lemon", "plum", "grape", "star"}
 SHARED = ["glyphs", "popups", "fx"]
 
@@ -266,10 +269,13 @@ def build(x: str) -> dict:
     # ui: logo, plates, buy
     if (src / "ui.png").exists():
         ui = Image.open(src / "ui.png").convert("RGBA")
-        for box in UI_ERASE.get(x, []):  # logo scraps hanging into the plates row
-            ui.paste((0, 0, 0, 0), box)
-        ub = grid(ui, [1, 4, 1])
-        lim, rest = ub[0], ub[1:]
+        if x in UI_SPLIT:
+            y = UI_SPLIT[x]
+            lim = grid(ui.crop((0, 0, ui.width, y)), [1])[0]
+            rest = grid(ui.crop((0, y, ui.width, ui.height)), [4, 1])
+        else:
+            ub = grid(ui, [1, 4, 1])
+            lim, rest = ub[0], ub[1:]
         plates, bim = rest[:4], rest[4]
         lim.thumbnail((1100, 1100), Image.LANCZOS)
         save(lim, img / "logo.webp")
@@ -561,12 +567,14 @@ def page(x: str) -> str:
         ("img/neon-joker-spins/coins/collector.webp?v=1", f"{root}/coins/collector.webp?v=1"),
         # без Spine-пака: он нарисован под оригинальный арт
         ('  <script src="js/neon-joker-spins/fx.js?v=1"></script>\n', ""),
-        ('  <script src="js/neon-joker-spins/slot.js?v=4"></script>',
+        ('  <script src="js/neon-joker-spins/slot.js?v=5"></script>',
          f"  <script>window.NJS_ASSET_ROOT = '{root}'; window.NJS_SKIN = '{x}';</script>\n"
          '  <script src="js/neon-joker-spins/winlines.js?v=6"></script>\n'
-         '  <script src="js/neon-joker-spins/slot.js?v=4"></script>\n'
-         '  <script src="js/neon-joker-spins/mascot.js?v=1"></script>\n'
-         '  <script src="js/neon-joker-spins/skin-fx.js?v=2"></script>'),
+         '  <script src="js/neon-joker-spins/slot.js?v=5"></script>\n'
+         '  <script src="js/neon-joker-spins/mascot-rig.js?v=1"></script>\n'
+         '  <script src="js/neon-joker-spins/mascot.js?v=2"></script>\n'
+         '  <script src="js/neon-joker-spins/skin-fx.js?v=2"></script>\n'
+         '  <script src="js/neon-joker-spins/graffiti.js?v=1"></script>'),
         ('  <div class="screen" id="screen">',
          ('' if x in STANDALONE else SWITCHER.format(links=links)) + '\n  <div class="screen" id="screen">'),
     ]

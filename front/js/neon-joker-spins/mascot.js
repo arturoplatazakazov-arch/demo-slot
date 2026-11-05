@@ -14,7 +14,7 @@
 // does not load this file.
 (function () {
   const img = document.getElementById('mascot');
-  if (!img) return;
+  if (!img || window.NJS_MASCOT_RIG_ACTIVE) return;   // mascot-rig.js took over (mesh rig)
 
   const STRIP = 3;            // source px per strip
   const PAD = 0.06;           // canvas margin (fraction of the drawn height) for the sway

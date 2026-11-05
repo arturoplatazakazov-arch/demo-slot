@@ -1,5 +1,5 @@
-animation.webp?v=a6afbb85
-size:1954,903
+animation.png?v=1f630839
+size:1854,903
 filter:Linear,Linear
 pma:true
 card_fs
@@ -9,13 +9,13 @@ bounds:742,0,740,350
 card_col
 bounds:0,352,740,350
 logo
-bounds:742,352,492,200
+bounds:742,352,442,200
 logo_flash
-bounds:1236,352,492,200
+bounds:1186,352,442,200
 c_col
-bounds:1730,352,115,126
+bounds:1630,352,115,126
 joker
-bounds:1847,352,105,110
+bounds:1747,352,105,110
 d_col
 bounds:0,704,312,108
 d_hw

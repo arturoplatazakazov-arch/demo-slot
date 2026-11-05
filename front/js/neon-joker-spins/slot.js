@@ -1152,7 +1152,7 @@ const SCREEN_BOX = {
   desk: { x: -800, y: -450, width: 1600, height: 900 },
   mob: { x: -360, y: -640, width: 720, height: 1280 },
 };
-const SCREEN_V = 3;                 // поднимать при пересборке screens
+const SCREEN_V = 4;                 // поднимать при пересборке screens
 const SCREEN_FADE_MS = 500;
 const BONUS_SCREEN_AUTOCLOSE_MS = 10000;
 let screenStage = null;
