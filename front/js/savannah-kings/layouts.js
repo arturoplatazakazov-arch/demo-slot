@@ -10,7 +10,8 @@
 //      plaques never reach down into the symbol window.
 //   1  logo top centre, GRAND MAJOR MINOR MINI in one row on the frame's
 //      top border, reels as large as layout 2's.
-//   3  the frame (as tall as the columns allow), centred on x and at 45% of the stage height
+//   3  one-line title banner on the frame, WIN/BUY left, jackpots right,
+//      the frame centred on x at 45% of the stage height
 //      (60% of it below); the left column (logo, WIN, BUY BONUS) and the
 //      right column (jackpots, MINI at the bottom) are exactly as tall as the
 //      frame, items scaled up as far as the column width allows, equal gaps.
@@ -33,10 +34,18 @@
   const buy = $('.medal--buy');
   const status = $('.medal--status');
   const plaques = ladder ? [...ladder.querySelectorAll('.jp')] : [];
+  // Layout 3's one-line title banner, a sibling of the stacked logo.
+  const logoWide = document.createElement('img');
+  logoWide.className = 'logo logo--wide';
+  logoWide.alt = '';
+  logoWide.src = `${window.SK_ASSET_ROOT || 'img/savannah-kings'}/img/logo_wide.webp`;
+  logoWide.style.display = 'none';
+  if (logo) logo.after(logoWide);
   const touched = [reel, logo, sys, ladder, buy, status, ...plaques].filter(Boolean);
 
   function reset() {
     for (const el of touched) el.removeAttribute('style');
+    logoWide.setAttribute('style', 'display: none');
   }
 
   function cssNum(name) {
@@ -81,79 +90,72 @@
     Object.assign(ladder.style, { top: `${crownTop}px` });
   }
 
-  // --- 3: side columns as tall as the frame ------------------------------
-  const L3_FRAME_MAX = 940;    // frame height on stage: tallest tried
-  const L3_FRAME_MIN = 560;    // ...and the floor
+  // --- 3: title banner on the frame, WIN/BUY left, jackpots right --------
+  // The jackpots (GRAND JP_W wide) stand JP_FRAME_GAP right of the frame;
+  // the frame is centred, so it is as wide as that leaves on both sides.
+  // The one-line logo (logo_wide.webp) rests on the frame's top border and
+  // never reaches down into the symbols; WIN and BUY BONUS stack on the
+  // left, centred on the frame.
   const L3_CY = H * 0.45;      // frame centre: 45% from the top
-  const EDGE = 28;             // outer margin of both columns
-  const COL_GAP = 24;          // between a column and the frame
-  const GAP = 16;              // minimum gap between items in a column
-
-  // The frame and the left column are sized as one width wC (the slot as
-  // large as possible while wC >= COL_MIN_W); the jackpots are JP_K times
-  // that and may lie over the frame's right border.
-  const COL_MIN_W = 240;
-  const JP_EDGE = 14;
-  const JP_K = 1.5;            // jackpot plaques vs the column width
-  function plan3(f, frameH) {
-    const s = frameH / f.h;
-    const fW = f.w * s;
-    const logoR = ratio(logo, 0.6), medalH0 = buy.offsetHeight, md0 = 256;
-    const ps = plaqueRatios();
-    const rightUnit = ps.reduce((a, p) => a + p.r * (p.grand ? 1 : 1 / GRAND_K), 0);
-    const side = W / 2 - fW / 2 - COL_GAP - EDGE;
-    const wC = Math.min(
-      side,
-      (frameH - 2 * GAP) / (logoR + (2 * medalH0) / md0),
-      (frameH - 3 * GAP) / rightUnit,
-    );
-    return { frameH, s, fW, logoR, medalH0, md0, ps, wC, fits: wC >= COL_MIN_W };
-  }
+  const EDGE = 28;             // outer margin of the left column
+  const JP_EDGE = 14;          // jackpot column to the stage edge
+  const JP_FRAME_GAP = 10;     // jackpots / WIN-BUY to the frame
+  const GAP = 16;              // between items in a column
+  const JP_W = 360;            // GRAND width (1.5x the old 240 column)
+  const BANNER_K = 0.8;        // logo banner width vs the frame width
 
   function layout3() {
     const f = frameBox();
     buy.style.zoom = '1';
-    let frameH = L3_FRAME_MAX, p = plan3(f, frameH);
-    while (!p.fits && frameH > L3_FRAME_MIN) { frameH -= 4; p = plan3(f, frameH); }
-    const fLeft = W / 2 - p.fW / 2, fRight = W / 2 + p.fW / 2;
-    const wC = p.wC;
+    const ps = plaqueRatios();
+    const bannerR = logoWide.naturalWidth ? logoWide.naturalHeight / logoWide.naturalWidth : 0.18;
 
-    // Frame centred on x = 960; transform-origin is the reel's centre.
+    // Largest centred frame that leaves the jackpots their room, then
+    // shrink until banner top >= 6 and frame bottom stays above the pill.
+    let fW = W - 2 * (JP_FRAME_GAP + JP_W + JP_EDGE), s, fH, top, winTop, bannerW, bannerH;
+    for (;;) {
+      s = fW / f.w; fH = f.h * s;
+      top = L3_CY - fH / 2;
+      winTop = top - f.y * s;
+      bannerW = fW * BANNER_K; bannerH = bannerW * bannerR;
+      if ((winTop - 4 - bannerH >= 6 && top + fH <= PILL_TOP - 12) || fW < 700) break;
+      fW -= 8;
+    }
+    const fLeft = W / 2 - fW / 2, fRight = W / 2 + fW / 2;
     const dx = f.x + f.w / 2 - WIN_W / 2;
     const dy = f.y + f.h / 2 - WIN_H / 2;
     Object.assign(reel.style, {
-      left: `${W / 2 - WIN_W / 2 - dx * p.s}px`, top: `${L3_CY - WIN_H / 2 - dy * p.s}px`,
-      transform: `scale(${p.s})`, transformOrigin: '50% 50%',
+      left: `${W / 2 - WIN_W / 2 - dx * s}px`, top: `${L3_CY - WIN_H / 2 - dy * s}px`,
+      transform: `scale(${s})`, transformOrigin: '50% 50%',
     });
 
-    // Left: logo, WIN, BUY BONUS, each wC wide.
-    const k = wC / p.md0;
-    const lcx = (EDGE + fLeft - COL_GAP) / 2;
-    const logoH = wC * p.logoR, medalH = p.medalH0 * k;
-    // Tight GAP gaps, the group centred on the frame's vertical centre.
-    const g = GAP;
-    const lTop = L3_CY - (logoH + 2 * medalH + 2 * g) / 2;
-    Object.assign(logo.style, { left: `${lcx - wC / 2}px`, top: `${lTop}px`, width: `${wC}px` });
-    // zoom scales the medallion and its own left/top, so place in zoomed px.
+    // Title banner: bottom just above the symbol window, over the top border.
+    logo.style.display = 'none';
+    Object.assign(logoWide.style, {
+      display: 'block', left: `${W / 2 - bannerW / 2}px`, top: `${winTop - 4 - bannerH}px`, width: `${bannerW}px`,
+      zIndex: '7',   // over the frame's crest
+    });
+
+    // Left: WIN and BUY BONUS, as wide as the room allows, centred on the frame.
+    const room = fLeft - JP_FRAME_GAP - EDGE;
+    const md0 = 256, medalH0 = buy.offsetHeight;
+    const wC = Math.min(room, JP_W * 0.8, ((fH - GAP) / 2) * (md0 / medalH0));
+    const k = wC / md0, medalH = medalH0 * k;
+    const lcx = (EDGE + fLeft - JP_FRAME_GAP) / 2;
+    const lTop = L3_CY - (2 * medalH + GAP) / 2;
     const place = (el, y) => Object.assign(el.style, {
       zoom: String(k), left: `${(lcx - wC / 2) / k}px`, right: 'auto', top: `${y / k}px`,
     });
-    place(status, lTop + logoH + g);
-    place(buy, lTop + logoH + g + medalH + g);
+    place(status, lTop);
+    place(buy, lTop + medalH + GAP);
 
-    // Right: jackpots 1.5x the column width (GRAND = JP_K * wC, the others
-    // that / GRAND_K), MINI at the bottom, tight equal gaps, centred on the
-    // frame. Pinned to the stage's right edge; whatever is wider than the
-    // room beside the frame lies over the frame's right border.
-    const wG = JP_K * wC;
-    const x1 = W - JP_EDGE;
-    p.ps.forEach((q) => sizePlaque(q, q.grand ? wG : wG / GRAND_K));
-    const stackH = p.ps.reduce((a, q) => a + q.r * (q.grand ? wG : wG / GRAND_K), 0) + 3 * GAP;
-    const colH = Math.max(frameH, stackH);
+    // Right: jackpots, MINI at the bottom, JP_FRAME_GAP from the frame.
+    ps.forEach((q) => sizePlaque(q, q.grand ? JP_W : JP_W / GRAND_K));
+    const stackH = ps.reduce((a, q) => a + q.r * (q.grand ? JP_W : JP_W / GRAND_K), 0) + 3 * GAP;
     Object.assign(ladder.style, {
-      left: `${x1 - wG}px`, right: 'auto', width: `${wG}px`,
-      top: `${L3_CY - colH / 2}px`, height: `${colH}px`, transform: 'none',
-      justifyContent: 'center', alignItems: 'flex-end', gap: `${GAP}px`, zIndex: '6',
+      left: `${fRight + JP_FRAME_GAP}px`, right: 'auto', width: `${JP_W}px`,
+      top: `${L3_CY - stackH / 2}px`, height: `${stackH}px`, transform: 'none',
+      justifyContent: 'center', alignItems: 'flex-start', gap: `${GAP}px`, zIndex: '6',
     });
 
     // The system buttons move off the jackpot column, next to the pill.
@@ -215,7 +217,7 @@
   // (slot.js toggles body.is-portrait in its own resize handler first).
   window.addEventListener('load', arrange);
   window.addEventListener('resize', () => requestAnimationFrame(arrange));
-  [logo, ...plaques.map((p) => p.querySelector('img'))].forEach((img) => {
+  [logo, logoWide, ...plaques.map((p) => p.querySelector('img'))].forEach((img) => {
     if (img && !img.complete) img.addEventListener('load', arrange, { once: true });
   });
 })();
