@@ -292,6 +292,15 @@ def job_logo_wide():
     save_png(tight(load('logo_wide')), IMG / 'logo_wide.png', max_w=1400)
 
 
+def job_popups():
+    """Tier popup emblems (BIG/MEGA/EPIC WIN, MINI..GRAND JACKPOT), tight-cropped."""
+    for t in ('big', 'mega', 'epic', 'mini', 'minor', 'major', 'grand'):
+        try:
+            save_png(tight(load(f'popup_{t}')), IMG / f'popup_{t}.png', max_w=900)
+        except FileNotFoundError as e:
+            print('  skip', e)
+
+
 def job_frame():
     """Measure the window (transparent hole) and re-slice the frame so the
     hole is exactly 5:3 (square cells): corners keep their size, the plain
@@ -481,7 +490,7 @@ def job_cover():
 
 
 JOBS = {
-    'symbols': job_symbols, 'wild_big': job_wild_big, 'bg': job_bg, 'logo': job_logo, 'logo_wide': job_logo_wide,
+    'symbols': job_symbols, 'wild_big': job_wild_big, 'bg': job_bg, 'logo': job_logo, 'logo_wide': job_logo_wide, 'popups': job_popups,
     'frame': job_frame, 'jackpots': job_jackpots, 'wheel': job_wheel, 'titles': job_titles,
     'panel': job_panel, 'cards': job_cards, 'mascot': job_mascot, 'cover': job_cover,
 }

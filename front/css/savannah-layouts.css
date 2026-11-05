@@ -76,3 +76,48 @@ body:not(.is-portrait) .screen[data-layout="1"] .crown--ladder {
 body:not(.is-portrait) .screen[data-layout="1"] .crown--ladder .jp { width: 310px; font-size: 26px; }
 body:not(.is-portrait) .screen[data-layout="1"] .crown--ladder .jp--grand { width: 350px; font-size: 32px; }
 body:not(.is-portrait) .screen[data-layout="1"] .crown__top::before { width: 120%; height: 160%; }
+
+/* --- Tier popup art (window.SK_POPUP_ART): BIG / MEGA / EPIC WIN and the
+   four jackpots are full emblems (character + title) instead of a wordmark;
+   the counting amount panel sits under the emblem. ---------------------- */
+.sk-popup__art {
+  display: block; width: 560px; margin-bottom: -50px;
+  filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.6));
+  animation: title-in 0.7s cubic-bezier(.2, 1.4, .4, 1) both;
+}
+.sk-popup.is-tier-mega .sk-popup__art { width: 600px; }
+.sk-popup.is-tier-epic .sk-popup__art { width: 640px; }
+.sk-popup__art + .sk-popup__panel { z-index: 1; }
+.wheel-award__art {
+  display: block; width: 540px; margin-bottom: -40px;
+  filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.6));
+  animation: title-in 0.7s cubic-bezier(.2, 1.4, .4, 1) both;
+}
+.wheel-award[data-tier="minor"] .wheel-award__art { width: 570px; }
+.wheel-award[data-tier="major"] .wheel-award__art { width: 600px; }
+.wheel-award[data-tier="grand"] .wheel-award__art { width: 650px; }
+.wheel-award.has-art .wheel-award__tier { display: none; }
+.wheel-award__art + .wheel-award__tier + .wheel-award__panel { position: relative; z-index: 1; }
+body.is-portrait .sk-popup__art { width: 820px; }
+body.is-portrait .wheel-award__art { width: 800px; }
+
+/* --- DEMO panel (js/savannah-kings/demo.js): replay the win / jackpot
+   popups; collapsed to a small tab by default, visible on deployed pages. */
+.demo-panel {
+  position: fixed; left: 12px; top: 12px; z-index: 120;
+  display: flex; flex-direction: column; gap: 6px; width: 132px;
+  font: 700 13px/1 system-ui, sans-serif;
+}
+.demo-panel:not([open]) { width: auto; }
+.demo-btn {
+  padding: 8px 12px; border-radius: 8px; text-align: left;
+  border: 1px solid rgba(255, 213, 106, 0.45);
+  background: rgba(10, 6, 4, 0.8); color: #ffd75a; cursor: pointer;
+  font: inherit; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+}
+.demo-btn:hover { background: rgba(255, 213, 106, 0.16); }
+.demo-btn--all { background: #ffd75a; color: #1a0b06; }
+.demo-panel__toggle { list-style: none; text-align: center; letter-spacing: 0.08em; }
+.demo-panel__toggle::-webkit-details-marker { display: none; }
+.demo-panel.is-busy .demo-btn:not(.demo-panel__toggle) { opacity: 0.5; pointer-events: none; }
+body.is-buying .demo-panel { display: none; }

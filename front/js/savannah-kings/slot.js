@@ -544,10 +544,13 @@ function renderJackpots(bet) {
 //
 // Title wordmark (carved gold, from the art) over a stone-and-gold panel with
 // a live number that counts up. Money popups rain coins over the dim.
+// Pages that ship tier popup art (popup_big ... popup_grand) set
+// window.SK_POPUP_ART; the others keep the plain wordmark titles.
+const POPUP_ART = !!window.SK_POPUP_ART;
 const POPUP_CONFIG = {
-  bigWin: { title: 'title_big.webp', kind: 'money', tier: 'big', count: 2600 },
-  megaWin: { title: 'title_mega.webp', kind: 'money', tier: 'mega', count: 3400 },
-  epicWin: { title: 'title_epic.webp', kind: 'money', tier: 'epic', count: 4200 },
+  bigWin: { title: 'title_big.webp', art: 'popup_big.webp', kind: 'money', tier: 'big', count: 2600 },
+  megaWin: { title: 'title_mega.webp', art: 'popup_mega.webp', kind: 'money', tier: 'mega', count: 3400 },
+  epicWin: { title: 'title_epic.webp', art: 'popup_epic.webp', kind: 'money', tier: 'epic', count: 4200 },
   freeSpinsIntro: { title: 'title_freespins.webp', kind: 'count', sub: 'FREE SPINS AWARDED' },
   freeSpinsMore: { title: 'title_freespins.webp', kind: 'count', sub: 'EXTRA FREE SPINS', plus: true },
   freeSpinsTotal: { title: 'title_totalwin.webp', kind: 'money', tier: 'total', count: 2400 },
@@ -574,7 +577,9 @@ function buildPopupNode(key, amount) {
   if (cfg.tier) root.classList.add(`is-tier-${cfg.tier}`);
   root.innerHTML = `
     <div class="sk-popup__rays"></div>
-    <img class="sk-popup__title" src="${img(cfg.title)}" alt="">
+    ${POPUP_ART && cfg.art
+      ? `<img class="sk-popup__art" src="${img(cfg.art)}" alt="">`
+      : `<img class="sk-popup__title" src="${img(cfg.title)}" alt="">`}
     <div class="sk-popup__panel">
       <img src="${img('panel.webp')}" alt="">
       <div class="sk-popup__value"></div>
@@ -703,6 +708,46 @@ function buildWheel(segments) {
 
 // Plays the whole wheel moment and resolves when the award has been shown.
 // `result` = response.wheel_of_fortune. `auto`: autoplay spins it after 3s.
+// The jackpot award screen (tier emblem or word + counting amount), shown at
+// the end of a wheel round; also called by the demo panel (js/savannah-kings/demo.js).
+async function showJackpotAward(tier, amount, { auto = false } = {}) {
+  const overlay = document.getElementById('wheelOverlay');
+  overlay.hidden = false;
+  overlay.classList.add('is-in');
+  const award = document.getElementById('wheelAward');
+  award.dataset.tier = tier;
+  award.querySelector('.wheel-award__tier').textContent = SECTOR_STYLE[tier].label;
+  if (POPUP_ART) {
+    // Pages with tier popup art show the jackpot's own emblem instead of the word.
+    let art = award.querySelector('.wheel-award__art');
+    if (!art) {
+      art = document.createElement('img');
+      art.className = 'wheel-award__art';
+      art.alt = '';
+      award.querySelector('.wheel-award__tier').before(art);
+    }
+    art.src = img(`popup_${tier}.webp`);
+    award.classList.add('has-art');
+  }
+  const value = award.querySelector('.wheel-award__value');
+  value.textContent = money(0);
+  award.hidden = false;
+  overlay.classList.add('has-award');
+  void award.offsetWidth;
+  award.classList.add('is-in');
+  Sound.playSfx(tier === 'grand' || tier === 'major' ? 'epicWin' : 'bigWin');
+  if (window.SKFx) SKFx.startShower(tier === 'grand' ? 'epic' : tier === 'major' ? 'mega' : 'big');
+  await countUp(value, amount, tier === 'grand' ? 4200 : tier === 'major' ? 3200 : 2200, (v) => money(Math.round(v)));
+  await wait(auto ? 2200 : 2600);
+  if (window.SKFx) SKFx.stopShower();
+  award.classList.remove('is-in');
+  overlay.classList.remove('is-in', 'is-stopped', 'has-award');
+  await wait(450);
+  award.hidden = true;
+  overlay.hidden = true;
+  Sound.playMusic(document.getElementById('screen').dataset.mode === 'freespins' ? 'bonus' : 'base');
+}
+
 async function playJackpotWheel(result, bet, { auto = false, bought = false } = {}) {
   if (!wheelSegments) buildWheel(result.segments);
   const overlay = document.getElementById('wheelOverlay');
@@ -755,27 +800,7 @@ async function playJackpotWheel(result, bet, { auto = false, bought = false } = 
   if (window.SKFx) SKFx.burstAt(document.getElementById('wheelPointer'), 'gold');
   await wait(900);
 
-  // Award screen.
-  const award = document.getElementById('wheelAward');
-  award.dataset.tier = tier;
-  award.querySelector('.wheel-award__tier').textContent = SECTOR_STYLE[tier].label;
-  const value = award.querySelector('.wheel-award__value');
-  value.textContent = money(0);
-  award.hidden = false;
-  overlay.classList.add('has-award');
-  void award.offsetWidth;
-  award.classList.add('is-in');
-  Sound.playSfx(tier === 'grand' || tier === 'major' ? 'epicWin' : 'bigWin');
-  if (window.SKFx) SKFx.startShower(tier === 'grand' ? 'epic' : tier === 'major' ? 'mega' : 'big');
-  await countUp(value, result.win_amount, tier === 'grand' ? 4200 : tier === 'major' ? 3200 : 2200, (v) => money(Math.round(v)));
-  await wait(auto ? 2200 : 2600);
-  if (window.SKFx) SKFx.stopShower();
-  award.classList.remove('is-in');
-  overlay.classList.remove('is-in', 'is-stopped', 'has-award');
-  await wait(450);
-  award.hidden = true;
-  overlay.hidden = true;
-  Sound.playMusic(document.getElementById('screen').dataset.mode === 'freespins' ? 'bonus' : 'base');
+  await showJackpotAward(tier, result.win_amount, { auto });
 }
 
 // Ratchet clicks as the studs pass the pointer, read off the live transform.
@@ -897,6 +922,11 @@ function preloadAssets() {
     'title_big.webp', 'title_mega.webp', 'title_epic.webp', 'title_freespins.webp', 'title_totalwin.webp',
     'title_jackpot.webp', 'title_buybonus.webp', 'card_fs.webp', 'card_wheel.webp',
   ]) tasks.push(track(preloadImage(img(f))));
+  if (POPUP_ART) {
+    for (const t of ['big', 'mega', 'epic', 'mini', 'minor', 'major', 'grand']) {
+      tasks.push(track(preloadImage(img(`popup_${t}.webp`))));
+    }
+  }
   const suffix = isPortrait() ? '_mob' : '';
   tasks.push(track(preloadImage(img(`bg_base${suffix}.jpg`))));
   tasks.push(track(preloadImage(img(`bg_bonus${suffix}.jpg`))));

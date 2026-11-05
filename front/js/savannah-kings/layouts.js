@@ -187,9 +187,38 @@
     Object.assign(reel.style, { top: `${winTop}px`, transform: `scale(${s})`, transformOrigin: '50% 0' });
   }
 
+  // --- Portrait (phones): the jackpot ladder (5% larger) on top, then the
+  // frame with the one-line title banner lying over its top border (never
+  // over the symbols); the medallions follow the frame.
+  const P_SCALE = 1.034;
+  function layoutPortrait() {
+    const f = frameBox();
+    const ps = plaqueRatios();
+    const wGrand = 380 * 1.05, wRow = 300 * 1.05;
+    ps.forEach((q) => sizePlaque(q, q.grand ? wGrand : wRow));
+    const crownTop = 20;
+    const crownH = ps.filter((q) => q.grand).reduce((a, q) => a + q.r * wGrand, 0)
+      + 8 + Math.max(...ps.filter((q) => !q.grand).map((q) => q.r * wRow));
+    Object.assign(ladder.style, { top: `${crownTop}px` });
+
+    const bannerR = logoWide.naturalWidth ? logoWide.naturalHeight / logoWide.naturalWidth : 0.2;
+    const bannerW = Math.min(900, f.w * P_SCALE * BANNER_K);
+    const bannerH = bannerW * bannerR;
+    const bannerTop = crownTop + crownH + 10;
+    const winTop = bannerTop + bannerH + 4;
+    logo.style.display = 'none';
+    Object.assign(logoWide.style, {
+      display: 'block', left: `${(1080 - bannerW) / 2}px`, top: `${bannerTop}px`, width: `${bannerW}px`, zIndex: '7',
+    });
+    Object.assign(reel.style, { top: `${winTop}px`, transform: `scale(${P_SCALE})`, transformOrigin: '50% 0' });
+    const frameBottom = winTop + (f.y + f.h) * P_SCALE;
+    status.style.top = `${frameBottom + 16}px`;
+    buy.style.top = `${frameBottom + 16}px`;
+  }
+
   function arrange() {
     reset();
-    if (document.body.classList.contains('is-portrait')) return;
+    if (document.body.classList.contains('is-portrait')) { layoutPortrait(); return; }
     const v = screen.dataset.layout;
     if (v === '2') layout2();
     else if (v === '3') layoutTop();
