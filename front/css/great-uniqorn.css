@@ -547,7 +547,8 @@ body.is-feature-screen .layout-switch { visibility: hidden; }
 .buy-dialog__hero {
   position: absolute;
   left: 100px;
-  top: 113px;
+  /* опущен на 75px (было 113): обрезанный низ героя прячется под плашку цены */
+  top: 188px;
   width: 563px;
   pointer-events: none;
 }
@@ -556,10 +557,12 @@ body.is-feature-screen .layout-switch { visibility: hidden; }
   position: absolute;
   left: 0;
   right: 0;
-  top: 600px;
+  top: 610px;
   text-align: center;
+  white-space: nowrap;
   font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
-  font-size: 104px;
+  /* «BUY BONUS SPINS» длиннее «BUY FREE SPINS»: 104 -> 86, в одну строку */
+  font-size: 86px;
   line-height: 1;
   letter-spacing: 0.01em;
   background: linear-gradient(180deg, #fff4c2 0%, #ffd56a 38%, #e09a1f 62%, #ffcf5c 100%);
