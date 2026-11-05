@@ -527,7 +527,8 @@ function getReelSpin() {
       loopFiller: randomSymbolCode,
       codes: SYMBOL_CODES,
       onReelStop: (col, isLast) => {
-        Sound.playSfx(isLast ? 'finalReelStop' : 'reelStop');
+        Sound.reelStop(col, isLast);
+        if (isLast) Sound.stopLoop('reelLoop');
         fx('reelStop', col);
       },
     });
@@ -538,6 +539,7 @@ window.addEventListener('load', () => getReelSpin());
 
 function startReelLoop() {
   Sound.playSfx('spinStart');
+  Sound.startLoop('reelLoop');
   reelsBusy = true;
   teardownCellInstances();
   hideInlineWinAmount();
@@ -548,6 +550,7 @@ function startReelLoop() {
 
 function stopReelLoop() {
   reelsBusy = false;
+  Sound.stopLoop('reelLoop');
   getReelSpin().stopLoop();
 }
 
@@ -577,7 +580,8 @@ function settleColumnCells(cellEls, col, finalCodes) {
         const p = cellCentreInStage(info);
         ringAt(p.x, p.y, info.symbol === SCATTER_CODE ? 'ring_pink' : 'ring_cyan', rowStep * 1.1, 520);
       }, 20);
-      Sound.blip(info.symbol === SCATTER_CODE ? 660 : 990);
+      if (info.symbol === COIN_CODE && Sound.has('coinLand')) Sound.playSfx('coinLand');
+      else Sound.blip(info.symbol === SCATTER_CODE ? 660 : 990);
     }
   }
 }
@@ -810,6 +814,9 @@ function hitPlate(tier) {
 // --- Free Spins: режим и панель -------------------------------------------------
 
 function setFreeSpinsMode(on) {
+  const was = document.getElementById('screen').classList.contains('is-fs');
+  if (was !== on) Sound.playOr(on ? 'bonusEnter' : 'bonusExit');
+  Sound.music(on ? 'bonus' : 'base');
   document.getElementById('screen').classList.toggle('is-fs', on);
   fx('setMode', on ? 'fs' : 'base');
   document.getElementById('fsPanel').classList.toggle('is-on', on);
@@ -903,6 +910,8 @@ function tweenHwTotal(to, ms = 260) {
 }
 
 function enterHoldAndWinMode() {
+  Sound.playOr('bonusEnter');
+  Sound.music('bonus');
   document.getElementById('screen').classList.add('is-hw');
   fx('holdWinStart');
   fx('setMode', 'hw');
@@ -916,6 +925,8 @@ function exitHoldAndWinMode() {
   document.getElementById('hwPanel').classList.remove('is-on');
   if (screen.classList.contains('is-fs')) document.getElementById('fsPanel').classList.add('is-on');
   fx('setMode', screen.classList.contains('is-fs') ? 'fs' : 'base');
+  Sound.playOr('bonusExit');
+  Sound.music(screen.classList.contains('is-fs') ? 'bonus' : 'base');
 }
 window.exitHoldAndWinMode = exitHoldAndWinMode;
 
@@ -1384,6 +1395,7 @@ async function init() {
   document.dispatchEvent(new Event('njs:ready'));
   if (window.Preloader) window.Preloader.done();
   window.__slot = { cellInfos };
+  Sound.music('base');   // пакет страницы: играет с первого касания
   showFeatureScreen();
 }
 

@@ -360,9 +360,24 @@ async function restoreActiveRound() {
   try { localStorage.setItem(SESSION_KEY, gameState.sessionId); } catch { /* ignore */ }
 }
 
+// Звук кнопки: у пакета страницы свои звуки ставки, меню, турбо и автоспина
+// (без пакета — общий клик). Спин звучит своим spinStart, клик поверх не нужен.
+const BUTTON_SOUNDS = [
+  ['[data-action="bet-plus"]', 'betPlus'],
+  ['[data-action="bet-minus"]', 'betMinus'],
+  ['#v3MenuBtn', 'menu'],
+  ['#v3TurboBtn', 'turbo'],
+  ['#v3AutoBtn, .v3-chip', 'autospin'],
+];
 function setupClickSounds() {
-  document.querySelectorAll('.ui-icon-btn, .ui-spin-btn, .buy-btn').forEach((btn) => {
-    btn.addEventListener('click', () => Sound.playSfx('click'));
+  const own = (btn) => BUTTON_SOUNDS.find(([sel, name]) => btn.matches(sel) && Sound.has(name));
+  document.querySelectorAll('.ui-icon-btn, .ui-spin-btn, .buy-btn, .v3-chip').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const hit = own(btn);
+      if (hit) Sound.playSfx(hit[1]);
+      else if (btn.matches('.ui-spin-btn') && Sound.has('reelLoop')) return;
+      else if (!btn.matches('.v3-chip')) Sound.playSfx('click');
+    });
   });
 }
 

@@ -306,6 +306,88 @@ def build(x: str) -> dict:
 
 # Per-skin CSS that is about the look, not the measured geometry.
 EXTRA_CSS = {
+    # A: casino life on the reels (with js/neon-joker-spins/skin-fx.js) —
+    # neon bounce on landing, breathing neon on specials, a springy pop with a
+    # rotating ray halo on wins, glint sweeps and star sparkles; the four
+    # jackpot plates swell one after another (GRAND -> MINI) once every 7 s.
+    "a": """.reel__cell[data-symbol].is-landing > img.sym { animation: a-land 360ms cubic-bezier(.3,1.5,.5,1); }
+@keyframes a-land {
+  0% { transform: translateY(-7%) scale(1.04, 0.94); filter: brightness(1.6) drop-shadow(0 0 10px #ff3cac); }
+  45% { transform: translateY(2%) scale(0.96, 1.05); }
+  100% { transform: none; filter: none; }
+}
+.reel__cell[data-symbol="wild"] > img.sym,
+.reel__cell[data-symbol="seven"] > img.sym,
+.reel__cell[data-symbol="coin"] > img.sym,
+.reel__cell[data-symbol="collector"] > img.sym { animation: a-neon 3.2s ease-in-out infinite; }
+.reel__col:nth-child(2) .reel__cell > img.sym { animation-delay: -1.1s; }
+.reel__col:nth-child(3) .reel__cell > img.sym { animation-delay: -2.2s; }
+@keyframes a-neon {
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(255, 60, 172, 0.35)); }
+  50% { filter: drop-shadow(0 0 12px rgba(255, 60, 172, 0.85)) drop-shadow(0 0 22px rgba(44, 232, 255, 0.35)) brightness(1.08); }
+}
+.reel__cell[data-symbol="scatter"] > img.sym { animation: a-joker 4s ease-in-out infinite; }
+@keyframes a-joker {
+  0%, 100% { transform: none; filter: drop-shadow(0 0 6px rgba(44, 232, 255, 0.5)); }
+  20% { transform: rotate(-4deg) scale(1.04); }
+  40% { transform: rotate(3deg) scale(1.02); filter: drop-shadow(0 0 16px rgba(255, 60, 172, 0.9)) brightness(1.15); }
+  60% { transform: none; }
+}
+.reel__cell.is-winning > img.sym,
+.reel__cell[data-symbol].is-winning > img.sym { animation: a-win 620ms cubic-bezier(.3,1.4,.5,1); }
+@keyframes a-win {
+  0% { transform: scale(1); filter: none; }
+  18% { transform: scale(1.24) rotate(-5deg); filter: brightness(1.55) drop-shadow(0 0 16px #ffd75a) drop-shadow(0 0 30px #ff3cac); }
+  38% { transform: scale(0.95) rotate(3deg); }
+  58% { transform: scale(1.1) rotate(-1.5deg); filter: brightness(1.25) drop-shadow(0 0 12px #2ce8ff); }
+  78% { transform: scale(0.99); }
+  100% { transform: scale(1); filter: none; }
+}
+.reel__cell.is-win-active::before {
+  content: ''; position: absolute; inset: -6%; z-index: 0; border-radius: 50%; pointer-events: none;
+  background:
+    radial-gradient(circle, rgba(255, 60, 172, 0.85) 0%, rgba(255, 60, 172, 0.3) 45%, transparent 72%),
+    repeating-conic-gradient(from 0deg, rgba(255, 215, 90, 0.75) 0deg 9deg, transparent 9deg 24deg);
+  -webkit-mask: radial-gradient(circle, #000 45%, transparent 78%); mask: radial-gradient(circle, #000 45%, transparent 78%);
+  animation: a-rays 2.4s linear infinite, a-halo 620ms ease-in-out infinite alternate;
+}
+@keyframes a-rays { to { transform: rotate(360deg); } }
+@keyframes a-halo { from { opacity: 0.55; } to { opacity: 1; } }
+.sym-glint {
+  position: absolute; z-index: 2; pointer-events: none;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.9) 48%, rgba(255, 240, 255, 0.95) 50%, transparent 62%) 0 0 / 260% 100% no-repeat;
+  mix-blend-mode: screen; opacity: 0;
+  animation: a-glint 820ms ease-in-out both;
+}
+@keyframes a-glint {
+  0% { background-position: 130% 0; opacity: 0; }
+  15% { opacity: 0.85; }
+  85% { opacity: 0.85; }
+  100% { background-position: -40% 0; opacity: 0; }
+}
+.sym-spark {
+  position: absolute; z-index: 3; width: 28px; height: 28px; margin: -14px 0 0 -14px; pointer-events: none;
+  background: radial-gradient(circle, #fff 0 18%, rgba(255, 60, 172, 0.9) 30%, transparent 62%);
+  clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+  animation: a-spark 760ms cubic-bezier(.2,.8,.4,1) both;
+}
+.sym-spark.is-cyan { background: radial-gradient(circle, #fff 0 18%, rgba(44, 232, 255, 0.9) 30%, transparent 62%); }
+@keyframes a-spark {
+  0% { transform: translate(0, 0) scale(0.2) rotate(0); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(var(--s)) rotate(160deg); opacity: 0; }
+}
+.jackpots .jp:not(.is-hit) { animation: a-jp-wave 7s ease-in-out infinite; transform-origin: 50% 50%; }
+.jackpots .jp--grand:not(.is-hit) { animation-delay: 0s; }
+.jackpots .jp--major:not(.is-hit) { animation-delay: 0.3s; }
+.jackpots .jp--minor:not(.is-hit) { animation-delay: 0.6s; }
+.jackpots .jp--mini:not(.is-hit) { animation-delay: 0.9s; }
+@keyframes a-jp-wave {
+  0%, 9%, 100% { transform: scale(1); filter: none; }
+  4% { transform: scale(1.16); filter: brightness(1.35) drop-shadow(0 0 14px #ffd75a) drop-shadow(0 0 26px #ff3cac); }
+  6.5% { transform: scale(0.98); }
+}
+""",
     # D: paper reel strips on drums — cream, darker towards the top/bottom edge
     # (cylinder), thin shadow between the drums; Hold & Win dims the paper.
     "d": """.reel { background:
@@ -409,6 +491,21 @@ def css(x: str, g: dict) -> str:
     return "\n".join(L) + "\n"
 
 
+# Skins we work on as their own game from now on: no version switcher on the page.
+STANDALONE = {"c"}
+# Own sound pack (scripts/neon_joker_spins_c_sfx.py install): file per game sound
+# name, read by js/neon-joker-spins/sound.js from window.NJS_SOUND_PACK.
+SOUND_PACKS = {
+    "c": ("sound/neon-joker-spins-c/", {
+        "music_base": "bg_base.mp3", "music_bonus": "bg_bonus.mp3", "spinStart": "spin.mp3",
+        "reelLoop": "reel_loop.mp3", "reelStop1": "reel_stop_1.mp3", "reelStop2": "reel_stop_2.mp3",
+        "reelStop3": "reel_stop_3.mp3", "coinLand": "coin_land.mp3", "smallWin": "win_small.mp3",
+        "bigWin": "win_big.mp3", "megaWin": "win_mega.mp3", "epicWin": "win_epic.mp3",
+        "bonusEnter": "bonus_enter.mp3", "bonusExit": "bonus_exit.mp3", "click": "ui_click.mp3",
+        "popupOpen": "ui_popup_open.mp3", "popupClose": "ui_popup_close.mp3", "autospin": "ui_autospin.mp3",
+        "betPlus": "ui_bet_plus.mp3", "betMinus": "ui_bet_minus.mp3", "menu": "ui_menu.mp3", "turbo": "ui_turbo.mp3",
+    }),
+}
 NAMES = {"a": "A · Neon Sign", "b": "B · Glossy Show", "c": "C · Rock Chrome", "d": "D · Retro 80s"}
 
 SWITCHER_RE = r"\n  <!-- Скин-сравнение.*?a\.search = location\.search;</script>\n"
@@ -458,19 +555,27 @@ def page(x: str) -> str:
     reps = [
         ("<title>Neon Joker Spins — demo</title>", f"<title>Neon Joker Spins {x.upper()} — demo</title>"),
         ('<link rel="stylesheet" href="css/neon-joker-spins.css?v=3">',
-         f'<link rel="stylesheet" href="css/neon-joker-spins.css?v=3">\n<link rel="stylesheet" href="css/njs-skin-{x}.css?v=1">'),
+         f'<link rel="stylesheet" href="css/neon-joker-spins.css?v=3">\n<link rel="stylesheet" href="css/njs-skin-{x}.css?v=3">'),
         ("img/neon-joker-spins/img/logo.webp?v=2", f"{root}/img/logo.webp?v=1"),
         ("img/neon-joker-spins/img/mascot.webp?v=1", f"{root}/img/mascot.webp?v=1"),
         ("img/neon-joker-spins/coins/collector.webp?v=1", f"{root}/coins/collector.webp?v=1"),
         # без Spine-пака: он нарисован под оригинальный арт
         ('  <script src="js/neon-joker-spins/fx.js?v=1"></script>\n', ""),
-        ('  <script src="js/neon-joker-spins/slot.js?v=3"></script>',
+        ('  <script src="js/neon-joker-spins/slot.js?v=4"></script>',
          f"  <script>window.NJS_ASSET_ROOT = '{root}'; window.NJS_SKIN = '{x}';</script>\n"
          '  <script src="js/neon-joker-spins/winlines.js?v=6"></script>\n'
-         '  <script src="js/neon-joker-spins/slot.js?v=3"></script>\n'
-         '  <script src="js/neon-joker-spins/mascot.js?v=1"></script>'),
-        ('  <div class="screen" id="screen">', SWITCHER.format(links=links) + '\n  <div class="screen" id="screen">'),
+         '  <script src="js/neon-joker-spins/slot.js?v=4"></script>\n'
+         '  <script src="js/neon-joker-spins/mascot.js?v=1"></script>\n'
+         '  <script src="js/neon-joker-spins/skin-fx.js?v=2"></script>'),
+        ('  <div class="screen" id="screen">',
+         ('' if x in STANDALONE else SWITCHER.format(links=links)) + '\n  <div class="screen" id="screen">'),
     ]
+    if x in SOUND_PACKS:
+        d, files = SOUND_PACKS[x]
+        import json as _json
+        reps.append(('  <script src="js/neon-joker-spins/sound.js?v=2"></script>',
+                     f"  <script>window.NJS_SOUND_PACK = {_json.dumps({'dir': d, 'files': files})};</script>\n"
+                     '  <script src="js/neon-joker-spins/sound.js?v=2"></script>'))
     for a, b in reps:
         assert a in html, a
         html = html.replace(a, b)

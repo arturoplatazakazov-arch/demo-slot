@@ -1,4 +1,4 @@
-// Neon Joker Spins — звук. Механика как у tesla-spins/sound.js (one-shot SFX
+// Neon Joker Spins — звук (+ пакет версии C: музыка, петля барабанов, свои UI). Механика как у tesla-spins/sound.js (one-shot SFX
 // через WebAudio, мягкое падение на отсутствующем файле): тиры выигрыша и
 // петли — из неонового пака neon-reels (тот же синт-поп), барабаны и UI —
 // общие. Своё — СИНТЕЗ: «искра» Коллектора (короткий восходящий блип, высота
@@ -20,7 +20,16 @@ const SOUND_FILES = {
   popupClose: COMMON + 'Popup-close.mp3',
 };
 
+// Страница может принести свой звуковой пакет (версия C: window.NJS_SOUND_PACK
+// = { dir, files: { name: file } }) — его файлы заменяют/дополняют общие. Без
+// пакета игра звучит как раньше; всё новое ниже (музыка, петли, отдельные
+// звуки кнопок и барабанов) молча молчит, если файла нет.
+const PACK = window.NJS_SOUND_PACK;
+if (PACK) for (const [name, file] of Object.entries(PACK.files)) SOUND_FILES[name] = PACK.dir + file;
+
 const SFX_VOLUME = 0.7;
+const MUSIC_VOLUME = 0.42;
+const LOOP_VOLUME = 0.5;
 
 let muted = localStorage.getItem('slot.muted') === '1';
 let audioUnlocked = false;
@@ -53,6 +62,61 @@ function playSfx(name) {
   source.buffer = sfxBuffers[name];
   source.connect(sfxGain);
   source.start();
+}
+
+const has = (name) => !!SOUND_FILES[name];
+// Звук с запасным: свой файл пакета, иначе общий.
+function playOr(name, fallback) {
+  if (has(name)) playSfx(name);
+  else if (fallback) playSfx(fallback);
+}
+
+// --- петли и музыка (WebAudio buffer loop: у <audio loop> щель на стыке mp3) ---
+
+const loops = {};          // name -> { src, gain }
+function startLoop(name, volume = LOOP_VOLUME, fade = 0.05) {
+  if (!sfxCtx || !sfxBuffers[name] || loops[name]) return;
+  if (sfxCtx.state === 'suspended') sfxCtx.resume();
+  const src = sfxCtx.createBufferSource();
+  src.buffer = sfxBuffers[name];
+  src.loop = true;
+  const g = sfxCtx.createGain();
+  const t = sfxCtx.currentTime;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(muted ? 0.0001 : volume, t + fade);
+  src.connect(g).connect(sfxCtx.destination);
+  src.start();
+  loops[name] = { src, gain: g, volume };
+}
+function stopLoop(name, fade = 0.08) {
+  const l = loops[name];
+  if (!l) return;
+  delete loops[name];
+  const t = sfxCtx.currentTime;
+  l.gain.gain.cancelScheduledValues(t);
+  l.gain.gain.setValueAtTime(Math.max(0.0001, l.gain.gain.value), t);
+  l.gain.gain.exponentialRampToValueAtTime(0.0001, t + fade);
+  l.src.stop(t + fade + 0.02);
+}
+
+// Фоновая музыка: 'base' | 'bonus' | null, смена — кроссфейдом.
+let musicKind = null;
+let wantMusic = null;
+function music(kind) {
+  wantMusic = kind;
+  if (!audioUnlocked) return;            // запустится по первому касанию
+  if (kind === musicKind) return;
+  if (musicKind) stopLoop(`music_${musicKind}`, 0.9);
+  musicKind = kind;
+  if (!kind || !has(`music_${kind}`)) return;
+  if (sfxBuffers[`music_${kind}`]) startLoop(`music_${kind}`, MUSIC_VOLUME, 0.9);
+  else Promise.all(sfxLoadPromises).then(() => { if (musicKind === kind) startLoop(`music_${kind}`, MUSIC_VOLUME, 0.9); });
+}
+
+// Остановка барабана: у пакета свой звук на каждый барабан.
+function reelStop(col, isLast) {
+  if (has(`reelStop${col + 1}`)) playSfx(`reelStop${col + 1}`);
+  else playSfx(isLast ? 'finalReelStop' : 'reelStop');
 }
 
 // --- синтез ------------------------------------------------------------------
@@ -101,6 +165,7 @@ function unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
   if (sfxCtx && sfxCtx.state === 'suspended') sfxCtx.resume();
+  if (wantMusic) Promise.all(sfxLoadPromises).then(() => { const k = wantMusic; musicKind = null; music(k); });
 }
 
 function updateSoundIcon() {
@@ -112,6 +177,10 @@ function setMuted(next) {
   muted = next;
   localStorage.setItem('slot.muted', muted ? '1' : '0');
   updateSoundIcon();
+  if (sfxCtx) {
+    const t = sfxCtx.currentTime;
+    for (const l of Object.values(loops)) l.gain.gain.setTargetAtTime(muted ? 0.0001 : l.volume, t, 0.05);
+  }
 }
 
 window.addEventListener('pointerdown', unlockAudio, { once: true });
@@ -119,6 +188,12 @@ window.addEventListener('keydown', unlockAudio, { once: true });
 
 window.Sound = {
   playSfx,
+  playOr,
+  has,
+  startLoop,
+  stopLoop,
+  music,
+  reelStop,
   spark,
   ding,
   blip,
@@ -127,6 +202,9 @@ window.Sound = {
   preloadPromises: sfxLoadPromises,
   get muted() {
     return muted;
+  },
+  get musicPlaying() {
+    return musicKind && loops[`music_${musicKind}`] ? musicKind : null;
   },
 };
 
