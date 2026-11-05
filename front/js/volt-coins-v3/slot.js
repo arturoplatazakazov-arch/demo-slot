@@ -2169,7 +2169,7 @@ function getScreenStage() {
   return screenStage;
 }
 
-const SCREEN_V = 14;
+const SCREEN_V = 15;
 function getScreenResource(kind, variant = screenVariant()) {
   const key = `${kind}_${variant}`;
   if (!screenResourceCache[key]) {
