@@ -24,3 +24,6 @@ provider2/art/
 provider2/mockups/
 provider3/art/
 front/img/olympus-thunder/v*/src/
+
+# ChatGPT raw sheets of the Olympus Thunder art variants (cut by scripts/olympus_thunder_variants_art.py)
+front/img/olympus-thunder/*/src/

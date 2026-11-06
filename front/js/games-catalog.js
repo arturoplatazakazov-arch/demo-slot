@@ -82,6 +82,21 @@ const SAVANNAH_VARIANTS = {
     desc: 'Пастельное утро в тумане: белая жемчужная рама с ледяными кристаллами, фламинго.',
     cover: 'img/savannah-crisp/cover.jpg?v=2' },
 };
+const OT_VARIANTS = {
+  sunny: { page: 'olympus-thunder-sunny.html', name: 'Olympus Thunder · Sunny', badge: 'Midday',
+    desc: 'Глянцевый мульт-3D: солнечная терраса дворца, белый мрамор с синей эмалью, смеющийся Зевс.',
+    cover: 'img/olympus-thunder/sunny/cover.jpg?v=2' },
+  realms: { page: 'olympus-thunder-realms.html', name: 'Olympus Thunder · Realms', badge: 'Twilight',
+    desc: 'Сиреневые сумерки над храмами и цветущей сакурой: бронза с аметистовой эмалью и меандром.',
+    cover: 'img/olympus-thunder/realms/cover.jpg?v=2' },
+  heights: { page: 'olympus-thunder-heights.html', name: 'Olympus Thunder · Heights', badge: 'Storm',
+    desc: 'Грозовая ночь над облаками: золотые врата, водопады, кованое золото с крылатым гербом.',
+    cover: 'img/olympus-thunder/heights/cover.jpg?v=2' },
+  tides: { page: 'olympus-thunder-tides.html', name: 'Olympus Thunder · Tides', badge: 'Sea storm',
+    desc: 'Храм на морском утёсе в изумрудный шторм: светящиеся волны, патинированная бронза с жемчугом.',
+    cover: 'img/olympus-thunder/tides/cover.jpg?v=2' },
+};
+const ot = (key, extra) => ({ code: 'olympus-thunder', ...OT_VARIANTS[key], ...extra });
 const njs = (key, extra) => ({ code: 'neon-joker-spins', ...NJS_VARIANTS[key], ...extra });
 const savannah = (key, extra) => ({ code: 'savannah-kings', ...SAVANNAH_VARIANTS[key], ...extra });
 
@@ -103,6 +118,10 @@ const ILLUMINATOR_CARDS = [
 // Illuminator, in this order.
 const SPIN_FACTORY_CODES = new Set(['big-catch', 'caesars-fortune', 'ice-spin-deluxe', 'tesla-spins']);
 const SPIN_FACTORY_EXTRA_CARDS = [
+  ot('sunny'),
+  ot('realms'),
+  ot('heights'),
+  ot('tides'),
   'gold-of-baku',
   'gold-of-baku-2',
   njs('original'),
