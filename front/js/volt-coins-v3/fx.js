@@ -20,7 +20,7 @@
   const ROOT = 'img/volt-coins-v3/fx';
   // Версия atlas/json скелетов — поднимать при каждой пересборке fx
   // (PNG-страницы версионируются хешем в самом атласе).
-  const FX_V = 45;
+  const FX_V = 46;
   const BOX = {
     bg_desk: { x: -899, y: -437.5, width: 1798, height: 875 },
     bg_mob: { x: -465.5, y: -845, width: 931, height: 1690 },
@@ -284,7 +284,7 @@
   // a 1000-unit stroke centred on its origin; the root bone is rotated and
   // stretched so it spans exactly a -> b. Thickness grows a little with length
   // so short hops stay crisp and long ones read from across the screen.
-  function zap(a, b, delay = 0) {
+  function zap(a, b, delay = 0, clip = 'zap') {
     if (!res.arc) return;
     const run = () => {
       const canvas = front.canvasEl;
@@ -310,7 +310,7 @@
       place();
       const update = inst.update.bind(inst);
       inst.update = (delta, canvasEl) => { place(); update(delta, canvasEl); };
-      inst.play('zap', false);
+      inst.play(clip, false);
       inst.onSettle = () => front.removeOverlay(inst);
       front.addOverlay(inst);
     };
@@ -440,6 +440,46 @@
       c.inst.queue(winOn ? 'win' : 'off', true);
       bgFlash(c, 0.5);
     }
+  };
+
+  // Разряд монета ↔ катушка (2026-11-06, продукт; сцены на странице анимаций):
+  // молния бежит клипом arc `travel` (голова-искра ведёт ствол, попадание в
+  // TRAVEL_HIT_MS), катушка искрит — вспышки discharge + короткие разряды
+  // вокруг головы. База: монета → катушка; Hold & Win: катушка → монета.
+  const TRAVEL_HIT_MS = 300;
+  const SPARK_LEAD_MS = 350;
+  function coilSparks(c) {
+    const h = coilHead(c);
+    bgFlash(c, 1);
+    if (!anticOn && !bigOn) {
+      c.inst.play('discharge', false);
+      c.inst.queue(winOn ? 'win' : 'off', true);
+    }
+    for (let i = 0; i < 4; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const d = 28 + Math.random() * 36;
+      zap(h, { x: h.x + Math.cos(a) * d, y: h.y + Math.sin(a) * d }, i * 90);
+    }
+  }
+  const hasTravel = () => res.arc && res.arc.skeletonData.findAnimation('travel');
+
+  VoltFx.coinToCoil = function coinToCoil(cellEl) {
+    const p = center(cellEl);
+    const c = nearestCoil(p);
+    if (!c) return;
+    if (!hasTravel()) { VoltFx.coinLanded(cellEl); return; }
+    zap(p, coilHead(c), 0, 'travel');
+    setTimeout(() => coilSparks(c), TRAVEL_HIT_MS);
+  };
+
+  // onHit — когда молния попала в монету (там slot.js запускает её выигрыш)
+  VoltFx.coilToCoin = function coilToCoin(cellEl, onHit) {
+    const p = center(cellEl);
+    const c = nearestCoil(p);
+    if (!c || !hasTravel()) { VoltFx.coinLanded(cellEl); if (onHit) onHit(); return; }
+    coilSparks(c);
+    zap(coilHead(c), p, SPARK_LEAD_MS, 'travel');
+    if (onHit) setTimeout(onHit, SPARK_LEAD_MS + TRAVEL_HIT_MS);
   };
 
   VoltFx.arcToPlate = function arcToPlate(cellEl, plateEl) {

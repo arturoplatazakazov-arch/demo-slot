@@ -1039,10 +1039,14 @@ function settleColumnCells(cellEls, col, finalCodes) {
     };
     cell.addEventListener('click', () => previewSymbolWin(info));
     cellInfos[row * GRID_COLS + col] = info;
-    // Приземлилась монета — короткая дуга от катушки (GDD: «приземление монеты»).
+    // Приземлилась монета (база, 2026-11-06): у монеты начинается выигрыш,
+    // молния бежит от неё в катушку, после попадания катушка искрит.
     if (code === 'coin') {
-      fx('coinLanded', cell);
+      const face = lastBaseFaces && lastBaseFaces[row] && lastBaseFaces[row][col];
+      if (face && info.coinFace) info.faceKey = face.word || face.digits;
       Sound.playSfx('coinLand');
+      playWinAnimationOnce(info);
+      fx('coinToCoil', cell);
     }
   }
   return Promise.resolve();
@@ -1619,6 +1623,7 @@ function showBuyBonusDialog({ betSteps, betIndex, costMultiplier, currency, bala
 
 const RESPIN_COUNT = 3;                 // = hold_and_win.respin_count сида
 const HOLD_AND_WIN_RESPIN_PAUSE_MS = 700;
+const HOLD_AND_WIN_COIN_PAUSE_MS = 1500;
 const HW_CELL_SPIN_MS = 620;
 const HW_CELL_SPIN_FILLER = 8;
 const HW_COIN_FILLER_CHANCE = 0.07;     // = respin_land_weights coin 7 / 100
@@ -1805,7 +1810,9 @@ async function runHoldAndWinSequence(result, locked, baseGrid = null) {
       noteTier(c.kind);
       const info = cellInfos[c.row * GRID_COLS + c.col];
       if (!info) continue;
-      fx('coinLanded', info.cell);
+      // Hold & Win (2026-11-06): катушка искрит, молния бежит в монету,
+      // при попадании монета играет выигрыш.
+      fx('coilToCoin', info.cell, () => playWinAnimationOnce(info));
       // Джекпот-монета: разряд идёт от неё к своей плашке (GDD).
       if (JACKPOT_TIERS.includes(c.kind)) {
         const plate = document.querySelector(`.jp--${c.kind}`);
@@ -1820,7 +1827,8 @@ async function runHoldAndWinSequence(result, locked, baseGrid = null) {
       Sound.playSfx(respin.landed.some((c) => JACKPOT_TIERS.includes(c.kind)) ? 'jackpotCoin' : 'newCoin');
       setTimeout(() => Sound.playSfx('coinLock'), 260);
     }
-    await wait(HOLD_AND_WIN_RESPIN_PAUSE_MS);
+    // новая монета: молния катушка → монета (0,65 с) и её выигрыш успевают до следующего респина
+    await wait(respin.landed.length ? HOLD_AND_WIN_COIN_PAUSE_MS : HOLD_AND_WIN_RESPIN_PAUSE_MS);
   }
 
   await wait(300);
