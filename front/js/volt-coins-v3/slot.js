@@ -1892,12 +1892,13 @@ async function testSpin(grid, faces = [], lineWins = null) {
 }
 
 function setupTestPanel() {
-  const panel = document.createElement('details');
+  const panel = document.createElement('div');
   panel.className = 'test-panel';
-  // на телефоне столбик закрыл бы барабаны: свёрнута, открывается тапом по «Тест»
-  panel.open = !isMobileLayout();
   const B = (id, label) => `<button type="button" data-test="${id}">${label}</button>`;
-  panel.innerHTML = '<summary>Тест</summary><div class="test-panel__col">' + [
+  // «Тест» сворачивает столбик; под ним — ссылка на страницу всех анимаций игры
+  panel.innerHTML = '<details class="test-panel__toggle"><summary>Тест</summary></details>' +
+    '<a class="test-panel__anim" href="volt-coins-v3-anim-lab.html">Анимации</a>' +
+    '<div class="test-panel__col">' + [
     B('buy', 'Buy Bonus'),
     B('pop:bigWin', 'Big Win'), B('pop:megaWin', 'Mega Win'), B('pop:epicWin', 'Epic Win'),
     B('jp:grand', 'Grand Jackpot'),
@@ -1905,6 +1906,12 @@ function setupTestPanel() {
     B('coins', 'Все монеты'),
   ].join('') + '</div>';
   document.body.appendChild(panel);
+  // на телефоне столбик закрыл бы барабаны: свёрнут, открывается тапом по «Тест»
+  const toggle = panel.querySelector('.test-panel__toggle');
+  const col = panel.querySelector('.test-panel__col');
+  toggle.addEventListener('toggle', () => { col.hidden = !toggle.open; });
+  toggle.open = !isMobileLayout();
+  col.hidden = !toggle.open;
   const comboBtn = panel.querySelector('[data-test="combo"]');
   panel.addEventListener('click', async (e) => {
     const b = e.target.closest('button[data-test]');

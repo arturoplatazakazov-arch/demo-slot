@@ -1,0 +1,16 @@
+animation.png?v=173c5173
+size:1420,248
+filter:Linear,Linear
+pma:true
+base
+bounds:0,0,312,248
+face
+bounds:314,0,312,248
+aura1
+bounds:628,0,271,215
+aura2
+bounds:901,0,271,215
+halo
+bounds:1174,0,138,138
+cflash
+bounds:1314,0,104,83

@@ -18,7 +18,7 @@
 // amount included (a second canvas #fxPopupTop just above the node).
 (function () {
   const ROOT = 'img/volt-coins-v3/fx';
-  const V = 4;
+  const V = 5;
   const VoltPop = { meta: null, ready: false };
   let stage = null;
   let canvas = null;
@@ -26,6 +26,9 @@
   let topCanvas = null;
   let rain = null;
   const res = {};
+  // все попапы и дождь — один общий атлас (scripts/volt_coins_v3_popups_fx.py
+  // write_shared): одинаковые лучи/свечения/рама/монеты в нём один раз
+  const POP_DIR = `${ROOT}/popups`;
   const RAIN = { big_win: 'big', mega_win: 'mega', epic_win: 'epic', jp_grand: 'grand' };
   // rain units: the popup core width = 1000 (fit by width to the node)
   const RAIN_BOX = { x: -500, y: -260, width: 1000, height: 520 };
@@ -44,15 +47,15 @@
       topCanvas.id = 'fxPopupTop';
       document.getElementById('screen').appendChild(topCanvas);
       topStage = new SpineEngine.SpineStage(topCanvas);
-      // one skeleton, two GL contexts: the resource cache is keyed by path, so
-      // the second load names the json explicitly (a separate cache entry)
+      // one skeleton, two GL contexts: a separate cache entry (cacheKey) gives
+      // the top canvas its own textures
       Promise.all([
-        SpineEngine.SpineResource.load(stage.assetManager, `${ROOT}/coin_rain`, { premultipliedAlpha: true, version: V }),
-        SpineEngine.SpineResource.load(topStage.assetManager, `${ROOT}/coin_rain`, { premultipliedAlpha: true, version: V, skeleton: 'animation' }),
+        SpineEngine.SpineResource.load(stage.assetManager, POP_DIR, { premultipliedAlpha: true, version: V, skeleton: 'coin_rain' }),
+        SpineEngine.SpineResource.load(topStage.assetManager, POP_DIR, { premultipliedAlpha: true, version: V, skeleton: 'coin_rain', cacheKey: `${POP_DIR}#coin_rain#top` }),
       ]).then(([back, front]) => { rain = { back, front }; })
         .catch((e) => console.warn('[volt] coin rain failed', e));
       await Promise.all(Object.keys(VoltPop.meta).map((k) =>
-        SpineEngine.SpineResource.load(stage.assetManager, `${ROOT}/pop_${k}`, { premultipliedAlpha: true, version: V })
+        SpineEngine.SpineResource.load(stage.assetManager, POP_DIR, { premultipliedAlpha: true, version: V, skeleton: k })
           .then((r) => { res[k] = r; })
           .catch((e) => console.warn('[volt] popup skeleton failed', k, e))));
       VoltPop.ready = true;

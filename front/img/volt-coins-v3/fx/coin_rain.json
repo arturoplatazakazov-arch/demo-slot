@@ -5,19 +5,19 @@
  "tiers": {
   "big": {
    "coins": 12,
-   "life_max": 2.26
+   "life_max": 2.21
   },
   "mega": {
    "coins": 24,
-   "life_max": 2.08
+   "life_max": 2.18
   },
   "epic": {
    "coins": 38,
-   "life_max": 2.08
+   "life_max": 2.05
   },
   "grand": {
    "coins": 56,
-   "life_max": 2.13
+   "life_max": 1.92
   }
  }
 }

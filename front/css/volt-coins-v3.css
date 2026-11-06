@@ -2658,7 +2658,15 @@ html body .reel__cell.is-coin:not(.is-winning) > img { filter: none; animation: 
   background: rgba(7, 11, 38, 0.85); border: 1px solid rgba(57, 216, 255, 0.6);
 }
 .test-panel summary::-webkit-details-marker { display: none; }
-.test-panel__col { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; width: max-content; }
+.test-panel { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.test-panel__toggle { display: block; }
+.test-panel__anim {
+  display: inline-block; padding: 6px 12px; border-radius: 999px; text-decoration: none; color: #dfeaff;
+  background: rgba(7, 11, 38, 0.85); border: 1px solid rgba(255, 201, 60, 0.6);
+}
+.test-panel__anim:hover { color: #fff; border-color: #ffc93c; }
+.test-panel__col[hidden] { display: none; }
+.test-panel__col { display: flex; flex-direction: column; gap: 4px; width: max-content; }
 .test-panel__col button {
   padding: 6px 10px; border-radius: 8px; text-align: left; cursor: pointer; font: inherit;
   border: 1px solid #2c3766; background: rgba(18, 26, 64, 0.9); color: #cfe;

@@ -59,8 +59,11 @@ class SpineResource {
   // skeleton (optional): the skeleton file of a folder whose atlas is shared by
   // several skeletons (e.g. 'big_win' -> big_win.json next to animation.atlas);
   // the atlas (and its textures) is then loaded once for all of them.
-  static load(assetManager, folderPath, { premultipliedAlpha = true, version = '', skeleton = '' } = {}) {
-    const key = skeleton ? `${folderPath}#${skeleton}` : folderPath;
+  // cacheKey (optional): a separate cache entry for the same files — needed
+  // when one skeleton is drawn by two SpineStages (two WebGL contexts: each
+  // needs its own textures, but the cache is keyed by path only).
+  static load(assetManager, folderPath, { premultipliedAlpha = true, version = '', skeleton = '', cacheKey = '' } = {}) {
+    const key = cacheKey || (skeleton ? `${folderPath}#${skeleton}` : folderPath);
     if (spineResourceCache.has(key)) return spineResourceCache.get(key);
     const q = version ? `?v=${version}` : '';
     const promise = (async () => {

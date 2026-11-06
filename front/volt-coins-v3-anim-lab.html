@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Volt Coins V3 — все анимации игры</title>
+<!-- Все анимации, которые играют на странице слота (volt-coins-v3.html), одним
+     столбцом по категориям: подпись слева (что, клип, длительность, когда в игре),
+     справа — сама анимация. Spine — те же скелеты, что грузит игра
+     (fx/sym_*, fx/frame, fx/logo, fx/cellbolt, fx/arc, fx/popups/*, screens/*);
+     CSS/DOM-эффекты (неон рамы, вспышки катушек, плашки джекпотов) повторены
+     по правилам из css/volt-coins-v3.css и js/volt-coins-v3/fx.js.
+     Spine рисуется на одном фиксированном канвасе поверх страницы, каждый
+     инстанс привязан к своему боксу (anchorEl); попапы с дождём — свои
+     два канваса (монеты из-за попапа и перед суммой). -->
+<link rel="stylesheet" href="css/fonts.css">
+<style>
+  :root {
+    --bg: #070a1c;
+    --panel: #0d1330;
+    --line: rgba(160, 190, 255, 0.14);
+    --text: #e8f0ff;
+    --muted: #8d9bc4;
+    --accent: #39d8ff;
+    --cell-w: 200px;
+    --cell-h: calc(var(--cell-w) * 254 / 320);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Baloo 2', system-ui, sans-serif; }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px;
+    padding: 12px 24px; background: rgba(7, 10, 28, 0.94);
+    border-bottom: 1px solid var(--line); backdrop-filter: blur(6px);
+  }
+  h1 { margin: 0; font-size: 22px; font-weight: 700; }
+  a.back { color: var(--text); text-decoration: none; font-size: 14px; padding: 6px 14px; border-radius: 999px; border: 1px solid rgba(255, 201, 60, 0.6); }
+  nav { display: flex; flex-wrap: wrap; gap: 6px; }
+  nav a {
+    color: var(--muted); text-decoration: none; font-size: 14px;
+    padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line);
+  }
+  nav a:hover { color: var(--accent); border-color: var(--accent); }
+  .tools { margin-left: auto; display: flex; gap: 8px; }
+  button {
+    font: inherit; font-size: 14px; color: var(--text); cursor: pointer;
+    padding: 6px 14px; border-radius: 999px;
+    border: 1px solid rgba(160, 190, 255, 0.35); background: var(--panel);
+  }
+  button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+  main { padding: 0 24px 80px; max-width: 1400px; }
+
+  /* категория */
+  .cat { padding-top: 26px; scroll-margin-top: 70px; }
+  .cat > h2 {
+    margin: 0 0 4px; font-size: 26px; font-weight: 800; letter-spacing: 0.02em;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  .cat > h2 span { font-size: 14px; font-weight: 500; color: var(--muted); }
+  .cat > p { margin: 0 0 14px; color: var(--muted); font-size: 14px; max-width: 820px; line-height: 1.4; }
+  .sub { margin: 22px 0 6px; font-size: 14px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+
+  /* строка = одна анимация: подпись | сцена */
+  .row {
+    display: grid; grid-template-columns: 290px 1fr; gap: 20px;
+    padding: 16px 0; border-top: 1px solid var(--line); align-items: center;
+  }
+  .cap h3 { margin: 0; font-size: 19px; font-weight: 700; line-height: 1.2; }
+  .cap .clip { margin-top: 4px; font-size: 13px; color: var(--accent); font-family: ui-monospace, Menlo, monospace; }
+  .cap p { margin: 6px 0 0; font-size: 13.5px; line-height: 1.4; color: var(--muted); }
+  .cap .kind {
+    display: inline-block; margin-top: 8px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 6px; border: 1px solid var(--line); color: var(--muted);
+  }
+  .stages { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+  .st { display: flex; flex-direction: column; gap: 4px; max-width: 100%; }
+  .st:has(> .popdemo), .st:has(> .scrbox.desk) { flex: 1 1 100%; }
+  .st > .lbl { font-size: 12px; color: var(--muted); }
+
+  /* ячейка барабана */
+  .tilebox {
+    position: relative; width: var(--cell-w); height: var(--cell-h); border-radius: 10px; cursor: pointer;
+    background: #031a51;
+    box-shadow: inset 0 0 34px rgba(1, 74, 179, 0.75), inset 0 0 0 1px rgba(160, 190, 255, 0.18);
+  }
+  .tilebox img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .tilebox.is-hidden-img img { visibility: hidden; }
+
+  /* сцена с подложкой-артом (рама, лого, катушки) */
+  .artbox { position: relative; cursor: pointer; }
+  .artbox > img.back { display: block; width: 100%; height: 100%; }
+  .darkstage {
+    border-radius: 12px; box-shadow: inset 0 0 0 1px var(--line);
+    background: radial-gradient(ellipse at 50% 55%, #10204a 0%, #070a1c 75%);
+    padding: 18px; display: flex; align-items: center; justify-content: center;
+  }
+
+  canvas#lab { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 3; }
+
+  /* неон в желобе рамы — копия .v3-neon из css/volt-coins-v3.css */
+  .v3-neon { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; pointer-events: none; overflow: visible; opacity: 0; }
+  .v3-neon rect { fill: none; stroke-linecap: round; }
+  .v3-neon { --n-core: #e8fbff; --n-glow: #39b8ff; --n-tail: #5fd2ff; --n-sh1: #8fe8ff; --n-sh2: #39d8ff; }
+  .v3-neon__glow { stroke: var(--n-glow); stroke-width: 16; filter: blur(6px); opacity: 0.95; }
+  .v3-neon__core { stroke: var(--n-core); stroke-width: 5; filter: drop-shadow(0 0 3px var(--n-sh1)) drop-shadow(0 0 7px var(--n-sh2)); }
+  .v3-neon__tail { stroke: var(--n-tail); stroke-width: 4.5; opacity: 0.6; filter: drop-shadow(0 0 5px var(--n-sh2)); }
+  .v3-neon[data-tone="mini"]  { --n-core: #ffe6cc; --n-glow: #d9822b; --n-tail: #eaa060; --n-sh1: #ffb877; --n-sh2: #c8691c; }
+  .v3-neon[data-tone="minor"] { --n-core: #ffffff; --n-glow: #b9c8dc; --n-tail: #dfe7f2; --n-sh1: #eef4ff; --n-sh2: #9fb3cc; }
+  .v3-neon[data-tone="major"] { --n-core: #fff6cc; --n-glow: #ffbf1a; --n-tail: #ffd75a; --n-sh1: #ffe28a; --n-sh2: #f0a800; }
+  .v3-neon[data-tone="green"] { --n-core: #eaffea; --n-glow: #2fe86a; --n-tail: #6cf59a; --n-sh1: #a4ffbe; --n-sh2: #1fcf55; }
+  .v3-neon .v3-neon__core, .v3-neon .v3-neon__glow { stroke-dasharray: 230 1049.5; }
+  .v3-neon .v3-neon__tail { stroke-dasharray: 590 689.5; }
+  .v3-neon.is-run { animation: v3-neon-fade 1700ms ease-in-out forwards; }
+  .v3-neon.is-run .v3-neon__core, .v3-neon.is-run .v3-neon__glow { animation: v3-neon-lap 1700ms cubic-bezier(0.45, 0.05, 0.55, 0.95) forwards; }
+  .v3-neon.is-run .v3-neon__tail { animation: v3-neon-lap-tail 1700ms cubic-bezier(0.45, 0.05, 0.55, 0.95) forwards; }
+  .v3-neon.is-loop { opacity: 1; }
+  .v3-neon.is-loop .v3-neon__core, .v3-neon.is-loop .v3-neon__glow { animation: v3-neon-lap 2000ms linear infinite; }
+  .v3-neon.is-loop .v3-neon__tail { animation: v3-neon-lap-tail 2000ms linear infinite; }
+  @keyframes v3-neon-fade { 0% { opacity: 0; } 22% { opacity: 1; } 72% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes v3-neon-lap      { from { stroke-dashoffset: 0; }   to { stroke-dashoffset: -2559; } }
+  @keyframes v3-neon-lap-tail { from { stroke-dashoffset: 360; } to { stroke-dashoffset: -2199; } }
+  .neonbox .reelbg { position: absolute; left: 5.6%; top: 6.1%; width: 88.8%; height: 87.8%; border-radius: 8px; background: url(img/volt-coins-v3/v3/reel_bg.png) 0 0 / 100% 100%; }
+  .neonbox > img.back { position: relative; z-index: 2; }
+
+  /* вспышки катушек — копия .v3-flash (fx.js makeCoilFlash) */
+  .coilbox { width: 130px; aspect-ratio: 330 / 640; margin: 90px 110px 80px; }
+  .coilbox img.back { position: relative; z-index: 2; }
+  .coilbox .flash { position: absolute; opacity: 0; pointer-events: none; z-index: 1; max-width: none; }
+
+  /* плашки джекпотов — jp-hit / jp-won */
+  .jpbox { display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: center; padding: 14px 18px; }
+  .jpbox img { height: 44px; display: block; }
+  .jpbox .grand img { height: 56px; }
+  .jpbox .plate span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 17px; color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.5); }
+  .jpbox .plate { position: relative; }
+  .jpbox .plate.is-hit { animation: jp-hit 700ms cubic-bezier(0.2, 1.3, 0.4, 1); }
+  .jpbox .plate.is-won { animation: jp-won 420ms ease-in-out infinite; }
+  @keyframes jp-hit { 0% { transform: scale(1); filter: brightness(1); } 20% { transform: scale(1.12); filter: brightness(1.9); } 100% { transform: scale(1); filter: brightness(1); } }
+  @keyframes jp-won { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.7); } }
+
+  /* разряд катушка → монета */
+  .arcbox { display: flex; align-items: center; gap: 0; padding: 10px 18px; }
+  .arcbox .coilimg { height: 170px; }
+  .arcbox .arcanchor { width: 420px; height: 59px; }
+  .arcbox .coinimg { width: 130px; }
+
+  /* попап (+ дождь) в кадре игры */
+  .popdemo {
+    position: relative; width: 100%; max-width: 1000px; aspect-ratio: 1932 / 940; overflow: hidden; border-radius: 12px; cursor: pointer;
+    background: url(img/volt-coins-v3/v3/bg_desk.jpg) center / cover; box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .popdemo::after { content: ''; position: absolute; inset: 0; background: rgba(2, 4, 16, 0.7); z-index: 0; }
+  .popdemo canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .popdemo .c-back { z-index: 1; }
+  .popdemo .c-top { z-index: 3; }
+  .popcore { position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 2; }
+  .poppanel {
+    position: absolute; display: flex; align-items: center; justify-content: center;
+    container-type: size; opacity: 0; transition: opacity 0.25s;
+  }
+  .popdemo.is-on .poppanel { opacity: 1; transition-delay: 0.45s; }
+  .popamount {
+    font-family: 'Baloo 2', system-ui, sans-serif; font-weight: 800; font-size: 62cqh; line-height: 1; white-space: nowrap;
+    background: linear-gradient(180deg, #fff6c8 0%, #ffd34d 45%, #e79a12 60%, #ffe27a 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 2px 0 #3a1d00) drop-shadow(0 0 8px rgba(255, 190, 60, 0.45));
+  }
+
+  /* экраны фич / бонуса */
+  .scrbox { position: relative; overflow: hidden; border-radius: 12px; cursor: pointer; box-shadow: inset 0 0 0 1px var(--line); }
+  .scrbox::before { content: ''; position: absolute; inset: 0; background: var(--bg-img) center / cover no-repeat; }
+  .scrbox::after {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 45%, rgba(5, 8, 30, 0.15) 0%, rgba(5, 8, 30, 0.55) 62%, rgba(2, 3, 12, 0.92) 100%);
+  }
+  .scrbox.desk { width: 100%; max-width: 900px; aspect-ratio: 1920 / 1040; --bg-img: url(img/volt-coins-v3/v3/bg_desk.jpg); }
+  .scrbox.mob { width: 300px; aspect-ratio: 800 / 1450; --bg-img: url(img/volt-coins-v3/img/bg_mob.jpg); }
+  .scrbox .anchor { position: absolute; inset: 0; }
+
+  @media (max-width: 900px) {
+    :root { --cell-w: 150px; }
+    .row { grid-template-columns: 1fr; gap: 10px; }
+    main { padding: 0 16px 60px; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <a class="back" href="volt-coins-v3.html">← К игре</a>
+    <h1>Volt Coins V3 — все анимации игры</h1>
+    <nav id="nav"></nav>
+    <div class="tools">
+      <button type="button" id="slowBtn" aria-pressed="false">Замедлить ×0.5</button>
+      <button type="button" id="replayBtn">Повторить все</button>
+    </div>
+  </header>
+  <main id="root"></main>
+  <canvas id="lab"></canvas>
+
+  <script src="vendor/spine-webgl.js"></script>
+  <script src="js/spine-engine.js?v=10"></script>
+  <script>
+  (async () => {
+    const IMG = 'img/volt-coins-v3';
+    const FX = `${IMG}/fx`;
+    const V = Date.now();
+    const PMA = { premultipliedAlpha: true, version: V };
+    const root = document.getElementById('root');
+    const nav = document.getElementById('nav');
+    const stage = new SpineEngine.SpineStage(document.getElementById('lab'));
+    const BOX = {
+      cell: { x: -160, y: -127, width: 320, height: 254 },
+      frame: { x: -435, y: -347, width: 870, height: 694 },
+      logo: { x: -620, y: -186, width: 1240, height: 372 },
+      cellbolt: { x: -165, y: -150, width: 330, height: 300 },
+      arc: { x: -500, y: -70, width: 1000, height: 140 },
+      desk: { x: -960, y: -520, width: 1920, height: 1040 },
+      mob: { x: -400, y: -725, width: 800, height: 1450 },
+      rain: { x: -500, y: -260, width: 1000, height: 520 },
+    };
+    let speed = 1;
+    const players = [];      // {run} — всё, что перезапускается кнопкой «Повторить все»
+    const fmt = (s) => `${String(s).replace('.', ',')} с`;
+
+    // ---------- разметка ----------
+    let cat = null;
+    const category = (id, title, note, text) => {
+      cat = document.createElement('section');
+      cat.className = 'cat';
+      cat.id = id;
+      cat.innerHTML = `<h2>${title}<span>${note}</span></h2>${text ? `<p>${text}</p>` : ''}`;
+      root.appendChild(cat);
+      nav.insertAdjacentHTML('beforeend', `<a href="#${id}">${title}</a>`);
+    };
+    const sub = (t) => cat.insertAdjacentHTML('beforeend', `<div class="sub">${t}</div>`);
+    // строка: подпись + сцены; возвращает контейнер сцен
+    const row = ({ title, clip, text, kind }) => {
+      const r = document.createElement('div');
+      r.className = 'row';
+      r.innerHTML = `<div class="cap"><h3>${title}</h3>${clip ? `<div class="clip">${clip}</div>` : ''}
+        ${text ? `<p>${text}</p>` : ''}<span class="kind">${kind}</span></div><div class="stages"></div>`;
+      cat.appendChild(r);
+      return r.querySelector('.stages');
+    };
+    const st = (stages, html, lbl) => {
+      const d = document.createElement('div');
+      d.className = 'st';
+      d.innerHTML = html + (lbl ? `<div class="lbl">${lbl}</div>` : '');
+      stages.appendChild(d);
+      return d.firstElementChild;
+    };
+
+    // ---------- Spine-проигрыватель ----------
+    const resCache = {};
+    const loadRes = (folder, opts = {}) => {
+      const key = opts.cacheKey || (opts.skeleton ? `${folder}#${opts.skeleton}` : folder);
+      if (!resCache[key]) resCache[key] = SpineEngine.SpineResource.load(opts.stage ? opts.stage.assetManager : stage.assetManager, folder, { ...PMA, ...opts, stage: undefined });
+      return resCache[key];
+    };
+    // seq: [[clip, loop], ...] — первый play, остальные queue; every — повтор, мс (0 = один раз)
+    const spinePlayer = async (anchor, folder, seq, { box, every = 0, opts = {}, fitMode, stageObj = stage, overlay = false } = {}) => {
+      const res = await loadRes(folder, opts);
+      const inst = res.createInstance();
+      inst.anchorEl = anchor;
+      inst.fit = 1;
+      if (box) inst.boundsOverride = box;
+      if (fitMode) inst.fitMode = fitMode;
+      if (overlay) stageObj.addOverlay(inst); else stageObj.addBase(inst);
+      let timer = null;
+      const run = () => {
+        clearTimeout(timer);
+        inst.animationState.timeScale = speed;
+        inst.play(seq[0][0], seq[0][1]);
+        for (const [c, l] of seq.slice(1)) inst.queue(c, l, 0);
+        if (every) timer = setTimeout(run, every / speed);
+      };
+      anchor.addEventListener('click', run);
+      players.push({ run });
+      run();
+      return { inst, run };
+    };
+    const clipLen = (res, name) => {
+      const a = res.skeletonData.findAnimation(name);
+      return a ? a.duration : 0;
+    };
+
+    // =====================================================================
+    category('scene', 'Сцена и рама', 'фон игры, всегда на экране',
+      'Неон в желобе рамы, вспышки катушек и логотип. Логотип — Spine поверх стола; неон и вспышки — CSS/DOM.');
+
+    sub('Неон в желобе рамы · CSS');
+    {
+      const s = row({ title: 'Неон — спин', clip: '.v3-neon.is-run · 1,7 с', text: 'На каждом спине два бегунка на противоположных сторонах проявляются, проходят круг по часовой и гаснут.', kind: 'CSS' });
+      const NEON = '<svg class="v3-neon" viewBox="0 0 698 639" preserveAspectRatio="none"><rect class="v3-neon__glow" x="11.5" y="11.5" width="675" height="613" rx="10"/><rect class="v3-neon__tail" x="11.5" y="11.5" width="675" height="613" rx="10"/><rect class="v3-neon__core" x="11.5" y="11.5" width="675" height="613" rx="10"/></svg>';
+      const box = (tone) => `<div class="artbox neonbox" style="width:300px;aspect-ratio:698/639"><div class="reelbg"></div><img class="back" src="${IMG}/v3/frame.png" alt="">${NEON.replace('class="v3-neon"', `class="v3-neon"${tone ? ` data-tone="${tone}"` : ''}`)}</div>`;
+      const a = st(s, box(''));
+      const svg = a.querySelector('svg');
+      const run = () => { svg.classList.remove('is-run'); void svg.getBoundingClientRect(); svg.classList.add('is-run'); clearTimeout(a.t); a.t = setTimeout(run, 2600 / speed); };
+      a.addEventListener('click', run);
+      players.push({ run });
+      run();
+      const s2 = row({ title: 'Неон — бонус', clip: '.v3-neon.is-loop · круг 2 с', text: 'В Hold & Win неон крутится постоянно (на респине ×2, на выигрыше ×2,5). Цвет: голубой; бронза / серебро / золото — пока приходит джекпот-монета MINI / MINOR / MAJOR; зелёный — все 9 ячеек.', kind: 'CSS' });
+      for (const [tone, lbl] of [['', 'обычный'], ['mini', 'MINI'], ['minor', 'MINOR'], ['major', 'MAJOR'], ['green', '9 / 9']]) {
+        const b = st(s2, box(tone), lbl);
+        b.querySelector('svg').classList.add('is-loop');
+      }
+    }
+
+    sub('Катушки Теслы · DOM-вспышки (fx.js makeCoilFlash)');
+    {
+      const FLASH_BOX = { flash: [-34.55, -43.13, 169.09, 86.72], flash2: [-60.61, -69.69, 226.67, 161.72] };
+      const CLIPS = [
+        ['spin', [420, 0, 0.85], 'Спин', 'Короткая вспышка на каждом старте барабанов.'],
+        ['charge', [700, 0, 0.9], 'Заряд', 'Последний барабан на антисипации — катушки набирают заряд.'],
+        ['charged', [300, 240, 0.9], 'Заряжена', 'Петля частых вспышек, пока длится антисипация.'],
+        ['win', [460, 1100, 0.75], 'Выигрыш', 'Редкие вспышки, пока на экране выигрыш.'],
+        ['discharge', [650, 0, 1], 'Разряд', 'Разряд в раму: вход в Hold & Win, джекпот.'],
+        ['bigwin', [300, 200, 1], 'Большой выигрыш', 'Частые яркие вспышки под Big / Mega / Epic Win.'],
+      ];
+      for (const [clip, [dur, gap, peak], title, text] of CLIPS) {
+        const s = row({ title: `Катушка — ${title}`, clip: `${clip} · вспышка ${dur} мс${gap ? ` · петля, пауза ~${gap} мс` : ''} · яркость ${peak}`, text, kind: 'DOM' });
+        const a = st(s, `<div class="artbox coilbox"><img class="back" src="${IMG}/v3/coil_l.png" alt=""></div>`);
+        const imgs = ['flash', 'flash2'].map((n) => {
+          const img = document.createElement('img');
+          img.className = 'flash';
+          img.src = `${IMG}/v3/${n}_l.webp`;
+          const [l, t, w, h] = FLASH_BOX[n];
+          Object.assign(img.style, { left: `${l}%`, top: `${t}%`, width: `${w}%`, height: `${h}%` });
+          a.appendChild(img);
+          return img;
+        });
+        let turn = 0;
+        const flash = () => {
+          const img = imgs[turn]; turn = 1 - turn;
+          img.animate([{ opacity: 0 }, { opacity: peak, offset: 0.12 }, { opacity: peak * 0.45, offset: 0.3 }, { opacity: peak, offset: 0.45 }, { opacity: 0 }],
+            { duration: dur / speed, easing: 'ease-out' });
+        };
+        const run = () => {
+          clearTimeout(a.t);
+          const tick = () => { flash(); a.t = setTimeout(tick, (gap ? dur + gap * (0.7 + Math.random() * 0.6) : 2200) / speed); };
+          tick();
+        };
+        a.addEventListener('click', run);
+        players.push({ run });
+        run();
+      }
+    }
+
+    sub('Логотип · Spine fx/logo');
+    const logoRes = await loadRes(`${FX}/logo`);
+    for (const [clip, title, text] of [['idle', 'Покой', 'Петля 12 с: редкие блики по буквам и мягкий ореол.'], ['win', 'Выигрыш', 'Петля, пока на экране выигрыш — блики чаще и ярче.']]) {
+      const s = row({ title: `Логотип — ${title}`, clip: `${clip} · ${fmt(clipLen(logoRes, clip).toFixed(1))} · петля`, text, kind: 'Spine' });
+      const a = st(s, `<div class="artbox" style="width:460px;aspect-ratio:1240/372"><img class="back" src="${IMG}/img/logo.png" alt=""></div>`);
+      spinePlayer(a, `${FX}/logo`, [[clip, true]], { box: BOX.logo });
+    }
+
+    // =====================================================================
+    category('reels', 'Выигрыш на барабанах', 'символы, ячейки, разряды',
+      'Анимация выигрыша каждого символа (первый и последний кадр = статика), молния по периметру выигрышной ячейки и разряд катушки в монету.');
+    const sym = await fetch(`${FX}/sym.json?v=${V}`).then((r) => r.json());
+    const artOf = {};
+    for (const [art, sk] of Object.entries(sym.art)) if (!artOf[sk]) artOf[sk] = art;
+    const SYMS = [
+      ['seven', '7', 'дешёвый'], ['bar', 'BAR', 'дешёвый'], ['star', 'Звезда', 'дешёвый'], ['horseshoe', 'Подкова', 'дешёвый'],
+      ['bell', 'Колокол', 'дорогой'], ['battery', 'Батарейка', 'дорогой'], ['diamond', 'Бриллиант', 'дорогой'], ['wild', 'Wild', 'самый активный'],
+    ];
+    sub('Символы · Spine fx/sym_*');
+    for (const [code, title, tier] of SYMS) {
+      const d = sym.dur[code];
+      const s = row({ title, clip: `win · ${fmt(d)}`, text: `${tier[0].toUpperCase()}${tier.slice(1)}. Играет поверх ячейки, пока показан выигрыш линии; повтор с паузой.`, kind: 'Spine' });
+      st(s, `<div class="tilebox"><img src="${IMG}/symbols/${artOf[code]}.png" alt=""></div>`, 'статика');
+      const a = st(s, '<div class="tilebox"></div>', 'анимация');
+      spinePlayer(a, `${FX}/sym_${code}`, [['win', false]], { box: BOX.cell, every: d * 1000 + 900 });
+    }
+
+    sub('Ячейки и разряды');
+    {
+      const s = row({ title: 'Молния по ячейке', clip: 'cellbolt: in 0,3 с → loop 1,2 с', text: 'Вместо линии выигрыша: молния обегает каждую выигрышную ячейку, пока показан выигрыш.', kind: 'Spine' });
+      for (const art of ['seven_v3', 'seven_v3', 'seven_v3']) {
+        const a = st(s, `<div class="tilebox"><img src="${IMG}/symbols/${art}.png" alt=""></div>`);
+        spinePlayer(a, `${FX}/cellbolt`, [['in', false], ['loop', true]], { box: BOX.cellbolt, every: 4000 });
+      }
+      const s2 = row({ title: 'Разряд катушки', clip: 'arc: zap · 0,5 с', text: 'Молния от катушки в каждую упавшую монету; в бонусе — от джекпот-монеты к её плашке. В игре разряд растягивается между двумя точками.', kind: 'Spine' });
+      const box = st(s2, `<div class="darkstage arcbox"><img class="coilimg" src="${IMG}/v3/coil_l.png" alt=""><div class="arcanchor"></div><img class="coinimg" src="${FX}/lab3_static/x10.png" alt=""></div>`);
+      spinePlayer(box.querySelector('.arcanchor'), `${FX}/arc`, [['zap', false]], { box: BOX.arc, every: 1400 });
+    }
+
+    // =====================================================================
+    category('coins', 'Монеты', 'Hold & Win',
+      'Иерархия x1 → MAJOR: размер (доля высоты ячейки), сила кольца молний «из-под монеты», число искр. Фон — «Проявление + поворот» (в игре тем же рисунком на CSS), выигрыш — Spine, сила растёт по старшинству.');
+    const m3 = await fetch(`${FX}/lab3.json?v=${V}`).then((r) => r.json());
+    const TT = { mini: 'MINI', minor: 'MINOR', major: 'MAJOR' };
+    for (const [face, m] of Object.entries(m3)) {
+      const s = row({ title: `Монета ${TT[face] || face}`, clip: `фон v1 · петля · win ${fmt(m.win_dur)} → фон`,
+        text: `${Math.round(m.diam * 100)}% высоты ячейки · молнии ${Math.round(m.power * 100)}% · искр ${m.sparks}.`, kind: 'Spine' });
+      st(s, `<div class="tilebox"><img src="${FX}/lab3_static/${face}.png?v=${V}" alt=""></div>`, 'статика');
+      const a = st(s, '<div class="tilebox"></div>', 'фон (лежит на барабане)');
+      spinePlayer(a, `${FX}/lab3_coin_${face}`, [['v1', true]], { box: BOX.cell });
+      const b = st(s, '<div class="tilebox"></div>', 'выигрыш → фон');
+      spinePlayer(b, `${FX}/lab3_coin_${face}`, [['win', false], ['v1', true]], { box: BOX.cell, every: m.win_dur * 1000 + 1800 });
+    }
+    {
+      const s = row({ title: 'Плашки джекпотов', clip: 'jp-hit 0,7 с · jp-won 0,42 с × 1,1 с', text: 'Монета MINI / MINOR / MAJOR в бонусе: плашка вспыхивает и пульсирует 1,1 с (отдельного попапа нет). GRAND — финальный попап Grand Jackpot.', kind: 'CSS' });
+      const a = st(s, `<div class="darkstage jpbox">${['mini', 'minor', 'major', 'grand'].map((t) => `<div class="plate${t === 'grand' ? ' grand' : ''}" data-t="${t}"><img src="${IMG}/v3/jp_${t}.png" alt=""><span>${t.toUpperCase()} ${{ mini: 'x20', minor: 'x50', major: 'x250', grand: 'x1000' }[t]}</span></div>`).join('')}</div>`);
+      const plates = [...a.querySelectorAll('.plate')];
+      let i = 0;
+      const run = () => {
+        clearTimeout(a.t);
+        const p = plates[i % plates.length]; i += 1;
+        plates.forEach((x) => x.classList.remove('is-hit', 'is-won'));
+        void p.offsetWidth;
+        p.classList.add('is-hit');
+        setTimeout(() => { p.classList.remove('is-hit'); p.classList.add('is-won'); }, 700 / speed);
+        setTimeout(() => p.classList.remove('is-won'), (700 + 1100) / speed);
+        a.t = setTimeout(run, 2400 / speed);
+      };
+      a.addEventListener('click', run);
+      players.push({ run });
+      run();
+    }
+
+    // =====================================================================
+    category('popups', 'Попапы', 'Spine fx/popups — общий атлас',
+      'Появление `in` → петля `loop`, сумма — живой текст в панели. У Big / Mega / Epic Win и Grand Jackpot — дождь монет: взлетают из-за попапа и падают перед экраном, число монет растёт по уровню. Кадр игры 1932×940.');
+    const pmeta = await fetch(`${FX}/pop.json?v=${V}`).then((r) => r.json());
+    const rmeta = await fetch(`${FX}/coin_rain.json?v=${V}`).then((r) => r.json());
+    const POPS = [
+      ['big_win', 'Big Win', '1 250.00', 'big', 'Крупный выигрыш спина; в конце Hold & Win — итог x1–x5.'],
+      ['mega_win', 'Mega Win', '4 800.00', 'mega', 'Крупный выигрыш спина (уровень выше Big); в конце Hold & Win — итог x6–x25.'],
+      ['epic_win', 'Epic Win', '12 500.00', 'epic', 'Крупный выигрыш спина (высший уровень); в конце Hold & Win — итог от x26.'],
+      ['jp_grand', 'Grand Jackpot', '10 000.00', 'grand', 'Монеты заняли все 9 ячеек в Hold & Win.'],
+      ['buy_bonus', 'Buy Bonus · Hold\'n\'Win', '100.00', null, 'Диалог покупки бонуса: ✓ — купить, ✗ — отмена.'],
+    ];
+    for (const [key, title, amt, tier, text] of POPS) {
+      const m = pmeta[key];
+      if (!m) continue;
+      const clip = `in ${fmt(m.in)} → loop ${fmt(m.loop)}${tier ? ` · дождь ${rmeta.tiers[tier].coins} монет / 3 с` : ''}`;
+      const s = row({ title, clip, text, kind: tier ? 'Spine + дождь' : 'Spine' });
+      const p = m.panel;
+      const demo = st(s, `<div class="popdemo"><canvas class="c-back"></canvas>
+        <div class="popcore" style="width:${(m.core[0] / 1932 * 100).toFixed(1)}%;aspect-ratio:${m.core[0]} / ${m.core[1]}">
+          <div class="poppanel" style="left:${p.l * 100}%;top:${p.t * 100}%;width:${p.w * 100}%;height:${p.h * 100}%"><span class="popamount">${amt}</span></div></div>
+        <canvas class="c-top"></canvas></div>`);
+      const core = demo.querySelector('.popcore');
+      const back = new SpineEngine.SpineStage(demo.querySelector('.c-back'));
+      const top = tier ? new SpineEngine.SpineStage(demo.querySelector('.c-top')) : null;
+      const pr = await SpineEngine.SpineResource.load(back.assetManager, `${FX}/popups`, { ...PMA, skeleton: key, cacheKey: `pop#${key}` });
+      const rb = tier ? await SpineEngine.SpineResource.load(back.assetManager, `${FX}/popups`, { ...PMA, skeleton: 'coin_rain', cacheKey: `rainb#${key}` }) : null;
+      const rf = tier ? await SpineEngine.SpineResource.load(top.assetManager, `${FX}/popups`, { ...PMA, skeleton: 'coin_rain', cacheKey: `rainf#${key}` }) : null;
+      let live = [];
+      const run = () => {
+        clearTimeout(demo.t);
+        for (const [stg, i] of live) stg.removeOverlay(i);
+        demo.classList.remove('is-on'); void demo.offsetWidth; demo.classList.add('is-on');
+        const mk = (r, clip2) => { const i = r.createInstance(); i.anchorEl = core; i.fit = 1; i.fitMode = 'width'; i.boundsOverride = BOX.rain; i.animationState.timeScale = speed; i.play(`${clip2}_start`, false).queue(clip2, true, 0); return i; };
+        const pi = pr.createInstance(); pi.anchorEl = core; pi.fit = 1; pi.animationState.timeScale = speed; pi.play('in', false).queue('loop', true, 0);
+        live = [];
+        if (rb) { const b = mk(rb, `${tier}_back`); back.addOverlay(b); live.push([back, b]); }
+        back.addOverlay(pi); live.push([back, pi]);
+        if (rf) { const f = mk(rf, `${tier}_front`); top.addOverlay(f); live.push([top, f]); }
+        demo.t = setTimeout(run, 8000 / speed);
+      };
+      demo.addEventListener('click', run);
+      players.push({ run });
+      run();
+    }
+
+    // =====================================================================
+    category('screens', 'Экраны', 'Spine screens/*',
+      'Превью фич при входе в игру и экран бонуса при входе в Hold & Win: появление `intro` 3 с → петля `idle` до тапа. Отдельные скелеты для десктопа и мобилы, фон — картинка игры в DOM.');
+    for (const [kind, title, text] of [['feature', 'Превью фич', 'Показывается при входе в игру: монеты, Hold & Win, джекпоты.'], ['bonus', 'Экран бонуса', 'Вход в Hold & Win: число респинов и монеты.']]) {
+      for (const v of ['desk', 'mob']) {
+        const s = row({ title: `${title} — ${v === 'desk' ? 'десктоп' : 'мобила'}`, clip: `screens/${kind}_${v}: intro 3 с → idle 4 с · петля`, text, kind: 'Spine' });
+        const a = st(s, `<div class="scrbox ${v}"><div class="anchor"></div></div>`);
+        spinePlayer(a.querySelector('.anchor'), `${IMG}/screens/${kind}_${v}`, [['intro', false], ['idle', true]], { box: BOX[v], every: 11000 });
+        a.addEventListener('click', () => a.querySelector('.anchor').click());
+      }
+    }
+
+    // ---------- кнопки ----------
+    const replayAll = () => players.forEach((p, i) => setTimeout(p.run, (i % 6) * 50));
+    document.getElementById('replayBtn').addEventListener('click', replayAll);
+    const slow = document.getElementById('slowBtn');
+    slow.addEventListener('click', () => {
+      speed = speed === 1 ? 0.5 : 1;
+      slow.setAttribute('aria-pressed', String(speed !== 1));
+      replayAll();
+    });
+    window.__lab = { stage, players };
+  })();
+  </script>
+</body>
+</html>
