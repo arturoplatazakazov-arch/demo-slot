@@ -143,6 +143,10 @@
   .arcbox .coilimg { height: 170px; }
   .arcbox .arcanchor { width: 420px; height: 59px; }
   .arcbox .coinimg { width: 130px; }
+  /* разряд катушка ↔ монета: голова катушки на высоте центра монеты */
+  .duo { align-items: flex-start; padding: 150px 40px 30px; }
+  .duo .duo-gap { width: 360px; }
+  .duo .coilbox--duo { width: 110px; margin: calc(var(--cell-h) / 2) 0 0; }
 
   /* попап (+ дождь) в кадре игры */
   .popdemo {
@@ -380,9 +384,109 @@
         const a = st(s, `<div class="tilebox"><img src="${IMG}/symbols/${art}.png" alt=""></div>`);
         spinePlayer(a, `${FX}/cellbolt`, [['in', false], ['loop', true]], { box: BOX.cellbolt, every: 4000 });
       }
-      const s2 = row({ title: 'Разряд катушки', clip: 'arc: zap · 0,5 с', text: 'Молния от катушки в каждую упавшую монету; в бонусе — от джекпот-монеты к её плашке. В игре разряд растягивается между двумя точками.', kind: 'Spine' });
-      const box = st(s2, `<div class="darkstage arcbox"><img class="coilimg" src="${IMG}/v3/coil_l.png" alt=""><div class="arcanchor"></div><img class="coinimg" src="${FX}/lab3_static/x10.png" alt=""></div>`);
-      spinePlayer(box.querySelector('.arcanchor'), `${FX}/arc`, [['zap', false]], { box: BOX.arc, every: 1400 });
+      // --- разряд катушка ↔ монета: молния бежит по клипу arc `travel` (голова-искра ведёт ствол,
+      // попадание в 0,3 с), катушка искрит вспышками + мелкими разрядами вокруг головы ---
+      const arcRes = await loadRes(`${FX}/arc`);
+      const coinRes = await loadRes(`${FX}/lab3_coin_x10`);
+      const cv = stage.canvasEl;
+      const ctr = (el, fx = 0.5, fy = 0.5) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width * fx, y: r.top + r.height * fy }; };
+      // молния между двумя точками экрана (как fx.js zap); точки — функции, сцена едет со скроллом
+      const zapPts = (A, B, clip, scaleK = 1) => {
+        const inst = arcRes.createInstance();
+        const sk = inst.skeleton;
+        const rootB = sk.getRootBone();
+        const place = () => {
+          const dpr = window.devicePixelRatio || 1;
+          const cr = cv.getBoundingClientRect();
+          const a = A(); const b = B();
+          const ax = (a.x - cr.left) * dpr; const ay = (a.y - cr.top) * dpr;
+          const bx = (b.x - cr.left) * dpr; const by = (b.y - cr.top) * dpr;
+          const k = Math.hypot(bx - ax, by - ay) / 1000;
+          rootB.rotation = (Math.atan2(-(by - ay), bx - ax) * 180) / Math.PI;
+          rootB.scaleX = k;
+          rootB.scaleY = Math.min(1.1, Math.max(0.45, 0.35 + k * 0.6)) * dpr * 0.55 * scaleK;
+          sk.x = (ax + bx) / 2 - cv.width / 2;
+          sk.y = cv.height / 2 - (ay + by) / 2;
+        };
+        place();
+        const upd = inst.update.bind(inst);
+        inst.update = (d, c) => { place(); upd(d, c); };
+        inst.animationState.timeScale = speed;
+        inst.play(clip, false);
+        inst.onSettle = () => stage.removeOverlay(inst);
+        stage.addOverlay(inst);
+      };
+      const HIT = 300;          // попадание молнии в клипе travel, мс
+      const FLASH_R = { l: { flash: [-34.55, -43.13, 169.09, 86.72], flash2: [-60.61, -69.69, 226.67, 161.72] },
+        r: { flash: [-38.37, -43.13, 168.58, 86.72], flash2: [-65.86, -69.69, 225.98, 161.72] } };
+      const coilScene = (side) => {
+        const coilHtml = `<div class="artbox coilbox coilbox--duo"><img class="back" src="${IMG}/v3/coil_${side}.png" alt=""></div>`;
+        const coinHtml = '<div class="tilebox duo-coin"></div>';
+        return `<div class="darkstage duo">${side === 'l' ? coilHtml + '<div class="duo-gap"></div>' + coinHtml : coinHtml + '<div class="duo-gap"></div>' + coilHtml}</div>`;
+      };
+      const mountScene = (box, side) => {
+        const coil = box.querySelector('.coilbox');
+        const tile = box.querySelector('.duo-coin');
+        const imgs = ['flash', 'flash2'].map((n) => {
+          const img = document.createElement('img');
+          img.className = 'flash';
+          img.src = `${IMG}/v3/${n}_${side}.webp`;
+          const [l, t, w, h] = FLASH_R[side][n];
+          Object.assign(img.style, { left: `${l}%`, top: `${t}%`, width: `${w}%`, height: `${h}%` });
+          coil.appendChild(img);
+          return img;
+        });
+        const coin = coinRes.createInstance();
+        coin.anchorEl = tile; coin.fit = 1; coin.boundsOverride = BOX.cell;
+        coin.play('v1', true);
+        stage.addBase(coin);
+        const head = () => ctr(coil, 0.5, 0.03);
+        const mid = () => ctr(tile);
+        // катушка искрит: обе вспышки (клип discharge) + 4 коротких разряда вокруг головы
+        const sparks = () => {
+          for (const img of imgs) {
+            img.animate([{ opacity: 0 }, { opacity: 1, offset: 0.12 }, { opacity: 0.45, offset: 0.3 }, { opacity: 1, offset: 0.45 }, { opacity: 0 }],
+              { duration: 650 / speed, easing: 'ease-out' });
+          }
+          for (let i = 0; i < 4; i++) {
+            const ang = Math.random() * Math.PI * 2;
+            const d = 28 + Math.random() * 36;
+            setTimeout(() => zapPts(head, () => ({ x: head().x + Math.cos(ang) * d, y: head().y + Math.sin(ang) * d }), 'zap', 0.8), (i * 90) / speed);
+          }
+        };
+        const coinWin = () => { coin.animationState.timeScale = speed; coin.play('win', false); coin.queue('v1', true, 0); };
+        return { sparks, coinWin, toCoil: () => zapPts(mid, head, 'travel'), toCoin: () => zapPts(head, mid, 'travel'), box };
+      };
+      {
+        const s1 = row({ title: 'Разряд катушки → монета', clip: 'катушка искрит → arc: travel 0,8 с → монета win',
+          text: 'Сценарий: катушка искрит, молния летит в монету, при попадании (0,3 с) монета играет выигрыш.', kind: 'Spine + DOM' });
+        const b1 = st(s1, coilScene('l'));
+        const sc = mountScene(b1, 'l');
+        const run = () => {
+          clearTimeout(b1.t);
+          sc.sparks();
+          setTimeout(sc.toCoin, 380 / speed);
+          setTimeout(sc.coinWin, (380 + HIT) / speed);
+          b1.t = setTimeout(run, 3400 / speed);
+        };
+        b1.addEventListener('click', run);
+        players.push({ run });
+        run();
+        const s2 = row({ title: 'Разряд монета → катушка', clip: 'монета win → arc: travel 0,8 с → катушка искрит',
+          text: 'Вариант: у монеты начинается выигрыш, молния летит в катушку, после попадания (0,3 с) катушка искрит.', kind: 'Spine + DOM' });
+        const b2 = st(s2, coilScene('r'));
+        const sc2 = mountScene(b2, 'r');
+        const run2 = () => {
+          clearTimeout(b2.t);
+          sc2.coinWin();
+          setTimeout(sc2.toCoil, 350 / speed);
+          setTimeout(sc2.sparks, (350 + HIT) / speed);
+          b2.t = setTimeout(run2, 3400 / speed);
+        };
+        b2.addEventListener('click', run2);
+        players.push({ run: run2 });
+        run2();
+      }
     }
 
     // =====================================================================
