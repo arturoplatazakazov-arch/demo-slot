@@ -195,7 +195,6 @@ async function runSpin(request, opts = {}) {
   // The stake leaves the balance the moment the reels start (it comes back
   // with the server's figure at the end).
   if (!st.inFs && !opts.bought) renderBalance(st.balance - bet());
-  if (!st.inFs) SK.setMascot('idle');
   SK.startReelLoop();
   let ok = true;
   try {

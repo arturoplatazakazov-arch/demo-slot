@@ -619,9 +619,13 @@ function setMascot(pose, ms = 2200) {
   const el = document.getElementById('mascot');
   if (!el) return;
   clearTimeout(mascotTimer);
+  const changed = el.dataset.pose !== pose;
   for (const im of el.querySelectorAll('img')) im.classList.toggle('is-on', im.dataset.pose === pose);
   el.dataset.pose = pose;
-  bump(el);
+  // Only a real reaction hops (bomb, big win, free spins, jackpot); going back
+  // to idle — every spin start — is a quiet swap (user: the hop on each spin
+  // pulled the eye away from the reels).
+  if (changed && pose !== 'idle') bump(el);
   if (pose !== 'idle') mascotTimer = setTimeout(() => setMascot('idle'), ms);
 }
 
