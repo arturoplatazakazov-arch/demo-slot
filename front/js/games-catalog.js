@@ -99,6 +99,25 @@ const OT_VARIANTS = {
 const ot = (key, extra) => ({ code: 'olympus-thunder', ...OT_VARIANTS[key], ...extra });
 const njs = (key, extra) => ({ code: 'neon-joker-spins', ...NJS_VARIANTS[key], ...extra });
 const savannah = (key, extra) => ({ code: 'savannah-kings', ...SAVANNAH_VARIANTS[key], ...extra });
+// Sugar Blast (GDD-05): four art variants of one game. In Secret Room for now
+// (user, 2026-11-07); they move to Illuminator later.
+const SUGAR_VARIANTS = {
+  forest: { page: 'sugar-blast-forest.html', name: 'Sugar Blast · Forest', badge: 'Dusk',
+    desc: 'Живописный 2.5D: лиловый лес гигантских леденцов, рама из печенья с глазурью, пряничная фабрика.',
+    cover: 'img/sugar-blast-forest/cover.jpg' },
+  meadow: { page: 'sugar-blast-meadow.html', name: 'Sugar Blast · Meadow', badge: 'Sunny',
+    desc: 'Солнечный глянцевый 3D: луг с деревьями из сахарной ваты, рама из сливок и карамельной трости.',
+    cover: 'img/sugar-blast-meadow/cover.jpg' },
+  gummy: { page: 'sugar-blast-gummy.html', name: 'Sugar Blast · Gummy', badge: 'Jelly',
+    desc: 'Сахарные кристаллы и желе: пастельное утро, радужная мармеладная рама, мишки-младшие.',
+    cover: 'img/sugar-blast-gummy/cover.jpg' },
+  night: { page: 'sugar-blast-night.html', name: 'Sugar Blast · Night', badge: 'Neon',
+    desc: 'Ночное шоу на фабрике: карамельная река, прожекторы, шоколадная рама с неоном.',
+    cover: 'img/sugar-blast-night/cover.jpg' },
+};
+const sugar = (key, extra) => ({ code: 'sugar-blast', ...SUGAR_VARIANTS[key], ...extra });
+// Secret Room: hand-placed cards shown first, before the CRE8_CODES games.
+const CRE8_TOP_CARDS = [sugar('forest'), sugar('meadow'), sugar('gummy'), sugar('night')];
 
 // Illuminator: hand-ordered cards (first card first). A card is a game code
 // or { code, page, name, badge, desc, cover } overriding the /catalog entry;
@@ -254,6 +273,7 @@ async function renderCatalog() {
     if (uniqornGrid) {
       appendCards(uniqornGrid, entries.filter((e) => isUnicornGame(e.code) && !UNIQORN_MASCOT_CODES.has(e.code) && !UNIQORN_WIP_CODES.has(e.code)));
     }
+    if (cre8Grid) appendCards(cre8Grid, resolveCards(CRE8_TOP_CARDS, byCode));
     if (cre8Grid) appendCards(cre8Grid, entries.filter((e) => CRE8_CODES.has(e.code)));
   } catch (err) {
     const li = document.createElement('li');

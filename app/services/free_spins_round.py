@@ -17,6 +17,8 @@ STATE_KEYS = (
     # Gangsta Casino: the round's accumulated multiplier (coin_multiplier
     # round_accumulate / round_sticky).
     "free_spins_bomb_multiplier",
+    # Sugar Blast: which bought variant the round runs ("super").
+    "free_spins_variant",
 )
 
 

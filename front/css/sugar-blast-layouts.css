@@ -1,0 +1,187 @@
+/* Savannah Kings art variants (carved / canyon / toon / timber / crisp):
+   desktop layout options picked with the «Варианты» switch
+   (js/sugar-blast/layouts.js sets .screen[data-layout]).
+
+     1  (main) one-line title banner on the frame, WIN and BUY BONUS on the
+        left, jackpots on the right 10px off the frame; slot centred.
+     2  jackpots on two floors above the reels: GRAND on top, MINI · MINOR ·
+        MAJOR under it, resting on the frame's top border.
+     3  logo top centre, GRAND MAJOR MINOR MINI in one row on the frame.
+   Geometry for 1-3 is computed in js/sugar-blast/layouts.js.
+
+   Stage coordinates are the 1920x1080 design frame. Portrait is untouched:
+   every rule is scoped to body:not(.is-portrait). A variant whose frame art
+   is taller than usual tunes --l2-reel-top / --l2-reel-scale /
+   --l3-reel-scale in its own stylesheet. */
+
+/* --- Switch (same pill as Great Uniqorn) --------------------------------- */
+
+.layout-switch {
+  position: fixed; right: 12px; top: 12px; z-index: 110;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 4px 4px 12px; border-radius: 999px;
+  background: rgba(10, 6, 4, 0.78);
+  border: 1px solid rgba(255, 213, 106, 0.55);
+  color: #ffd75a;
+  font: 700 13px/1 system-ui, sans-serif;
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+}
+.layout-switch__label { margin-right: 4px; }
+.layout-switch button {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid rgba(255, 213, 106, 0.35);
+  background: transparent; color: #ffd75a; font: inherit; cursor: pointer;
+}
+.layout-switch button:hover { background: rgba(255, 213, 106, 0.14); }
+.layout-switch button:focus-visible { outline: 2px solid #fff4dc; outline-offset: 2px; }
+.layout-switch button[aria-pressed="true"] { background: #ffd75a; color: #1a0b06; border-color: #ffd75a; }
+body.is-portrait .layout-switch,
+body.is-buying .layout-switch { display: none; }
+
+/* --- 2: jackpots on two floors ------------------------------------------- */
+
+body:not(.is-portrait) .screen[data-layout="2"] .crown--ladder {
+  top: 14px; left: 50%; right: auto; width: 820px; transform: translateX(-50%);
+  flex-wrap: wrap; justify-content: center; align-items: flex-end;
+  gap: 6px 14px; z-index: 5;
+}
+body:not(.is-portrait) .screen[data-layout="2"] .crown--ladder .crown__top {
+  order: -1; flex-basis: 100%; display: flex; justify-content: center;
+}
+body:not(.is-portrait) .screen[data-layout="2"] .crown--ladder .jp { width: 250px; font-size: 24px; }
+body:not(.is-portrait) .screen[data-layout="2"] .crown--ladder .jp--grand { width: 320px; font-size: 32px; }
+body:not(.is-portrait) .screen[data-layout="2"] .reel {
+  top: var(--l2-reel-top, 392px);
+  transform: scale(var(--l2-reel-scale, 0.9)); transform-origin: 50% 0;
+}
+
+/* --- 1 (main): side columns ----------------------------------------------------- */
+
+/* Left column, reel size and the ladder geometry: js/sugar-blast/layouts.js. */
+
+/* Reels: no crown above them any more, so they grow and rise a little. */
+body:not(.is-portrait) .screen[data-layout="1"] .reel {
+  top: var(--l3-reel-top, 300px);
+  transform: scale(var(--l3-reel-scale, 1.05)); transform-origin: 50% 50%;
+}
+
+/* Right column: the ladder stands up, MINI at the bottom, GRAND on top
+   (DOM order is MINI MINOR MAJOR GRAND, so column-reverse). */
+body:not(.is-portrait) .screen[data-layout="1"] .crown--ladder {
+  top: 556px; left: auto; right: 32px; width: 360px;
+  transform: translateY(-50%);
+  flex-direction: column-reverse; align-items: center; justify-content: flex-start;
+  gap: 14px; z-index: 5;
+}
+body:not(.is-portrait) .screen[data-layout="1"] .crown--ladder .jp { width: 310px; font-size: 26px; }
+body:not(.is-portrait) .screen[data-layout="1"] .crown--ladder .jp--grand { width: 350px; font-size: 32px; }
+body:not(.is-portrait) .screen[data-layout="1"] .crown__top::before { width: 120%; height: 160%; }
+
+/* --- Tier popup art (window.SK_POPUP_ART): BIG / MEGA / EPIC WIN and the
+   four jackpots are full emblems (character + title) instead of a wordmark;
+   the counting amount panel sits under the emblem. ---------------------- */
+.sk-popup__art {
+  display: block; width: 560px; margin-bottom: -50px;
+  filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.6));
+  animation: title-in 0.7s cubic-bezier(.2, 1.4, .4, 1) both;
+}
+.sk-popup.is-tier-mega .sk-popup__art { width: 600px; }
+.sk-popup.is-tier-epic .sk-popup__art { width: 640px; }
+.sk-popup__art + .sk-popup__panel { z-index: 1; }
+.wheel-award__art {
+  display: block; width: 540px; margin-bottom: -40px;
+  filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.6));
+  animation: title-in 0.7s cubic-bezier(.2, 1.4, .4, 1) both;
+}
+.wheel-award[data-tier="minor"] .wheel-award__art { width: 570px; }
+.wheel-award[data-tier="major"] .wheel-award__art { width: 600px; }
+.wheel-award[data-tier="grand"] .wheel-award__art { width: 650px; }
+.wheel-award.has-art .wheel-award__tier { display: none; }
+.wheel-award__art + .wheel-award__tier + .wheel-award__panel { position: relative; z-index: 1; }
+body.is-portrait .sk-popup__art { width: 820px; }
+body.is-portrait .wheel-award__art { width: 800px; }
+
+/* --- DEMO panel (js/sugar-blast/demo.js): replay the win / jackpot
+   popups; collapsed to a small tab by default, visible on deployed pages. */
+.demo-panel {
+  position: fixed; left: 12px; top: 12px; z-index: 120;
+  display: flex; flex-direction: column; gap: 6px; width: 132px;
+  font: 700 13px/1 system-ui, sans-serif;
+}
+.demo-panel:not([open]) { width: auto; }
+.demo-btn {
+  padding: 8px 12px; border-radius: 8px; text-align: left;
+  border: 1px solid rgba(255, 213, 106, 0.45);
+  background: rgba(10, 6, 4, 0.8); color: #ffd75a; cursor: pointer;
+  font: inherit; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+}
+.demo-btn:hover { background: rgba(255, 213, 106, 0.16); }
+.demo-btn--all { background: #ffd75a; color: #1a0b06; }
+.demo-panel__toggle { list-style: none; text-align: center; letter-spacing: 0.08em; }
+.demo-panel__toggle::-webkit-details-marker { display: none; }
+.demo-panel.is-busy .demo-btn:not(.demo-panel__toggle) { opacity: 0.5; pointer-events: none; }
+body.is-buying .demo-panel { display: none; }
+
+/* ?shot=1 (layouts.js): clean frames for exports — no demo/switch chrome. */
+body.is-shot .demo-panel, body.is-shot .layout-switch, body.is-shot .preloader { display: none !important; }
+
+/* --- Win-line candidates (slot.js showWinLine, ?line=a|b|c / DEMO panel) --- */
+.win-line path, .win-line circle, .win-line rect { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+/* A · Silk: a smooth glowing thread, white-hot core, light pulses running
+   along it; paying cells get a soft pulsing ring. */
+.wl-a-glow { stroke: rgba(255, 176, 64, 0.55); stroke-width: 30; filter: blur(9px); }
+.wl-a-body { stroke: #ffc94d; stroke-width: 11; filter: drop-shadow(0 0 6px rgba(255, 190, 70, 0.9)); }
+.wl-a-core { stroke: #fffbe8; stroke-width: 3; }
+.wl-a-glow, .wl-a-body, .wl-a-core {
+  stroke-dasharray: 1 1; stroke-dashoffset: 1;
+  animation: wl-draw 0.55s cubic-bezier(.22, 1, .36, 1) forwards;
+}
+.wl-a-pulse {
+  stroke: #ffffff; stroke-width: 7; stroke-dasharray: 0.07 0.93; stroke-dashoffset: 0.07;
+  filter: drop-shadow(0 0 8px #fff3b0) drop-shadow(0 0 16px #ffb540);
+  animation: wl-run 1.4s linear 0.45s infinite;
+}
+.wl-a-pulse--2 { animation-delay: 1.15s; }
+.wl-a-ring {
+  stroke: #fff0b8; stroke-width: 8; opacity: 0; transform-box: fill-box; transform-origin: center;
+  filter: drop-shadow(0 0 10px rgba(255, 200, 80, 1)) drop-shadow(0 0 22px rgba(255, 160, 40, 0.8));
+  animation: wl-ring 1.2s ease-out infinite;
+}
+@keyframes wl-draw { to { stroke-dashoffset: 0; } }
+@keyframes wl-run { from { stroke-dashoffset: 0.07; } to { stroke-dashoffset: -0.93; } }
+@keyframes wl-ring {
+  0% { opacity: 0; transform: scale(0.82); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.08); }
+}
+
+/* B · Coin beads: a string of gold beads that rolls in left to right;
+   paying cells get a big glowing orb. */
+.wl-b-reveal { stroke: #fff; stroke-width: 80; fill: none; stroke-dasharray: 1 1; stroke-dashoffset: 1;
+  animation: wl-draw 0.7s cubic-bezier(.3, .8, .4, 1) forwards; }
+.wl-b-shadow { stroke: rgba(40, 14, 0, 0.75); stroke-width: 30; stroke-dasharray: 0 38; }
+.wl-b-bead { stroke: #f5b400; stroke-width: 22; stroke-dasharray: 0 38;
+  filter: drop-shadow(0 0 5px rgba(255, 190, 60, 0.8)); }
+.wl-b-shine { stroke: #fff6c8; stroke-width: 8; stroke-dasharray: 0 38; transform: translate(-3px, -4px); }
+.wl-b-orb, .wl-b-orb-glow { transform-box: fill-box; transform-origin: center; opacity: 0; animation: wl-orb 0.5s cubic-bezier(.2, 1.6, .4, 1) forwards; }
+.win-line .wl-b-orb { fill: #fff3b0; stroke: #a86a00; stroke-width: 4; }
+.win-line .wl-b-orb-glow { fill: rgba(255, 190, 60, 0.55); filter: blur(6px); }
+@keyframes wl-orb { from { opacity: 0; transform: scale(0.2); } to { opacity: 1; transform: scale(1); } }
+
+/* C · Flow ribbon: a dark translucent ribbon with gold rails, light dashes
+   streaming in the paying direction; paying cells get a marching gold frame. */
+.wl-c-edge { stroke: #ffcf4a; stroke-width: 24; filter: drop-shadow(0 0 8px rgba(255, 180, 50, 0.75)); }
+.wl-c-bed { stroke: rgba(30, 10, 0, 0.82); stroke-width: 17; }
+.wl-c-flow { stroke: #ffe9a6; stroke-width: 7; stroke-dasharray: 14 26; animation: wl-flow 0.6s linear infinite; }
+.wl-c-glint { stroke: rgba(255, 255, 255, 0.35); stroke-width: 2; transform: translateY(-6px); }
+.wl-c-edge, .wl-c-bed, .wl-c-glint { animation: wl-fade 0.35s ease-out both; }
+.wl-c-box {
+  stroke: #ffd75a; stroke-width: 6; stroke-dasharray: 0.08 0.04;
+  filter: drop-shadow(0 0 6px rgba(255, 200, 70, 0.9));
+  animation: wl-march 1.6s linear infinite, wl-fade 0.3s ease-out both;
+}
+@keyframes wl-flow { to { stroke-dashoffset: -40; } }
+@keyframes wl-march { to { stroke-dashoffset: -0.12; } }
+@keyframes wl-fade { from { opacity: 0; } to { opacity: 1; } }
+.demo-btn.is-on { border-color: #fff4dc; box-shadow: 0 0 0 2px rgba(255, 215, 90, 0.6); }

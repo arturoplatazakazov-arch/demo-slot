@@ -79,11 +79,23 @@ async def run_spin(
 
     # Neon Joker Spins (GDD-02 §4.1): the round spins its own weight set —
     # only the symbols named in reel_weight_overrides change.
-    if was_in_free_spins and fs_params.get("reel_weight_overrides"):
+    # Sugar Blast Super Free Spins (GDD-05 §8.2): a bought "super" round has
+    # its own weight set and every spin shows at least `min_count` of a
+    # symbol (one bomb) — the draw is repeated until it does.
+    super_round = was_in_free_spins and state.get("free_spins_variant") == "super"
+    if super_round and fs_params.get("super_weight_overrides"):
+        reel_set = with_weight_overrides(reel_set, fs_params["super_weight_overrides"])
+    elif was_in_free_spins and fs_params.get("reel_weight_overrides"):
         reel_set = with_weight_overrides(reel_set, fs_params["reel_weight_overrides"])
+    guarantee = fs_params.get("super_guarantee") if super_round else None
 
-    grid = spin_reels(reel_set, rng)
-    grid = apply_reel_caps(grid, reel_set, rng)
+    for _ in range(100_000):
+        grid = spin_reels(reel_set, rng)
+        grid = apply_reel_caps(grid, reel_set, rng)
+        if guarantee is None or sum(
+            column.count(guarantee["symbol_code"]) for column in grid.reels
+        ) >= int(guarantee.get("min_count", 1)):
+            break
 
     # Dev-only override (see /dev/force-hold-and-win): forces specific
     # symbols onto an otherwise-real, otherwise-normally-drawn grid, so
@@ -440,6 +452,9 @@ async def run_feature_buy(
     # purchase spin happens to land 3+ scatters on its own.
     result = plan.target_feature.execute(ctx, plan.target_config.params)
     state.update(result.state_patch)
+    # Sugar Blast: which bought round this is ("super" = Super Free Spins).
+    if product.get("free_spins_variant"):
+        state["free_spins_variant"] = product["free_spins_variant"]
 
     # Hold & Win resolves entirely in this one call (no state carried to a
     # future spin, unlike free_spins) — its payout is added to this spin's
