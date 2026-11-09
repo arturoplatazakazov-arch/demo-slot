@@ -2114,17 +2114,21 @@ function updateStageScale() {
 // (-8,-78)); cover, но не мельче сцены, иначе на деске съедет под автоматом.
 // На мобиле тот же фон — cover по высоте, видна середина с дверью сейфа.
 const V3_BG = { w: 1948, h: 1096 };
+// Мобила: свой портретный фон (дверь сейфа сверху, пол снизу), просто cover.
+const V3_BG_MOB = { w: 805, h: 1431 };
 function layoutV3Bg() {
   const screenEl = document.getElementById('screen');
   const bg = document.getElementById('bgLayer');
   if (!bg) return;
   const vw = screenEl.clientWidth;
   const vh = screenEl.clientHeight;
+  const mob = isMobileLayout();
+  const B = mob ? V3_BG_MOB : V3_BG;
   const s = parseFloat(document.documentElement.style.getPropertyValue('--stage-scale')) || 1;
-  const k = Math.max(s, vw / V3_BG.w, vh / V3_BG.h);
+  const k = mob ? Math.max(vw / B.w, vh / B.h) : Math.max(s, vw / B.w, vh / B.h);
   Object.assign(bg.style, {
-    inset: 'auto', objectFit: 'fill', width: `${V3_BG.w * k}px`, height: `${V3_BG.h * k}px`,
-    left: `${(vw - V3_BG.w * k) / 2}px`, top: `${(vh - V3_BG.h * k) / 2}px`,
+    inset: 'auto', objectFit: 'fill', width: `${B.w * k}px`, height: `${B.h * k}px`,
+    left: `${(vw - B.w * k) / 2}px`, top: `${(vh - B.h * k) / 2}px`,
   });
 }
 
@@ -2145,7 +2149,7 @@ function layoutBg() {
 }
 
 function setBackground() {
-  const bgSrc = `${ASSET_ROOT}/v3/bg_desk.jpg`;
+  const bgSrc = `${ASSET_ROOT}/v3/${isMobileLayout() ? 'bg_mob' : 'bg_desk'}.jpg`;
   const bg = document.getElementById('bgLayer');
   if (!bg.src.endsWith(bgSrc)) bg.src = bgSrc;
   // V3: катушки из макета (левая и правая — разные картинки, без зеркала)
@@ -2334,7 +2338,7 @@ function showSpineScreen(kind, { dark = false, onFrame = null, autoCloseMs = 0 }
     };
     root.classList.toggle('is-dark', dark);
     const setBg = () => {
-      const src = `${ASSET_ROOT}/img/${isMobileLayout() ? 'bg_mob' : 'bg_desk'}.jpg`;
+      const src = `${ASSET_ROOT}/${isMobileLayout() ? 'v3/bg_mob' : 'img/bg_desk'}.jpg`;
       root.style.setProperty('--fs-bg', `url("${new URL(src, location.href).href}")`);
     };
     const onResize = () => {
