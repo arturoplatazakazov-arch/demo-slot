@@ -1623,7 +1623,7 @@ function showBuyBonusDialog({ betSteps, betIndex, costMultiplier, currency, bala
 
 const RESPIN_COUNT = 3;                 // = hold_and_win.respin_count сида
 const HOLD_AND_WIN_RESPIN_PAUSE_MS = 700;
-const HOLD_AND_WIN_COIN_PAUSE_MS = 1500;
+const HOLD_AND_WIN_COIN_PAUSE_MS = 1900;   // + молния в табличку и её заполнение
 const HW_CELL_SPIN_MS = 620;
 const HW_CELL_SPIN_FILLER = 8;
 const HW_COIN_FILLER_CHANCE = 0.07;     // = respin_land_weights coin 7 / 100
@@ -1650,17 +1650,36 @@ function paintLockedCoins(locked) {
   }
 }
 
-function setRespinCounter(value, reset = false) {
+// tick — респин без монеты: гаснущая цифра «выбивается» (вспышка, искры,
+// табличка вздрагивает); reset — заполнение 1→2→3 после молнии от монеты.
+function restartClass(el, cls) {
+  el.classList.remove(cls);
+  void el.offsetWidth;
+  el.classList.add(cls);
+}
+function setRespinCounter(value, reset = false, tick = false) {
   const el = document.getElementById('respinValue');
   if (!el) return;
   el.textContent = value;
   // V3 деск: табличка 1-2-3 у рамы — горят цифры до оставшегося числа респинов
+  const plate = document.getElementById('v3Resp');
+  // классы прошлого события снимаем, иначе заполнение перебивает «ход»
+  if (plate && (tick || reset)) {
+    plate.classList.remove('is-fill', 'is-reset', 'is-tick');
+    plate.querySelectorAll('.v3resp__n').forEach((n) => n.classList.remove('is-tick'));
+  }
   document.querySelectorAll('#v3Resp .v3resp__n').forEach((n) => {
+    const wasOn = n.classList.contains('is-on');
     n.classList.toggle('is-on', Number(n.dataset.n) <= value);
+    if (tick && wasOn && !n.classList.contains('is-on')) {
+      restartClass(n, 'is-tick');
+      fx('counterTick', n);
+    }
   });
-  if (reset) {
-    const plate = document.getElementById('v3Resp');
-    if (plate) { plate.classList.remove('is-reset'); void plate.offsetWidth; plate.classList.add('is-reset'); }
+  if (plate && tick) restartClass(plate, 'is-tick');
+  if (reset && plate) {
+    restartClass(plate, 'is-reset');
+    restartClass(plate, 'is-fill');
   }
   // Ревью 2: визуальный счётчик — три «заряда»; гаснут по одному.
   const pips = document.getElementById('respinPips');
@@ -1803,16 +1822,35 @@ async function runHoldAndWinSequence(result, locked, baseGrid = null) {
     setRoundCharge(locked.size);
 
     respinsLeft = respin.landed.length ? RESPIN_COUNT : respinsLeft - 1;
-    setRespinCounter(Math.max(0, respinsLeft), respin.landed.length > 0);
-    Sound.playSfx(respin.landed.length ? 'resetCounter' : 'respinCount');
+    // 2026-11-09: без монеты — цифра гаснет с ударом; с монетой табличка
+    // заполняется, когда в неё попадёт молния от монеты (ниже), не сразу.
+    let refilled = false;
+    const refill = () => {
+      if (refilled) return;
+      refilled = true;
+      setRespinCounter(RESPIN_COUNT, true);
+      Sound.playSfx('resetCounter');
+    };
+    if (respin.landed.length) setTimeout(refill, 1500);   // страховка, если FX нет
+    else {
+      setRespinCounter(Math.max(0, respinsLeft), false, true);
+      Sound.playSfx('respinCount');
+    }
+    const counterEl = document.getElementById('v3Resp');
 
-    for (const c of respin.landed) {
+    for (const [ci, c] of respin.landed.entries()) {
       noteTier(c.kind);
       const info = cellInfos[c.row * GRID_COLS + c.col];
       if (!info) continue;
       // Hold & Win (2026-11-06): катушка искрит, молния бежит в монету,
       // при попадании монета играет выигрыш.
-      fx('coilToCoin', info.cell, () => playWinAnimationOnce(info));
+      // затем молния монета → табличка респинов, та заполняется
+      fx('coilToCoin', info.cell, () => {
+        playWinAnimationOnce(info);
+        setTimeout(() => {
+          if (!fx('coinToCounter', info.cell, counterEl, refill)) refill();
+        }, 200 + ci * 120);
+      });
       // Джекпот-монета: разряд идёт от неё к своей плашке (GDD).
       if (JACKPOT_TIERS.includes(c.kind)) {
         const plate = document.querySelector(`.jp--${c.kind}`);

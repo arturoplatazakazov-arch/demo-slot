@@ -20,7 +20,7 @@
   const ROOT = 'img/volt-coins-v3/fx';
   // Версия atlas/json скелетов — поднимать при каждой пересборке fx
   // (PNG-страницы версионируются хешем в самом атласе).
-  const FX_V = 47;
+  const FX_V = 48;
   const BOX = {
     bg_desk: { x: -899, y: -437.5, width: 1798, height: 875 },
     bg_mob: { x: -465.5, y: -845, width: 931, height: 1690 },
@@ -157,6 +157,7 @@
           if (queued) { const [qc, ql] = queued; queued = null; inst.play(qc, ql); }
         }, dur);
       },
+      isBusy: () => performance.now() < busyUntil,
       queue(clip, loop = false) {
         if (performance.now() < busyUntil && loopTimer) queued = [clip, loop];
         else inst.play(clip, loop);
@@ -202,10 +203,17 @@
   // головы), и вокруг неё из темноты проступает сам фон — та же картинка,
   // ярче, под радиальной маской, ровно поверх фона (его прямоугольник берём
   // у #bgLayer: на деске он не cover). Во время выигрыша/антиципации — нет.
+  let ambientTimer = null;
   function ambientGlow() {
-    setTimeout(ambientGlow, 4000 + Math.random() * 4000);
+    // бонус (2026-11-09): катушки искрят заметно чаще, без «проявления» фона —
+    // в бонусе фон и так почти не затемнён
+    const bonus = mode === 'bonus';
+    clearTimeout(ambientTimer);
+    ambientTimer = setTimeout(ambientGlow, bonus ? 900 + Math.random() * 1300 : 4000 + Math.random() * 4000);
     if (document.hidden || document.body.classList.contains('lights-off')) return;
-    if (winOn || anticOn || bigOn || !coils.length) return;
+    if (bigOn || !coils.length) return;
+    if (bonus) { bonusSpark(); return; }
+    if (winOn || anticOn) return;
     const scr = document.getElementById('screen');
     const bg = document.getElementById('bgLayer');
     if (!scr || !bg) return;
@@ -238,6 +246,26 @@
     d.style.setProperty('--reveal-a', (0.8 + Math.random() * 0.2).toFixed(2));
     scr.appendChild(d);
     setTimeout(() => d.remove(), 2600);
+  }
+
+  function bonusSpark() {
+    const free = coils.filter((c) => !(c.inst.isBusy && c.inst.isBusy()));
+    if (!free.length) return;
+    // иногда обе катушки разом
+    const pick = free.length > 1 && Math.random() < 0.3 ? free : [free[Math.floor(Math.random() * free.length)]];
+    for (const c of pick) {
+      const h = coilHead(c);
+      c.inst.play('spin', false);
+      c.inst.queue('off', true);
+      const n = 3 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < n; i++) {
+        const ang = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.7;
+        const dist = 30 + Math.random() * 50;
+        zap(h, { x: h.x + Math.cos(ang) * dist, y: h.y + Math.sin(ang) * dist * 0.7 }, i * 90);
+      }
+      bgFlash(c, 0.6);
+    }
+    if (window.Sound && Math.random() < 0.35) Sound.playSfx('coilBuzz');
   }
 
   function coilsPlay(clip, loop = false, thenIdle = true) {
@@ -359,7 +387,7 @@
       });
       document.body.classList.add('fx-ready');
       if (document.body.classList.contains('v3')) loadSymFx();
-      setTimeout(ambientGlow, 2500);
+      ambientTimer = setTimeout(ambientGlow, 2500);
       load(back, isMobile() ? 'bg_desk' : 'bg_mob').catch(() => {});
       window.addEventListener('resize', () => {
         const v = isMobile() ? 'bg_mob' : 'bg_desk';
@@ -482,6 +510,35 @@
     if (onHit) setTimeout(onHit, SPARK_LEAD_MS + TRAVEL_HIT_MS);
   };
 
+  // Hold & Win (2026-11-09): новая монета после своего выигрыша бьёт молнией
+  // в табличку респинов; onHit — табличка заполняется (slot.js).
+  VoltFx.coinToCounter = function coinToCounter(cellEl, counterEl, onHit) {
+    if (!counterEl || !hasTravel()) return false;
+    const p = center(cellEl);
+    const q = center(counterEl);
+    zap(p, q, 0, 'travel');
+    setTimeout(() => {
+      for (let i = 0; i < 4; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const d = 22 + Math.random() * 26;
+        zap(q, { x: q.x + Math.cos(a) * d * 1.6, y: q.y + Math.sin(a) * d * 0.7 }, i * 60);
+      }
+      if (onHit) onHit();
+    }, TRAVEL_HIT_MS);
+    return true;
+  };
+
+  // Респин без монеты: гаснущая цифра «выбивает» короткие искры.
+  VoltFx.counterTick = function counterTick(digitEl) {
+    if (!digitEl) return;
+    const q = center(digitEl);
+    for (let i = 0; i < 5; i++) {
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.6;
+      const d = 18 + Math.random() * 22;
+      zap(q, { x: q.x + Math.cos(a) * d, y: q.y + Math.sin(a) * d }, i * 45);
+    }
+  };
+
   VoltFx.arcToPlate = function arcToPlate(cellEl, plateEl) {
     // GDD: «джекпот-коин — разряд идёт к своей плашке»
     if (!plateEl) return;
@@ -526,6 +583,9 @@
       if (doorInst) doorInst.play('idle', true);
       coilsRest();
     } else {
+      // бонус: частые искры катушек начинаются сразу, не через 4–8 с
+      clearTimeout(ambientTimer);
+      ambientTimer = setTimeout(ambientGlow, 700);
       const cur = frameInst.animationState.getCurrent(0);
       if (!cur || cur.animation.name !== 'charge') frameInst.play('bonus', true);
       const dcur = doorInst && doorInst.animationState.getCurrent(0);

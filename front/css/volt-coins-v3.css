@@ -2674,3 +2674,53 @@ html body .reel__cell.is-coin:not(.is-winning) > img { filter: none; animation: 
 .test-panel__col button:hover { border-color: var(--cyan); color: #fff; }
 .test-panel__col button[data-test="combo"],
 .test-panel__col button[data-test="coins"] { border-color: rgba(255, 201, 60, 0.6); }
+
+/* ---- 2026-11-09: бонус почти без затемнения (светлее базы) ---- */
+html body.v3 .screen[data-mode="bonus"] .bg { filter: brightness(0.97) saturate(1.15) hue-rotate(-8deg); }
+html body.v3 .screen[data-mode="bonus"] .field-vignette {
+  background:
+    radial-gradient(70% 40% at 50% 0%, rgba(255, 196, 70, 0.14), transparent 70%),
+    radial-gradient(var(--vig-rx, 60%) var(--vig-ry, 55%) at var(--vig-x, 50%) var(--vig-y, 50%),
+      transparent 60%, rgba(2, 4, 20, 0.12) 85%, rgba(2, 4, 20, 0.22) 100%);
+}
+
+/* ---- 2026-11-09: табличка респинов — заполнение и «ход» ---- */
+/* заполнение после молнии от монеты: цифры вспыхивают по очереди 1 → 2 → 3 */
+@keyframes v3resp-fill {
+  0%   { opacity: 0.28; transform: translateY(-50%) scale(0.7); filter: none; }
+  45%  { opacity: 1; transform: translateY(-50%) scale(1.6); filter: brightness(2.4) drop-shadow(0 0 12px #8fe8ff); }
+  100% { opacity: 1; transform: translateY(-50%) scale(1); filter: none; }
+}
+.screen[data-mode="bonus"] .v3resp.is-fill .v3resp__n { animation: v3resp-fill 520ms cubic-bezier(0.2, 0.8, 0.3, 1) backwards; }
+.screen[data-mode="bonus"] .v3resp.is-fill .v3resp__n[data-n="2"] { animation-delay: 110ms; }
+.screen[data-mode="bonus"] .v3resp.is-fill .v3resp__n[data-n="3"] { animation-delay: 220ms; }
+@keyframes v3resp-reset {
+  0%   { filter: brightness(1); }
+  25%  { filter: brightness(2.3) drop-shadow(0 0 14px #39d8ff); }
+  100% { filter: brightness(1); }
+}
+.v3resp.is-reset .v3resp__art { animation: v3resp-reset 800ms ease-out; }
+
+/* ход без монеты: гаснущая цифра раскаляется, раздувается и тухнет,
+   табличка вздрагивает и на миг темнеет */
+@keyframes v3resp-tick {
+  0%   { opacity: 1; transform: translateY(-50%) scale(1); filter: none; color: #fff; }
+  22%  { opacity: 1; transform: translateY(-50%) scale(2); filter: brightness(1.35) drop-shadow(0 0 14px #ff7a2d); color: #ffb35a; }
+  55%  { opacity: 0.9; transform: translateY(-50%) scale(0.85); color: #ff8a3d; }
+  100% { opacity: 0.28; transform: translateY(-50%) scale(1); filter: none; }
+}
+.screen[data-mode="bonus"] .v3resp__n.is-tick { animation: v3resp-tick 700ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+@keyframes v3resp-shake {
+  0%, 100% { translate: 0 0; }
+  15% { translate: -4px 1px; }
+  35% { translate: 4px -1px; }
+  55% { translate: -3px 0; }
+  75% { translate: 2px 0; }
+}
+@keyframes v3resp-dim {
+  0%   { filter: brightness(1); }
+  20%  { filter: brightness(0.55) saturate(1.4) hue-rotate(-25deg); }
+  100% { filter: brightness(1); }
+}
+.v3resp.is-tick { animation: v3resp-shake 420ms ease-out; }
+.v3resp.is-tick .v3resp__art { animation: v3resp-dim 700ms ease-out; }
