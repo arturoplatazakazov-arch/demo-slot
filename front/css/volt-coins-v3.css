@@ -154,6 +154,10 @@ body.fx-over-dim .fx-canvas--front { z-index: 9; }
 
 /* Тумблер «turn off light» (dev-панель, идея с мита): гасит всё Spine-свечение. */
 body.lights-off .fx-canvas { display: none; }
+/* попапы (арт + дождь монет) — Spine на своих канвасах: «свет» их не гасит,
+   иначе от попапа остаётся только текст суммы */
+body.lights-off .fx-canvas--popup,
+body.lights-off .fx-canvas--popup-top { display: block; }
 
 /* ---------- Катушки Теслы ----------
    coil.png 566x1080 (перегенерирована в fal), правая — зеркальная копия.
@@ -2724,3 +2728,10 @@ html body.v3 .screen[data-mode="bonus"] .field-vignette {
 }
 .v3resp.is-tick { animation: v3resp-shake 420ms ease-out; }
 .v3resp.is-tick .v3resp__art { animation: v3resp-dim 700ms ease-out; }
+
+/* ---- 2026-11-10: в бонусе разряды золотые (вариант C со страницы анимаций) ---- */
+/* картинки вспышек катушек (голубые в PSB) уводим в золото фильтром */
+.screen[data-mode="bonus"] .v3-flash img { filter: grayscale(0.4) sepia(0.85) saturate(1.8) brightness(1.12); }   /* вариант C «Золото монет» */
+.screen[data-mode="bonus"] .bg-flash {
+  background: radial-gradient(closest-side, rgba(255, 236, 150, 0.9), rgba(255, 186, 40, 0.45) 45%, rgba(255, 150, 0, 0) 100%);
+}

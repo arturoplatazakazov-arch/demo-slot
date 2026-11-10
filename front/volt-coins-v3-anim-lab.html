@@ -449,7 +449,7 @@
       const cv = stage.canvasEl;
       const ctr = (el, fx = 0.5, fy = 0.5) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width * fx, y: r.top + r.height * fy }; };
       // молния между двумя точками экрана (как fx.js zap); точки — функции, сцена едет со скроллом
-      const zapPts = (A, B, clip, scaleK = 1) => {
+      const zapPts = (A, B, clip, scaleK = 1, tint = null) => {
         const inst = arcRes.createInstance();
         const sk = inst.skeleton;
         const rootB = sk.getRootBone();
@@ -468,7 +468,10 @@
         };
         place();
         const upd = inst.update.bind(inst);
-        inst.update = (d, c) => { place(); upd(d, c); };
+        inst.update = (d, c) => {
+          place(); upd(d, c);
+          if (tint) for (const sl of sk.slots) { const t = tint[sl.data.name.replace(/\d+$/, '')]; if (t) { sl.color.r = t[0]; sl.color.g = t[1]; sl.color.b = t[2]; } }
+        };
         inst.animationState.timeScale = speed;
         inst.play(clip, false);
         inst.onSettle = () => stage.removeOverlay(inst);
@@ -482,7 +485,7 @@
         const coinHtml = '<div class="tilebox duo-coin"></div>';
         return `<div class="darkstage duo">${side === 'l' ? coilHtml + '<div class="duo-gap"></div>' + coinHtml : coinHtml + '<div class="duo-gap"></div>' + coilHtml}</div>`;
       };
-      const mountScene = (box, side) => {
+      const mountScene = (box, side, { tint = null, filter = '' } = {}) => {
         const coil = box.querySelector('.coilbox');
         const tile = box.querySelector('.duo-coin');
         const imgs = ['flash', 'flash2'].map((n) => {
@@ -491,6 +494,7 @@
           img.src = `${IMG}/v3/${n}_${side}.webp`;
           const [l, t, w, h] = FLASH_R[side][n];
           Object.assign(img.style, { left: `${l}%`, top: `${t}%`, width: `${w}%`, height: `${h}%` });
+          if (filter) img.style.filter = filter;
           coil.appendChild(img);
           return img;
         });
@@ -509,11 +513,11 @@
           for (let i = 0; i < 4; i++) {
             const ang = Math.random() * Math.PI * 2;
             const d = 28 + Math.random() * 36;
-            setTimeout(() => zapPts(head, () => ({ x: head().x + Math.cos(ang) * d, y: head().y + Math.sin(ang) * d }), 'zap', 0.8), (i * 90) / speed);
+            setTimeout(() => zapPts(head, () => ({ x: head().x + Math.cos(ang) * d, y: head().y + Math.sin(ang) * d }), 'zap', 0.8, tint), (i * 90) / speed);
           }
         };
         const coinWin = () => { coin.animationState.timeScale = speed; coin.play('win', false); coin.queue('v1', true, 0); };
-        return { sparks, coinWin, toCoil: () => zapPts(mid, head, 'travel'), toCoin: () => zapPts(head, mid, 'travel'), box };
+        return { sparks, coinWin, toCoil: () => zapPts(mid, head, 'travel', 1, tint), toCoin: () => zapPts(head, mid, 'travel', 1, tint), box };
       };
       {
         const s1 = row({ title: 'Разряд катушки → монета', clip: 'катушка искрит → arc: travel 0,8 с → монета win',
@@ -548,7 +552,27 @@
 
       // =====================================================================
       category('hw', 'Hold & Win', 'бонус: катушки и респины',
-        'Что добавлено в бонус 2026-11-09: частые искры катушек, молния монеты в табличку респинов с заполнением и заметный «ход» при каждом пустом респине.');
+        'Бонус: все разряды золотые («Золото монет»), частые искры катушек, молния монеты в табличку респинов с заполнением и молния по кромке ячейки при каждом пустом респине.');
+      // В бонусе все разряды золотые — вариант C «Золото монет» (выбран 2026-11-10),
+      // как в игре (fx.js BONUS_ARC_TINT, css .screen[data-mode="bonus"] .v3-flash img).
+      const BONUS_TINT = { glow: [0.96, 0.7, 0.24], bolt: [1, 0.92, 0.66], src: [1, 0.78, 0.45], hitdot: [1, 0.78, 0.45], headdot: [1, 0.78, 0.45], hitflare: [1, 0.94, 0.75], headflare: [1, 0.94, 0.75] };
+      const BONUS_FLASH_FILTER = 'grayscale(0.4) sepia(0.85) saturate(1.8) brightness(1.12)';
+      {
+        const s = row({ title: 'Разряд катушки → монета в бонусе', clip: 'катушка искрит → arc: travel 0,8 с → монета win · цвет «Золото монет»',
+          text: 'В Hold & Win молнии и вспышки катушек золотые — в цвет монет и рамки джекпотов (в базе — голубые).', kind: 'Spine + DOM' });
+        const b = st(s, coilScene('l'));
+        const sc = mountScene(b, 'l', { tint: BONUS_TINT, filter: BONUS_FLASH_FILTER });
+        const run = () => {
+          clearTimeout(b.t);
+          sc.sparks();
+          setTimeout(sc.toCoin, 380 / speed);
+          setTimeout(sc.coinWin, (380 + HIT) / speed);
+          b.t = setTimeout(run, 2600 / speed);
+        };
+        b.addEventListener('click', run);
+        players.push({ run });
+        run();
+      }
       {
         const s = row({ title: 'Катушка — искры в бонусе', clip: 'spin 420 мс + 3–5 разрядов у головы · каждые 0,9–2,2 с',
           text: 'Пока идёт Hold & Win, катушки искрят постоянно (в базе — раз в 4–8 с). Иногда обе разом. Не перебивают разряды «катушка → монета».', kind: 'DOM + Spine' });
@@ -559,7 +583,7 @@
             img.className = 'flash';
             img.src = `${IMG}/v3/${n}_${side}.webp`;
             const [l, t, w, h] = FLASH_R[side][n];
-            Object.assign(img.style, { left: `${l}%`, top: `${t}%`, width: `${w}%`, height: `${h}%` });
+            Object.assign(img.style, { left: `${l}%`, top: `${t}%`, width: `${w}%`, height: `${h}%`, filter: BONUS_FLASH_FILTER });
             a.appendChild(img);
             return img;
           });
@@ -573,7 +597,7 @@
             for (let i = 0; i < n; i++) {
               const ang = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.7;
               const d = 30 + Math.random() * 50;
-              setTimeout(() => zapPts(head, () => ({ x: head().x + Math.cos(ang) * d, y: head().y + Math.sin(ang) * d * 0.7 }), 'zap', 0.8), (i * 90) / speed);
+              setTimeout(() => zapPts(head, () => ({ x: head().x + Math.cos(ang) * d, y: head().y + Math.sin(ang) * d * 0.7 }), 'zap', 0.8, BONUS_TINT), (i * 90) / speed);
             }
           };
           const run = () => {
@@ -597,12 +621,17 @@
           n.classList.toggle('is-on', Number(n.dataset.n) <= value);
           if (tick && was && !n.classList.contains('is-on')) {
             restart(n, 'is-tick');
-            const q = () => ctr(n);
-            for (let i = 0; i < 5; i++) {
-              const a = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.6;
-              const d = 18 + Math.random() * 22;
-              setTimeout(() => zapPts(q, () => ({ x: q().x + Math.cos(a) * d, y: q().y + Math.sin(a) * d }), 'zap', 0.6), (i * 45) / speed);
-            }
+            // молния обегает по кромке синюю ячейку цифры (как fx.js counterTick):
+            // поля ячеек — замер respins_h.png 424x89
+            const cell = [[11, 12, 113, 61], [155, 12, 113, 61], [299, 12, 113, 61]][Number(n.dataset.n) - 1];
+            const corner = (i) => () => {
+              const r = plate.getBoundingClientRect();
+              const kx = r.width / 424; const ky = r.height / 89;
+              const x0 = r.left + cell[0] * kx; const y0 = r.top + cell[1] * ky;
+              const x1 = x0 + cell[2] * kx; const y1 = y0 + cell[3] * ky;
+              return [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }][i % 4];
+            };
+            [0, 210, 330, 540].forEach((ms, i) => setTimeout(() => zapPts(corner(i), corner(i + 1), 'travel', 1, BONUS_TINT), ms / speed));
           }
         });
         if (tick) restart(plate, 'is-tick');
@@ -623,13 +652,13 @@
           setPlate(plate, 1);
           setTimeout(() => { coin.animationState.timeScale = speed; coin.play('win', false); coin.queue('v1', true, 0); }, 500 / speed);
           setTimeout(() => {
-            zapPts(() => ctr(tile), () => ctr(plate), 'travel');
+            zapPts(() => ctr(tile), () => ctr(plate), 'travel', 1, BONUS_TINT);
             setTimeout(() => {
               const q = () => ctr(plate);
               for (let i = 0; i < 4; i++) {
                 const a = Math.random() * Math.PI * 2;
                 const d = 22 + Math.random() * 26;
-                setTimeout(() => zapPts(q, () => ({ x: q().x + Math.cos(a) * d * 1.6, y: q().y + Math.sin(a) * d * 0.7 }), 'zap', 0.8), (i * 60) / speed);
+                setTimeout(() => zapPts(q, () => ({ x: q().x + Math.cos(a) * d * 1.6, y: q().y + Math.sin(a) * d * 0.7 }), 'zap', 0.8, BONUS_TINT), (i * 60) / speed);
               }
               setPlate(plate, 3, { reset: true });
             }, HIT / speed);
@@ -641,8 +670,8 @@
         run();
       }
       {
-        const s = row({ title: 'Респины — ход (пустой респин)', clip: 'is-tick: цифра 0,7 с · табличка shake 0,42 с + затемнение · 5 искр',
-          text: 'Респин без монеты: гаснущая цифра раскаляется оранжевым, раздувается вдвое и тухнет, из неё бьют искры; табличка вздрагивает и на миг темнеет. Здесь: 3 → 2 → 1 → 0, затем новая монета снова заполняет табличку.', kind: 'CSS + Spine' });
+        const s = row({ title: 'Респины — ход (пустой респин)', clip: 'is-tick: цифра 0,7 с · табличка shake 0,42 с + затемнение · молния по кромке ячейки (4 × arc travel)',
+          text: 'Респин без монеты: гаснущая цифра раскаляется оранжевым, раздувается вдвое и тухнет, молния обегает по кромке её ячейку (верх → правый край → низ → левый); табличка вздрагивает и на миг темнеет. Здесь: 3 → 2 → 1 → 0, затем новая монета снова заполняет табличку.', kind: 'CSS + Spine' });
         const box = st(s, `<div class="darkstage">${PLATE}</div>`);
         const plate = box.querySelector('.respbox');
         const run = () => {
@@ -659,6 +688,40 @@
         box.addEventListener('click', run);
         players.push({ run });
         run();
+      }
+      {
+        // молния по кругу рамы — как fx.js frameLap: две молнии из противоположных углов
+        // по часовой, по середине хромового бортика (9,5 из 698×639), стороны — arc `travel`
+        const LAP = [0, 250, 480, 730];
+        const lap = (frame, delay, laps, tint) => {
+          const pt = (i) => () => {
+            const r = frame.getBoundingClientRect();
+            const ix = (9.5 / 698) * r.width; const iy = (9.5 / 639) * r.height;
+            return [{ x: r.left + ix, y: r.top + iy }, { x: r.right - ix, y: r.top + iy },
+              { x: r.right - ix, y: r.bottom - iy }, { x: r.left + ix, y: r.bottom - iy }][i % 4];
+          };
+          for (let l = 0; l < laps; l++) {
+            for (const start of [0, 2]) {
+              for (let i = 0; i < 4; i++) {
+                setTimeout(() => zapPts(pt(start + i), pt(start + i + 1), 'travel', 1, tint), (delay + l * 990 + LAP[i]) / speed);
+              }
+            }
+          }
+        };
+        const FRAME = `<div class="artbox neonbox" style="width:340px;aspect-ratio:698/639"><div class="reelbg"></div><img class="back" src="${IMG}/v3/frame.png" alt=""></div>`;
+        for (const [title, clip, text, laps, tint] of [
+          ['Рама — молния по кругу: вход в бонус', 'frameLap: 2 молнии × 4 стороны · arc travel · 1 круг ~1 с',
+            '3 монеты в линию: катушки бьют в раму, и сразу по бортику рамы из двух противоположных углов бегут две молнии (голубые, как в базе).', 1, null],
+          ['Рама — золотая молния: 9 из 9 перед Grand', 'frameLap: 2 круга · цвет «Золото монет» · затем попап GRAND',
+            'Все 9 ячеек в монетах: разряды катушек во все ячейки и в плашку GRAND, по раме два круга золотой молнии, после — попап Grand Jackpot.', 2, BONUS_TINT],
+        ]) {
+          const s = row({ title, clip, text, kind: 'Spine' });
+          const a = st(s, FRAME);
+          const run = () => { clearTimeout(a.t); lap(a, 0, laps, tint); a.t = setTimeout(run, (laps * 990 + 1600) / speed); };
+          a.addEventListener('click', run);
+          players.push({ run });
+          run();
+        }
       }
     }
 

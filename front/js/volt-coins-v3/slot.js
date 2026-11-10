@@ -43,7 +43,7 @@ const FILLER_CODES = SYMBOL_CODES.filter((code) => code !== 'coin');
 // показывается пустой эмалью с номиналом поверх, поэтому код 'coin' ведёт
 // на coin_value.
 // Версия картинок символов: поднимать при замене арта (новый уайлд — 2, слиток — 3, 4, бриллиант — 5).
-const SYM_V = 29;  // V3: монеты из PSB №2 (2026-11-05)
+const SYM_V = 30;  // V3: монеты из PSB №2 (2026-11-05)
 // V2: слиток подменяется выбранным вариантом (review.js, data-ingot).
 function artCode(code) {
   if (code === 'coin') return 'coin_value';
@@ -1878,7 +1878,8 @@ async function runHoldAndWinSequence(result, locked, baseGrid = null) {
   if (grand) {
     Sound.playSfx('gridComplete');
     fx('grandDischarge');
-    await wait(900);
+    // разряды в ячейки + два круга золотой молнии по раме (fx.js frameLap) до попапа GRAND
+    await wait(2100);
   }
 
   // Итог раунда (2026-11-05, продукт): вместо TOTAL WIN — попап по сумме за
@@ -1943,7 +1944,7 @@ function setupTestPanel() {
   const B = (id, label) => `<button type="button" data-test="${id}">${label}</button>`;
   // «Тест» сворачивает столбик; под ним — ссылка на страницу всех анимаций игры
   panel.innerHTML = '<details class="test-panel__toggle"><summary>Тест</summary></details>' +
-    '<a class="test-panel__anim" href="volt-coins-v3-anim-lab.html">Анимации</a>' +
+    `<a class="test-panel__anim" href="volt-coins-v3-anim-lab.html?v=${Date.now()}">Анимации</a>` +
     '<div class="test-panel__col">' + [
     B('buy', 'Buy Bonus'),
     B('pop:bigWin', 'Big Win'), B('pop:megaWin', 'Mega Win'), B('pop:epicWin', 'Epic Win'),
@@ -2330,7 +2331,7 @@ function getScreenStage() {
   return screenStage;
 }
 
-const SCREEN_V = 15;
+const SCREEN_V = 17;
 function getScreenResource(kind, variant = screenVariant()) {
   const key = `${kind}_${variant}`;
   if (!screenResourceCache[key]) {

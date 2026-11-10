@@ -1,5 +1,5 @@
-animation.png?v=2545943e
-size:2031,1155
+animation.png?v=615b9f10
+size:2031,1153
 filter:Linear,Linear
 pma:true
 card_values
@@ -45,13 +45,13 @@ bounds:712,992,87,87
 tap_continue
 bounds:801,992,461,86
 jp_grand
-bounds:1264,992,250,71
+bounds:1264,992,250,69
 jp_minor
-bounds:1516,992,205,58
-jp_major
-bounds:1723,992,205,57
+bounds:1516,992,205,56
 jp_mini
-bounds:0,1098,205,57
+bounds:1723,992,205,56
+jp_major
+bounds:0,1098,205,55
 bolt0
 bounds:207,1098,357,48
 bolt1

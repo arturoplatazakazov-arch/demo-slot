@@ -20,7 +20,7 @@
   const ROOT = 'img/volt-coins-v3/fx';
   // Версия atlas/json скелетов — поднимать при каждой пересборке fx
   // (PNG-страницы версионируются хешем в самом атласе).
-  const FX_V = 48;
+  const FX_V = 50;
   const BOX = {
     bg_desk: { x: -899, y: -437.5, width: 1798, height: 875 },
     bg_mob: { x: -465.5, y: -845, width: 931, height: 1690 },
@@ -312,6 +312,12 @@
   // a 1000-unit stroke centred on its origin; the root bone is rotated and
   // stretched so it spans exactly a -> b. Thickness grows a little with length
   // so short hops stay crisp and long ones read from across the screen.
+  // слот скелета arc (без цифр) → цвет 0..1 в бонусе
+  // вариант C «Золото монет» (выбран 2026-11-10 на странице анимаций)
+  const BONUS_ARC_TINT = {
+    glow: [0.96, 0.7, 0.24], bolt: [1, 0.92, 0.66], src: [1, 0.78, 0.45],
+    hitdot: [1, 0.78, 0.45], hitflare: [1, 0.94, 0.75], headdot: [1, 0.78, 0.45], headflare: [1, 0.94, 0.75],
+  };
   function zap(a, b, delay = 0, clip = 'zap') {
     if (!res.arc) return;
     const run = () => {
@@ -337,7 +343,19 @@
       };
       place();
       const update = inst.update.bind(inst);
-      inst.update = (delta, canvasEl) => { place(); update(delta, canvasEl); };
+      // бонус (проба 2026-11-10): молнии жёлтые — цвет слотов перекрашиваем
+      // после каждого apply (таймлайны клипа пишут только альфу поверх setup)
+      const tint = mode === 'bonus' ? BONUS_ARC_TINT : null;
+      inst.update = (delta, canvasEl) => {
+        place();
+        update(delta, canvasEl);
+        if (tint) {
+          for (const sl of sk.slots) {
+            const c = tint[sl.data.name.replace(/\d+$/, '')];
+            if (c) { sl.color.r = c[0]; sl.color.g = c[1]; sl.color.b = c[2]; }
+          }
+        }
+      };
       inst.play(clip, false);
       inst.onSettle = () => front.removeOverlay(inst);
       front.addOverlay(inst);
@@ -528,15 +546,32 @@
     return true;
   };
 
-  // Респин без монеты: гаснущая цифра «выбивает» короткие искры.
+  // Респин без монеты (2026-11-10): молния обегает по кромке синюю ячейку
+  // гаснущей цифры — верх → правый край → низ → левый край (клип arc `travel`).
+  // Ячейки — замер синих полей в v3/respins_h.png (мобила, 424x89) и
+  // v3/respins.png (деск, 148x388): [left, top, width, height] в px картинки.
+  const RESP_CELLS = {
+    h: { w: 424, h: 89, cells: [[11, 12, 113, 61], [155, 12, 113, 61], [299, 12, 113, 61]] },
+    v: { w: 148, h: 388, cells: [[17, 53, 111, 61], [17, 160, 111, 61], [17, 267, 111, 61]] },
+  };
+  const EDGE_LAP_MS = [0, 210, 330, 540];   // старт каждой стороны (длинные — дольше)
   VoltFx.counterTick = function counterTick(digitEl) {
-    if (!digitEl) return;
-    const q = center(digitEl);
-    for (let i = 0; i < 5; i++) {
-      const a = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.6;
-      const d = 18 + Math.random() * 22;
-      zap(q, { x: q.x + Math.cos(a) * d, y: q.y + Math.sin(a) * d }, i * 45);
-    }
+    if (!digitEl || !hasTravel()) return;
+    const plate = digitEl.closest('.v3resp');
+    if (!plate) return;
+    const artH = plate.querySelector('.v3resp__art--h');
+    const spec = artH && getComputedStyle(artH).display !== 'none' ? RESP_CELLS.h : RESP_CELLS.v;
+    const cell = spec.cells[Number(digitEl.dataset.n) - 1];
+    if (!cell) return;
+    const r = plate.getBoundingClientRect();
+    const kx = r.width / spec.w;
+    const ky = r.height / spec.h;
+    const x0 = r.left + cell[0] * kx;
+    const y0 = r.top + cell[1] * ky;
+    const x1 = x0 + cell[2] * kx;
+    const y1 = y0 + cell[3] * ky;
+    const corners = [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }];
+    for (let i = 0; i < 4; i++) zap(corners[i], corners[(i + 1) % 4], EDGE_LAP_MS[i], 'travel');
   };
 
   VoltFx.arcToPlate = function arcToPlate(cellEl, plateEl) {
@@ -548,6 +583,43 @@
 
   // GDD: «старт Hold & Win — разряд в рамку, рамка заряжается»; дверь сейфа
   // за барабанами проворачивается и заряжается (без перелёта в сейф).
+  // 2026-11-10: молния по кругу рамы слота. Две молнии бегут по середине хромового
+  // бортика из противоположных углов по часовой (как неон в желобе), каждая сторона —
+  // клип arc `travel`; цвет — как у остальных разрядов (в бонусе золото).
+  // Бортик рамы 698x639, окно барабанов с отступом 19 — молния идёт на 9,5 от края.
+  const FRAME_BAND = { w: 698, h: 639, inset: 9.5 };
+  const FRAME_LAP_MS = [0, 250, 480, 730];     // старт каждой стороны (длинные дольше)
+  function frameLap(delay = 0, laps = 1) {
+    const frameEl = document.getElementById('cabinetFrame');
+    if (!frameEl || !hasTravel()) return 0;
+    const r = frameEl.getBoundingClientRect();
+    const ix = (FRAME_BAND.inset / FRAME_BAND.w) * r.width;
+    const iy = (FRAME_BAND.inset / FRAME_BAND.h) * r.height;
+    const p = [
+      { x: r.left + ix, y: r.top + iy }, { x: r.right - ix, y: r.top + iy },
+      { x: r.right - ix, y: r.bottom - iy }, { x: r.left + ix, y: r.bottom - iy },
+    ];
+    const lapMs = FRAME_LAP_MS[3] + 260;
+    for (let l = 0; l < laps; l++) {
+      for (const start of [0, 2]) {           // из левого верхнего и из правого нижнего
+        for (let i = 0; i < 4; i++) {
+          const a = p[(start + i) % 4];
+          const b = p[(start + i + 1) % 4];
+          zap(a, b, delay + l * lapMs + FRAME_LAP_MS[i], 'travel');
+        }
+      }
+    }
+    // искры по углам, когда молнии проходят их
+    p.forEach((c, i) => setTimeout(() => {
+      for (let k = 0; k < 2; k++) {
+        const ang = Math.random() * Math.PI * 2;
+        zap(c, { x: c.x + Math.cos(ang) * 26, y: c.y + Math.sin(ang) * 26 }, k * 60);
+      }
+    }, delay + FRAME_LAP_MS[i] + 240));
+    return delay + laps * lapMs;
+  }
+  VoltFx.frameLap = (delay, laps) => frameLap(delay, laps);
+
   VoltFx.holdWinStart = function holdWinStart() {
     const frameEl = document.getElementById('cabinetFrame');
     const fr = frameEl.getBoundingClientRect();
@@ -566,6 +638,8 @@
         zap(h, t, 260 + i * 90);
       });
     }
+    // молния обегает раму, как только разряды катушек в неё попали
+    frameLap(220);
     frameInst.play('charge', false);
     frameInst.queue('bonus', true);
     if (doorInst) {
@@ -674,6 +748,8 @@
       for (const cell of cells) zap(h, center(cell), (i++ % 9) * 60);
       if (plate) zap(h, center(plate), 600);
     }
+    // 9/9: два круга молнии по раме (в бонусе — золотые) перед попапом GRAND
+    frameLap(150, 2);
     frameInst.play('charge', false);
     frameInst.queue(mode === 'bonus' ? 'bonus' : 'idle', true);
     setTimeout(popOverDim, 1600);
