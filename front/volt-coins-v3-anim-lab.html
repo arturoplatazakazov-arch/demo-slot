@@ -148,6 +148,54 @@
   .duo .duo-gap { width: 360px; }
   .duo .coilbox--duo { width: 110px; margin: calc(var(--cell-h) / 2) 0 0; }
 
+  /* фон игры: база / бонус (фильтры как в css/volt-coins-v3.css, 2026-11-09) */
+  .bgbox { position: relative; overflow: hidden; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--line); }
+  .bgbox img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .bgbox.desk { width: 420px; aspect-ratio: 1948 / 1096; }
+  .bgbox.mob { width: 190px; aspect-ratio: 805 / 1431; }
+  .bgbox.base img { filter: brightness(0.68) saturate(1.05); }
+  .bgbox.bonus img { filter: brightness(0.97) saturate(1.15) hue-rotate(-8deg); }
+  .bgbox::after { content: ''; position: absolute; inset: 0; pointer-events: none; }
+  .bgbox.base::after { background: radial-gradient(60% 55% at 50% 50%, transparent 45%, rgba(2, 4, 16, 0.55) 78%, rgba(2, 4, 16, 0.85) 100%); }
+  .bgbox.bonus::after { background: radial-gradient(70% 40% at 50% 0%, rgba(255, 196, 70, 0.14), transparent 70%), radial-gradient(60% 55% at 50% 50%, transparent 60%, rgba(2, 4, 20, 0.12) 85%, rgba(2, 4, 20, 0.22) 100%); }
+
+  /* табличка респинов — копия .v3resp (горизонтальная, как на мобиле) */
+  .respduo { align-items: center; gap: 0; padding: 40px 36px; }
+  .respduo .duo-gap { width: 300px; }
+  .respbox { position: relative; width: 320px; aspect-ratio: 424 / 89; cursor: pointer; }
+  .respbox .v3resp__art { display: block; width: 100%; height: 100%; }
+  .v3resp__n {
+    position: absolute; top: 50%; width: 0; display: flex; justify-content: center;
+    font-family: 'Roboto', system-ui, sans-serif; font-weight: 900; font-size: 29px; line-height: 1;
+    color: #fff; text-shadow: 0 0 6px #8fe8ff, 0 0 16px #39d8ff, 0 2px 0 rgba(0, 0, 0, 0.5);
+    transform: translateY(-50%); transition: color 240ms ease, text-shadow 240ms ease, opacity 300ms ease;
+  }
+  .v3resp__n[data-n="1"] { left: 16.04%; }
+  .v3resp__n[data-n="2"] { left: 50%; }
+  .v3resp__n[data-n="3"] { left: 83.96%; }
+  .v3resp__n:not(.is-on) { opacity: 0.28; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5); }
+  @keyframes v3resp-fill {
+    0%   { opacity: 0.28; transform: translateY(-50%) scale(0.7); filter: none; }
+    45%  { opacity: 1; transform: translateY(-50%) scale(1.6); filter: brightness(2.4) drop-shadow(0 0 12px #8fe8ff); }
+    100% { opacity: 1; transform: translateY(-50%) scale(1); filter: none; }
+  }
+  .respbox.is-fill .v3resp__n { animation: v3resp-fill 520ms cubic-bezier(0.2, 0.8, 0.3, 1) backwards; }
+  .respbox.is-fill .v3resp__n[data-n="2"] { animation-delay: 110ms; }
+  .respbox.is-fill .v3resp__n[data-n="3"] { animation-delay: 220ms; }
+  @keyframes v3resp-reset { 0% { filter: brightness(1); } 25% { filter: brightness(2.3) drop-shadow(0 0 14px #39d8ff); } 100% { filter: brightness(1); } }
+  .respbox.is-reset .v3resp__art { animation: v3resp-reset 800ms ease-out; }
+  @keyframes v3resp-tick {
+    0%   { opacity: 1; transform: translateY(-50%) scale(1); filter: none; color: #fff; }
+    22%  { opacity: 1; transform: translateY(-50%) scale(2); filter: brightness(1.35) drop-shadow(0 0 14px #ff7a2d); color: #ffb35a; }
+    55%  { opacity: 0.9; transform: translateY(-50%) scale(0.85); color: #ff8a3d; }
+    100% { opacity: 0.28; transform: translateY(-50%) scale(1); filter: none; }
+  }
+  .v3resp__n.is-tick { animation: v3resp-tick 700ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+  @keyframes v3resp-shake { 0%, 100% { translate: 0 0; } 15% { translate: -4px 1px; } 35% { translate: 4px -1px; } 55% { translate: -3px 0; } 75% { translate: 2px 0; } }
+  @keyframes v3resp-dim { 0% { filter: brightness(1); } 20% { filter: brightness(0.55) saturate(1.4) hue-rotate(-25deg); } 100% { filter: brightness(1); } }
+  .respbox.is-tick { animation: v3resp-shake 420ms ease-out; }
+  .respbox.is-tick .v3resp__art { animation: v3resp-dim 700ms ease-out; }
+
   /* попап (+ дождь) в кадре игры */
   .popdemo {
     position: relative; width: 100%; max-width: 1000px; aspect-ratio: 1932 / 940; overflow: hidden; border-radius: 12px; cursor: pointer;
@@ -178,7 +226,7 @@
     background: radial-gradient(ellipse at 50% 45%, rgba(5, 8, 30, 0.15) 0%, rgba(5, 8, 30, 0.55) 62%, rgba(2, 3, 12, 0.92) 100%);
   }
   .scrbox.desk { width: 100%; max-width: 900px; aspect-ratio: 1920 / 1040; --bg-img: url(img/volt-coins-v3/v3/bg_desk.jpg); }
-  .scrbox.mob { width: 300px; aspect-ratio: 800 / 1450; --bg-img: url(img/volt-coins-v3/img/bg_mob.jpg); }
+  .scrbox.mob { width: 300px; aspect-ratio: 800 / 1450; --bg-img: url(img/volt-coins-v3/v3/bg_mob.jpg); }
   .scrbox .anchor { position: absolute; inset: 0; }
 
   @media (max-width: 900px) {
@@ -308,6 +356,16 @@
         const b = st(s2, box(tone), lbl);
         b.querySelector('svg').classList.add('is-loop');
       }
+    }
+
+    sub('Фон игры · CSS-фильтр поверх картинки');
+    {
+      const s = row({ title: 'Фон — база и бонус', clip: '.bg: база brightness 0,68 + виньетка · бонус brightness 0,97',
+        text: 'В бонусе фон почти не затемнён — светлее, чем в базе; виньетка по краям еле заметна, сверху тёплый отсвет. На мобиле — свой портретный фон с дверью сейфа.', kind: 'CSS' });
+      st(s, `<div class="bgbox desk base"><img src="${IMG}/v3/bg_desk.jpg" alt=""></div>`, 'десктоп · база');
+      st(s, `<div class="bgbox desk bonus"><img src="${IMG}/v3/bg_desk.jpg" alt=""></div>`, 'десктоп · бонус');
+      st(s, `<div class="bgbox mob base"><img src="${IMG}/v3/bg_mob.jpg" alt=""></div>`, 'мобила · база');
+      st(s, `<div class="bgbox mob bonus"><img src="${IMG}/v3/bg_mob.jpg" alt=""></div>`, 'мобила · бонус');
     }
 
     sub('Катушки Теслы · DOM-вспышки (fx.js makeCoilFlash)');
@@ -486,6 +544,121 @@
         b2.addEventListener('click', run2);
         players.push({ run: run2 });
         run2();
+      }
+
+      // =====================================================================
+      category('hw', 'Hold & Win', 'бонус: катушки и респины',
+        'Что добавлено в бонус 2026-11-09: частые искры катушек, молния монеты в табличку респинов с заполнением и заметный «ход» при каждом пустом респине.');
+      {
+        const s = row({ title: 'Катушка — искры в бонусе', clip: 'spin 420 мс + 3–5 разрядов у головы · каждые 0,9–2,2 с',
+          text: 'Пока идёт Hold & Win, катушки искрят постоянно (в базе — раз в 4–8 с). Иногда обе разом. Не перебивают разряды «катушка → монета».', kind: 'DOM + Spine' });
+        for (const side of ['l', 'r']) {
+          const a = st(s, `<div class="artbox coilbox"><img class="back" src="${IMG}/v3/coil_${side}.png" alt=""></div>`, side === 'l' ? 'левая' : 'правая');
+          const imgs = ['flash', 'flash2'].map((n) => {
+            const img = document.createElement('img');
+            img.className = 'flash';
+            img.src = `${IMG}/v3/${n}_${side}.webp`;
+            const [l, t, w, h] = FLASH_R[side][n];
+            Object.assign(img.style, { left: `${l}%`, top: `${t}%`, width: `${w}%`, height: `${h}%` });
+            a.appendChild(img);
+            return img;
+          });
+          const head = () => ctr(a, 0.5, 0.03);
+          let turn = 0;
+          const spark = () => {
+            const img = imgs[turn]; turn = 1 - turn;
+            img.animate([{ opacity: 0 }, { opacity: 0.85, offset: 0.12 }, { opacity: 0.38, offset: 0.3 }, { opacity: 0.85, offset: 0.45 }, { opacity: 0 }],
+              { duration: 420 / speed, easing: 'ease-out' });
+            const n = 3 + Math.floor(Math.random() * 3);
+            for (let i = 0; i < n; i++) {
+              const ang = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.7;
+              const d = 30 + Math.random() * 50;
+              setTimeout(() => zapPts(head, () => ({ x: head().x + Math.cos(ang) * d, y: head().y + Math.sin(ang) * d * 0.7 }), 'zap', 0.8), (i * 90) / speed);
+            }
+          };
+          const run = () => {
+            clearTimeout(a.t);
+            const tick = () => { spark(); a.t = setTimeout(tick, (900 + Math.random() * 1300) / speed); };
+            a.t = setTimeout(tick, side === 'l' ? 0 : 600 / speed);
+          };
+          a.addEventListener('click', run);
+          players.push({ run });
+          run();
+        }
+      }
+      const PLATE = `<div class="respbox"><img class="v3resp__art" src="${IMG}/v3/respins_h.png" alt="">${[1, 2, 3].map((n) => `<span class="v3resp__n is-on" data-n="${n}">${n}</span>`).join('')}</div>`;
+      const restart = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+      // как setRespinCounter в slot.js: tick — гаснущая цифра «выбивается», reset — заполнение 1 → 2 → 3
+      const setPlate = (plate, value, { reset = false, tick = false } = {}) => {
+        plate.classList.remove('is-fill', 'is-reset', 'is-tick');
+        plate.querySelectorAll('.v3resp__n').forEach((n) => n.classList.remove('is-tick'));
+        plate.querySelectorAll('.v3resp__n').forEach((n) => {
+          const was = n.classList.contains('is-on');
+          n.classList.toggle('is-on', Number(n.dataset.n) <= value);
+          if (tick && was && !n.classList.contains('is-on')) {
+            restart(n, 'is-tick');
+            const q = () => ctr(n);
+            for (let i = 0; i < 5; i++) {
+              const a = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.6;
+              const d = 18 + Math.random() * 22;
+              setTimeout(() => zapPts(q, () => ({ x: q().x + Math.cos(a) * d, y: q().y + Math.sin(a) * d }), 'zap', 0.6), (i * 45) / speed);
+            }
+          }
+        });
+        if (tick) restart(plate, 'is-tick');
+        if (reset) { restart(plate, 'is-reset'); restart(plate, 'is-fill'); }
+      };
+      {
+        const s = row({ title: 'Респины — монета заряжает табличку', clip: 'монета win → arc: travel 0,8 с → искры у таблички → is-fill 1 → 2 → 3',
+          text: 'Новая монета в бонусе: после её выигрыша молния летит от монеты в табличку респинов, при попадании (0,3 с) вокруг таблички искры, табличка вспыхивает и цифры загораются по очереди. Счётчик сбрасывается на 3 именно в этот момент.', kind: 'Spine + CSS' });
+        const box = st(s, `<div class="darkstage duo respduo"><div class="tilebox duo-coin"></div><div class="duo-gap"></div>${PLATE}</div>`);
+        const tile = box.querySelector('.duo-coin');
+        const plate = box.querySelector('.respbox');
+        const coin = coinRes.createInstance();
+        coin.anchorEl = tile; coin.fit = 1; coin.boundsOverride = BOX.cell;
+        coin.play('v1', true);
+        stage.addBase(coin);
+        const run = () => {
+          clearTimeout(box.t);
+          setPlate(plate, 1);
+          setTimeout(() => { coin.animationState.timeScale = speed; coin.play('win', false); coin.queue('v1', true, 0); }, 500 / speed);
+          setTimeout(() => {
+            zapPts(() => ctr(tile), () => ctr(plate), 'travel');
+            setTimeout(() => {
+              const q = () => ctr(plate);
+              for (let i = 0; i < 4; i++) {
+                const a = Math.random() * Math.PI * 2;
+                const d = 22 + Math.random() * 26;
+                setTimeout(() => zapPts(q, () => ({ x: q().x + Math.cos(a) * d * 1.6, y: q().y + Math.sin(a) * d * 0.7 }), 'zap', 0.8), (i * 60) / speed);
+              }
+              setPlate(plate, 3, { reset: true });
+            }, HIT / speed);
+          }, 700 / speed);
+          box.t = setTimeout(run, 3600 / speed);
+        };
+        box.addEventListener('click', run);
+        players.push({ run });
+        run();
+      }
+      {
+        const s = row({ title: 'Респины — ход (пустой респин)', clip: 'is-tick: цифра 0,7 с · табличка shake 0,42 с + затемнение · 5 искр',
+          text: 'Респин без монеты: гаснущая цифра раскаляется оранжевым, раздувается вдвое и тухнет, из неё бьют искры; табличка вздрагивает и на миг темнеет. Здесь: 3 → 2 → 1 → 0, затем новая монета снова заполняет табличку.', kind: 'CSS + Spine' });
+        const box = st(s, `<div class="darkstage">${PLATE}</div>`);
+        const plate = box.querySelector('.respbox');
+        const run = () => {
+          clearTimeout(box.t);
+          let v = 3;
+          setPlate(plate, 3);
+          const step = () => {
+            v -= 1;
+            if (v >= 0) { setPlate(plate, v, { tick: true }); box.t = setTimeout(step, 1400 / speed); }
+            else { setPlate(plate, 3, { reset: true }); box.t = setTimeout(run, 1600 / speed); }
+          };
+          box.t = setTimeout(step, 900 / speed);
+        };
+        box.addEventListener('click', run);
+        players.push({ run });
+        run();
       }
     }
 
