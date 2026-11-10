@@ -20,7 +20,7 @@
   const ROOT = 'img/volt-coins-v3/fx';
   // Версия atlas/json скелетов — поднимать при каждой пересборке fx
   // (PNG-страницы версионируются хешем в самом атласе).
-  const FX_V = 50;
+  const FX_V = 51;
   const BOX = {
     bg_desk: { x: -899, y: -437.5, width: 1798, height: 875 },
     bg_mob: { x: -465.5, y: -845, width: 931, height: 1690 },
@@ -572,6 +572,21 @@
     const y1 = y0 + cell[3] * ky;
     const corners = [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }];
     for (let i = 0; i < 4; i++) zap(corners[i], corners[(i + 1) % 4], EDGE_LAP_MS[i], 'travel');
+  };
+
+  // Сбор монет (2026-11-10): обе катушки бьют молнией в точку, где слились
+  // монеты, вокруг — венец коротких разрядов. В бонусе цвет — золото (zap).
+  VoltFx.collectBurst = function collectBurst(p, r = 90) {
+    for (const c of coils) {
+      coilSparks(c);
+      if (hasTravel()) zap(coilHead(c), p, SPARK_LEAD_MS, 'travel');
+    }
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2 + Math.random() * 0.3;
+      const d = r * (0.9 + Math.random() * 0.5);
+      zap({ x: p.x + Math.cos(a) * r * 0.45, y: p.y + Math.sin(a) * r * 0.45 },
+        { x: p.x + Math.cos(a) * d, y: p.y + Math.sin(a) * d }, SPARK_LEAD_MS + TRAVEL_HIT_MS + i * 25);
+    }
   };
 
   VoltFx.arcToPlate = function arcToPlate(cellEl, plateEl) {

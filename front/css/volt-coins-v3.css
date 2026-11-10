@@ -2735,3 +2735,34 @@ html body.v3 .screen[data-mode="bonus"] .field-vignette {
 .screen[data-mode="bonus"] .bg-flash {
   background: radial-gradient(closest-side, rgba(255, 236, 150, 0.9), rgba(255, 186, 40, 0.45) 45%, rgba(255, 150, 0, 0) 100%);
 }
+
+/* ---- 2026-11-10: сбор монет перед итогом Hold & Win (slot.js collectCoins) ---- */
+.coin-collect { position: absolute; inset: 0; z-index: 22; pointer-events: none; }
+.coin-collect__ghost { position: absolute !important; margin: 0 !important; z-index: 1; will-change: transform; }
+.reel__cell.is-collected > img,
+.reel__cell.is-collected .coin-face { visibility: hidden; }
+.coin-collect__big { position: absolute; z-index: 2; transform: scale(0.2); opacity: 0; }
+.coin-collect__big > img { position: absolute; pointer-events: none; }
+.coin-collect__coin { inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 0 18px rgba(255, 200, 80, 0.75)); }
+.coin-collect__aura { left: -15%; top: -15%; width: 130%; height: 130%; opacity: 0; mix-blend-mode: screen;
+  animation: collect-aura 1.5s linear infinite; }
+.coin-collect__aura--2 { animation-delay: -0.75s; }
+@keyframes collect-aura {
+  0% { opacity: 0; transform: rotate(0deg) scale(0.92); }
+  25% { opacity: 1; }
+  60% { opacity: 0.85; }
+  100% { opacity: 0; transform: rotate(46deg) scale(1.04); }
+}
+.coin-collect__label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.coin-collect__label .coin-face__glyphs { display: inline-flex; align-items: flex-end; line-height: 1; }
+.coin-collect__burst { position: absolute; left: 50%; top: 50%; width: 140%; aspect-ratio: 1; translate: -50% -50%;
+  border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 245, 200, 0.95), rgba(255, 196, 60, 0.55) 45%, rgba(255, 160, 0, 0) 100%);
+  opacity: 0; mix-blend-mode: screen; }
+.coin-collect__big.is-in { animation: collect-in 520ms cubic-bezier(0.2, 1.4, 0.4, 1) forwards; }
+.coin-collect__big.is-in .coin-collect__burst { animation: collect-burst 700ms ease-out forwards; }
+.coin-collect__big.is-done .coin-collect__label { animation: collect-done 420ms cubic-bezier(0.2, 1.5, 0.4, 1); }
+.coin-collect__big.is-out { animation: collect-out 300ms ease-in forwards; }
+@keyframes collect-in { 0% { transform: scale(0.2); opacity: 0; } 60% { transform: scale(1.18); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes collect-burst { 0% { opacity: 0; transform: scale(0.3); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(1.4); } }
+@keyframes collect-done { 0% { transform: scale(1); filter: brightness(1); } 40% { transform: scale(1.25); filter: brightness(1.8); } 100% { transform: scale(1); filter: brightness(1); } }
+@keyframes collect-out { from { transform: scale(1); opacity: 1; } to { transform: scale(1.3); opacity: 0; } }

@@ -1882,9 +1882,13 @@ async function runHoldAndWinSequence(result, locked, baseGrid = null) {
     await wait(2100);
   }
 
+  // монеты слетаются в одну с суммарным множителем (2026-11-10)
+  const dropCollect = await collectCoins(locked);
+  if (dropCollect) dropCollect();
+
   // Итог раунда (2026-11-05, продукт): вместо TOTAL WIN — попап по сумме за
   // режим в ставках: x1–x5 BIG, x6–x25 MEGA, x26+ EPIC; поле 9/9 — GRAND.
-  Sound.playSfx('coinCollect');
+  if (!dropCollect) Sound.playSfx('coinCollect');
   if (grand) {
     Sound.playSfx('jackpotReveal');
     setTimeout(() => Sound.playSfx('jackpot_grand'), 350);
@@ -1897,6 +1901,120 @@ async function runHoldAndWinSequence(result, locked, baseGrid = null) {
   }
   await leaveBonusMode();
   showTotalWin(result.total_win);
+}
+
+// Сбор монет (2026-11-10, локально): перед итоговым попапом Hold & Win —
+// ходы кончились или поле 9/9 — все монеты слетаются в центр поля и
+// сливаются в одну крупную, на ней набегает их суммарный множитель
+// (номиналы + MINI/MINOR/MAJOR по лестнице; GRAND за 9/9 — в попапе).
+const COLLECT_FLY_MS = 560;
+const COLLECT_STAGGER_MS = 75;
+const COLLECT_COUNT_MS = 700;
+const COLLECT_HOLD_MS = 1100;
+
+function coinsMultiplier(locked) {
+  let x = 0;
+  for (const coin of locked.values()) {
+    x += JACKPOT_TIERS.includes(coin.kind) ? (JACKPOT_VALUE_BY_TIER[coin.kind] || 0) : (Number(coin.value) || 0);
+  }
+  return x;
+}
+
+async function collectCoins(locked) {
+  const screenEl = document.getElementById('screen');
+  const grid = document.getElementById('reelGrid');
+  if (!screenEl || !grid || !locked || !locked.size) return null;
+  const infos = [...locked.keys()].map((k) => {
+    const [r, c] = k.split('-').map(Number);
+    return cellInfos[r * GRID_COLS + c];
+  }).filter(Boolean);
+  if (!infos.length) return null;
+  const sr = screenEl.getBoundingClientRect();
+  const gr = grid.getBoundingClientRect();
+  const cx = gr.left + gr.width / 2 - sr.left;
+  const cy = gr.top + gr.height / 2 - sr.top;
+  const layer = document.createElement('div');
+  layer.className = 'coin-collect';
+  screenEl.appendChild(layer);
+  // от дальних к центру: центральная монета летит последней
+  const dist = (info) => {
+    const r = info.cell.getBoundingClientRect();
+    return Math.hypot(r.left + r.width / 2 - sr.left - cx, r.top + r.height / 2 - sr.top - cy);
+  };
+  infos.sort((a, b) => dist(b) - dist(a));
+  let cellW = 0;
+  let cellH = 0;
+  infos.forEach((info, i) => {
+    const r = info.cell.getBoundingClientRect();
+    cellW = r.width;
+    cellH = r.height;
+    const g = info.cell.cloneNode(true);
+    g.classList.remove('is-winning', 'is-win-active', 'is-dimmed', 'is-fx');
+    g.classList.add('coin-collect__ghost');
+    Object.assign(g.style, { left: `${r.left - sr.left}px`, top: `${r.top - sr.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+    layer.appendChild(g);
+    info.cell.classList.add('is-collected');
+    const dx = cx - (r.left - sr.left + r.width / 2);
+    const dy = cy - (r.top - sr.top + r.height / 2);
+    g.animate([
+      { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+      { transform: `translate(${-dx * 0.08}px, ${-dy * 0.08}px) scale(1.12)`, opacity: 1, offset: 0.22 },
+      { transform: `translate(${dx}px, ${dy}px) scale(0.5)`, opacity: 1, offset: 0.9 },
+      { transform: `translate(${dx}px, ${dy}px) scale(0.35)`, opacity: 0 },
+    ], { duration: COLLECT_FLY_MS, delay: i * COLLECT_STAGGER_MS, easing: 'cubic-bezier(0.55, 0, 0.8, 0.3)', fill: 'forwards' });
+    setTimeout(() => Sound.playSfx('coinLock'), i * COLLECT_STAGGER_MS + COLLECT_FLY_MS * 0.9);
+  });
+  await wait(COLLECT_FLY_MS * 0.9 + (infos.length - 1) * COLLECT_STAGGER_MS);
+
+  // одна большая монета на месте слияния
+  const mult = coinsMultiplier(locked);
+  const big = document.createElement('div');
+  big.className = 'coin-collect__big';
+  const bw = cellW * 1.75;
+  const bh = bw * 381 / 480;
+  Object.assign(big.style, { left: `${cx - bw / 2}px`, top: `${cy - bh / 2}px`, width: `${bw}px`, height: `${bh}px` });
+  big.innerHTML = `<img class="coin-collect__aura" src="${ASSET_ROOT}/symbols/coin_aura_1.png?v=${SYM_V}" alt="">`
+    + `<img class="coin-collect__aura coin-collect__aura--2" src="${ASSET_ROOT}/symbols/coin_aura_2.png?v=${SYM_V}" alt="">`
+    + `<img class="coin-collect__coin" src="${ASSET_ROOT}/symbols/coin_value.png?v=${SYM_V}" alt="">`
+    + '<span class="coin-collect__burst"></span><span class="coin-collect__label"></span>';
+  layer.appendChild(big);
+  const label = big.querySelector('.coin-collect__label');
+  const setLabel = (v) => {
+    const chars = [...`x${v}`];
+    label.textContent = '';
+    if (chars.every((ch) => GLYPHS[ch])) {
+      const row = glyphRow(chars);
+      row.style.fontSize = `${Math.min(bh * 0.28, (bw * 0.42) / glyphRowWidth(chars)).toFixed(1)}px`;
+      label.appendChild(row);
+    } else label.textContent = `x${v}`;
+  };
+  setLabel(0);
+  Sound.playSfx('coinCollect');
+  fx('collectBurst', { x: cx + sr.left, y: cy + sr.top }, bw * 0.45);
+  big.classList.add('is-in');
+  // набегание множителя
+  const t0 = performance.now();
+  await new Promise((resolve) => {
+    const step = () => {
+      const k = Math.min(1, (performance.now() - t0) / COLLECT_COUNT_MS);
+      setLabel(Math.round(mult * (1 - (1 - k) ** 3)));
+      if (k < 1) requestAnimationFrame(step); else resolve();
+    };
+    // и в скрытой вкладке (rAF стоит) — по таймеру
+    setTimeout(() => { setLabel(mult); resolve(); }, COLLECT_COUNT_MS + 400);
+    requestAnimationFrame(step);
+  });
+  setLabel(mult);
+  big.classList.add('is-done');
+  Sound.playSfx('newCoin');
+  await wait(COLLECT_HOLD_MS);
+  return () => {
+    big.classList.add('is-out');
+    setTimeout(() => {
+      layer.remove();
+      for (const info of infos) info.cell.classList.remove('is-collected');
+    }, 320);
+  };
 }
 
 function holdWinResultPopup(total, grand) {

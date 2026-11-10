@@ -196,6 +196,33 @@
   .respbox.is-tick { animation: v3resp-shake 420ms ease-out; }
   .respbox.is-tick .v3resp__art { animation: v3resp-dim 700ms ease-out; }
 
+  /* сбор монет (как slot.js collectCoins) */
+  .collectbox { padding: 26px; }
+  .cgrid { position: relative; display: grid; grid-template-columns: repeat(3, 132px); grid-template-rows: repeat(3, 120px);
+    border-radius: 10px; background: url(img/volt-coins-v3/v3/reel_bg.png) 0 0 / 100% 100%; cursor: pointer; }
+  .cgrid .cc { position: relative; }
+  .cgrid .cc img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .cgrid .ghost { position: absolute; z-index: 2; will-change: transform; }
+  .cgrid .ghost img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .cgrid .big { position: absolute; z-index: 3; transform: scale(0.2); opacity: 0; pointer-events: none; }
+  .cgrid .big > img { position: absolute; }
+  .cgrid .big .coin { inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 0 18px rgba(255, 200, 80, 0.75)); }
+  .cgrid .big .aura { left: -15%; top: -15%; width: 130%; height: 130%; opacity: 0; mix-blend-mode: screen; animation: collect-aura 1.5s linear infinite; }
+  .cgrid .big .aura.a2 { animation-delay: -0.75s; }
+  .cgrid .big .lbl { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .cgrid .big .glyphs { display: inline-flex; align-items: flex-end; line-height: 1; }
+  .cgrid .big .glyphs img { display: block; flex: 0 0 auto; }
+  .cgrid .big .burst { position: absolute; left: 50%; top: 50%; width: 140%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(255, 245, 200, 0.95), rgba(255, 196, 60, 0.55) 45%, rgba(255, 160, 0, 0) 100%); opacity: 0; mix-blend-mode: screen; }
+  .cgrid .big.is-in { animation: collect-in 520ms cubic-bezier(0.2, 1.4, 0.4, 1) forwards; }
+  .cgrid .big.is-in .burst { animation: collect-burst 700ms ease-out forwards; }
+  .cgrid .big.is-done .lbl { animation: collect-done 420ms cubic-bezier(0.2, 1.5, 0.4, 1); }
+  .cgrid .big.is-out { animation: collect-out 300ms ease-in forwards; }
+  @keyframes collect-aura { 0% { opacity: 0; transform: rotate(0deg) scale(0.92); } 25% { opacity: 1; } 60% { opacity: 0.85; } 100% { opacity: 0; transform: rotate(46deg) scale(1.04); } }
+  @keyframes collect-in { 0% { transform: scale(0.2); opacity: 0; } 60% { transform: scale(1.18); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+  @keyframes collect-burst { 0% { opacity: 0; transform: scale(0.3); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(1.4); } }
+  @keyframes collect-done { 0% { transform: scale(1); filter: brightness(1); } 40% { transform: scale(1.25); filter: brightness(1.8); } 100% { transform: scale(1); filter: brightness(1); } }
+  @keyframes collect-out { from { transform: scale(1); opacity: 1; } to { transform: scale(1.3); opacity: 0; } }
   /* попап (+ дождь) в кадре игры */
   .popdemo {
     position: relative; width: 100%; max-width: 1000px; aspect-ratio: 1932 / 940; overflow: hidden; border-radius: 12px; cursor: pointer;
@@ -722,6 +749,106 @@
           players.push({ run });
           run();
         }
+      }
+      {
+        // сбор монет перед итогом Hold & Win — как slot.js collectCoins: монеты
+        // слетаются в центр (дальние первыми), сливаются в одну крупную, на ней
+        // набегает суммарный множитель битмап-цифрами glyphs/, катушки бьют в неё
+        const GL = await fetch(`${IMG}/glyphs/glyphs.json?v=${V}`).then((r) => r.json());
+        const digits = '0123456789'.split('').map((c) => GL[c]);
+        const CORE = digits.reduce((a, g) => a + (g.cb - g.ct) * g.h, 0) / digits.length;
+        const GAP = 0.06;
+        const em = (ch) => (ch.length === 1 ? GL[ch].h / CORE : 1 / (GL[ch].cb - GL[ch].ct));
+        const glyphRow = (chars, px) => {
+          const row = document.createElement('span');
+          row.className = 'glyphs';
+          row.style.fontSize = `${px}px`;
+          for (const ch of chars) {
+            const g = GL[ch]; const h = em(ch); const w = (g.w / g.h) * h;
+            const img = document.createElement('img');
+            img.src = `${IMG}/glyphs/${ch}.webp`;
+            Object.assign(img.style, { height: `${h}em`, width: `${w}em`, marginBottom: `${-(1 - g.cb) * h}em`,
+              marginLeft: `${-g.cl * w + GAP / 2}em`, marginRight: `${-(1 - g.cr) * w + GAP / 2}em` });
+            row.appendChild(img);
+          }
+          return row;
+        };
+        const rowW = (chars) => chars.reduce((a, ch) => { const g = GL[ch]; const h = em(ch); return a + (g.cr - g.cl) * (g.w / g.h) * h + GAP; }, 0);
+        const FACES = ['x1', 'x3', 'x5', 'x10', 'x15', 'x25', 'mini', 'minor', 'major'];
+        const MULT = { mini: 20, minor: 50, major: 250 };
+        const total = FACES.reduce((a, f) => a + (MULT[f] || Number(f.slice(1))), 0);
+        const s = row({ title: 'Сбор монет перед итогом Hold & Win',
+          clip: `полёт 0,56 с, шаг 75 мс → монета: in 0,52 с + счёт 0,7 с → x${total} → пауза 1,1 с → попап`,
+          text: 'Ходы кончились или поле 9/9: все монеты слетаются в центр поля (дальние первыми) и сливаются в одну крупную; обе катушки бьют в неё молнией, вокруг — венец разрядов; на монете набегает суммарный множитель (номиналы + MINI x20 / MINOR x50 / MAJOR x250; GRAND — в попапе). Цвет молний — бонусный золотой.',
+          kind: 'DOM + Spine' });
+        const box = st(s, `<div class="darkstage collectbox"><div class="cgrid">${FACES.map((f) => `<div class="cc"><img src="${FX}/lab3_static/${f}.png?v=${V}" alt=""></div>`).join('')}</div></div>`);
+        const grid = box.querySelector('.cgrid');
+        const cells = [...grid.querySelectorAll('.cc')];
+        const run = async () => {
+          clearTimeout(grid.t);
+          grid.querySelectorAll('.ghost, .big').forEach((e) => e.remove());
+          cells.forEach((c) => { c.style.visibility = ''; });
+          const gr = grid.getBoundingClientRect();
+          const cx = gr.width / 2; const cy = gr.height / 2;
+          const order = cells.map((c) => {
+            const r = c.getBoundingClientRect();
+            return { c, x: r.left - gr.left, y: r.top - gr.top, w: r.width, h: r.height };
+          }).sort((a, b) => Math.hypot(b.x + b.w / 2 - cx, b.y + b.h / 2 - cy) - Math.hypot(a.x + a.w / 2 - cx, a.y + a.h / 2 - cy));
+          const FLY = 560 / speed; const STEP = 75 / speed;
+          order.forEach((o, i) => {
+            const g = document.createElement('div');
+            g.className = 'ghost';
+            Object.assign(g.style, { left: `${o.x}px`, top: `${o.y}px`, width: `${o.w}px`, height: `${o.h}px` });
+            g.innerHTML = o.c.innerHTML;
+            grid.appendChild(g);
+            o.c.style.visibility = 'hidden';
+            const dx = cx - (o.x + o.w / 2); const dy = cy - (o.y + o.h / 2);
+            g.animate([
+              { transform: 'translate(0,0) scale(1)', opacity: 1 },
+              { transform: `translate(${-dx * 0.08}px,${-dy * 0.08}px) scale(1.12)`, opacity: 1, offset: 0.22 },
+              { transform: `translate(${dx}px,${dy}px) scale(0.5)`, opacity: 1, offset: 0.9 },
+              { transform: `translate(${dx}px,${dy}px) scale(0.35)`, opacity: 0 },
+            ], { duration: FLY, delay: i * STEP, easing: 'cubic-bezier(0.55, 0, 0.8, 0.3)', fill: 'forwards' });
+          });
+          await new Promise((r) => setTimeout(r, FLY * 0.9 + (order.length - 1) * STEP));
+          const bw = order[0].w * 1.75; const bh = bw * 381 / 480;
+          const big = document.createElement('div');
+          big.className = 'big';
+          Object.assign(big.style, { left: `${cx - bw / 2}px`, top: `${cy - bh / 2}px`, width: `${bw}px`, height: `${bh}px` });
+          big.innerHTML = `<img class="aura" src="${IMG}/symbols/coin_aura_1.png" alt=""><img class="aura a2" src="${IMG}/symbols/coin_aura_2.png" alt="">`
+            + `<img class="coin" src="${IMG}/symbols/coin_value.png" alt=""><span class="burst"></span><span class="lbl"></span>`;
+          grid.appendChild(big);
+          const lbl = big.querySelector('.lbl');
+          const set = (v) => { const ch = [...`x${v}`]; lbl.textContent = ''; lbl.appendChild(glyphRow(ch, Math.min(bh * 0.28, (bw * 0.42) / rowW(ch)))); };
+          set(0);
+          big.classList.add('is-in');
+          // катушек на странице нет — бьют две молнии сверху-слева и сверху-справа, плюс венец
+          const P = () => { const r = grid.getBoundingClientRect(); return { x: r.left + cx, y: r.top + cy }; };
+          const tl = () => { const r = grid.getBoundingClientRect(); return { x: r.left - 40, y: r.top - 30 }; };
+          const tr = () => { const r = grid.getBoundingClientRect(); return { x: r.right + 40, y: r.top - 30 }; };
+          zapPts(tl, P, 'travel', 1, BONUS_TINT);
+          zapPts(tr, P, 'travel', 1, BONUS_TINT);
+          for (let i = 0; i < 10; i++) {
+            const a = (i / 10) * Math.PI * 2 + Math.random() * 0.3; const d = bw * 0.45 * (0.9 + Math.random() * 0.5);
+            setTimeout(() => zapPts(() => { const p = P(); return { x: p.x + Math.cos(a) * bw * 0.2, y: p.y + Math.sin(a) * bw * 0.2 }; },
+              () => { const p = P(); return { x: p.x + Math.cos(a) * d, y: p.y + Math.sin(a) * d }; }, 'zap', 0.7, BONUS_TINT), (HIT + i * 25) / speed);
+          }
+          const t0 = performance.now();
+          const COUNT = 700 / speed;
+          await new Promise((res) => {
+            const step = () => { const k = Math.min(1, (performance.now() - t0) / COUNT); set(Math.round(total * (1 - (1 - k) ** 3))); if (k < 1) requestAnimationFrame(step); else res(); };
+            setTimeout(res, COUNT + 400);
+            requestAnimationFrame(step);
+          });
+          set(total);
+          big.classList.add('is-done');
+          await new Promise((r) => setTimeout(r, 1100 / speed));
+          big.classList.add('is-out');
+          grid.t = setTimeout(run, 1400 / speed);
+        };
+        grid.addEventListener('click', run);
+        players.push({ run });
+        run();
       }
     }
 
