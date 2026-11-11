@@ -128,16 +128,16 @@ const KOI_VARIANTS = {
   lantern: { page: 'koi-fortune-lantern.html', name: 'Koi Fortune · Lanterns', badge: 'Festival',
     desc: 'Бумажная аппликация: ночная река фонарей и лунный мост, кои сверху, рама из вырезной бумаги.',
     cover: 'img/koi-fortune-lantern/cover.jpg' },
-  lacquer: { page: 'koi-fortune-lacquer.html', name: 'Koi Fortune · Lacquer', badge: 'Midnight',
-    desc: 'Чёрный лак и неон: дождливый двор с лунными вратами, денежная жаба, рама с киноварью.',
-    cover: 'img/koi-fortune-lacquer/cover.jpg' },
+  paper: { page: 'koi-fortune-paper.html', name: 'Koi Fortune · Paper Craft', badge: 'Paper',
+    desc: 'Многослойная бумага: полнолуние над бирюзовыми волнами, пагода и сакура, рама из алой бумаги с золотом.',
+    cover: 'img/koi-fortune-paper/cover.jpg' },
 };
 const koi = (key, extra) => ({ code: 'koi-fortune', ...KOI_VARIANTS[key], ...extra });
 // Secret Room: hand-placed cards shown first, before the CRE8_CODES games —
 // Koi Fortune, Sugar Blast, then every Olympus Thunder version (moved here
 // from Illuminator / Spin Factory, 2026-11-11).
 const CRE8_TOP_CARDS = [
-  koi('silk'), koi('jade'), koi('lantern'), koi('lacquer'),
+  koi('silk'), koi('jade'), koi('lantern'), koi('paper'),
   sugar('forest'), sugar('meadow'), sugar('gummy'), sugar('night'),
   'olympus-thunder', 'olympus-thunder-v2', 'olympus-thunder-v3',
   ot('sunny'), ot('realms'), ot('heights'), ot('tides'),

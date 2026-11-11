@@ -56,17 +56,17 @@ html, body { background: #031a10; }''',
 }
 html, body { background: #06061a; }''',
     },
-    'koi-fortune-lacquer': {
-        'frame': (0.1043, 0.1708, 0.7908, 0.7144),
+    'koi-fortune-paper': {
+        'frame': (0.0639, 0.1622, 0.8734, 0.6923),
         'jp': {},
         'palette': '''
 :root {
-  --glass: linear-gradient(180deg, rgba(26, 8, 10, 0.92), rgba(6, 2, 3, 0.96));
-  --hairline: inset 0 1px 0 rgba(255, 120, 90, 0.5), inset 0 0 0 1.5px rgba(255, 70, 50, 0.35);
-  --wine: #3a0608; --tan: #e8a08a;
-  --reel-a: rgba(36, 6, 8, 0.88); --reel-b: rgba(6, 1, 2, 0.95); --reel-line: rgba(255, 90, 60, 0.14);
+  --glass: linear-gradient(180deg, rgba(92, 14, 20, 0.9), rgba(30, 4, 8, 0.95));
+  --hairline: inset 0 1px 0 rgba(255, 220, 150, 0.55), inset 0 0 0 1.5px rgba(80, 200, 190, 0.35);
+  --wine: #6a1018; --tan: #9fd8cf;
+  --reel-a: rgba(110, 16, 24, 0.86); --reel-b: rgba(36, 4, 8, 0.94); --reel-line: rgba(120, 220, 205, 0.14);
 }
-html, body { background: #050102; }''',
+html, body { background: #0b0e24; }''',
     },
 }
 

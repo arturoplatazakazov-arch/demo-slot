@@ -16,7 +16,7 @@ VARIANTS = {
     'silk': ('Silk', 'a'),
     'jade': ('Jade', 'a'),
     'lantern': ('Lanterns', 'a'),
-    'lacquer': ('Lacquer', 'a'),
+    'paper': ('Paper Craft', 'a'),
 }
 
 
