@@ -659,6 +659,7 @@ function settleColumnCells(cellEls, col, finalCodes) {
     scatterLandCount += 1;
     Sound.playSfx(`scatter${scatterLandCount}`);
   }
+  if (finalCodes.includes('wild')) Sound.playSfx('wildLand');
   for (let row = 0; row < GRID_ROWS; row++) {
     const code = finalCodes[row];
     const cell = cellEls[row];

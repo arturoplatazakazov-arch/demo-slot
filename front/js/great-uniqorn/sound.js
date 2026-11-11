@@ -7,29 +7,36 @@
 // reference).
 const GAME = 'sound/great-uniqorn/';
 
+// 2026-11-11: the composer's pack ("Great Uniqorn SFX (Short)") replaced the
+// synthesized placeholders (kept in _audition/synth_v1/). The pack has no reel
+// stops or bonus enter/exit, so those stay synthesized (REEL_*, BONUS_*).
 const SOUND_FILES = {
   // wins
   smallWin: GAME + 'WIN_Line.mp3',          // a line pays (no popup)
-  bigWin: GAME + 'WIN_Big.mp3',
-  megaWin: GAME + 'WIN_Mega.mp3',
-  epicWin: GAME + 'WIN_Epic.mp3',
-  bonusTotalWin: GAME + 'WIN_Big.mp3',      // free-spins round total — no own take, BIG WIN's
-  cashLoop: GAME + 'WIN_CashLoop.mp3',      // seamless loop while a popup's amount counts up
+  bigWin: GAME + 'WIN_Bigwin.mp3',
+  megaWin: GAME + 'WIN_Megawin.mp3',
+  epicWin: GAME + 'WIN_Epicwin.mp3',
+  bonusTotalWin: GAME + 'WIN_Bigwin.mp3',   // free-spins round total — no own take, BIG WIN's
+  cashLoop: GAME + 'WIN_Cashloop.mp3',      // loop while a popup's amount counts up
   // scatters: the 1st/2nd/3rd burger to land in a spin, then the trigger
   scatter1: GAME + 'SCATTER_1.mp3',
   scatter2: GAME + 'SCATTER_2.mp3',
   scatter3: GAME + 'SCATTER_3.mp3',
   scatterWin: GAME + 'SCATTER_Win.mp3',
+  wildLand: GAME + 'WILD_Land.mp3',         // a wild lands on a stopping reel
   wildGrow: GAME + 'WILD_Multiplier.mp3',   // wild -> multiplier reveal
   bonusEnter: GAME + 'BONUS_Enter.mp3',
   bonusExit: GAME + 'BONUS_Exit.mp3',
+  // bonus buy: the sign opens the dialog, BUY confirms
+  buyButton: GAME + 'BUY_Button.mp3',
+  buyConfirm: GAME + 'BUY_Confirm.mp3',
   // ui
   click: GAME + 'UI_Click.mp3',
-  popupOpen: GAME + 'UI_PopupOpen.mp3',
-  popupClose: GAME + 'UI_PopupClose.mp3',
+  popupOpen: GAME + 'UI_Popupopen.mp3',
+  popupClose: GAME + 'UI_Popupclose.mp3',
   autospin: GAME + 'UI_Autospin.mp3',
-  betPlus: GAME + 'UI_BetPlus.mp3',
-  betMinus: GAME + 'UI_BetMinus.mp3',
+  betPlus: GAME + 'UI_Betplus.mp3',
+  betMinus: GAME + 'UI_Betminus.mp3',
   menu: GAME + 'UI_Menu.mp3',
   turbo: GAME + 'UI_Turbo.mp3',
   // reels: each of reels 1-4 stops on its own rising note (a little melody
@@ -43,13 +50,13 @@ const SOUND_FILES = {
   anticipation: GAME + 'REEL_Anticipation.mp3',
 };
 
-// One seamless loop per level (the files are rendered with the reverb tail
-// folded back onto the start), played as a WebAudio buffer loop: an <audio
-// loop> leaves a short gap at the mp3 boundary.
+// Each level = music + an ambience bed under it, both WebAudio buffer loops
+// (an <audio loop> leaves a short gap at the mp3 boundary).
 const MUSIC_FILES = {
-  base: { music: GAME + 'BG_Base.mp3' },
-  bonus: { music: GAME + 'BG_Bonus.mp3' },
+  base: { music: GAME + 'MUSIC_Base.mp3', ambient: GAME + 'AMBIENT_Base.mp3' },
+  bonus: { music: GAME + 'MUSIC_Bonus.mp3', ambient: GAME + 'AMBIENT_Bonus.mp3' },
 };
+const AMBIENT_VOLUME = 0.5; // relative to the music bus
 
 const SFX_VOLUME = 0.7;
 const MUSIC_VOLUME = 0.35; // main background track
@@ -123,13 +130,19 @@ if (musicGain) {
   musicGain.connect(sfxCtx.destination);
 }
 const musicBuffers = {};
+function loadBuffer(src) {
+  return fetch(src)
+    .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()))
+    .then((ab) => sfxCtx.decodeAudioData(ab))
+    .catch(() => null);
+}
+// Resolves to { music, ambient } buffers (either may be null).
 function loadMusicBuffer(key) {
   if (!sfxCtx || !MUSIC_FILES[key]) return Promise.resolve(null);
   if (!musicBuffers[key]) {
-    musicBuffers[key] = fetch(MUSIC_FILES[key].music)
-      .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()))
-      .then((ab) => sfxCtx.decodeAudioData(ab))
-      .catch(() => null);
+    const f = MUSIC_FILES[key];
+    musicBuffers[key] = Promise.all([loadBuffer(f.music), f.ambient ? loadBuffer(f.ambient) : null])
+      .then(([music, ambient]) => ({ music, ambient }));
   }
   return musicBuffers[key];
 }
@@ -155,24 +168,30 @@ function playMusic(key) {
   if (!musicUnlocked || currentMusicKey === key) return;
   stopLayers();
   currentMusicKey = key;
-  if (!MUSIC_FILES[key]) return;
-  if (!sfxCtx) {
-    currentLayers.push(startLayer(MUSIC_FILES[key].music, MUSIC_VOLUME));
-    return;
-  }
-  loadMusicBuffer(key).then((buf) => {
+  const files = MUSIC_FILES[key];
+  if (!files) return;
+  const fallback = () => {
+    currentLayers.push(startLayer(files.music, MUSIC_VOLUME));
+    if (files.ambient) currentLayers.push(startLayer(files.ambient, MUSIC_VOLUME * AMBIENT_VOLUME));
+  };
+  if (!sfxCtx) { fallback(); return; }
+  loadMusicBuffer(key).then((bufs) => {
     if (currentMusicKey !== key) return; // switched again while decoding
-    if (!buf) {
-      currentLayers.push(startLayer(MUSIC_FILES[key].music, MUSIC_VOLUME));
-      return;
-    }
+    if (!bufs || !bufs.music) { fallback(); return; }
     if (sfxCtx.state === 'suspended') sfxCtx.resume();
-    const node = sfxCtx.createBufferSource();
-    node.buffer = buf;
-    node.loop = true;
-    node.connect(musicGain);
-    node.start();
-    currentLayers.push({ node, vol: MUSIC_VOLUME });
+    const at = sfxCtx.currentTime + 0.05; // start both layers on the same tick
+    for (const [buf, vol] of [[bufs.music, 1], [bufs.ambient, AMBIENT_VOLUME]]) {
+      if (!buf) continue;
+      const node = sfxCtx.createBufferSource();
+      node.buffer = buf;
+      node.loop = true;
+      const g = sfxCtx.createGain();
+      g.gain.value = vol;
+      node.connect(g);
+      g.connect(musicGain);
+      node.start(at);
+      currentLayers.push({ node, vol: MUSIC_VOLUME * vol });
+    }
   });
 }
 

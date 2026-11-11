@@ -175,7 +175,7 @@ function setupBuyBonusButton() {
     document.getElementById('buyNote').hidden = affordable;
     confirmBtn.disabled = !affordable;
     open = true;
-    Sound.playSfx('popupOpen');
+    Sound.playSfx('buyButton');
     pushScreenDim();
     dialog.hidden = false;
     void dialog.offsetWidth;
@@ -187,7 +187,7 @@ function setupBuyBonusButton() {
   confirmBtn.addEventListener('click', () => {
     if (confirmBtn.disabled) return;
     close(false);
-    Sound.playSfx('click');
+    Sound.playSfx('buyConfirm');
     const betAmount = gameState.betSteps[gameState.betIndex];
     gameState.boughtBonus = true;
     runSpin(() => Api.buyFeature(gameState.sessionId, 'free_spins_buy', betAmount));
