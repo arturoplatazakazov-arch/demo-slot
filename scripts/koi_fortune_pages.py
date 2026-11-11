@@ -33,7 +33,7 @@ def build(key, title, line):
     # would drop it silently.
     s = rep(s, 'js/api.js?v=2', 'js/api.js?v=3')
     s = rep(s, '<title>Savannah Kings · Carved</title>', f'<title>Koi Fortune · {title}</title>')
-    s = rep(s, '<link rel="stylesheet" href="css/savannah-carved.css?v=3">', f'<link rel="stylesheet" href="css/{slug}.css?v=1">')
+    s = rep(s, '<link rel="stylesheet" href="css/savannah-carved.css?v=3">', f'<link rel="stylesheet" href="css/{slug}.css?v=2">')
     s = rep(s, '<link rel="stylesheet" href="css/savannah-layouts.css?v=8">',
             '<link rel="stylesheet" href="css/savannah-layouts.css?v=8">\n<link rel="stylesheet" href="css/koi-fortune.css?v=5">')
     s = rep(s, '''    <!-- Day and night backgrounds both live in the DOM and cross-fade
@@ -68,6 +68,7 @@ def build(key, title, line):
             <span class="ante__text"><span class="ante__label">ANTE BET</span><span class="ante__sub">2× features · <span id="anteCost">+25%</span></span></span>
           </button>''')
     s = rep(s, 'Popups, the wheel and the buy window', 'Popups and the buy window')
+    s = rep(s, 'img/reel_frame.webp"', 'img/reel_frame.webp?v=2"')
     # no wheel overlay
     a = s.index('      <div class="wheel-overlay"')
     b = s.index('      <div class="buy-overlay"')

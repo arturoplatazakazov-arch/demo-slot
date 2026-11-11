@@ -26,10 +26,10 @@
   --win-w: 880px;
   --win-h: 528px;
   /* Frame art: where the window sits inside reel_frame.png, as fractions. */
-  --frame-win-l: 0.0834;
-  --frame-win-t: 0.1581;
-  --frame-win-w: 0.8338;
-  --frame-win-h: 0.7439;
+  --frame-win-l: 0.0842;
+  --frame-win-t: 0.1586;
+  --frame-win-w: 0.8298;
+  --frame-win-h: 0.7419;
   /* Jackpot plaques: the empty value panel, fractions of the plaque art. */
   --jp-l: 0.106;
   --jp-r: 0.106;

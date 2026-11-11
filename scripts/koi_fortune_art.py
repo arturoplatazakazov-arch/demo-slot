@@ -114,8 +114,69 @@ def job_glyphs():
         save_png(isolate(rgba, full, p), IMG / f'tag_{name}.png', max_w=360)
 
 
+def frame_window(a):
+    """The reel window = the transparent region connected to the frame's
+    centre (bbox). Scanning one row from the edge, as savannah's job_frame
+    does, stops at the gap between a hanging lantern and the rail."""
+    from collections import deque
+    h, w = a.shape
+    s = 4
+    clear = np.array(Image.fromarray(a).resize((w // s, h // s), Image.BILINEAR)) < 40
+    sh, sw = clear.shape
+    seen = np.zeros_like(clear)
+    q = deque([(sh // 2, sw // 2)])
+    seen[sh // 2, sw // 2] = True
+    while q:
+        y, x = q.popleft()
+        for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            ny, nx = y + dy, x + dx
+            if 0 <= ny < sh and 0 <= nx < sw and clear[ny, nx] and not seen[ny, nx]:
+                seen[ny, nx] = True
+                q.append((ny, nx))
+    ys, xs = np.nonzero(seen)
+    # Trim the ragged inner edge: the rows/cols that are mostly clear.
+    col_fill = seen.mean(axis=0)
+    row_fill = seen.mean(axis=1)
+    cols = np.nonzero(col_fill > col_fill.max() * 0.6)[0]
+    rows = np.nonzero(row_fill > row_fill.max() * 0.6)[0]
+    return cols[0] * s, (cols[-1] + 1) * s, rows[0] * s, (rows[-1] + 1) * s
+
+
 def job_frame():
-    sk.job_frame()
+    """savannah's job_frame (9-slice re-proportioned to a 5:3 window) with
+    the window measured by frame_window()."""
+    rgba = tight(load('frame'), pad=0)
+    h, w = rgba.shape[:2]
+    a = rgba[..., 3]
+    l, r, t, b = frame_window(a)
+    print(f'  frame {w}x{h}, window x {l}..{r} y {t}..{b} ({r - l}x{b - t}, ratio {(r - l) / (b - t):.3f})')
+    S = 1.5
+    win_w, win_h = round(920 * S), round(552 * S)
+    sx = win_w / (r - l)
+    sy = win_h / (b - t)
+    # Borders keep one scale (the horizontal one) so their ornament isn't
+    # squashed; only the window's spans stretch.
+    s = sx
+    xs = [0, l, r, w]
+    ys = [0, t, b, h]
+    out_w = round(l * s) + win_w + round((w - r) * s)
+    out_h = round(t * s) + win_h + round((h - b) * s)
+    dx = [0, round(l * s), round(l * s) + win_w, out_w]
+    dy = [0, round(t * s), round(t * s) + win_h, out_h]
+    src = Image.fromarray(rgba)
+    out = Image.new('RGBA', (out_w, out_h), (0, 0, 0, 0))
+    for i in range(3):
+        for j in range(3):
+            if i == 1 and j == 1:
+                continue
+            piece = src.crop((xs[j], ys[i], xs[j + 1], ys[i + 1]))
+            tw, th = dx[j + 1] - dx[j], dy[i + 1] - dy[i]
+            if tw > 0 and th > 0:
+                out.paste(piece.resize((tw, th), Image.LANCZOS), (dx[j], dy[i]))
+    print(f'  (vertical stretch of the side rails x{sy / sx:.2f})')
+    save_png(out, IMG / 'reel_frame.png')
+    print(f'  CSS: --frame-win-l: {dx[1] / out_w:.4f}; --frame-win-t: {dy[1] / out_h:.4f}; '
+          f'--frame-win-w: {win_w / out_w:.4f}; --frame-win-h: {win_h / out_h:.4f};')
 
 
 def job_bg():
