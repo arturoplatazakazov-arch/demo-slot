@@ -1,0 +1,149 @@
+/* Koi Fortune — the game's own rules on top of the variant stylesheet
+   (css/koi-fortune-<variant>.css, generated from the Savannah Kings one):
+   coin labels, the Hold & Win round, the Ante Bet switch, three background
+   modes. Loaded after the variant sheet and css/savannah-layouts.css. */
+
+/* --- Backgrounds: base / free spins / Hold & Win --------------------------- */
+.bg--hw { opacity: 0; }
+.screen[data-mode="hw"] .bg--hw { opacity: 1; }
+.screen[data-mode="hw"] .bg--base { opacity: 0; }
+
+/* Reel window tint follows the variant palette. */
+.reel__bg {
+  background:
+    repeating-linear-gradient(90deg, transparent 0 174px, var(--reel-line, rgba(255, 200, 120, 0.12)) 174px 176px),
+    radial-gradient(ellipse at 50% 30%, var(--reel-a, rgba(70, 34, 18, 0.86)), var(--reel-b, rgba(24, 10, 8, 0.93)));
+}
+.screen[data-mode="hw"] .reel__bg {
+  background:
+    repeating-linear-gradient(90deg, transparent 0 174px, rgba(255, 210, 110, 0.16) 174px 176px),
+    radial-gradient(ellipse at 50% 40%, rgba(70, 44, 6, 0.9), rgba(14, 8, 2, 0.95));
+}
+
+/* High and feature symbols read 5% larger than the letters. */
+.reel__cell:is([data-symbol="koi"], [data-symbol="turtle"], [data-symbol="lantern"], [data-symbol="lotus"],
+  [data-symbol="wild"], [data-symbol="scatter"], [data-symbol="coin"], [data-symbol="jpcoin"]) > img { scale: 1.05; }
+/* Every special carries its word in the art; no CSS captions. */
+.reel__cell::after { display: none !important; }
+
+/* --- Coin labels ------------------------------------------------------------ */
+.coin-label {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.glyph-row { display: inline-flex; align-items: flex-end; height: 62px; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.7)); }
+.glyph { height: 62px; width: auto; margin: 0 -3px; }
+.glyph--punct { height: 22px; margin: 0 -1px 2px; }
+/* Longer amounts shrink to stay on the coin. */
+.coin-label .glyph-row:has(> :nth-child(4)) { transform: scale(0.82); }
+.coin-label .glyph-row:has(> :nth-child(5)) { transform: scale(0.7); }
+.coin-label .glyph-row:has(> :nth-child(6)) { transform: scale(0.6); }
+.coin-label__tag { width: 74%; margin-top: 4%; filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.6)); }
+.reel__strip.is-fast .coin-label { display: none; }
+
+/* --- Hold & Win round ------------------------------------------------------- */
+body.is-hw .reel__cell.is-empty > img { opacity: 0; }
+body.is-hw .reel__cell.is-empty::before { display: none; }
+body.is-hw .reel__cell.is-empty {
+  background: radial-gradient(circle at 50% 50%, rgba(255, 200, 90, 0.08), transparent 62%);
+}
+body.is-hw .reel__cell.is-hw-spin::after {
+  content: '' !important; display: block !important; position: absolute; inset: 14%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 220, 120, 0.55), rgba(255, 170, 40, 0.12) 60%, transparent 70%);
+  animation: hw-spin 0.32s linear infinite;
+}
+@keyframes hw-spin {
+  0% { transform: translateY(-30%) scaleY(1.4); opacity: 0.2; }
+  50% { opacity: 1; }
+  100% { transform: translateY(30%) scaleY(1.4); opacity: 0.2; }
+}
+body.is-hw .reel__cell.is-locked > img { filter: drop-shadow(0 0 14px rgba(255, 200, 80, 0.75)) drop-shadow(0 6px 6px rgba(0, 0, 0, 0.45)); }
+.reel__cell.is-slam > img, .reel__cell.is-slam .coin-label { animation: coin-slam 0.44s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes coin-slam { 0% { transform: scale(1.45); opacity: 0.2; } 100% { transform: scale(1); opacity: 1; } }
+.reel__cell.is-collect > img, .reel__cell.is-collect .coin-label { animation: coin-collect 0.42s ease-out; }
+@keyframes coin-collect { 40% { transform: scale(1.18); filter: brightness(1.6); } }
+body.is-hw .reel__cell.is-jp-coin > img { animation: jp-coin 1.4s ease-in-out infinite alternate; }
+@keyframes jp-coin { to { filter: drop-shadow(0 0 22px rgba(255, 240, 200, 0.95)) brightness(1.12); } }
+
+/* Counter + total over the frame's top border while the round runs; the
+   title banner / logo step aside. */
+.hw-panel {
+  position: absolute; left: 50%; top: -168px; z-index: 8;
+  display: flex; align-items: center; gap: 22px;
+  transform: translateX(-50%) scale(0.92); opacity: 0; pointer-events: none;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+body.is-hw .hw-panel { opacity: 1; transform: translateX(-50%) scale(1); }
+body.is-hw .logo { opacity: 0 !important; transition: opacity 0.3s ease; }
+.hw-respins { position: relative; width: 360px; }
+.hw-respins > img { display: block; width: 100%; }
+.hw-respins__n {
+  position: absolute; left: calc(var(--socket-x, 0.80) * 100%); top: calc(var(--socket-y, 0.5) * 100%);
+  transform: translate(-50%, -50%);
+}
+.hw-respins__n .glyph-row { height: 76px; }
+.hw-respins__n .glyph { height: 76px; }
+.hw-respins__n.is-bump { animation: bump 0.45s ease; }
+.hw-total { position: relative; width: 380px; }
+.hw-total > img { display: block; width: 100%; }
+.hw-total__value {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 44px; font-weight: 900; color: var(--gold-2); white-space: nowrap;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.8), 0 0 14px rgba(255, 200, 80, 0.5);
+}
+.hw-total__value.is-bump { animation: bump 0.4s ease; }
+.hw-total__label {
+  position: absolute; left: 0; right: 0; top: -26px; text-align: center;
+  font-size: 18px; font-weight: 900; letter-spacing: 0.24em; color: var(--tan);
+}
+/* Layouts 2 / 3 keep the jackpots on the frame's top border: there the
+   counter and the total take the medallions' places either side of the
+   frame (the medallions step back for the round). */
+body:not(.is-portrait) .screen:is([data-layout="2"], [data-layout="3"]) .hw-panel {
+  top: 50%; width: calc(var(--win-w) + 2 * var(--hw-side, 390px)); justify-content: space-between;
+  transform: translate(-50%, -50%) scale(0.92);
+}
+body.is-hw:not(.is-portrait) .screen:is([data-layout="2"], [data-layout="3"]) .hw-panel { transform: translate(-50%, -50%); }
+body:not(.is-portrait) .screen:is([data-layout="2"], [data-layout="3"]) .hw-panel > * { width: 290px; }
+body.is-hw:not(.is-portrait) .screen:is([data-layout="2"], [data-layout="3"]) .medal { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+/* Portrait: jackpots on top, so the counter rides under the frame. */
+body.is-portrait .hw-panel {
+  top: calc(var(--win-h) + 10px); transform-origin: 50% 0;
+  transform: translateX(-50%) scale(0.6);
+}
+body.is-hw.is-portrait .hw-panel { transform: translateX(-50%) scale(0.66); }
+body.is-portrait.is-hw .hw-panel { transform: translateX(-50%) scale(0.9); }
+body.is-portrait.is-hw .medal { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+
+/* Jackpot plaque lit by a jackpot coin. */
+.jp.is-hit { animation: jp-hit 1.2s ease-out; z-index: 3; }
+@keyframes jp-hit {
+  0% { transform: scale(1); filter: brightness(1); }
+  20% { transform: scale(1.14); filter: brightness(1.6) drop-shadow(0 0 26px rgba(255, 220, 120, 1)); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+/* Jackpot popups: the tier emblem is the title. */
+.sk-popup.is-jackpot .sk-popup__art { width: 600px; }
+.sk-popup.is-jp-grand .sk-popup__art { width: 700px; }
+
+/* --- Ante Bet switch (in the pill, after the balance) ---------------------- */
+.ante {
+  position: relative; display: flex; align-items: center; gap: 10px;
+  padding: 0 6px; height: 64px; cursor: pointer;
+}
+.ante[hidden] { display: none; }
+.ante__switch { position: relative; width: 104px; height: 70px; }
+.ante__switch img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transition: opacity 0.25s ease; }
+.ante__on { opacity: 0; }
+.ante.is-on .ante__on { opacity: 1; }
+.ante.is-on .ante__off { opacity: 0; }
+.ante__text { display: flex; flex-direction: column; align-items: flex-start; line-height: 1; }
+.ante__label { font-size: 15px; font-weight: 700; letter-spacing: 0.2em; color: var(--tan); }
+.ante__sub { margin-top: 4px; font-size: 13px; font-weight: 700; color: var(--cream); opacity: 0.75; white-space: nowrap; }
+.ante.is-on .ante__label { color: var(--gold-2); }
+.ante.is-on .ante__sub { opacity: 1; color: var(--gold-2); }
+.ante:hover { filter: brightness(1.15); }
+body.is-locked .ante { opacity: 0.45; pointer-events: none; }
+.readout--balance { min-width: 200px; }

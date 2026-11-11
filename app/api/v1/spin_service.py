@@ -14,6 +14,8 @@ app/services/free_spins_round.py (round state lifecycle)."""
 import dataclasses
 from decimal import Decimal
 
+from fastapi import HTTPException
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1 import schemas
@@ -51,9 +53,14 @@ async def run_spin(
     requested_bet_amount: int,
     rng: RNGProvider,
     force_positions: dict[str, list[tuple[int, int]]] | None = None,
+    ante_bet: bool = False,
 ) -> schemas.SpinResponse:
     game_config = await load_active_config(db, session.game_id)
     reel_set = to_reel_set_config(game_config)
+
+    ante_config = find_feature_config(game_config, "ante_bet")
+    if ante_bet and ante_config is None:
+        raise HTTPException(status_code=400, detail="this game has no ante bet")
 
     tumble_config = find_feature_config(game_config, "scatter_tumble")
     if tumble_config is not None:
@@ -88,6 +95,17 @@ async def run_spin(
     elif was_in_free_spins and fs_params.get("reel_weight_overrides"):
         reel_set = with_weight_overrides(reel_set, fs_params["reel_weight_overrides"])
     guarantee = fs_params.get("super_guarantee") if super_round else None
+
+    # Ante Bet (koi-fortune): a paid base spin costs bet x cost_multiplier and
+    # draws on the ante weight set (more gongs and coins); wins are still
+    # paid on the bet. A free spin is never charged, so the flag does nothing
+    # inside a round.
+    ante_active = ante_bet and not was_in_free_spins
+    spin_cost = Decimal(bet_amount)
+    if ante_active:
+        spin_cost = Decimal(str(ante_config.params.get("cost_multiplier", 1.25))) * bet_amount
+        if ante_config.params.get("weight_overrides"):
+            reel_set = with_weight_overrides(reel_set, ante_config.params["weight_overrides"])
 
     for _ in range(100_000):
         grid = spin_reels(reel_set, rng)
@@ -256,7 +274,7 @@ async def run_spin(
     )
 
     balance_before = Decimal(str(session.balance))
-    balance_after = balance_before + spin_win if was_in_free_spins else balance_before - bet_amount + spin_win
+    balance_after = balance_before + spin_win if was_in_free_spins else balance_before - spin_cost + spin_win
 
     win_breakdown: dict[str, object] = {
         "line_pay": str(evaluation.line_pay_total),
@@ -285,12 +303,16 @@ async def run_spin(
     if wheel_result is not None:
         win_breakdown["wheel_of_fortune"] = wheel_result.details
         features_triggered.append("wheel_of_fortune")
+    if ante_active:
+        # SpinRecord.bet_amount below is what the spin cost; the bet the
+        # wins were paid on stays here.
+        win_breakdown["ante_bet"] = {"bet_amount": bet_amount, "cost": str(spin_cost)}
 
     await commit_spin(
         db,
         session,
         game_config_id=game_config.id,
-        bet_amount=bet_amount,
+        bet_amount=int(spin_cost) if ante_active else bet_amount,
         state=state,
         grid=grid,
         win_amount=spin_win,

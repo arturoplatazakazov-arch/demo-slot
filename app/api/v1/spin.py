@@ -17,7 +17,7 @@ async def spin(
     rng: RNGProvider = Depends(get_rng),
 ) -> schemas.SpinResponse:
     session = await load_session(db, body.session_id)
-    return await run_spin(db, session, body.bet_amount, rng)
+    return await run_spin(db, session, body.bet_amount, rng, ante_bet=body.ante_bet)
 
 
 @router.post("/dev/force-hold-and-win", response_model=schemas.SpinResponse)
@@ -68,7 +68,7 @@ async def dev_force_hold_and_win(
                 ]
             }
 
-    return await run_spin(db, session, body.bet_amount, rng, force_positions=force_positions)
+    return await run_spin(db, session, body.bet_amount, rng, force_positions=force_positions, ante_bet=body.ante_bet)
 
 
 @router.post("/dev/force-free-spins", response_model=schemas.SpinResponse)
@@ -93,4 +93,4 @@ async def dev_force_free_spins(
                 (index % game_config.num_reels, index // game_config.num_reels) for index in range(count)
             ]
         }
-    return await run_spin(db, session, body.bet_amount, rng, force_positions=force_positions)
+    return await run_spin(db, session, body.bet_amount, rng, force_positions=force_positions, ante_bet=body.ante_bet)

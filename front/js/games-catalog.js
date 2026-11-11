@@ -116,8 +116,32 @@ const SUGAR_VARIANTS = {
     cover: 'img/sugar-blast-night/cover.jpg' },
 };
 const sugar = (key, extra) => ({ code: 'sugar-blast', ...SUGAR_VARIANTS[key], ...extra });
-// Secret Room: hand-placed cards shown first, before the CRE8_CODES games.
-const CRE8_TOP_CARDS = [sugar('forest'), sugar('meadow'), sugar('gummy'), sugar('night')];
+// Koi Fortune (Asian Fortune brief): four art variants of one game, with
+// Hold & Win, free spins, two buys and the Ante Bet. Secret Room (2026-11-11).
+const KOI_VARIANTS = {
+  silk: { page: 'koi-fortune-silk.html', name: 'Koi Fortune · Silk', badge: 'Sunset',
+    desc: 'Тушь и золото на шёлке: пруд с кои на закате, красная беседка, рама из красного лака.',
+    cover: 'img/koi-fortune-silk/cover.jpg' },
+  jade: { page: 'koi-fortune-jade.html', name: 'Koi Fortune · Jade', badge: 'Morning',
+    desc: 'Глянцевый 3D: нефритовые горы и водопад, золотая рыбка и журавль, рама из резного нефрита.',
+    cover: 'img/koi-fortune-jade/cover.jpg' },
+  lantern: { page: 'koi-fortune-lantern.html', name: 'Koi Fortune · Lanterns', badge: 'Festival',
+    desc: 'Бумажная аппликация: ночная река фонарей и лунный мост, кои сверху, рама из вырезной бумаги.',
+    cover: 'img/koi-fortune-lantern/cover.jpg' },
+  lacquer: { page: 'koi-fortune-lacquer.html', name: 'Koi Fortune · Lacquer', badge: 'Midnight',
+    desc: 'Чёрный лак и неон: дождливый двор с лунными вратами, денежная жаба, рама с киноварью.',
+    cover: 'img/koi-fortune-lacquer/cover.jpg' },
+};
+const koi = (key, extra) => ({ code: 'koi-fortune', ...KOI_VARIANTS[key], ...extra });
+// Secret Room: hand-placed cards shown first, before the CRE8_CODES games —
+// Koi Fortune, Sugar Blast, then every Olympus Thunder version (moved here
+// from Illuminator / Spin Factory, 2026-11-11).
+const CRE8_TOP_CARDS = [
+  koi('silk'), koi('jade'), koi('lantern'), koi('lacquer'),
+  sugar('forest'), sugar('meadow'), sugar('gummy'), sugar('night'),
+  'olympus-thunder', 'olympus-thunder-v2', 'olympus-thunder-v3',
+  ot('sunny'), ot('realms'), ot('heights'), ot('tides'),
+];
 
 // Illuminator: hand-ordered cards (first card first). A card is a game code
 // or { code, page, name, badge, desc, cover } overriding the /catalog entry;
@@ -125,8 +149,6 @@ const CRE8_TOP_CARDS = [sugar('forest'), sugar('meadow'), sugar('gummy'), sugar(
 const ILLUMINATOR_CARDS = [
   'volt-coins',
   njs('c', { name: 'Neon Joker Spins', badge: null, desc: null }),
-  'olympus-thunder',
-  'olympus-thunder-v2',
   savannah('carved'),
   savannah('canyon'),
   savannah('toon'),
@@ -137,17 +159,12 @@ const ILLUMINATOR_CARDS = [
 // Illuminator, in this order.
 const SPIN_FACTORY_CODES = new Set(['big-catch', 'caesars-fortune', 'ice-spin-deluxe', 'tesla-spins']);
 const SPIN_FACTORY_EXTRA_CARDS = [
-  ot('sunny'),
-  ot('realms'),
-  ot('heights'),
-  ot('tides'),
   'gold-of-baku',
   'gold-of-baku-2',
   njs('original'),
   njs('a'),
   njs('b'),
   njs('d'),
-  'olympus-thunder-v3',
   savannah('v3'),
   savannah('lions'),
   savannah('classic'),

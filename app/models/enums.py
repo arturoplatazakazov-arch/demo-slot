@@ -45,6 +45,10 @@ class FeatureType(str, enum.Enum):
     # orbs, TOTAL MULTIPLIER free spins, eagle jackpot wheel and its own
     # multi-SKU buy (app/engine/scatter_tumble*.py, app/api/v1/spin_tumble.py).
     SCATTER_TUMBLE = "scatter_tumble"
+    # Also a pure config carrier: the game sells an Ante Bet (spin price
+    # x cost_multiplier, base weights from weight_overrides) — read by
+    # spin_service.run_spin when the request sets ante_bet.
+    ANTE_BET = "ante_bet"
 
 
 class SimulationStatus(str, enum.Enum):

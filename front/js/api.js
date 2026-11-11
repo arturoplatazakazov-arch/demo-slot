@@ -115,8 +115,9 @@ const Api = {
   startSession(gameId) {
     return apiPost('/session/start', { game_id: gameId });
   },
-  spin(sessionId, betAmount) {
-    return apiPost('/spin', { session_id: sessionId, bet_amount: betAmount });
+  // `extra`: optional request flags, e.g. { ante_bet: true } (Koi Fortune).
+  spin(sessionId, betAmount, extra = null) {
+    return apiPost('/spin', { session_id: sessionId, bet_amount: betAmount, ...(extra || {}) });
   },
   buyFeature(sessionId, featureId, betAmount) {
     return apiPost('/feature/buy', { session_id: sessionId, feature_id: featureId, bet_amount: betAmount });

@@ -51,6 +51,11 @@ class SessionStartRequest(BaseModel):
     game_id: str
 
 
+class AnteBetOut(BaseModel):
+    """The game sells an Ante Bet: a spin with it costs bet x cost_multiplier."""
+    cost_multiplier: float
+
+
 class SessionStartResponse(BaseModel):
     session_id: uuid.UUID
     balance: int
@@ -62,6 +67,7 @@ class SessionStartResponse(BaseModel):
     # scatter_tumble games only (app/api/v1/spin_tumble.py:tumble_rules_out):
     # buy SKUs, jackpot prizes/sectors and paytable for the client.
     game_rules: dict | None = None
+    ante_bet: AnteBetOut | None = None
 
 
 class ActiveFeatureState(BaseModel):
@@ -80,6 +86,10 @@ class SessionStateResponse(BaseModel):
 class SpinRequest(BaseModel):
     session_id: uuid.UUID
     bet_amount: int = Field(gt=0)
+    # Ante Bet (games with an `ante_bet` feature row): the spin costs
+    # bet_amount x cost_multiplier, wins are still paid on bet_amount.
+    # Ignored inside a free-spins round (those spins aren't charged).
+    ante_bet: bool = False
 
 
 class FeatureBuyRequest(BaseModel):

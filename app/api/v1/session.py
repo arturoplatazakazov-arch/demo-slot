@@ -71,6 +71,11 @@ async def start_session(
         ],
         free_spins_trigger=free_spins_trigger,
         hold_and_win_trigger=hold_and_win_trigger,
+        ante_bet=(
+            schemas.AnteBetOut(cost_multiplier=float(ante_config.params.get("cost_multiplier", 1.25)))
+            if (ante_config := find_feature_config(game_config, "ante_bet")) is not None
+            else None
+        ),
         game_rules=(
             tumble_rules_out(game_config, tumble_config)
             if (tumble_config := find_feature_config(game_config, "scatter_tumble")) is not None
