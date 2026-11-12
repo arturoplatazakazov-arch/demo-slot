@@ -11,6 +11,12 @@ S = os.path.dirname(os.path.abspath(__file__))
 G = os.path.join(S, 'gfx')
 OUT = '/Users/arturkasian/demo_slot/front/img/amys-fruit-farm/Screens'
 FPS = 30
+# --notext: localisation build. Every text image becomes a `txt_<key>` bone (centre of
+# the text field, y up) carrying an empty slot of the same name, so the intro/idle
+# alpha timelines survive for the engine that draws the translated string. Field
+# sizes go to TEXT_FIELDS -> texts table.
+NOTEXT = False
+TEXT_FIELDS = []
 
 # --- easing ---------------------------------------------------------------------
 def lin(t): return t
@@ -120,6 +126,17 @@ class Skel:
 
     def anim(self, name, dur):
         a = Anim(dur); self.anims[name] = a; return a
+
+    def text(self, name, bone, img, x=0, y=0, scale=1, key=None):
+        """A translatable string: baked image normally, a bare txt_ bone under --notext."""
+        key = key or img
+        if not NOTEXT:
+            return self.slot(name, bone, img, x=x, y=y, scale=scale)
+        w, h = self.size(img)
+        tb = self.bone(f'txt_{name}', bone, x=x, y=y)
+        TEXT_FIELDS.append(dict(skeleton=self.name, bone=tb, slot=name, key=key,
+                                w=round(w * scale), h=round(h * scale)))
+        return self.slot(name, tb)
 
     # -- export --------------------------------------------------------------------
     def export(self):
@@ -278,21 +295,27 @@ def feature_screen(mob):
         sk.slot(f'rays_{key}', rb, 'rays1', blend='additive', rgb='ffd060', alpha=0.75, tex=0.5)
         sk.slot(f'rglow_{key}', cb, 'rays2', blend='additive', rgb='ffb830', alpha=0.5, scale=0.42 * c['isc'], tex=0.5)
         ib = sk.bone(f'icon_{key}_b', cb, s=icon_s * c['isc'])
-        sk.slot(f'icon_{key}', ib, icon)
+        if NOTEXT and icon == 'icon_buy':  # the sign's BUY BONUS label is text too
+            sk.slot(f'icon_{key}', ib, 'icon_buy_blank')
+            sh = sk.size('icon_buy_blank')[1]
+            sk.text(f'sign_{key}', ib, 'icon_buy_blank', y=sh * 0.02, scale=1, key='sign_buy')
+            TEXT_FIELDS[-1].update(w=round(sk.size('icon_buy_blank')[0] * 0.8), h=round(sh * 0.32))
+        else:
+            sk.slot(f'icon_{key}', ib, icon)
         flash(sk, intro, f'iflash_{key}', ib, t + 0.18, 1.5)
-        pop_in(intro, ib, [f'icon_{key}'], t, 0.55)
+        pop_in(intro, ib, [f'icon_{key}'] + ([f'sign_{key}'] if NOTEXT and icon == 'icon_buy' else []), t, 0.55)
         pop_in(intro, rb, [(f'rays_{key}', 0.75)], t + 0.1, 0.6, from_s=0.1, ease=out_cubic)
         intro.alpha(f'rays_{key}', [(0, 0, lin), (t + 0.1, 0, lin), (t + 0.5, 0.75, out_quad)], rgb='ffd060')
         intro.alpha(f'rglow_{key}', [(0, 0, lin), (t + 0.1, 0, lin), (t + 0.5, 0.5, out_quad)], rgb='ffb830')
         # plaque + title
         pb = sk.bone(f'plaque_{key}_b', x=c['px'], y=c['py'])
         sk.slot(f'plaque_{key}', pb, 'plaque', scale=c['psc'])
-        sk.slot(f'title_{key}', pb, title, y=4, scale=fit(sk, title, 588 * c['psc'] * 0.84, 153 * c['psc'] * 0.62))
+        sk.text(f'title_{key}', pb, title, y=4, scale=fit(sk, title, 588 * c['psc'] * 0.84, 153 * c['psc'] * 0.62))
         pop_in(intro, pb, [f'plaque_{key}', f'title_{key}'], t + 0.18, 0.45, from_s=0.5, ease=out_back_soft)
         # description
         dimg = f'{desc}_{"mob" if mob else "desk"}'
         db = sk.bone(f'desc_{key}_b', x=c['dx'], y=c['dy'])
-        sk.slot(f'desc_{key}', db, dimg, scale=fit(sk, dimg, c['dw']))
+        sk.text(f'desc_{key}', db, dimg, scale=fit(sk, dimg, c['dw']))
         intro.bone(db, 'translate', [(0, (0, -30), lin), (t + 0.32, (0, -30), lin), (t + 0.72, (0, 0), out_cubic)])
         intro.alpha(f'desc_{key}', [(0, 0, lin), (t + 0.32, 0, lin), (t + 0.72, 1, out_quad)])
         # idle: rays spin, icon bobs + pulses (phase-shifted per card), glow breathes
@@ -307,7 +330,7 @@ def feature_screen(mob):
     cx, cy, cimg, csc = (130, -470, 'cont_mob', 0.82) if mob else (180, -392, 'cont_desk', 0.9)
     sk.bone('cont_b', x=cx, y=cy, s=csc)
     sk.slot('cont_glow', 'cont_b', 'glow', blend='additive', rgb='ffcf4a', alpha=0.3, scale=(2.6, 0.8 if not mob else 1.2))
-    sk.slot('cont', 'cont_b', cimg)
+    sk.text('cont', 'cont_b', cimg)
     intro.alpha('cont', [(0, 0, lin), (1.75, 0, lin), (2.2, 1, out_quad)])
     intro.alpha('cont_glow', [(0, 0, lin), (1.75, 0, lin), (2.2, 0.3, out_quad)], rgb='ffcf4a')
     intro.bone('cont_b', 'translate', [(0, (0, -25), lin), (1.75, (0, -25), lin), (2.2, (0, 0), out_cubic)])
@@ -355,8 +378,8 @@ def bonus_screen(mob):
     sk.slot('rays_b2', 'rays2_b', 'rays1', blend='additive', rgb='fff0b0', alpha=0.45, tex=0.5)
     sk.bone('frame_b', 'frame_root')
     sk.slot('frame', 'frame_b', 'honey_frame')
-    sk.slot('t_youwon', 'frame_b', 't_youwon', y=171, scale=fit(sk, 't_youwon', 300, 52))
-    sk.slot('t_freespins', 'frame_b', 't_freespins', y=-160, scale=fit(sk, 't_freespins', 300, 52))
+    sk.text('t_youwon', 'frame_b', 't_youwon', y=171, scale=fit(sk, 't_youwon', 300, 52))
+    sk.text('t_freespins', 'frame_b', 't_freespins', y=-160, scale=fit(sk, 't_freespins', 300, 52))
     # count: up to three digit slots; runtime swaps attachments + x (see slot.js)
     sk.bone('number', 'frame_b', y=-6)
     dsc = 0.78
@@ -394,7 +417,7 @@ def bonus_screen(mob):
     tx, ty, tsc = (0, 642, 0.84) if mob else (200, 368, 0.8)
     sk.bone('title_b', x=tx, y=ty, s=tsc)
     sk.slot('title_glow', 'title_b', 'glow', blend='additive', rgb='ffcf4a', alpha=0.35, scale=(4.2, 1.1))
-    sk.slot('title', 'title_b', 't_congrats')
+    sk.text('title', 'title_b', 't_congrats')
     intro.bone('title_b', 'scale', [(0, 3.0, lin), (0.5, 3.0, lin), (0.78, 1, in_quad), (0.86, (1.08, 0.92), out_quad), (1.1, 1, out_back_soft)])
     intro.alpha('title', [(0, 0, lin), (0.5, 0, lin), (0.7, 1, out_quad)])
     intro.alpha('title_glow', [(0, 0, lin), (0.78, 0, lin), (0.9, 0.9, out_quad), (1.5, 0.35, in_out_sine)], rgb='ffcf4a')
@@ -413,7 +436,7 @@ def bonus_screen(mob):
         pb = sk.bone(f'pl_{key}', x=px, y=py)
         pw = 588 * psc
         sk.slot(f'plq_{key}', pb, 'plaque', scale=psc)
-        sk.slot(f'plt_{key}', pb, txt, x=pw * 0.08, y=2, scale=fit(sk, txt, pw * 0.72, 153 * psc * 0.5))
+        sk.text(f'plt_{key}', pb, txt, x=pw * 0.08, y=2, scale=fit(sk, txt, pw * 0.72, 153 * psc * 0.5))
         ib = sk.bone(f'pli_{key}', pb, x=-pw / 2 + 18, y=4, s=0.62 * psc / 0.72)
         sk.slot(f'pli_{key}', ib, icon)
         pop_in(intro, pb, [f'plq_{key}', f'plt_{key}'], t, 0.45, from_s=0.4, ease=out_back_soft, dy=-40)
@@ -426,7 +449,7 @@ def bonus_screen(mob):
     cx, cy, cimg, csc = (175, -470, 'start_mob', 0.82) if mob else (200, -400, 'start_desk', 0.9)
     sk.bone('cont_b', x=cx, y=cy, s=csc)
     sk.slot('cont_glow', 'cont_b', 'glow', blend='additive', rgb='ffcf4a', alpha=0.3, scale=(2.4, 0.8 if not mob else 1.2))
-    sk.slot('cont', 'cont_b', cimg)
+    sk.text('cont', 'cont_b', cimg)
     intro.alpha('cont', [(0, 0, lin), (1.9, 0, lin), (2.35, 1, out_quad)])
     intro.alpha('cont_glow', [(0, 0, lin), (1.9, 0, lin), (2.35, 0.3, out_quad)], rgb='ffcf4a')
     intro.bone('cont_b', 'translate', [(0, (0, -25), lin), (1.9, (0, -25), lin), (2.35, (0, 0), out_cubic)])
@@ -460,6 +483,12 @@ def bonus_screen(mob):
     sk.export()
 
 if __name__ == '__main__':
+    import sys
+    if '--notext' in sys.argv:
+        NOTEXT = True
+        OUT = sys.argv[sys.argv.index('--notext') + 1]
     for mob in (False, True):
         feature_screen(mob)
         bonus_screen(mob)
+    if NOTEXT:
+        with open(os.path.join(OUT, 'text_fields.json'), 'w') as f: json.dump(TEXT_FIELDS, f, indent=1)

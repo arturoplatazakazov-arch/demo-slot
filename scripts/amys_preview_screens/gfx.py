@@ -1,12 +1,15 @@
 # Generates every bitmap the preview-screen skeletons need into gfx/.
 import os, math, shutil
 import numpy as np
+from texts import TEXTS
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 S = os.path.dirname(os.path.abspath(__file__))
 G = os.path.join(S, 'gfx'); P = os.path.join(S, 'parts')
 A = '/Users/arturkasian/demo_slot/front/img/amys-fruit-farm'
 LG = os.path.join(S, 'fonts/luckiest-guy-latin-fe2ede07.ttf')
 FR = os.path.join(S, 'fonts/fredoka-latin-849e3a33.ttf')
+
+T = {k: v['en'] for k, v in TEXTS.items()}
 
 def save(im, name): im.save(os.path.join(G, name + '.png'))
 
@@ -115,25 +118,26 @@ def main():
     gl = Image.new('RGBA', m.size, (255, 255, 255, 0)); gl.putalpha(m); save(gl, 'logo_glow')
     # buy-bonus sign with its label baked in (in-game it is a DOM overlay)
     sign = Image.open(os.path.join(A, 'img/sign_buy_bonus.png')).convert('RGBA')
-    lab = styled('BUY\nBONUS', 64, grad=((255, 250, 205), (255, 214, 80), (240, 150, 10)), line_h=0.95, shadow=4)
+    lab = styled(T['sign_buy'], 64, grad=((255, 250, 205), (255, 214, 80), (240, 150, 10)), line_h=0.95, shadow=4)
     lab = lab.resize((int(lab.width * 0.9), int(lab.height * 0.9)), Image.LANCZOS)
     sign.alpha_composite(lab, ((sign.width - lab.width) // 2, int(sign.height * 0.48) - lab.height // 2))
+    save(Image.open(os.path.join(A, 'img/sign_buy_bonus.png')).convert('RGBA'), 'icon_buy_blank')
     save(sign, 'icon_buy')
     # --- copy ------------------------------------------------------------------------
-    save(styled('FREE SPINS', 50), 't_fs')
-    save(styled('BUY BONUS', 50), 't_buy')
-    save(body('3, 4 or 5 SCATTERS award\n10, 15 or 20 FREE SPINS.\nScatters retrigger the bonus!', 30, hi=['SCATTERS', 'FREE', 'SPINS.', '10,', '15', '20']), 'd_fs_desk')
-    save(body('Skip the wait: buy\nFREE SPINS straight away\nfor 100x your bet', 30, hi=['FREE', 'SPINS', '100x']), 'd_buy_desk')
-    save(body('3, 4 or 5 SCATTERS award\n10, 15 or 20 FREE SPINS.\nScatters retrigger!', 30, hi=['SCATTERS', 'FREE', 'SPINS.', '10,', '15', '20']), 'd_fs_mob')
-    save(body('Buy FREE SPINS straight\naway for 100x your bet', 30, hi=['FREE', 'SPINS', '100x']), 'd_buy_mob')
-    save(styled('CLICK ANYWHERE TO CONTINUE', 44, grad=((255, 255, 240), (255, 236, 160), (255, 200, 70))), 'cont_desk')
-    save(styled('TAP ANYWHERE\nTO CONTINUE', 50, grad=((255, 255, 240), (255, 236, 160), (255, 200, 70))), 'cont_mob')
-    save(styled('CLICK ANYWHERE TO START', 44, grad=((255, 255, 240), (255, 236, 160), (255, 200, 70))), 'start_desk')
-    save(styled('TAP ANYWHERE\nTO START', 50, grad=((255, 255, 240), (255, 236, 160), (255, 200, 70))), 'start_mob')
-    save(styled('CONGRATULATIONS!', 84), 't_congrats')
-    save(styled('YOU WON', 46, grad=((255, 250, 225), (255, 222, 120), (246, 170, 30))), 't_youwon')
-    save(styled('FREE SPINS', 50, grad=((255, 250, 225), (255, 222, 120), (246, 170, 30))), 't_freespins')
-    save(body('3+ SCATTERS = MORE SPINS', 34, hi=['SCATTERS']), 'b_fs')
+    save(styled(T['t_fs'], 50), 't_fs')
+    save(styled(T['t_buy'], 50), 't_buy')
+    save(body(T['d_fs_desk'], 30, hi=['SCATTERS', 'FREE', 'SPINS.', '10,', '15', '20']), 'd_fs_desk')
+    save(body(T['d_buy_desk'], 30, hi=['FREE', 'SPINS', '100x']), 'd_buy_desk')
+    save(body(T['d_fs_mob'], 30, hi=['SCATTERS', 'FREE', 'SPINS.', '10,', '15', '20']), 'd_fs_mob')
+    save(body(T['d_buy_mob'], 30, hi=['FREE', 'SPINS', '100x']), 'd_buy_mob')
+    save(styled(T['cont_desk'], 44, grad=((255, 255, 240), (255, 236, 160), (255, 200, 70))), 'cont_desk')
+    save(styled(T['cont_mob'], 50, grad=((255, 255, 240), (255, 236, 160), (255, 200, 70))), 'cont_mob')
+    save(styled(T['start_desk'], 44, grad=((255, 255, 240), (255, 236, 160), (255, 200, 70))), 'start_desk')
+    save(styled(T['start_mob'], 50, grad=((255, 255, 240), (255, 236, 160), (255, 200, 70))), 'start_mob')
+    save(styled(T['t_congrats'], 84), 't_congrats')
+    save(styled(T['t_youwon'], 46, grad=((255, 250, 225), (255, 222, 120), (246, 170, 30))), 't_youwon')
+    save(styled(T['t_freespins'], 50, grad=((255, 250, 225), (255, 222, 120), (246, 170, 30))), 't_freespins')
+    save(body(T['b_fs'], 34, hi=['SCATTERS']), 'b_fs')
     for d in '0123456789':
         save(styled(d, 150, grad=((255, 252, 215), (255, 206, 40), (226, 96, 0)), shadow=8, spacing=0), 'n' + d)
     # --- fx ----------------------------------------------------------------------------
