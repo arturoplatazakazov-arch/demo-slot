@@ -5,7 +5,7 @@ Generates `front/img/amys-fruit-farm/Screens/{feature,bonus}_screen_{desk,mob}/`
 `showPreviewScreen` in `front/js/slot.js`.
 
 ```
-python3 -m venv venv && venv/bin/pip install pillow fonttools brotli numpy
+python3 -m venv venv && venv/bin/pip install pillow fonttools brotli numpy xlsxwriter
 mkdir -p parts fonts
 for p in buy_free_spins bonus_spins_win bonus_spins_total_win; do
   venv/bin/python extract.py "../../front/img/amys-fruit-farm/Popup's/$p" parts $p; done
