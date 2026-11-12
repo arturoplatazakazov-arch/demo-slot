@@ -100,7 +100,7 @@ def main():
     for src, name in [('img/bg_base_game.png', 'bg_base_desk'), ('img/Mob_Base_bg.png', 'bg_base_mob'),
                       ('img/bg_freespins.png', 'bg_bonus_desk'), ('img/Mob_Bonus_bg.png', 'bg_bonus_mob'),
                       ('img/amy_base.png', 'amy_base'), ('img/amy_freespins.png', 'amy_bonus'),
-                      ('img/logo_amys_fruit_farm.png', 'logo'), ('Export/Wild/static.png', 'icon_wild'),
+                      ('img/logo_amys_fruit_farm.png', 'logo'),
                       ('Export/Scatter/static.png', 'icon_scatter')]:
         save(Image.open(os.path.join(A, src)).convert('RGBA'), name)
     for src, name in [('buy_free_spins_rays1', 'rays1'), ('buy_free_spins_rays2', 'rays2'),
@@ -120,13 +120,10 @@ def main():
     sign.alpha_composite(lab, ((sign.width - lab.width) // 2, int(sign.height * 0.48) - lab.height // 2))
     save(sign, 'icon_buy')
     # --- copy ------------------------------------------------------------------------
-    save(styled('EXPANDING WILD', 50), 't_wild')
     save(styled('FREE SPINS', 50), 't_fs')
     save(styled('BUY BONUS', 50), 't_buy')
-    save(body('WILD grows to fill the whole\nreel, then walks one reel to\nthe right on every spin', 30, hi=['WILD']), 'd_wild_desk')
     save(body('3, 4 or 5 SCATTERS award\n10, 15 or 20 FREE SPINS.\nScatters retrigger the bonus!', 30, hi=['SCATTERS', 'FREE', 'SPINS.', '10,', '15', '20']), 'd_fs_desk')
     save(body('Skip the wait: buy\nFREE SPINS straight away\nfor 100x your bet', 30, hi=['FREE', 'SPINS', '100x']), 'd_buy_desk')
-    save(body('WILD fills the whole reel,\nthen walks one reel right\non every spin', 30, hi=['WILD']), 'd_wild_mob')
     save(body('3, 4 or 5 SCATTERS award\n10, 15 or 20 FREE SPINS.\nScatters retrigger!', 30, hi=['SCATTERS', 'FREE', 'SPINS.', '10,', '15', '20']), 'd_fs_mob')
     save(body('Buy FREE SPINS straight\naway for 100x your bet', 30, hi=['FREE', 'SPINS', '100x']), 'd_buy_mob')
     save(styled('CLICK ANYWHERE TO CONTINUE', 44, grad=((255, 255, 240), (255, 236, 160), (255, 200, 70))), 'cont_desk')
@@ -136,7 +133,6 @@ def main():
     save(styled('CONGRATULATIONS!', 84), 't_congrats')
     save(styled('YOU WON', 46, grad=((255, 250, 225), (255, 222, 120), (246, 170, 30))), 't_youwon')
     save(styled('FREE SPINS', 50, grad=((255, 250, 225), (255, 222, 120), (246, 170, 30))), 't_freespins')
-    save(body('WILDS EXPAND & WALK', 34, hi=['WILDS']), 'b_wild')
     save(body('3+ SCATTERS = MORE SPINS', 34, hi=['SCATTERS']), 'b_fs')
     for d in '0123456789':
         save(styled(d, 150, grad=((255, 252, 215), (255, 206, 40), (226, 96, 0)), shadow=8, spacing=0), 'n' + d)

@@ -227,10 +227,13 @@ def fit(sk, img, max_w, max_h=10 ** 9):
 # FEATURE SCREEN
 # =================================================================================
 FEATURES = [  # (key, icon, icon scale, title, desc)
-    ('wild', 'icon_wild', 1.0, 't_wild', 'd_wild'),
     ('fs', 'icon_scatter', 1.0, 't_fs', 'd_fs'),
     ('buy', 'icon_buy', 0.7, 't_buy', 'd_buy'),
 ]
+
+# No expanding/walking wild in this game (product 2026-11-12): two cards only.
+DESK_COLS = (-30, 390)
+MOB_ROWS = (250, -50)
 
 def feature_screen(mob):
     box = (-390, -708, 780, 1416) if mob else (-966, -470, 1932, 940)
@@ -263,10 +266,10 @@ def feature_screen(mob):
 
     # --- feature cards ---------------------------------------------------------------
     if mob:
-        rows = [340, 95, -150]
+        rows = MOB_ROWS
         cards = [dict(ix=-250, iy=ry, px=95, py=ry + 58, dx=95, dy=ry - 42, isc=0.85, psc=0.64, dw=440) for ry in rows]
     else:
-        cards = [dict(ix=cx, iy=105, px=cx, py=-75, dx=cx, dy=-192, isc=1.0, psc=0.7, dw=400) for cx in (-240, 180, 600)]
+        cards = [dict(ix=cx, iy=105, px=cx, py=-75, dx=cx, dy=-192, isc=1.0, psc=0.7, dw=400) for cx in DESK_COLS]
     for i, ((key, icon, icon_s, title, desc), c) in enumerate(zip(FEATURES, cards)):
         t = 0.75 + i * 0.17
         cb = sk.bone(f'card_{key}', x=c['ix'], y=c['iy'])
@@ -400,10 +403,10 @@ def bonus_screen(mob):
 
     # --- info plaques -----------------------------------------------------------------
     if mob:
-        pl = [('wild', 'icon_wild', 'b_wild', 60, -15), ('fs', 'icon_scatter', 'b_fs', 60, -135)]
+        pl = [('fs', 'icon_scatter', 'b_fs', 30, -60)]
         psc = 0.84
     else:
-        pl = [('wild', 'icon_wild', 'b_wild', -15, -268), ('fs', 'icon_scatter', 'b_fs', 445, -268)]
+        pl = [('fs', 'icon_scatter', 'b_fs', 200, -268)]
         psc = 0.72
     for i, (key, icon, txt, px, py) in enumerate(pl):
         t = 1.3 + i * 0.15
