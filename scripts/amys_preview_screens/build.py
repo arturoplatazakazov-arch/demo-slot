@@ -6,6 +6,7 @@
 import os, json, math, random
 import numpy as np
 from PIL import Image
+from texts import IMAGES
 
 S = os.path.dirname(os.path.abspath(__file__))
 G = os.path.join(S, 'gfx')
@@ -129,7 +130,7 @@ class Skel:
 
     def text(self, name, bone, img, x=0, y=0, scale=1, key=None):
         """A translatable string: baked image normally, a bare txt_ bone under --notext."""
-        key = key or img
+        key = key or IMAGES[img][0]
         if not NOTEXT:
             return self.slot(name, bone, img, x=x, y=y, scale=scale)
         w, h = self.size(img)

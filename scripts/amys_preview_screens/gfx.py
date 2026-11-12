@@ -1,7 +1,7 @@
 # Generates every bitmap the preview-screen skeletons need into gfx/.
 import os, math, shutil
 import numpy as np
-from texts import TEXTS
+from texts import IMAGES
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 S = os.path.dirname(os.path.abspath(__file__))
 G = os.path.join(S, 'gfx'); P = os.path.join(S, 'parts')
@@ -9,7 +9,7 @@ A = '/Users/arturkasian/demo_slot/front/img/amys-fruit-farm'
 LG = os.path.join(S, 'fonts/luckiest-guy-latin-fe2ede07.ttf')
 FR = os.path.join(S, 'fonts/fredoka-latin-849e3a33.ttf')
 
-T = {k: v['en'] for k, v in TEXTS.items()}
+T = {img: s for img, (_, s) in IMAGES.items()}
 
 def save(im, name): im.save(os.path.join(G, name + '.png'))
 

@@ -6,7 +6,7 @@ bg_base_mob
 bounds:0,0,780,1416
 
 animation.png
-size:1856,1323
+size:1973,1323
 filter:Linear,Linear
 pma:true
 amy_base
@@ -32,11 +32,11 @@ bounds:2,1107,588,153
 sparkle
 bounds:592,1107,128,128
 d_fs_mob
-bounds:722,1107,378,117
-cont_mob
-bounds:1102,1107,398,109
+bounds:722,1107,420,117
 d_buy_mob
-bounds:1502,1107,352,82
+bounds:1144,1107,373,117
+cont_mob
+bounds:1519,1107,452,109
 t_buy
 bounds:2,1262,300,59
 t_fs

@@ -47,15 +47,15 @@ def header(ws, cols, widths):
 
 wb = Workbook()
 ws = wb.active; ws.title = 'Тексты'
-header(ws, ['Ключ', 'Где', 'EN (оригинал)', 'Перевод', 'Слова золотом', 'Строк в EN', 'Поле, px (Ш×В)', 'Кость Spine', 'Шрифт'],
-       [14, 22, 40, 40, 24, 9, 22, 22, 14])
+header(ws, ['Ключ', 'Где', 'EN (оригинал)', 'Перевод', 'Слова золотом', 'Как разбито в макете', 'Поле, px (Ш×В)', 'Кость Spine', 'Шрифт'],
+       [14, 22, 40, 40, 24, 34, 22, 22, 14])
 order = []
 for r in recs:
     if r['key'] not in order: order.append(r['key'])
 for key in order:
     t = TEXTS[key]; rs = [r for r in recs if r['key'] == key]
     ws.append([key, '\n'.join(dict.fromkeys(where(r) for r in rs)), t['en'], None,
-               ', '.join(w.strip(',.!') for w in t['hi']) or '—', t['en'].count('\n') + 1,
+               ', '.join(w.strip(',.!') for w in t['hi']) or '—', '\n\n'.join(f"{'деск' if i.endswith('desk') else 'моб' if i.endswith('mob') else 'все'}: {s}" for i, s in t.get('img', {key: t['en']}).items()),
                '\n'.join(dict.fromkeys(f"{r['fw']}×{r['fh']}" for r in rs)),
                '\n'.join(dict.fromkeys(r['bone'] for r in rs)), t['font']])
     row = ws.max_row
@@ -64,7 +64,7 @@ for key in order:
 n = ws.max_row + 2
 notes = [
     'Как заполнять: перевод пишем только в жёлтые ячейки колонки «Перевод».',
-    'Переносы строк в EN стоят под ширину поля, в переводе их можно ставить по-своему, лишь бы текст влез в «Поле, px».',
+    'Текст один для деска и мобилки; различаются только переносы строк под ширину поля («Как разбито в макете»). В переводе переносы ставим так же по ширине поля.',
     'Поле, px — габарит текста в дизайн-пикселях макета (деск 1932×940, моб 780×1416). Если перевод длиннее, уменьшаем кегль, чтобы текст влез в поле.',
     '«Слова золотом» в оригинале подсвечены золотым: в переводе подсветить слова с тем же смыслом.',
     'Логотип AMY\'S FRUIT FARM и надпись SCATTER на символе — арт, не переводятся.',
