@@ -58,10 +58,10 @@ def styled(lines, size, *, fnt=LG, wght=None, grad=((255, 248, 170), (255, 196, 
     white = Image.new('RGBA', (W, H), (255, 255, 235, 200)); base.paste(white, (0, 0), hl.filter(ImageFilter.GaussianBlur(0.6)))
     return base.crop(base.getbbox())
 
-def body(lines, size, color=(255, 250, 235), stroke=(60, 26, 4), wght=650, line_h=1.18, hi=None):
+def body(lines, size, color=(255, 250, 235), stroke=(60, 26, 4), wght=650, line_h=1.18, hi=None, fnt=FR):
     """Description copy: rounded bold Fredoka, cream with a brown stroke. `hi` words are tinted gold."""
     if isinstance(lines, str): lines = lines.split('\n')
-    f = font(FR, size, wght); sw = max(2, round(size * 0.14)); lh = int(size * line_h)
+    f = font(fnt, size, wght); sw = max(2, round(size * 0.14)); lh = int(size * line_h)
     widths = [f.getlength(l) for l in lines]
     W = int(max(widths) + sw * 2 + 20); H = int(lh * len(lines) + size * 0.4 + sw * 2 + 20)
     im = Image.new('RGBA', (W, H)); sh = Image.new('RGBA', (W, H))

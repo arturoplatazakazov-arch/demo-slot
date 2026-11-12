@@ -29,3 +29,17 @@ All strings live in `texts.py` (gfx.py renders them from there). Under `--notext
 each text slot becomes a bare `txt_<slot>` bone at the text-field centre with an
 empty slot of the same name (keeps the alpha timelines); the BUY BONUS sign uses
 the blank sign art. The normal build is unchanged byte-for-byte.
+
+## Translations + fit check
+
+`translations.py` holds the client's languages (`**word**` = gold). Run after the --notext build
+(needs the setup-pose renders `nt_<skeleton>.png` of the notext skeletons):
+
+```
+venv/bin/python lang_check.py <out>/spine_notext <renders dir> <out>/проверка_языков   # fit.json + <lang>.jpg
+venv/bin/python texts_table.py <out>/spine_notext                                        # picks up fit.json
+```
+
+Fit = font size vs EN as drawn in the game inside the field's available area (`box` in build.py),
+line breaks searched automatically. Glyphs the game fonts lack are measured with Arial Black /
+Arial Bold stand-ins and listed on the «Шрифты» sheet.

@@ -128,15 +128,18 @@ class Skel:
     def anim(self, name, dur):
         a = Anim(dur); self.anims[name] = a; return a
 
-    def text(self, name, bone, img, x=0, y=0, scale=1, key=None):
-        """A translatable string: baked image normally, a bare txt_ bone under --notext."""
+    def text(self, name, bone, img, x=0, y=0, scale=1, key=None, box=None):
+        """A translatable string: baked image normally, a bare txt_ bone under --notext.
+        `box` = the area the text may use, in the parent bone's units (the plaque interior,
+        the free strip for a prompt...); defaults to the EN art's own bbox."""
         key = key or IMAGES[img][0]
         if not NOTEXT:
             return self.slot(name, bone, img, x=x, y=y, scale=scale)
         w, h = self.size(img)
+        bw, bh = box or (w * scale, h * scale)
         tb = self.bone(f'txt_{name}', bone, x=x, y=y)
-        TEXT_FIELDS.append(dict(skeleton=self.name, bone=tb, slot=name, key=key,
-                                w=round(w * scale), h=round(h * scale)))
+        TEXT_FIELDS.append(dict(skeleton=self.name, bone=tb, slot=name, key=key, w=round(bw), h=round(bh),
+                                en_w=round(w * scale), en_h=round(h * scale)))  # EN art as drawn in the game
         return self.slot(name, tb)
 
     # -- export --------------------------------------------------------------------
@@ -299,8 +302,8 @@ def feature_screen(mob):
         if NOTEXT and icon == 'icon_buy':  # the sign's BUY BONUS label is text too
             sk.slot(f'icon_{key}', ib, 'icon_buy_blank')
             sh = sk.size('icon_buy_blank')[1]
-            sk.text(f'sign_{key}', ib, 'icon_buy_blank', y=sh * 0.02, scale=1, key='sign_buy')
-            TEXT_FIELDS[-1].update(w=round(sk.size('icon_buy_blank')[0] * 0.8), h=round(sh * 0.32))
+            sk.text(f'sign_{key}', ib, 'icon_buy_blank', y=sh * 0.02, key='sign_buy',
+                    box=(sk.size('icon_buy_blank')[0] * 0.85, sh * 0.42))  # the whole board
         else:
             sk.slot(f'icon_{key}', ib, icon)
         flash(sk, intro, f'iflash_{key}', ib, t + 0.18, 1.5)
@@ -311,12 +314,13 @@ def feature_screen(mob):
         # plaque + title
         pb = sk.bone(f'plaque_{key}_b', x=c['px'], y=c['py'])
         sk.slot(f'plaque_{key}', pb, 'plaque', scale=c['psc'])
-        sk.text(f'title_{key}', pb, title, y=4, scale=fit(sk, title, 588 * c['psc'] * 0.84, 153 * c['psc'] * 0.62))
+        tbox = (588 * c['psc'] * 0.84, 153 * c['psc'] * 0.62)
+        sk.text(f'title_{key}', pb, title, y=4, scale=fit(sk, title, *tbox), box=tbox)
         pop_in(intro, pb, [f'plaque_{key}', f'title_{key}'], t + 0.18, 0.45, from_s=0.5, ease=out_back_soft)
         # description
         dimg = f'{desc}_{"mob" if mob else "desk"}'
         db = sk.bone(f'desc_{key}_b', x=c['dx'], y=c['dy'])
-        sk.text(f'desc_{key}', db, dimg, scale=fit(sk, dimg, c['dw']))
+        sk.text(f'desc_{key}', db, dimg, scale=fit(sk, dimg, c['dw']), box=(c['dw'], 130 if mob else 150))
         intro.bone(db, 'translate', [(0, (0, -30), lin), (t + 0.32, (0, -30), lin), (t + 0.72, (0, 0), out_cubic)])
         intro.alpha(f'desc_{key}', [(0, 0, lin), (t + 0.32, 0, lin), (t + 0.72, 1, out_quad)])
         # idle: rays spin, icon bobs + pulses (phase-shifted per card), glow breathes
@@ -331,7 +335,7 @@ def feature_screen(mob):
     cx, cy, cimg, csc = (130, -470, 'cont_mob', 0.82) if mob else (180, -392, 'cont_desk', 0.9)
     sk.bone('cont_b', x=cx, y=cy, s=csc)
     sk.slot('cont_glow', 'cont_b', 'glow', blend='additive', rgb='ffcf4a', alpha=0.3, scale=(2.6, 0.8 if not mob else 1.2))
-    sk.text('cont', 'cont_b', cimg)
+    sk.text('cont', 'cont_b', cimg, box=((490 if mob else 1150) / csc, (120 if mob else 90) / csc))
     intro.alpha('cont', [(0, 0, lin), (1.75, 0, lin), (2.2, 1, out_quad)])
     intro.alpha('cont_glow', [(0, 0, lin), (1.75, 0, lin), (2.2, 0.3, out_quad)], rgb='ffcf4a')
     intro.bone('cont_b', 'translate', [(0, (0, -25), lin), (1.75, (0, -25), lin), (2.2, (0, 0), out_cubic)])
@@ -379,8 +383,8 @@ def bonus_screen(mob):
     sk.slot('rays_b2', 'rays2_b', 'rays1', blend='additive', rgb='fff0b0', alpha=0.45, tex=0.5)
     sk.bone('frame_b', 'frame_root')
     sk.slot('frame', 'frame_b', 'honey_frame')
-    sk.text('t_youwon', 'frame_b', 't_youwon', y=171, scale=fit(sk, 't_youwon', 300, 52))
-    sk.text('t_freespins', 'frame_b', 't_freespins', y=-160, scale=fit(sk, 't_freespins', 300, 52))
+    sk.text('t_youwon', 'frame_b', 't_youwon', y=171, scale=fit(sk, 't_youwon', 300, 52), box=(320, 56))
+    sk.text('t_freespins', 'frame_b', 't_freespins', y=-160, scale=fit(sk, 't_freespins', 300, 52), box=(320, 56))
     # count: up to three digit slots; runtime swaps attachments + x (see slot.js)
     sk.bone('number', 'frame_b', y=-6)
     dsc = 0.78
@@ -418,7 +422,7 @@ def bonus_screen(mob):
     tx, ty, tsc = (0, 642, 0.84) if mob else (200, 368, 0.8)
     sk.bone('title_b', x=tx, y=ty, s=tsc)
     sk.slot('title_glow', 'title_b', 'glow', blend='additive', rgb='ffcf4a', alpha=0.35, scale=(4.2, 1.1))
-    sk.text('title', 'title_b', 't_congrats')
+    sk.text('title', 'title_b', 't_congrats', box=((740 if mob else 1150) / tsc, 100 / tsc))
     intro.bone('title_b', 'scale', [(0, 3.0, lin), (0.5, 3.0, lin), (0.78, 1, in_quad), (0.86, (1.08, 0.92), out_quad), (1.1, 1, out_back_soft)])
     intro.alpha('title', [(0, 0, lin), (0.5, 0, lin), (0.7, 1, out_quad)])
     intro.alpha('title_glow', [(0, 0, lin), (0.78, 0, lin), (0.9, 0.9, out_quad), (1.5, 0.35, in_out_sine)], rgb='ffcf4a')
@@ -437,7 +441,7 @@ def bonus_screen(mob):
         pb = sk.bone(f'pl_{key}', x=px, y=py)
         pw = 588 * psc
         sk.slot(f'plq_{key}', pb, 'plaque', scale=psc)
-        sk.text(f'plt_{key}', pb, txt, x=pw * 0.08, y=2, scale=fit(sk, txt, pw * 0.72, 153 * psc * 0.5))
+        sk.text(f'plt_{key}', pb, txt, x=pw * 0.08, y=2, scale=fit(sk, txt, pw * 0.72, 153 * psc * 0.5), box=(pw * 0.72, 153 * psc * 0.62))
         ib = sk.bone(f'pli_{key}', pb, x=-pw / 2 + 18, y=4, s=0.62 * psc / 0.72)
         sk.slot(f'pli_{key}', ib, icon)
         pop_in(intro, pb, [f'plq_{key}', f'plt_{key}'], t, 0.45, from_s=0.4, ease=out_back_soft, dy=-40)
@@ -450,7 +454,7 @@ def bonus_screen(mob):
     cx, cy, cimg, csc = (175, -470, 'start_mob', 0.82) if mob else (200, -400, 'start_desk', 0.9)
     sk.bone('cont_b', x=cx, y=cy, s=csc)
     sk.slot('cont_glow', 'cont_b', 'glow', blend='additive', rgb='ffcf4a', alpha=0.3, scale=(2.4, 0.8 if not mob else 1.2))
-    sk.text('cont', 'cont_b', cimg)
+    sk.text('cont', 'cont_b', cimg, box=((390 if mob else 1150) / csc, (120 if mob else 90) / csc))
     intro.alpha('cont', [(0, 0, lin), (1.9, 0, lin), (2.35, 1, out_quad)])
     intro.alpha('cont_glow', [(0, 0, lin), (1.9, 0, lin), (2.35, 0.3, out_quad)], rgb='ffcf4a')
     intro.bone('cont_b', 'translate', [(0, (0, -25), lin), (1.9, (0, -25), lin), (2.35, (0, 0), out_cubic)])
