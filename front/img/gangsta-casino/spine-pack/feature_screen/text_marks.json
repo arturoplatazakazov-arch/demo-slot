@@ -1,0 +1,108 @@
+{
+ "desk": {
+  "free_spins": {
+   "bone": "text_free_spins",
+   "slot": "capL",
+   "text": "FREE SPINS",
+   "box": [
+    240,
+    66
+   ],
+   "lines": 2
+  },
+  "expanding_wild": {
+   "bone": "text_expanding_wild",
+   "slot": "capC",
+   "text": "EXPANDING WILD",
+   "box": [
+    279,
+    66
+   ],
+   "lines": 2
+  },
+  "tap_to_continue": {
+   "bone": "text_tap_to_continue",
+   "slot": "cont",
+   "text": "TAP TO CONTINUE",
+   "box": [
+    400,
+    116
+   ],
+   "lines": 2,
+   "line": 58
+  },
+  "multiplier": {
+   "bone": "text_multiplier",
+   "slot": "capR",
+   "text": "MULTIPLIER",
+   "box": [
+    240,
+    42
+   ],
+   "lines": 1
+  },
+  "multiplier_note": {
+   "bone": "text_multiplier_note",
+   "slot": "noteR",
+   "text": "ACCUMULATED IN BONUS GAME",
+   "box": [
+    273,
+    27
+   ],
+   "lines": 1
+  }
+ },
+ "mob": {
+  "free_spins": {
+   "bone": "m_text_free_spins",
+   "slot": "m_capL",
+   "text": "FREE SPINS",
+   "box": [
+    240,
+    74
+   ],
+   "lines": 2
+  },
+  "expanding_wild": {
+   "bone": "m_text_expanding_wild",
+   "slot": "m_capC",
+   "text": "EXPANDING WILD",
+   "box": [
+    279,
+    86
+   ],
+   "lines": 2
+  },
+  "tap_to_continue": {
+   "bone": "m_text_tap_to_continue",
+   "slot": "m_cont",
+   "text": "TAP TO CONTINUE",
+   "box": [
+    400,
+    116
+   ],
+   "lines": 2,
+   "line": 58
+  },
+  "multiplier": {
+   "bone": "m_text_multiplier",
+   "slot": "m_capR",
+   "text": "MULTIPLIER",
+   "box": [
+    240,
+    47
+   ],
+   "lines": 1
+  },
+  "multiplier_note": {
+   "bone": "m_text_multiplier_note",
+   "slot": "m_noteR",
+   "text": "ACCUMULATED IN BONUS GAME",
+   "box": [
+    244,
+    27
+   ],
+   "lines": 1
+  }
+ }
+}

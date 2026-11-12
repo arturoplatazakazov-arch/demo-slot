@@ -436,9 +436,9 @@ body {
    (154,555) 306x270. */
 .sign-buy-bonus {
   left: 154px;
-  top: 555px;
+  top: 503px; /* 306x322 = the Spine export's box, bottom kept at 825 */
   width: 306px;
-  height: 270px;
+  height: 322px;
   padding: 0;
   border: 0;
   background: none;
@@ -480,6 +480,9 @@ body {
   0%, 100% { transform: scale(0.9); opacity: 0.7; }
   50% { transform: scale(1.1); opacity: 1; }
 }
+/* Spine button: the DOM art steps aside, the anchor = the export's 306x322 box on the button's bottom. */
+.sign-buy-bonus.is-spine .sign-buy-bonus__art { display: none !important; }
+.sign-buy-bonus__spine { position: absolute; inset: 0; pointer-events: none; } /* = 306x322 box */
 .sign-buy-bonus:hover { transform: scale(1.04); }
 .sign-buy-bonus:active { transform: scale(0.97); }
 .sign-buy-bonus__price {
@@ -613,6 +616,7 @@ body.is-spine-popup #spineCanvas { position: fixed; z-index: 59; }
   color: #fff3c8;
   text-shadow: 0 0.06em 0 rgba(0, 0, 0, 0.75), 0 0 0.25em rgba(255, 190, 60, 0.55);
 }
+.pack-caption--fit { text-align: center; display: flex; align-items: center; justify-content: center; line-height: 1.02; max-width: none !important; padding-top: 0; overflow: visible; }
 .spop-block { position: fixed; inset: 0; z-index: 58; }
 .spop-hit {
   position: fixed;
@@ -1012,12 +1016,12 @@ body.is-feature-screen .to-catalog-btn { visibility: hidden; }
   .stage--front .frame { display: none; }
 
   .logo--desk { display: none; }
-  .logo--mob { display: block; left: 52px; top: -110px; width: 687px; height: 357px; } /* PSB -60, up 50 */
+  .logo--mob { display: block; left: 52px; top: -170px; width: 687px; height: 357px; } /* PSB -60, up 50, +60 so the chains run off the top */
   /* Plate centred on the frame's bottom edge, between the heroes. */
   /* hangs from the frame's bottom edge, between the heroes */
-  .mult-plate { left: 269px; top: 762px; width: 242px; height: 205px; }
+  .mult-plate { left: 269px; top: 679px; width: 242px; height: 205px; } /* the cut chains end right under the frame's bottom chrome */
 
-  .sign-buy-bonus { left: 43px; top: 901px; width: 244px; height: 240px; } /* PSB 941, up 40 (product) */
+  .sign-buy-bonus { left: 12px; top: 819px; width: 306px; height: 322px; } /* same 306x322 as desk; centre x and bottom (1141) kept */
   .sign-buy-bonus__art--desk { display: none; }
   .sign-buy-bonus__art--mob { display: block; }
   .sign-buy-bonus__price { font-size: 26px; bottom: -6px; }

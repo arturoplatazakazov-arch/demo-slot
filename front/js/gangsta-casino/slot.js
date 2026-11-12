@@ -1062,17 +1062,29 @@ function setMultiplierPlate(value, { lit = false, bump = false } = {}) {
 // the value stays DOM text, pinned every frame to the skeleton's `value` bone
 // (position, rotation and the update pop). Falls back to the static art.
 let plateInst = null;
+// Draw order of the plate: portrait = right under the frame (its chains run up
+// UNDER the frame's bottom chrome, product), desktop = on top of the scene.
+function placeMultiplierPlate() {
+  if (!plateInst || !backStage) return;
+  backStage.removeBase(plateInst);
+  backStage.removeOverlay(plateInst);
+  const frame = scene.frame_mob;
+  const i = isMobileLayout() && frame ? backStage.baseInstances.indexOf(frame) : -1;
+  if (i >= 0) backStage.baseInstances.splice(i, 0, plateInst);
+  else backStage.addOverlay(plateInst);
+}
 function setupMultiplierPlate() {
   const plate = document.getElementById('multPlate');
   if (!PACK || !backStage || !plate) return;
   loadSpineWithRetry(backStage.assetManager, `${PACK}/multiplier_plate`, { premultipliedAlpha: false }).then((res) => {
     const inst = res.createInstance();
     inst.anchorEl = plate;
-    inst.boundsOverride = res.bounds;
+    // the plate art's old 303x256 box (longer chains): the body stays put, the cut chains just end lower
+    inst.boundsOverride = { x: -151.5, y: -128, width: 303, height: 256 };
     inst.fit = 1;
     inst.play('idle', true);
-    backStage.addOverlay(inst);
     plateInst = inst;
+    placeMultiplierPlate();
     plate.classList.add('is-spine');
     const box = document.getElementById('multPlateValue');
     const canvas = document.getElementById('spineBackCanvas');
@@ -1095,6 +1107,26 @@ function setupMultiplierPlate() {
     };
     requestAnimationFrame(follow);
   }).catch((err) => console.warn('multiplier plate:', err));
+}
+
+// Buy-bonus button: Spine (chest + text still, the light cone breathes over
+// the chest). One export for desk and mob; the anchor keeps its 306:322 box
+// sitting on the button's bottom, so the mobile button just scales it down.
+function setupBuyButtonSpine() {
+  const btn = document.getElementById('buyBonusBtn');
+  if (!PACK || !backStage || !btn) return;
+  loadSpineWithRetry(backStage.assetManager, `${PACK}/buy_bonus`, { premultipliedAlpha: false }).then((res) => {
+    const anchor = document.createElement('span');
+    anchor.className = 'sign-buy-bonus__spine';
+    btn.prepend(anchor);
+    const inst = res.createInstance();
+    inst.anchorEl = anchor;
+    inst.boundsOverride = { x: -153, y: -136, width: 306, height: 322 };
+    inst.fit = 1;
+    inst.play('idle', true);
+    backStage.addOverlay(inst);
+    btn.classList.add('is-spine');
+  }).catch((err) => console.warn('buy button:', err));
 }
 
 // A copy of each value flies from its chip into the plate.
@@ -1646,6 +1678,7 @@ function sceneAnchorFor(name, resource) {
 async function setupScene() {
   if (!backStage) return;
   setupMultiplierPlate();
+  setupBuyButtonSpine();
   try {
     for (const name of SCENE_NAMES) {
       if (!sceneWanted(name)) continue;
@@ -1702,6 +1735,7 @@ function syncScene() {
   document.getElementById('screen').classList.toggle('has-still-people', want.background && !!scene.background && !scene.hero_man);
   for (const name of SCENE_NAMES) if (scene[name]) backStage.removeBase(scene[name]);
   for (const name of SCENE_NAMES) if (want[name] && scene[name]) backStage.addBase(scene[name]);
+  placeMultiplierPlate();
 }
 
 // One-shot reaction, then back to the idle loop.
@@ -1860,22 +1894,48 @@ function showSpineScreen(baseCode, { onFrame = null, onClose = null, onCreate = 
 
 // ?pack=opt screens: the captions are not baked in the export — text on the
 // skeleton's text_<key> bones (text_marks.json), alpha = its empty slot's.
+// [bone, text, box w, box h, lines, line height (default = box h)]: box = the inner part of the caption's ribbon in the text bone's
+// units (spine-export feature_screen/text_marks.json, also the `box` bounding boxes in the skeleton);
+// the text is fitted INTO it: one line if it fits, else up to `lines` lines with a smaller font.
 const PACK_CAPTIONS = {
-  feature_screen: [['text_free_spins', 'FREE SPINS', 206, 66], ['text_expanding_wild', 'EXPANDING WILD', 296, 66],
-    ['text_bonus_wheel', 'MULTIPLIER', 250, 66], ['text_tap_to_continue', 'TAP TO CONTINUE', 259, 58]],
+  feature_screen: {
+    desk: [['text_free_spins', 'FREE SPINS', 240, 66, 2], ['text_expanding_wild', 'EXPANDING WILD', 279, 66, 2],
+      ['text_multiplier', 'MULTIPLIER', 240, 42, 1], ['text_multiplier_note', 'ACCUMULATED IN BONUS GAME', 273, 27, 1],
+      ['text_tap_to_continue', 'TAP TO CONTINUE', 400, 116, 2, 58]],
+    mob: [['text_free_spins', 'FREE SPINS', 240, 74, 2], ['text_expanding_wild', 'EXPANDING WILD', 279, 86, 2],
+      ['text_multiplier', 'MULTIPLIER', 240, 47, 1], ['text_multiplier_note', 'ACCUMULATED IN BONUS GAME', 244, 27, 1],
+      ['text_tap_to_continue', 'TAP TO CONTINUE', 400, 116, 2, 58]],
+  },
   bonus_screen: [['text_bonus_game', 'BONUS GAME', 266, 71], ['text_tap_to_start', 'TAP TO START', 211, 58]],
 };
-const PACK_CAPTION_SLOTS = { text_free_spins: 'capL', text_expanding_wild: 'capC', text_bonus_wheel: 'capR',
+const PACK_CAPTION_SLOTS = { text_free_spins: 'capL', text_expanding_wild: 'capC', text_multiplier: 'capR', text_multiplier_note: 'noteR',
   text_tap_to_continue: 'cont', text_bonus_game: 't_bonus', text_tap_to_start: 't_start' };
 function packCaptions(base, lay) {
   const pre = lay === 'mob' ? 'm_' : '';
-  return (PACK_CAPTIONS[base] || []).map(([bone, text, w, h]) => {
+  const list = PACK_CAPTIONS[base] || [];
+  return (Array.isArray(list) ? list : list[lay] || list.desk).map(([bone, text, w, h, lines = 0, line = h]) => {
     const el = document.createElement('div');
-    el.className = 'pack-caption';
+    el.className = lines ? 'pack-caption pack-caption--fit' : 'pack-caption';
     el.textContent = text;
     document.body.appendChild(el);
-    return { el, bone: pre + bone, slot: pre + PACK_CAPTION_SLOTS[bone], w, h };
+    return { el, bone: pre + bone, slot: pre + PACK_CAPTION_SLOTS[bone], w, h, lines, line };
   });
+}
+// Fit a caption into its box (w x h, text-bone units): one line at the box's font if it fits,
+// else wrap to c.lines lines and shrink. The ratio is scale-free, so it's found once.
+function fitCaption(c, s) {
+  const W = c.w * s, H = c.h * s;
+  c.el.style.width = `${W}px`;
+  c.el.style.height = `${H}px`;
+  if (c.f || s < 0.15 || (document.fonts && document.fonts.status !== 'loaded')) return; // measure with the real font
+  const size = (f) => { c.el.style.fontSize = `${c.line * 0.62 * s * f}px`; };
+  c.el.style.whiteSpace = 'nowrap'; size(1);
+  if (c.el.scrollWidth <= W + 0.5) { c.f = 1; return; }
+  if (c.lines < 2) { c.f = W / c.el.scrollWidth; return; }
+  c.el.style.whiteSpace = 'normal';
+  let f = 1;
+  for (; f > 0.3; f *= 0.94) { size(f); if (c.el.scrollWidth <= W + 0.5 && c.el.scrollHeight <= H + 0.5) break; }
+  c.f = f;
 }
 function pinCaption(inst, c, alpha) {
   const o = boneOnScreen(inst, c.bone);
@@ -1883,8 +1943,9 @@ function pinCaption(inst, c, alpha) {
   const slot = inst.skeleton.findSlot(c.slot);
   c.el.style.left = `${o.x}px`;
   c.el.style.top = `${o.y}px`;
-  c.el.style.fontSize = `${c.h * 0.62 * o.s}px`;
+  c.el.style.fontSize = `${(c.line || c.h) * 0.62 * o.s * (c.f || 1)}px`;
   c.el.style.maxWidth = `${c.w * o.s}px`;
+  if (c.lines) fitCaption(c, o.s);
   c.el.style.opacity = (slot ? slot.color.a : 1) * alpha * inst.skeleton.color.a;
 }
 

@@ -1,0 +1,9 @@
+animation.png
+size:594,233
+filter:Linear,Linear
+cone
+bounds:0,0,197,176
+chest
+bounds:199,0,306,233
+text
+bounds:507,0,85,112
