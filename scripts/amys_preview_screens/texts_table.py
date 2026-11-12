@@ -5,6 +5,8 @@ import os, sys, json, math
 import numpy as np
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.cell.rich_text import CellRichText, TextBlock
+from openpyxl.cell.text import InlineFont
 from texts import TEXTS
 
 def world(d):
@@ -45,28 +47,44 @@ def header(ws, cols, widths):
         ws.column_dimensions[c.column_letter].width = widths[i]
     ws.freeze_panes = 'A2'
 
+def rich(text, hi):
+    """EN copy with the gold words in bold. Same word test as gfx.body(): w.strip(',.!') in hi."""
+    if not hi: return text
+    parts, buf = [], ''
+    for i, w in enumerate(text.split(' ')):
+        sep = ' ' if i else ''
+        core = w.strip(',.!')
+        if core and core in hi:
+            pre, post = w[:w.index(core)], w[w.index(core) + len(core):]
+            parts += [buf + sep + pre, TextBlock(InlineFont(rFont=F, b=True), core)]; buf = post
+        else:
+            buf += sep + w
+    parts.append(buf)
+    return CellRichText([p for p in parts if not isinstance(p, str) or p])
+
 wb = Workbook()
 ws = wb.active; ws.title = 'Тексты'
-header(ws, ['Ключ', 'Где', 'EN (оригинал)', 'Перевод', 'Слова золотом', 'Как разбито в макете', 'Поле, px (Ш×В)', 'Кость Spine', 'Шрифт'],
-       [14, 22, 40, 40, 24, 34, 22, 22, 14])
+header(ws, ['Ключ', 'Где', 'EN (оригинал)', 'Перевод', 'Как разбито в макете', 'Поле, px (Ш×В)', 'Кость Spine', 'Шрифт'],
+       [14, 22, 40, 40, 34, 22, 22, 14])
 order = []
 for r in recs:
     if r['key'] not in order: order.append(r['key'])
 for key in order:
     t = TEXTS[key]; rs = [r for r in recs if r['key'] == key]
     ws.append([key, '\n'.join(dict.fromkeys(where(r) for r in rs)), t['en'], None,
-               ', '.join(w.strip(',.!') for w in t['hi']) or '—', '\n\n'.join(f"{'деск' if i.endswith('desk') else 'моб' if i.endswith('mob') else 'все'}: {s}" for i, s in t.get('img', {key: t['en']}).items()),
+               '\n\n'.join(f"{'деск' if i.endswith('desk') else 'моб' if i.endswith('mob') else 'все'}: {s}" for i, s in t.get('img', {key: t['en']}).items()),
                '\n'.join(dict.fromkeys(f"{r['fw']}×{r['fh']}" for r in rs)),
                '\n'.join(dict.fromkeys(r['bone'] for r in rs)), t['font']])
     row = ws.max_row
     for c in ws[row]: c.font, c.alignment, c.border = Font(name=F), wrap, box
+    ws.cell(row, 3).value = rich(t['en'], t['hi'])
     ws.cell(row, 4).fill = fill_in
 n = ws.max_row + 2
 notes = [
     'Как заполнять: перевод пишем только в жёлтые ячейки колонки «Перевод».',
     'Текст один для деска и мобилки; различаются только переносы строк под ширину поля («Как разбито в макете»). В переводе переносы ставим так же по ширине поля.',
     'Поле, px — габарит текста в дизайн-пикселях макета (деск 1932×940, моб 780×1416). Если перевод длиннее, уменьшаем кегль, чтобы текст влез в поле.',
-    '«Слова золотом» в оригинале подсвечены золотым: в переводе подсветить слова с тем же смыслом.',
+    'Жирным в EN выделены слова, которые в игре подсвечены золотом: в переводе выделить жирным слова с тем же смыслом.',
     'Логотип AMY\'S FRUIT FARM и надпись SCATTER на символе — арт, не переводятся.',
     'Число спинов на бонус-скрине (10/15/20) — цифры n0…n9 внутри Spine, их не переводим.',
 ]
