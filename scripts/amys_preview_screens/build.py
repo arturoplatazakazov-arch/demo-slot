@@ -7,6 +7,7 @@ import os, json, math, random
 import numpy as np
 from PIL import Image
 from texts import IMAGES
+import fitkit
 
 S = os.path.dirname(os.path.abspath(__file__))
 G = os.path.join(S, 'gfx')
@@ -133,12 +134,15 @@ class Skel:
         `box` = the area the text may use, in the parent bone's units (the plaque interior,
         the free strip for a prompt...); defaults to the EN art's own bbox."""
         key = key or IMAGES[img][0]
-        if not NOTEXT:
-            return self.slot(name, bone, img, x=x, y=y, scale=scale)
         w, h = self.size(img)
         bw, bh = box or (w * scale, h * scale)
+        # fixed font size: the largest (<= EN design size) that EN and every translation fit
+        scale, limit = fitkit.common_scale(img, bw, bh, scale)
+        if not NOTEXT:
+            return self.slot(name, bone, img, x=x, y=y, scale=scale)
         tb = self.bone(f'txt_{name}', bone, x=x, y=y)
-        TEXT_FIELDS.append(dict(skeleton=self.name, bone=tb, slot=name, key=key, w=round(bw), h=round(bh),
+        TEXT_FIELDS.append(dict(skeleton=self.name, bone=tb, slot=name, key=key, img=img, w=round(bw), h=round(bh),
+                                scale=round(scale, 4), limit=limit,
                                 en_w=round(w * scale), en_h=round(h * scale)))  # EN art as drawn in the game
         return self.slot(name, tb)
 
@@ -240,6 +244,19 @@ def flash(sk, a, name, bone, t, scale, rgb='fff2c0', peak=0.9, dur=0.55):
     sk.slot(name, bone, 'glow', blend='additive', rgb=rgb, alpha=0, scale=scale)
     a.alpha(name, [(0, 0, lin), (t, 0, lin), (t + dur * 0.25, peak, out_quad), (t + dur, 0, in_quad)], rgb=rgb)
 
+def plaque(width, psc, cap=100):
+    """The green plaque 3-sliced to `width` design px at scale `psc` (ends kept, middle stretched)."""
+    src = Image.open(os.path.join(G, 'plaque.png')).convert('RGBA'); h = src.height
+    sw = round(width / psc); name = f'plaque_{sw}'
+    if sw != src.width:
+        mid = src.crop((cap, 0, src.width - cap, h)).resize((sw - 2 * cap, h), Image.LANCZOS)
+        out = Image.new('RGBA', (sw, h))
+        out.paste(src.crop((0, 0, cap, h)), (0, 0)); out.paste(mid, (cap, 0))
+        out.paste(src.crop((src.width - cap, 0, src.width, h)), (sw - cap, 0))
+        out.save(os.path.join(G, name + '.png'))
+    else: name = 'plaque'
+    return name, sw
+
 def fit(sk, img, max_w, max_h=10 ** 9):
     w, h = sk.size(img)
     return min(1, max_w / w, max_h / h)
@@ -253,8 +270,12 @@ FEATURES = [  # (key, icon, icon scale, title, desc)
 ]
 
 # No expanding/walking wild in this game (product 2026-11-12): two cards only.
-DESK_COLS = (-30, 390)
+# Plaques/fields are sized so EN and all translations fit one fixed font size
+# (product 2026-11-12: the engine does not resize plaques per language).
+DESK_COLS = (-80, 440)          # centred under the logo (x 180), 520 apart
+DESK_PW, DESK_DW, DESK_DH = 470, 470, 170
 MOB_ROWS = (250, -50)
+MOB_X, MOB_PW, MOB_DW, MOB_DH = 115, 450, 460, 150
 
 def feature_screen(mob):
     box = (-390, -708, 780, 1416) if mob else (-966, -470, 1932, 940)
@@ -288,9 +309,11 @@ def feature_screen(mob):
     # --- feature cards ---------------------------------------------------------------
     if mob:
         rows = MOB_ROWS
-        cards = [dict(ix=-250, iy=ry, px=95, py=ry + 58, dx=95, dy=ry - 42, isc=0.85, psc=0.64, dw=440) for ry in rows]
+        cards = [dict(ix=-250, iy=ry, px=MOB_X, py=ry + 58, dx=MOB_X, dy=ry - 52, isc=0.85, psc=0.64, pw=MOB_PW,
+                      dw=MOB_DW, dh=MOB_DH) for ry in rows]
     else:
-        cards = [dict(ix=cx, iy=105, px=cx, py=-75, dx=cx, dy=-192, isc=1.0, psc=0.7, dw=400) for cx in DESK_COLS]
+        cards = [dict(ix=cx, iy=105, px=cx, py=-75, dx=cx, dy=-202, isc=1.0, psc=0.7, pw=DESK_PW,
+                      dw=DESK_DW, dh=DESK_DH) for cx in DESK_COLS]
     for i, ((key, icon, icon_s, title, desc), c) in enumerate(zip(FEATURES, cards)):
         t = 0.75 + i * 0.17
         cb = sk.bone(f'card_{key}', x=c['ix'], y=c['iy'])
@@ -299,28 +322,28 @@ def feature_screen(mob):
         sk.slot(f'rays_{key}', rb, 'rays1', blend='additive', rgb='ffd060', alpha=0.75, tex=0.5)
         sk.slot(f'rglow_{key}', cb, 'rays2', blend='additive', rgb='ffb830', alpha=0.5, scale=0.42 * c['isc'], tex=0.5)
         ib = sk.bone(f'icon_{key}_b', cb, s=icon_s * c['isc'])
-        if NOTEXT and icon == 'icon_buy':  # the sign's BUY BONUS label is text too
+        if icon == 'icon_buy':  # the sign's BUY BONUS label is a text slot on the blank board
             sk.slot(f'icon_{key}', ib, 'icon_buy_blank')
-            sh = sk.size('icon_buy_blank')[1]
-            sk.text(f'sign_{key}', ib, 'icon_buy_blank', y=sh * 0.02, key='sign_buy',
-                    box=(sk.size('icon_buy_blank')[0] * 0.85, sh * 0.42))  # the whole board
+            bw_, sh = sk.size('icon_buy_blank')
+            sk.text(f'sign_{key}', ib, 'sign_buy', y=sh * 0.02, box=(bw_ * 0.85, sh * 0.42))  # the whole board
         else:
             sk.slot(f'icon_{key}', ib, icon)
         flash(sk, intro, f'iflash_{key}', ib, t + 0.18, 1.5)
-        pop_in(intro, ib, [f'icon_{key}'] + ([f'sign_{key}'] if NOTEXT and icon == 'icon_buy' else []), t, 0.55)
+        pop_in(intro, ib, [f'icon_{key}'] + ([f'sign_{key}'] if icon == 'icon_buy' else []), t, 0.55)
         pop_in(intro, rb, [(f'rays_{key}', 0.75)], t + 0.1, 0.6, from_s=0.1, ease=out_cubic)
         intro.alpha(f'rays_{key}', [(0, 0, lin), (t + 0.1, 0, lin), (t + 0.5, 0.75, out_quad)], rgb='ffd060')
         intro.alpha(f'rglow_{key}', [(0, 0, lin), (t + 0.1, 0, lin), (t + 0.5, 0.5, out_quad)], rgb='ffb830')
         # plaque + title
         pb = sk.bone(f'plaque_{key}_b', x=c['px'], y=c['py'])
-        sk.slot(f'plaque_{key}', pb, 'plaque', scale=c['psc'])
-        tbox = (588 * c['psc'] * 0.84, 153 * c['psc'] * 0.62)
+        pimg, psw = plaque(c['pw'], c['psc'])
+        sk.slot(f'plaque_{key}', pb, pimg, scale=c['psc'])
+        tbox = ((psw - 94) * c['psc'], 153 * c['psc'] * 0.62)   # inside the rounded ends
         sk.text(f'title_{key}', pb, title, y=4, scale=fit(sk, title, *tbox), box=tbox)
         pop_in(intro, pb, [f'plaque_{key}', f'title_{key}'], t + 0.18, 0.45, from_s=0.5, ease=out_back_soft)
         # description
         dimg = f'{desc}_{"mob" if mob else "desk"}'
         db = sk.bone(f'desc_{key}_b', x=c['dx'], y=c['dy'])
-        sk.text(f'desc_{key}', db, dimg, scale=fit(sk, dimg, c['dw']), box=(c['dw'], 130 if mob else 150))
+        sk.text(f'desc_{key}', db, dimg, scale=fit(sk, dimg, c['dw']), box=(c['dw'], c['dh']))
         intro.bone(db, 'translate', [(0, (0, -30), lin), (t + 0.32, (0, -30), lin), (t + 0.72, (0, 0), out_cubic)])
         intro.alpha(f'desc_{key}', [(0, 0, lin), (t + 0.32, 0, lin), (t + 0.72, 1, out_quad)])
         # idle: rays spin, icon bobs + pulses (phase-shifted per card), glow breathes

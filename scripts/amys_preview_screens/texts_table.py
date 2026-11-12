@@ -8,6 +8,7 @@ import numpy as np
 import xlsxwriter
 from texts import TEXTS
 from translations import TR, LANGS, plain
+import fitkit
 
 def world(d):
     def mat(x=0, y=0, rot=0, sx=1, sy=1):
@@ -27,7 +28,9 @@ for r in recs:
         cache[r['skeleton']] = world(json.load(open(os.path.join(out, r['skeleton'], 'animation.json'))))
     M = cache[r['skeleton']][r['bone']]
     r['cx'], r['cy'] = round(M[0, 2]), round(M[1, 2])
-    r['fw'], r['fh'] = round(r['w'] * math.hypot(M[0, 0], M[1, 0])), round(r['h'] * math.hypot(M[0, 1], M[1, 1]))
+    k = math.hypot(M[0, 0], M[1, 0])
+    r['fw'], r['fh'] = round(r['w'] * k), round(r['h'] * math.hypot(M[0, 1], M[1, 1]))
+    r['font_px'] = round(fitkit.font_px(r['img']) * r['scale'] * k)   # one fixed size for every language
 
 SCREEN = {'feature_screen': 'Фича-скрин', 'bonus_screen': 'Бонус-скрин'}
 def where(r):
@@ -67,8 +70,7 @@ LANG_NAME = dict(ru='RU · русский', uk='UK · українська', kk=
 def fit_of(L, key):
     v = FIT.get(L, {}).get(key)
     if not v: return None
-    m = min(v, key=lambda x: x['ratio'])
-    return m
+    return max(v, key=lambda x: x['used_w'])   # tightest of desk/mob
 
 order = []
 for r in recs:
@@ -97,13 +99,14 @@ def header(ws, cols, widths):
 
 ws = wb.add_worksheet('Тексты')
 NL = len(LANGS)
-header(ws, ['Ключ', 'Где', 'EN (оригинал)'] + [LANG_NAME[L] for L in LANGS] + ['Как разбито в макете (EN)', 'Поле, px (Ш×В)', 'Кость Spine', 'Шрифт'],
-       [12, 20, 34] + [30] * NL + [30, 16, 18, 13])
+header(ws, ['Ключ', 'Где', 'EN (оригинал)'] + [LANG_NAME[L] for L in LANGS] + ['Как разбито в макете (EN)', 'Поле, px (Ш×В)', 'Кегль, px (фикс.)', 'Кость Spine', 'Шрифт'],
+       [12, 20, 34] + [30] * NL + [30, 16, 14, 18, 13])
 for row, key in enumerate(order, 1):
     t = TEXTS[key]; rs = [r for r in recs if r['key'] == key]
     vals = [key, '\n'.join(dict.fromkeys(where(r) for r in rs)), None] + [None] * NL + [
             '\n\n'.join(f"{'деск' if i.endswith('desk') else 'моб' if i.endswith('mob') else 'все'}: {s}" for i, s in t.get('img', {key: t['en']}).items()),
             '\n'.join(dict.fromkeys(f"{r['fw']}×{r['fh']}" for r in rs)),
+            '\n'.join(dict.fromkeys(f"{'деск' if r['skeleton'].endswith('desk') else 'моб'}: {r['font_px']}" for r in rs)),
             '\n'.join(dict.fromkeys(r['bone'] for r in rs)), t['font']]
     for col, v in enumerate(vals):
         if 2 <= col < 3 + NL: continue
@@ -117,7 +120,7 @@ for row, key in enumerate(order, 1):
         ws.write(row, 2, t['en'], f_cell)
     for j, L in enumerate(LANGS):
         col = 3 + j; txt = TR[L][key]; m = fit_of(L, key)
-        fmt = f_cell if m is None else f_ok if m['status'] == 'ok' else f_small if m['status'] == 'small' else f_bad
+        fmt = f_cell if m is None else f_ok if m['status'] == 'ok' else f_bad
         rr = md_runs(txt)
         if any(b for _, b in rr) and len(rr) > 1:
             frags = []
@@ -125,14 +128,15 @@ for row, key in enumerate(order, 1):
             ws.write_rich_string(row, col, *frags, fmt)
         else:
             ws.write(row, col, plain(txt), wb.add_format(dict(base, bold=True, bg_color=fmt.bg_color)) if rr and rr[0][1] else fmt)
-        if m is not None and m['status'] != 'ok':
-            ws.write_comment(row, col, f"Шрифт на {round((1 - m['ratio']) * 100)}% мельче, чем EN ({m['skeleton']}). "
-                                       f"Разбито: {' / '.join(m['lines'])}", dict(x_scale=2, y_scale=1.2))
+        if m is not None:
+            ws.write_comment(row, col, ('Влезает' if m['status'] == 'ok' else 'НЕ ВЛЕЗАЕТ') +
+                             f" фиксированным кеглем; занято {round(m['used_w'] * 100)}% ширины поля ({m['skeleton']}). "
+                             f"Разбито: {' / '.join(m['lines'])}", dict(x_scale=2, y_scale=1.2))
 n = len(order) + 2
 notes = [
-    'Цвет ячейки перевода = проверка вёрстки (лист «Проверка»): зелёный — влезает кеглем EN или почти (≥85%), оранжевый — влезает, но шрифт мельче (60–85%, наведи на ячейку — комментарий с размером и разбивкой), красный — не влезает.',
+    'Размер плашек и кегль фиксированы и одинаковы для всех языков («Кегль, px»): они подобраны так, что EN и все переводы из этой таблицы влезают в поле, не меняя размера. Зелёный — влезает (наведи на ячейку — разбивка по строкам), красный — не влезает.',
     'Текст один для деска и мобилки; различаются только переносы строк под ширину поля («Как разбито в макете»). В переводе переносы ставим так же по ширине поля.',
-    'Поле, px — габарит текста в дизайн-пикселях макета (деск 1932×940, моб 780×1416). Если перевод длиннее, уменьшаем кегль, чтобы текст влез в поле.',
+    'Поле, px — область текста в дизайн-пикселях макета (деск 1932×940, моб 780×1416). Кегль и поле не подстраиваются под язык; новый перевод должен влезать в поле этим кеглем (переносы — по словам).',
     'Жирным выделены слова, которые в игре подсвечены золотом; в переводах — слова с тем же смыслом.',
     'Шрифты игры (Luckiest Guy, Fredoka) не содержат кириллицу и часть латиницы — см. лист «Шрифты». Для RU/UK/KK вёрстка проверена на замещающих шрифтах той же ширины.',
     'Логотип AMY\'S FRUIT FARM и надпись SCATTER на символе — арт, не переводятся.',
@@ -147,11 +151,11 @@ if FIT:
     for row, key in enumerate(order, 1):
         wf.write(row, 0, key, f_cell)
         for j, L in enumerate(LANGS):
-            m = fit_of(L, key); wf.write(row, 1 + j, m['ratio'], f_pct[m['status']])
+            m = fit_of(L, key); wf.write(row, 1 + j, m['used_w'], f_pct[m['status']])
     n = len(order) + 2
     for i, s_ in enumerate([
-            'Кегль перевода относительно EN в игре (100% = тот же размер, больше не увеличиваем). Худший из деск/моб.',
-            'Каждая строка нарисована тем же стилем, что EN-арт, переносы подобраны автоматически (до числа строк EN + 1), текст вписан в доступное поле (лист «Кости Spine»).',
+            'Сколько ширины поля занимает текст при фиксированном кегле (≤100% = влезает). Худший из деск/моб.',
+            'Каждая строка нарисована тем же стилем и кеглем, что EN-арт, переносы подобраны автоматически (до числа строк EN + 1), проверено попадание в поле (лист «Кости Spine»).',
             'Картинки всех экранов по каждому языку: папка проверка_языков/<язык>.jpg.']):
         wf.write(n + i, 0, s_, f_note)
 

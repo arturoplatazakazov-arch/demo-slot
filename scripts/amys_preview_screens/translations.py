@@ -67,7 +67,7 @@ TR = {
         'cont': 'ZUM FORTFAHREN IRGENDWO DRÜCKEN',
         'start': 'ZUM STARTEN IRGENDWO DRÜCKEN',
         't_congrats': 'GLÜCKWUNSCH!',
-        't_youwon': 'DU HAST GEWONNEN',
+        't_youwon': 'GEWONNEN',
         't_freespins': 'FREISPIELE',
         'b_fs': '3+ **SCATTER** = MEHR FREISPIELE',
     },

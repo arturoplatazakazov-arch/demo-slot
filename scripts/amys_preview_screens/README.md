@@ -40,6 +40,10 @@ venv/bin/python lang_check.py <out>/spine_notext <renders dir> <out>/прове�
 venv/bin/python texts_table.py <out>/spine_notext                                        # picks up fit.json
 ```
 
-Fit = font size vs EN as drawn in the game inside the field's available area (`box` in build.py),
-line breaks searched automatically. Glyphs the game fonts lack are measured with Arial Black /
-Arial Bold stand-ins and listed on the «Шрифты» sheet.
+Fixed sizes (product 2026-11-12: the engine never resizes plaques or fonts per language):
+build.py gives every text field ONE font size via `fitkit.common_scale` — the largest (<= EN design
+size) at which EN and every translation in translations.py fit the field (`box`), line breaks
+searched automatically. Plaques are 3-sliced wider where the layout has room. lang_check.py draws
+every language at that fixed size and flags anything leaving its field. Adding a language or
+changing copy => rebuild (sizes may drop). Glyphs the game fonts lack are measured with wide
+Arial Black / Arial Bold stand-ins and listed on the «Шрифты» sheet.

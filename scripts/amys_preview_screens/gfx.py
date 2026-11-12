@@ -120,6 +120,7 @@ def main():
     sign = Image.open(os.path.join(A, 'img/sign_buy_bonus.png')).convert('RGBA')
     lab = styled(T['sign_buy'], 64, grad=((255, 250, 205), (255, 214, 80), (240, 150, 10)), line_h=0.95, shadow=4)
     lab = lab.resize((int(lab.width * 0.9), int(lab.height * 0.9)), Image.LANCZOS)
+    save(lab, 'sign_buy')   # the label alone: build.py puts it on icon_buy_blank as a text slot
     sign.alpha_composite(lab, ((sign.width - lab.width) // 2, int(sign.height * 0.48) - lab.height // 2))
     save(Image.open(os.path.join(A, 'img/sign_buy_bonus.png')).convert('RGBA'), 'icon_buy_blank')
     save(sign, 'icon_buy')
