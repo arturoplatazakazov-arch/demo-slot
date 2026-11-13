@@ -508,24 +508,30 @@ def build_feature(variant):
 # Counter plate (win_free_spins/input): its purple window sits below the gem
 # crest — the window's centre is 61% down the trimmed region.
 PLATE_WINDOW_Y = 0.61
+# The dark bar (big_win/input) has a taller gold lip at the bottom: its dark window's centre is
+# 44.4% down the trimmed region, not 50%. Content centred on the bar's own bone therefore reads
+# low inside it — lift it by the difference.
+BAR_WINDOW_Y = 0.444
 
 
-def info_chip(sk, dev, idx, icon_region, key, x, y, cw, t0, from_x, icon_w, ribbon=True):
+def info_chip(sk, dev, idx, icon_region, key, x, y, cw, t0, from_x, icon_w, ribbon=True, bar_h=None):
     """Compact "icon + caption" group, optionally on its own dark bar of width cw."""
     c = sk.bone(f'chip{idx}', 'root', x, y)
     if ribbon:
-        sk.slot(f'chip{idx}', c, 'bar', w=cw, h=cw * 0.2)
+        bar_h = cw * 0.2
+        sk.slot(f'chip{idx}', c, 'bar', w=cw, h=bar_h)
         sk.both(f'chip{idx}', 'alpha', lambda t: fade(t, t0, 0.4), lambda t: 1)
     move(sk, c, lambda t: (seg(t, t0, t0 + 0.6, from_x, 0), 0), lambda t: (0, bob(t, 4, IDLE, idx * 0.5)))
     f = field('bonus', dev, key)
     gap = 26
     total = icon_w + gap + f['bw']
-    ib = sk.bone(f'chip{idx}_i', c, -total / 2 + icon_w / 2, 2)
+    dy = (0.5 - BAR_WINDOW_Y) * (bar_h or 0)      # the bar's window centre, not the art's centre
+    ib = sk.bone(f'chip{idx}_i', c, -total / 2 + icon_w / 2, 2 + dy)
     sk.slot(f'chip{idx}_i', ib, icon_region, w=icon_w)
     sk.both(ib, 'scale', uniform(lambda t: pop(t, t0 + 0.3, 0.5, 0.0)),
             uniform(lambda t: 1 + 0.1 * pulse(t, 2.0, idx * 0.25, 6)))
     sk.both(ib, 'rotate', lambda t: 0, lambda t: bob(t, 8, 2.0, idx * 0.5))
-    tb = sk.bone(f'chip{idx}_t', c, total / 2 - f['bw'] / 2, 0)
+    tb = sk.bone(f'chip{idx}_t', c, total / 2 - f['bw'] / 2, dy)
     place(sk, f'chip{idx}_t', tb, f)
     sk.both(f'chip{idx}_t', 'alpha', lambda t: fade(t, t0 + 0.25, 0.4), lambda t: 1)
 
@@ -620,8 +626,10 @@ def build_bonus(variant):
         sk.both(rb, 'scale', lambda t: (seg(t, 1.5, 2.0, 0.2, 1.0), 1), uniform(lambda t: 1))
         sk.both('band', 'alpha', lambda t: fade(t, 1.5, 0.4), lambda t: 1)
     (x0, y0, cw0, f0), (x1, y1, cw1, f1) = chips
-    info_chip(sk, variant, 0, 'coin_x2', 'chip_x2', x0, y0, cw0, 1.6, f0, chip_icon, ribbon=not band)
-    info_chip(sk, variant, 1, 'scatter', 'chip_fs', x1, y1, cw1, 1.75, f1, chip_icon, ribbon=not band)
+    info_chip(sk, variant, 0, 'coin_x2', 'chip_x2', x0, y0, cw0, 1.6, f0, chip_icon,
+              ribbon=not band, bar_h=band[3] if band else None)
+    info_chip(sk, variant, 1, 'scatter', 'chip_fs', x1, y1, cw1, 1.75, f1, chip_icon,
+              ribbon=not band, bar_h=band[3] if band else None)
 
     twinkles(sk, 'root', spots, seed=11)
     tap_hint(sk, 'bonus', variant, 'tap_start', tap_y)
