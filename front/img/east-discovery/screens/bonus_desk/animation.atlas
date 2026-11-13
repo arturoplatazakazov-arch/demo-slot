@@ -27,10 +27,10 @@ bounds:0,1027,190,119
 bag
 bounds:192,1027,210,115
 b_title_desk
-bounds:404,1027,529,87
+bounds:404,1027,640,96
 star
-bounds:935,1027,87,87
+bounds:1046,1027,87,87
 tap_start_desk
-bounds:1024,1027,265,61
+bounds:1135,1027,302,62
 b_sub_desk
-bounds:1291,1027,307,58
+bounds:1439,1027,383,57

@@ -19,13 +19,14 @@ ARIAL_BLACK = '/System/Library/Fonts/Supplemental/Arial Black.ttf'
 
 # --- the game: fonts and text styles exactly as golden_caravan_screens.py draws them ----------
 GAME = dict(slug='golden-caravan', xlsx='golden_caravan_тексты.xlsx', hdr='#123A78', tile=(10, 30, 66), sheet=(6, 16, 36))
-FAM = {'cinzel': ('Cinzel', 'cinzel', ARIAL_BLACK)}           # family -> (name, file prefix, stand-in)
+# Cinzel -> Cormorant SC 700: the original has no Cyrillic; this subset covers all 12 languages.
+FAM = {'cinzel': ('Cormorant SC 700', 'cormorant-sc', ARIAL_BLACK)}   # family -> (name, file prefix, stand-in)
 FAM_USE = {'cinzel': 'все тексты'}
 GOLD = [(0, hexc('fff6c8')), (0.45, hexc('ffd36a')), (1, hexc('c9861c'))]
 SAND = [(0, hexc('fffaf0')), (1, hexc('f3dcae'))]
-_title = dict(fam='cinzel', wght=900, fill=GOLD, stroke='3a1c06', sw=lambda px: max(3, px // 10), glow='ffb43a',
+_title = dict(fam='cinzel', wght=700, fill=GOLD, stroke='3a1c06', sw=lambda px: max(3, px // 10), glow='ffb43a',
               glow_r=lambda px: max(5, px // 7), shadow='120700', step=1.0)                 # title()
-_lines = dict(fam='cinzel', wght=800, fill=SAND, stroke='1f0f03', sw=lambda px: max(3, px // 9), glow=None,
+_lines = dict(fam='cinzel', wght=700, fill=SAND, stroke='1f0f03', sw=lambda px: max(3, px // 9), glow=None,
               shadow='0a0400', step=1.12)                                                    # lines()
 STYLES = {'title': _title, 'tap': dict(_title, fill=SAND, glow='ffae2e'), 'won': dict(_title, fill=SAND, glow='ff9a1f'),
           'caption': _lines, 'caption_gold': dict(_lines, fill=GOLD)}

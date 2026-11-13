@@ -12,13 +12,12 @@ from texts import TEXTS, IMAGES
 from translations import TR, LANGS, plain, bold_words
 
 S = os.path.dirname(os.path.abspath(__file__))
-LG_FULL = os.path.join(S, 'fonts/luckiest-guy-full.ttf')   # latin + latin-ext merged
+LG_FULL = os.path.join(S, 'fonts/shantell-sans-latin-800.ttf')   # all 12 languages in one subset
 FR_LAT = gfx.FR
 SUP = '/System/Library/Fonts/Supplemental/'
 PROXY = {'Luckiest Guy': SUP + 'Arial Black.ttf', 'Fredoka 650': SUP + 'Arial Bold.ttf'}
 CMAP = {'Luckiest Guy': set(TTFont(LG_FULL).getBestCmap()),
-        'Fredoka 650': set(TTFont(os.path.join(S, 'fonts/fredoka-latin-849e3a33.ttf')).getBestCmap())
-                       | set(TTFont(os.path.join(S, 'fonts/fredoka-latin-ext-20489dbf.ttf')).getBestCmap())}
+        'Fredoka 650': set(TTFont(os.path.join(S, 'fonts/comfortaa-latin-700.ttf')).getBestCmap())}
 FR_CMAP = set(TTFont(FR_LAT).getBestCmap())
 GOLD = ((255, 250, 225), (255, 222, 120), (246, 170, 30))
 PALE = ((255, 255, 240), (255, 236, 160), (255, 200, 70))

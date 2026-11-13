@@ -6,8 +6,10 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 S = os.path.dirname(os.path.abspath(__file__))
 G = os.path.join(S, 'gfx'); P = os.path.join(S, 'parts')
 A = '/Users/arturkasian/demo_slot/front/img/amys-fruit-farm'
-LG = os.path.join(S, 'fonts/luckiest-guy-latin-fe2ede07.ttf')
-FR = os.path.join(S, 'fonts/fredoka-latin-849e3a33.ttf')
+# Luckiest Guy -> Shantell Sans 800 and Fredoka -> Comfortaa 700 (2026-11-13): the
+# originals have no Cyrillic; these subsets carry all 12 client languages.
+LG = os.path.join(S, 'fonts/shantell-sans-latin-800.ttf')
+FR = os.path.join(S, 'fonts/comfortaa-latin-700.ttf')
 
 T = {img: s for img, (_, s) in IMAGES.items()}
 
@@ -15,7 +17,9 @@ def save(im, name): im.save(os.path.join(G, name + '.png'))
 
 def font(path, size, wght=None):
     f = ImageFont.truetype(path, size)
-    if wght: f.set_variation_by_axes([wght])
+    if wght:
+        try: f.set_variation_by_axes([wght])        # static subsets have no axes
+        except OSError: pass
     return f
 
 def lerp(a, b, t): return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
@@ -58,7 +62,7 @@ def styled(lines, size, *, fnt=LG, wght=None, grad=((255, 248, 170), (255, 196, 
     white = Image.new('RGBA', (W, H), (255, 255, 235, 200)); base.paste(white, (0, 0), hl.filter(ImageFilter.GaussianBlur(0.6)))
     return base.crop(base.getbbox())
 
-def body(lines, size, color=(255, 250, 235), stroke=(60, 26, 4), wght=650, line_h=1.18, hi=None, fnt=FR):
+def body(lines, size, color=(255, 250, 235), stroke=(60, 26, 4), wght=700, line_h=1.18, hi=None, fnt=FR):
     """Description copy: rounded bold Fredoka, cream with a brown stroke. `hi` words are tinted gold."""
     if isinstance(lines, str): lines = lines.split('\n')
     f = font(fnt, size, wght); sw = max(2, round(size * 0.14)); lh = int(size * line_h)

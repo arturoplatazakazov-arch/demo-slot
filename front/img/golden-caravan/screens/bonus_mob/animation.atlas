@@ -1,5 +1,5 @@
 animation.png
-size:2005,1047
+size:1969,1052
 filter:Linear,Linear
 pma:true
 burst
@@ -15,9 +15,9 @@ bounds:482,616,151,156
 plaque
 bounds:635,616,280,154
 t_free_spins_mob
-bounds:917,616,542,122
+bounds:917,616,524,132
 t_free_spins_flash
-bounds:1461,616,542,122
+bounds:1443,616,524,132
 wings
 bounds:0,854,520,120
 band
@@ -31,12 +31,12 @@ bounds:1518,854,118,93
 x3
 bounds:1638,854,120,92
 tap_start_mob
-bounds:0,976,400,71
+bounds:0,976,400,76
 chip_fs_mob
-bounds:402,976,372,68
+bounds:402,976,343,68
 chip_multi_mob
-bounds:776,976,357,68
-blik
-bounds:1135,976,59,56
+bounds:747,976,325,68
 t_you_won_mob
-bounds:1196,976,336,54
+bounds:1074,976,336,57
+blik
+bounds:1412,976,59,56

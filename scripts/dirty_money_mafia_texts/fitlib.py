@@ -18,8 +18,10 @@ F = os.path.join(HERE, 'fonts')
 SUP = '/System/Library/Fonts/Supplemental/'
 # stand-ins for glyphs the game fonts lack: the widest first (a conservative fit), then one
 # that covers the rest (Arial Black has no Kazakh Ң Ө Ұ Ү or Azerbaijani Ə).
-FAM = {'title': ('Cinzel 900', 'cinzel', 900, [SUP + 'Arial Black.ttf', SUP + 'Arial Bold.ttf']),
-       'caption': ('Baloo 2 800', 'baloo-2', 800, [SUP + 'Arial Bold.ttf'])}
+# Cinzel -> Cormorant SC 700 and Baloo 2 -> Nunito 900: the originals have no Cyrillic, these
+# cover all 12 client languages (same subsets the game loads from front/fonts).
+FAM = {'title': ('Cormorant SC 700', 'cormorant-sc', 700, [SUP + 'Arial Black.ttf', SUP + 'Arial Bold.ttf']),
+       'caption': ('Nunito 900', 'nunito', 900, [SUP + 'Arial Bold.ttf'])}
 FILES = {st: [os.path.join(F, n) for n in sorted(os.listdir(F)) if n.startswith(base + '-latin')]
          for st, (_, base, _, _) in FAM.items()}   # latin, latin-ext
 for st in FILES: FILES[st].sort(key=lambda p: '-ext' in p)

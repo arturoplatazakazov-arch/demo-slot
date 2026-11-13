@@ -273,3 +273,19 @@
   font-display: swap;
   src: url(../fonts/nunito-900-cde3a996.woff2) format('woff2');
 }
+
+/* Comfortaa 700 — замена Fredoka, Bitter 900 — замена Rye: те же подмножества на 12 языков. */
+@font-face {
+  font-family: 'Comfortaa';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(../fonts/comfortaa-700-1c96eb0d.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Bitter';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url(../fonts/bitter-900-d89a4661.woff2) format('woff2');
+}

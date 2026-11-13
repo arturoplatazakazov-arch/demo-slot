@@ -27,10 +27,10 @@ bounds:0,1001,170,107
 coins2
 bounds:172,1001,135,98
 b_title_mob
-bounds:309,1001,514,85
+bounds:309,1001,592,89
 star
-bounds:825,1001,77,77
+bounds:903,1001,77,77
 tap_start_mob
-bounds:904,1001,265,61
+bounds:982,1001,302,62
 b_sub_mob
-bounds:1171,1001,307,58
+bounds:1286,1001,383,57

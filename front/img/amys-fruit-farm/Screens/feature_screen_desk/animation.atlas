@@ -6,7 +6,7 @@ bg_base_desk
 bounds:0,0,1932,940
 
 animation.png
-size:1814,1323
+size:1946,1322
 filter:Linear,Linear
 pma:true
 amy_base
@@ -32,16 +32,16 @@ bounds:2,1107,671,153
 sparkle
 bounds:675,1107,128,128
 d_fs_desk
-bounds:805,1107,420,117
-sign_buy
-bounds:1227,1107,210,117
+bounds:805,1107,483,119
 d_buy_desk
-bounds:1439,1107,373,117
-t_buy
-bounds:2,1262,300,59
+bounds:1290,1107,425,119
+sign_buy
+bounds:1717,1107,227,117
 t_fs
-bounds:304,1262,289,58
+bounds:2,1262,353,58
+t_buy
+bounds:357,1262,328,58
 cont_desk
-bounds:595,1262,697,53
+bounds:687,1262,823,52
 white
-bounds:1294,1262,8,8
+bounds:1512,1262,8,8

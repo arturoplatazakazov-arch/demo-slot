@@ -19,9 +19,12 @@ SUP = '/System/Library/Fonts/Supplemental/'
 # style -> (name, font-file prefix, weight axis, stand-ins for glyphs the game font lacks:
 # the widest first (a conservative fit), then one that covers the rest — Arial Black has no
 # Kazakh Ң Ө Ұ Ү and no Azerbaijani Ə).
-FAM = {'title': ('Luckiest Guy', 'luckiest-guy', None, [SUP + 'Arial Black.ttf', SUP + 'Arial Bold.ttf']),
-       'tap': ('Luckiest Guy', 'luckiest-guy', None, [SUP + 'Arial Black.ttf', SUP + 'Arial Bold.ttf']),
-       'desc': ('Fredoka 600', 'fredoka', 600, [SUP + 'Arial Bold.ttf'])}
+# Luckiest Guy -> Shantell Sans 800 and Fredoka -> Comfortaa 700: the originals have no
+# Cyrillic (and the fredoka latin-ext subset was missing Polish/Turkish letters too); these
+# cover all 12 client languages and are the subsets the game loads from front/fonts.
+FAM = {'title': ('Shantell Sans 800', 'shantell-sans', None, [SUP + 'Arial Black.ttf', SUP + 'Arial Bold.ttf']),
+       'tap': ('Shantell Sans 800', 'shantell-sans', None, [SUP + 'Arial Black.ttf', SUP + 'Arial Bold.ttf']),
+       'desc': ('Comfortaa 700', 'comfortaa', 700, [SUP + 'Arial Bold.ttf'])}
 FILES = {st: [os.path.join(F, n) for n in sorted(os.listdir(F)) if n.startswith(base + '-latin')]
          for st, (_, base, _, _) in FAM.items()}   # latin, latin-ext
 for st in FILES: FILES[st].sort(key=lambda p: '-ext' in p)
