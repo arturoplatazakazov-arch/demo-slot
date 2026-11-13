@@ -45,13 +45,13 @@ bounds:584,739,110,68
 blik
 bounds:696,739,60,57
 d_fs_desk
-bounds:758,739,294,52
+bounds:758,739,294,56
 d_stack_desk
-bounds:1054,739,267,52
+bounds:1054,739,267,56
 d_mwild_desk
-bounds:1323,739,240,52
+bounds:1323,739,240,56
 d_line_desk
-bounds:1565,739,224,52
+bounds:1565,739,224,56
 t_stack_desk
 bounds:0,810,320,40
 t_mwild_desk

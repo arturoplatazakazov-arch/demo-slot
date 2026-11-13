@@ -108,7 +108,7 @@ def render(key, lines):
     if t['style'] == 'title':
         ims = [text_img(l, 'title', px, FILLS[t['fill']], '3b0a63', max(3, px // 9), t['glow'],
                         max(5, px // 6), '14002a') for l in lines]
-        return stack(ims, int(px * 1.0))
+        return stack(ims, int(px * 1.12))   # titles: a hair more leading between two lines
     ims = [text_img(l, 'caption', px, FILLS['white'], '2a0650', max(3, px // 8), None, 0, '12001f')
            for l in lines]
     return stack(ims, int(px * (1 + t['gap'])))

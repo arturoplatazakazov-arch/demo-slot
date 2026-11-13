@@ -37,9 +37,9 @@ bounds:0,956,420,83
 ruby
 bounds:422,956,80,80
 chip_x2_desk
-bounds:504,956,343,65
+bounds:504,956,343,69
 chip_fs_desk
-bounds:849,956,303,65
+bounds:849,956,303,69
 blik
 bounds:1154,956,60,57
 gem

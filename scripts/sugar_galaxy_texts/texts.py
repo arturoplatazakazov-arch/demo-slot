@@ -20,7 +20,7 @@ TEXTS = {
     'tap_start':    dict(en_lines=['TAP TO START'], style='title', px=64, fill='white', glow='b44dff'),
 }
 for v in TEXTS.values():
-    v.setdefault('fill', 'gold'); v.setdefault('glow', 'ff3fd0'); v.setdefault('gap', 0.08)
+    v.setdefault('fill', 'gold'); v.setdefault('glow', 'ff3fd0'); v.setdefault('gap', 0.22)   # межстрочный: было 0.08, строки стояли слишком тесно
     v['en'] = ' '.join(v['en_lines'])
 
 # Where each string sits. Geometry mirrors sugar_galaxy_screens.py:

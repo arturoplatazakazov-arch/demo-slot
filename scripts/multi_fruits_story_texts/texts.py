@@ -20,7 +20,7 @@ TEXTS = {
     'tap_start':    dict(en_lines=['TAP TO START'], style='title', px=64, fill='cream', glow='ffd23a'),
 }
 for v in TEXTS.values():
-    v.setdefault('fill', 'gold'); v.setdefault('glow', None); v.setdefault('gap', 0.06)
+    v.setdefault('fill', 'gold'); v.setdefault('glow', None); v.setdefault('gap', 0.22)   # межстрочный: было 0.06, строки стояли слишком тесно
     v['en'] = ('\n' if v.get('hard') else ' ').join(v['en_lines'])
 
 # Where each string sits. Geometry mirrors multi_fruits_story_screens.py:

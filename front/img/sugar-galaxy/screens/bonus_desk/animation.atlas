@@ -1,5 +1,5 @@
 animation.png
-size:2015,1179
+size:2015,1183
 filter:Linear,Linear
 pma:true
 rays
@@ -42,7 +42,7 @@ tap_start_desk
 bounds:577,1011,420,83
 t_you_won_desk
 bounds:999,1011,430,79
-chip_multi_desk
-bounds:1431,1011,427,72
 chip_fs_desk
-bounds:0,1107,250,72
+bounds:1431,1011,250,77
+chip_multi_desk
+bounds:0,1107,427,76
