@@ -339,7 +339,7 @@ def log_panel(w, h, scale=0.45, fill_top='3b2212', fill_bot='1c0e06', alpha=238)
     L, R, T, B = int(200 * scale), int(185 * scale), int(150 * scale), int(214 * scale)
     out = Image.new('RGBA', (w, h))
     # inner fill sits under the logs (inset to the logs' centre lines)
-    il, ir, it, ib = int(100 * scale), int(158 * scale), int(70 * scale), int(150 * scale)
+    # (the old rectangle insets are gone — the fill mask now comes from the frame silhouette)
     fill = vgrad((w, h), [(0, hexc(fill_top, alpha)), (1, hexc(fill_bot, alpha))])
     rnd = random.Random(w * 7 + h)
     grain = Image.new('L', (w, h))
@@ -351,10 +351,6 @@ def log_panel(w, h, scale=0.45, fill_top='3b2212', fill_bot='1c0e06', alpha=238)
     fill.paste(Image.new('RGBA', (w, h), (120, 70, 30, 255)), (0, 0), grain)
     vign = Image.radial_gradient('L').resize((w, h)).point(lambda v: int(170 * clamp((v - 90) / 110)))
     fill.paste(Image.new('RGBA', (w, h), (6, 2, 0, 255)), (0, 0), vign)
-    m = Image.new('L', (w, h))
-    ImageDraw.Draw(m).rectangle([il, it, w - ir, h - ib], fill=alpha)
-    out.paste(fill, (0, 0), m)
-
     def piece(box, size):
         p = src.crop(box)
         return p.resize(size, Image.LANCZOS) if p.size != size else p
@@ -372,6 +368,18 @@ def log_panel(w, h, scale=0.45, fill_top='3b2212', fill_bot='1c0e06', alpha=238)
     layer.alpha_composite(piece((L, sh - B, ex, sh), (cw, B)), (L, h - B))
     layer.alpha_composite(piece((0, T, L, sh - B), (L, ch)), (0, T))
     layer.alpha_composite(piece((sw - R, T, sw, sh - B), (R, ch)), (w - R, T))
+    # The dark fill must reach the logs' OUTER edge, not a guessed inset: a rectangle inset by
+    # eye left a transparent strip between the fill and the right log (the log art is narrower
+    # than its 9-slice column). So the mask is the card's own silhouette — the log pixels plus
+    # the hole they enclose, found by flooding the transparent area in from the corners.
+    la = layer.getchannel('A').point(lambda v: 255 if v > 20 else 0)
+    holes = la.point(lambda v: 0 if v else 255)
+    ImageDraw.floodfill(holes, (0, 0), 0)
+    ImageDraw.floodfill(holes, (w - 1, 0), 0)
+    ImageDraw.floodfill(holes, (0, h - 1), 0)
+    ImageDraw.floodfill(holes, (w - 1, h - 1), 0)
+    mask = ImageChops.lighter(la, holes).point(lambda v: alpha if v else 0)
+    out.paste(fill, (0, 0), mask)
     out.alpha_composite(layer)
     return out
 
