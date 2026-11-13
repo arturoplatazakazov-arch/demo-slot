@@ -18,7 +18,7 @@
 // amount included (a second canvas #fxPopupTop just above the node).
 (function () {
   const ROOT = 'img/volt-coins-v3/fx';
-  const V = 5;
+  const V = 6;
   const VoltPop = { meta: null, ready: false };
   let stage = null;
   let canvas = null;
@@ -29,7 +29,7 @@
   // все попапы и дождь — один общий атлас (scripts/volt_coins_v3_popups_fx.py
   // write_shared): одинаковые лучи/свечения/рама/монеты в нём один раз
   const POP_DIR = `${ROOT}/popups`;
-  const RAIN = { big_win: 'big', mega_win: 'mega', epic_win: 'epic', jp_grand: 'grand' };
+  const RAIN = { big_win: 'big', mega_win: 'mega', epic_win: 'epic', jp_grand: 'grand', total_win: 'epic', max_win: 'grand' };
   // rain units: the popup core width = 1000 (fit by width to the node)
   const RAIN_BOX = { x: -500, y: -260, width: 1000, height: 520 };
 

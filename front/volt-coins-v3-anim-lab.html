@@ -888,14 +888,16 @@
 
     // =====================================================================
     category('popups', 'Попапы', 'Spine fx/popups — общий атлас',
-      'Появление `in` → петля `loop`, сумма — живой текст в панели. У Big / Mega / Epic Win и Grand Jackpot — дождь монет: взлетают из-за попапа и падают перед экраном, число монет растёт по уровню. Кадр игры 1932×940.');
+      'Появление `in` → петля `loop`, сумма — живой текст в панели. У Big / Mega / Epic / Total / Max Win и Grand Jackpot — дождь монет: взлетают из-за попапа и падают перед экраном, число монет растёт по уровню. Кадр игры 1932×940.');
     const pmeta = await fetch(`${FX}/pop.json?v=${V}`).then((r) => r.json());
     const rmeta = await fetch(`${FX}/coin_rain.json?v=${V}`).then((r) => r.json());
     const POPS = [
-      ['big_win', 'Big Win', '1 250.00', 'big', 'Крупный выигрыш спина; в конце Hold & Win — итог x1–x5.'],
-      ['mega_win', 'Mega Win', '4 800.00', 'mega', 'Крупный выигрыш спина (уровень выше Big); в конце Hold & Win — итог x6–x25.'],
-      ['epic_win', 'Epic Win', '12 500.00', 'epic', 'Крупный выигрыш спина (высший уровень); в конце Hold & Win — итог от x26.'],
+      ['big_win', 'Big Win', '1 250.00', 'big', 'Крупный выигрыш спина (от x10 ставки).'],
+      ['mega_win', 'Mega Win', '4 800.00', 'mega', 'Крупный выигрыш спина (от x25 ставки).'],
+      ['epic_win', 'Epic Win', '12 500.00', 'epic', 'Крупный выигрыш спина (от x50 ставки).'],
+      ['total_win', 'Total Win', '4 200.00', 'epic', 'Итог Hold & Win после сбора монет — общий выигрыш раунда (если не выпал GRAND). Дождь монет как у Epic Win.'],
       ['jp_grand', 'Grand Jackpot', '10 000.00', 'grand', 'Монеты заняли все 9 ячеек в Hold & Win.'],
+      ['max_win', 'Max Win', '16 000.00', 'grand', 'Выигрыш от x1600 ставки — за спин или за раунд Hold & Win. Дождь монет как у Grand Jackpot.'],
       ['buy_bonus', 'Buy Bonus · Hold\'n\'Win', '100.00', null, 'Диалог покупки бонуса: ✓ — купить, ✗ — отмена.'],
     ];
     for (const [key, title, amt, tier, text] of POPS) {

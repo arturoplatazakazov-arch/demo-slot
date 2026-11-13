@@ -95,7 +95,8 @@ async function applySpinResult(data, betAmount) {
   // (поверх линий и Spine), и в попапе, если он крупный.
   showTotalWin(data.total_win);
   const popupType = popupForWin(data.total_win, betAmount);
-  if (popupType) {
+  if (typeof isMaxWin === 'function' && isMaxWin(data.total_win, betAmount)) playMaxWin(data.total_win);
+  else if (popupType) {
     Sound.playSfx({ bigWin: 'bigWin', megaWin: 'megaWin', epicWin: 'epicWin' }[popupType]);
     playPopup(popupType, data.total_win);
   } else if (data.total_win > 0) {

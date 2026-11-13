@@ -2766,3 +2766,6 @@ html body.v3 .screen[data-mode="bonus"] .field-vignette {
 @keyframes collect-burst { 0% { opacity: 0; transform: scale(0.3); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(1.4); } }
 @keyframes collect-done { 0% { transform: scale(1); filter: brightness(1); } 40% { transform: scale(1.25); filter: brightness(1.8); } 100% { transform: scale(1); filter: brightness(1); } }
 @keyframes collect-out { from { transform: scale(1); opacity: 1; } to { transform: scale(1.3); opacity: 0; } }
+
+/* служебная съёмка для Figma (?shot=1): без тест-панели */
+body.is-shot .test-panel { display: none !important; }

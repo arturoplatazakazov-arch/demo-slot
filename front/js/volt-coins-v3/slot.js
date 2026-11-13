@@ -1277,7 +1277,10 @@ const POPUP_CONFIG = {
   holdWinIntro: { title: 'HOLD & WIN', sub: '3 RESPINS', hideAmount: true, coin: 'coin' },
   grandWin: { title: 'GRAND JACKPOT' },
   holdWinTotal: { title: 'TOTAL WIN', sub: 'HOLD & WIN' },
+  maxWin: { title: 'MAX WIN' },
 };
+// MAX WIN (2026-11-13): выигрыш от 1600 ставок — за спин или за раунд Hold & Win
+const MAX_WIN_X = 1600;
 
 // Баннеры попапов нарисованы в ChatGPT (scripts/volt_coins_popups.py режет
 // листы): заголовок впечатан, а сумма печатается в пустую синюю панель
@@ -1294,7 +1297,7 @@ const POPUP_ART = {"big_win":{"w":651,"h":311,"panel":{"l":0.1014,"t":0.4823,"w"
   "jp_grand":{"w":1304,"h":552,"panel":{"l":0.0567,"t":0.1739,"w":0.8873,"h":0.7627}}};
 const POPUP_ART_KEY = {
   bigWin: 'big_win', megaWin: 'mega_win', epicWin: 'epic_win',
-  holdWinIntro: 'hold_and_win', holdWinTotal: 'total_win', grandWin: 'jp_grand',
+  holdWinIntro: 'hold_and_win', holdWinTotal: 'total_win', grandWin: 'jp_grand', maxWin: 'max_win',
 };
 
 // V3, PSB №2: попап из слоёв дизайнера, Spine (js/volt-coins-v3/popup-fx.js).
@@ -1345,7 +1348,7 @@ function artPopupNode(artKey, text, extraClass = '') {
 function buildPopupNode(key, amount) {
   const cfg = POPUP_CONFIG[key] || { title: key };
   const artKey = POPUP_ART_KEY[key];
-  if (artKey && POPUP_ART[artKey]) {
+  if (artKey && (POPUP_ART[artKey] || (window.VoltPop && VoltPop.has(artKey)))) {
     return artPopupNode(artKey, cfg.hideAmount ? (cfg.sub || '') : formatAmount(amount),
       cfg.hideAmount ? 'is-caption' : '');
   }
@@ -1377,7 +1380,7 @@ function buildPopupNode(key, amount) {
   return root;
 }
 
-const BIG_WIN_KEYS = new Set(['bigWin', 'megaWin', 'epicWin', 'grandWin']);
+const BIG_WIN_KEYS = new Set(['bigWin', 'megaWin', 'epicWin', 'grandWin', 'holdWinTotal', 'maxWin']);
 
 function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaque = false } = {}) {
   if (!POPUP_CONFIG[key]) return Promise.resolve();
@@ -1886,14 +1889,19 @@ async function runHoldAndWinSequence(result, locked, baseGrid = null) {
   const dropCollect = await collectCoins(locked);
   if (dropCollect) dropCollect();
 
-  // Итог раунда (2026-11-05, продукт): вместо TOTAL WIN — попап по сумме за
-  // режим в ставках: x1–x5 BIG, x6–x25 MEGA, x26+ EPIC; поле 9/9 — GRAND.
+  // Итог раунда (2026-11-13, PSD дизайнера): после сбора монет — TOTAL WIN с
+  // общим выигрышем (с дождём монет как у EPIC); поле 9/9 — GRAND. Сумма от
+  // 1600 ставок — следом MAX WIN (дождь как у GRAND).
   if (!dropCollect) Sound.playSfx('coinCollect');
-  if (grand) {
-    Sound.playSfx('jackpotReveal');
-    setTimeout(() => Sound.playSfx('jackpot_grand'), 350);
-  } else Sound.playSfx('roundTotalWin');
-  await playPopup(holdWinResultPopup(result.total_win, grand), result.total_win, 3000);
+  const resultKey = holdWinResultPopup(result.total_win, grand);
+  if (resultKey) {
+    if (grand) {
+      Sound.playSfx('jackpotReveal');
+      setTimeout(() => Sound.playSfx('jackpot_grand'), 350);
+    } else Sound.playSfx('roundTotalWin');
+    await playPopup(resultKey, result.total_win, 3000);
+  }
+  if (isMaxWin(result.total_win, jackpotBet)) await playMaxWin(result.total_win);
   holdAndWinLocked = null;
   if (baseGrid) {
     await applyGrid(baseGrid);
@@ -2019,8 +2027,19 @@ async function collectCoins(locked) {
 
 function holdWinResultPopup(total, grand) {
   if (grand) return 'grandWin';
-  const x = total / (jackpotBet || 10);
-  return x > 25 ? 'epicWin' : x > 5 ? 'megaWin' : 'bigWin';
+  // без гранда при MAX WIN итог показывает сам MAX WIN
+  if (isMaxWin(total, jackpotBet)) return null;
+  return 'holdWinTotal';
+}
+
+function isMaxWin(total, bet) {
+  return Number(bet) > 0 && Number(total) >= MAX_WIN_X * Number(bet);
+}
+
+function playMaxWin(amount) {
+  Sound.playSfx('jackpotReveal');
+  setTimeout(() => Sound.playSfx('jackpot_grand'), 350);
+  return playPopup('maxWin', amount, 3500);
 }
 
 // --- Тест-панель (2026-11-05): столбик кнопок вместо «Варианты», видна и в боте ---
@@ -2067,6 +2086,7 @@ function setupTestPanel() {
     B('buy', 'Buy Bonus'),
     B('pop:bigWin', 'Big Win'), B('pop:megaWin', 'Mega Win'), B('pop:epicWin', 'Epic Win'),
     B('jp:grand', 'Grand Jackpot'),
+    B('pop:holdWinTotal', 'Total Win'), B('pop:maxWin', 'Max Win'),
     B('combo', `Комбинация · ${TEST_COMBO_NAME[TEST_COMBO[0]]}`),
     B('coins', 'Все монеты'),
   ].join('') + '</div>';
@@ -2086,8 +2106,12 @@ function setupTestPanel() {
     if (kind === 'buy') document.getElementById('buyBonusBtn')?.click();
     else if (kind === 'pop') {
       if (gameState.isSpinning) return;
-      const mult = { bigWin: 15, megaWin: 30, epicWin: 60, holdWinTotal: 42 }[arg] || 0;
-      playPopup(arg, bet * mult, 2500);
+      const mult = { bigWin: 15, megaWin: 30, epicWin: 60, holdWinTotal: 42, maxWin: MAX_WIN_X }[arg] || 0;
+      if (arg === 'maxWin') playMaxWin(bet * mult);
+      else {
+        if (arg === 'holdWinTotal') Sound.playSfx('roundTotalWin');
+        playPopup(arg, bet * mult, 2500);
+      }
     } else if (kind === 'jp') {
       if (gameState.isSpinning) return;
       playJackpotAward(arg);
@@ -2405,7 +2429,10 @@ async function init() {
   if (shot) {
     const sp = new URLSearchParams(location.search);
     if (sp.get('layer')) document.body.dataset.shotLayer = sp.get('layer');
-    if (sp.get('dump')) setTimeout(dumpShotLayout, 2500);
+    // ?state=… — состояние экрана для Figma-макета по ТЗ (scripts/volt_coins_v3_figma_tz.py)
+    const state = sp.get('state');
+    if (state) setTimeout(() => applyShotState(state), 400);
+    if (sp.get('dump')) setTimeout(dumpShotLayout, state ? 2600 : 2500);
     document.body.classList.add('is-shot');
     document.body.dataset.ready = '1';
   } else {
@@ -2601,6 +2628,55 @@ function showBonusScreen(respins) {
 init();
 
 
+// Состояния экрана для съёмки Figma-макета по ТЗ (только ?shot=1, в игре не используются).
+const SHOT_BASE_GRID = [['bell', 'diamond', 'seven'], ['seven', 'seven', 'seven'], ['bar', 'wild', 'horseshoe']];
+function applyShotState(state) {
+  const cellAt = (r, c) => cellInfos[r * GRID_COLS + c];
+  const putGrid = (grid) => grid.forEach((row, r) => row.forEach((code, c) => {
+    const info = cellAt(r, c);
+    if (info && code) { clearCoinFace(info); setCellSymbol(info, code); }
+  }));
+  const putCoin = (r, c, face) => {
+    const info = cellAt(r, c);
+    if (!info) return;
+    setCellSymbol(info, 'coin');
+    showCoinFace(info, face.startsWith('x') ? { digits: face } : { word: face, art: `coin_${face}`, cls: 'is-tier' });
+  };
+  const bonus = (coins) => {
+    applyModeScreen('bonus');
+    cellInfos.forEach((info) => { clearCoinFace(info); setCellSymbol(info, 'blank'); });
+    for (const [r, c, f] of coins) putCoin(r, c, f);
+    setRespinCounter(2);
+  };
+  if (state === 'base' || state === 'menu' || state === 'win') putGrid(SHOT_BASE_GRID);
+  if (state === 'win') {
+    cellInfos.forEach((info, i) => { if (Math.floor(i / GRID_COLS) !== 1) info.cell.classList.add('is-dimmed'); });
+    showLineWin([cellAt(1, 0), cellAt(1, 1), cellAt(1, 2)], 50);
+  }
+  if (state === 'menu') document.getElementById('v3MenuBtn')?.click();
+  if (state === 'trigger') {
+    putGrid(SHOT_BASE_GRID);
+    putCoin(1, 0, 'x5'); putCoin(1, 1, 'mini'); putCoin(1, 2, 'x10');
+  }
+  if (state === 'bonus') bonus([[0, 0, 'x5'], [1, 1, 'mini'], [1, 2, 'x10'], [2, 0, 'x2'], [2, 2, 'major']]);
+  if (state === 'collect') {
+    bonus([]);
+    const locked = new Map([['0-0', { kind: 'value', value: 5 }], ['1-1', { kind: 'mini', value: 0 }], ['1-2', { kind: 'value', value: 10 }],
+      ['2-0', { kind: 'value', value: 2 }], ['2-2', { kind: 'major', value: 0 }]]);
+    for (const [k, coin] of locked) {
+      const [r, c] = k.split('-').map(Number);
+      putCoin(r, c, coin.kind === 'value' ? `x${coin.value}` : coin.kind);
+    }
+    collectCoins(locked);
+  }
+  // для листа ассетов: все символы / все номиналы монет
+  if (state === 'allsym') putGrid([['horseshoe', 'star', 'bar'], ['bell', 'ingot', 'diamond'], ['seven', 'wild', 'seven']]);
+  if (state === 'allcoins') ['x1', 'x2', 'x3', 'x5', 'x10', 'x15', 'x25', 'mini', 'minor'].forEach((f, i) => putCoin(Math.floor(i / 3), i % 3, f));
+  if (state === 'allcoins2') { putGrid(SHOT_BASE_GRID); putCoin(0, 0, 'major'); }
+  if (state === 'feature') showFeatureScreen();
+  if (state === 'bonusscreen') { applyModeScreen('bonus'); showBonusScreen(RESPIN_COUNT); }
+}
+
 // ?shot=1&dump=1 — раскладка экрана для сборки Figma-макета из элементов
 // (scripts/volt_coins_figma_svg.py): картинки, тексты и неон-обводки с их
 // координатами в CSS px окна. Кладётся в <script id="shotDump"> (--dump-dom).
@@ -2630,11 +2706,12 @@ function dumpShotLayout() {
       mirror: !!(m && m[0] < 0), cls: img.className, sym: cell ? cell.dataset.symbol : null,
       face: cell && cell.querySelector('.coin-face') ? [...cell.querySelectorAll('.coin-face img')].map((g) => g.getAttribute('src')).join('|') : null });
   });
-  document.querySelectorAll('.jp__value, .neon-label b').forEach((el) => {
+  document.querySelectorAll('.jp__value, .jp__name, .neon-label b, .v3resp__n, .win-hud.has-line .win-hud__line').forEach((el) => {
     const o = vis(el);
-    if (!o || getComputedStyle(el).visibility === 'hidden' || !el.textContent.trim()) return;
-    const cs = getComputedStyle(el);
-    const lines = el.innerHTML.split(/<br\s*\/?>/i).map((x) => x.replace(/<[^>]+>/g, '').trim());
+    const pseudo = el.dataset.amount;                 // сумма выигрыша — в ::before
+    if (!o || getComputedStyle(el).visibility === 'hidden' || !(pseudo || el.textContent.trim())) return;
+    const cs = getComputedStyle(el, pseudo ? '::before' : null);
+    const lines = pseudo ? [pseudo] : el.innerHTML.split(/<br\s*\/?>/i).map((x) => x.replace(/<[^>]+>/g, '').trim());
     const k = el.offsetWidth ? el.getBoundingClientRect().width / el.offsetWidth : 1;   // масштаб .stage
     const rg = document.createRange();
     rg.selectNodeContents(el);
@@ -2653,6 +2730,12 @@ function dumpShotLayout() {
         op: +cs.opacity, dash: cs.strokeDasharray, off: parseFloat(cs.strokeDashoffset) || 0, filter: cs.filter };
     });
     items.push({ t: 'neon', r: R(svg), vb: [vb.x, vb.y, vb.width, vb.height], groups });
+  });
+  document.querySelectorAll('.win-hud.has-line .win-hud__line').forEach((el) => {
+    if (!vis(el)) return;
+    const cs = getComputedStyle(el);
+    items.push({ t: 'barbox', hud: true, r: R(el), bg: cs.backgroundColor, bgimg: cs.backgroundImage, bw: parseFloat(cs.borderTopWidth) || 0,
+      bc: cs.borderTopColor, radius: cs.borderTopLeftRadius, shadow: cs.boxShadow, o: vis(el) });
   });
   // окно барабанов (подложка — CSS) и нижняя панель: кнопки, иконки, тексты
   items.push({ t: 'reelwin', r: R(document.getElementById('reelWindow')) });
