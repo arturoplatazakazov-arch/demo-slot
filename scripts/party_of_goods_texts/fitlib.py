@@ -30,7 +30,9 @@ WINE = '4a0714'
 STYLES = {
     'tag': dict(fam='cinzel', wght=700, fill=GOLD, stroke=WINE, sw=6, glow='000000', glow_r=8, track=3),
     'cap': dict(fam='luckiest', fill=GOLD, stroke=WINE, sw=8, shadow='000000'),
-    'sub': dict(fam='cinzel', wght=700, fill=CREAM, stroke=WINE, sw=6, glow='000000', glow_r=6, step=1.05),
+    # thin stroke + a near-black halo: Cormorant's hairlines survive at the small size the line
+    # is drawn, and the dark glow lifts it off the warm scene (a thick wine stroke clogged it)
+    'sub': dict(fam='cinzel', wght=700, fill=CREAM, stroke='1e0205', sw=3, glow='000000', glow_r=10, step=1.05),
     'tap': dict(fam='cinzel', wght=700, fill=GOLD, stroke=WINE, sw=7, glow='ff7a2a', glow_r=12, track=6),
     # PSB art (3 stacked lines, Luckiest-like gold) — approximated with the game font
     'title_art': dict(fam='luckiest', fill=GOLD, stroke=WINE, sw=8, shadow='000000', step=0.86),
