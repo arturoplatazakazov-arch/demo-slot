@@ -95,77 +95,11 @@
     <!-- Превью-экраны (по аналогии с feature_screen / bonus_screen в Gangsta Casino):
          DOM-вёрстка + настоящие Spine-символы, которые рисуются на #spineCanvas
          поверх (базовый слой канваса на это время скрыт — stage.baseHidden). -->
-    <div class="info-screen" id="introScreen" data-screen="intro" hidden>
-      <div class="info-screen__bg"></div>
-      <div class="info-screen__rays"></div>
-      <div class="info-screen__fx" data-fx="petals"></div>
-      <div class="info-screen__logo"><img src="img/east-discovery/img/Logo_east.png" alt=""><span class="logo__shine"></span></div>
-      <div class="info-screen__hero" data-spine="Hero_base" data-clip="idle"></div>
-      <div class="info-cards">
-        <div class="info-card" style="--i:0">
-          <div class="info-card__art" data-spine="wild" data-clip="big_idle" data-fit="0.6" data-voff="0.2"></div>
-          <div class="info-card__text">
-            <h3 class="info-card__title">EXPANDING WILD</h3>
-            <p class="info-card__desc">Wild expands to fill the whole reel</p>
-          </div>
-        </div>
-        <div class="info-card" style="--i:1">
-          <div class="info-card__art" data-spine="scatter" data-clip="idle" data-fit="1.3"></div>
-          <div class="info-card__text">
-            <h3 class="info-card__title">FREE SPINS</h3>
-            <p class="info-card__desc">3 or more Scatters trigger the bonus game</p>
-          </div>
-        </div>
-        <div class="info-card" style="--i:2">
-          <div class="info-card__art info-card__art--duo">
-            <div class="info-card__tiger" data-spine="collector_tiger" data-clip="win" data-loop="1"></div>
-            <div class="info-card__coin" data-spine="coin" data-clip="win" data-loop="1"></div>
-          </div>
-          <div class="info-card__text">
-            <h3 class="info-card__title">HOLD &amp; WIN</h3>
-            <p class="info-card__desc">The Tiger collects every coin prize</p>
-          </div>
-        </div>
-      </div>
-      <div class="info-screen__tap">TAP TO CONTINUE</div>
-    </div>
-
-    <div class="info-screen info-screen--bonus" id="bonusScreen" data-screen="bonus" hidden>
-      <div class="info-screen__bg"></div>
-      <div class="info-screen__rays"></div>
-      <div class="info-screen__fx" data-fx="lanterns"></div>
-      <div class="info-screen__logo"><img src="img/east-discovery/img/Logo_east.png" alt=""><span class="logo__shine"></span></div>
-      <div class="info-screen__hero" data-spine="Hero_Bonus" data-clip="idle"></div>
-      <div class="bonus-intro">
-        <div class="bonus-intro__title">BONUS GAME</div>
-        <div class="bonus-intro__counter">
-          <img class="bonus-intro__lantern" src="img/east-discovery/img/free-spins-counter.png" alt="">
-          <span class="bonus-intro__value" id="bonusIntroValue">10</span>
-        </div>
-        <div class="bonus-intro__sub">FREE SPINS</div>
-      </div>
-      <div class="info-screen__tap">TAP TO START</div>
-    </div>
-
-    <!-- Превью Hold & Win (вход в раунд коллектора): тигр + монеты, тап — старт. -->
-    <div class="info-screen info-screen--bonus info-screen--holdwin" id="holdWinScreen" data-screen="bonus" hidden>
-      <div class="info-screen__bg"></div>
-      <div class="info-screen__rays"></div>
-      <div class="info-screen__fx" data-fx="lanterns"></div>
-      <div class="info-screen__logo"><img src="img/east-discovery/img/Logo_east.png" alt=""><span class="logo__shine"></span></div>
-      <div class="bonus-intro">
-        <div class="bonus-intro__title">HOLD &amp; WIN</div>
-        <div class="hw-stage">
-          <div class="hw-stage__tiger" data-spine="collector_tiger" data-clip="win"></div>
-          <div class="hw-coin hw-coin--a" data-spine="coin" data-clip="win"></div>
-          <div class="hw-coin hw-coin--b" data-spine="coin" data-clip="win"></div>
-          <div class="hw-coin hw-coin--c" data-spine="coin" data-clip="win"></div>
-          <div class="hw-coin hw-coin--d" data-spine="coin" data-clip="win"></div>
-        </div>
-        <div class="bonus-intro__sub bonus-intro__sub--small">COLLECT THE COINS</div>
-      </div>
-      <div class="info-screen__tap">TAP TO START</div>
-    </div>
+    <!-- Превью-экраны (фича / бонус / Hold & Win) — Spine-скелеты из
+         scripts/east_discovery_screens.py. Этот слой рисует только фон
+         (под #spineCanvas), сам экран — оверлей на канвасе. -->
+    <div class="fscreen" id="featureScreen" hidden></div>
+    <div class="fscreen-count" id="fscreenCount" hidden></div>
 
     <!-- Полноэкранный WebGL-канвас для всех Spine-анимаций (окружение, персонаж, символы, попапы). -->
     <canvas class="layer spine-canvas" id="spineCanvas"></canvas>

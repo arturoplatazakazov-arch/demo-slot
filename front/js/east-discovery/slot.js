@@ -1909,93 +1909,193 @@ function setupAmbientFx() {
   }
 }
 
-// Preview screens (feature screen after the boot preloader, bonus screen on
-// free-spins entry) — modelled on Gangsta Casino's feature_screen/bonus_screen,
-// but DOM+CSS instead of a designer Spine pack: the layout/choreography is CSS,
-// the symbols on it are the game's real Spine clips drawn as overlay instances
-// on the shared #spineCanvas (base layer hidden meanwhile via stage.baseHidden).
-// Each instance's alpha follows the computed opacity of its DOM ancestors, so
-// CSS entrance/fade animations carry the Spine art with them. `?nofs` skips both.
+// Preview screens (feature after the boot preloader, bonus on free-spins entry,
+// Hold & Win on the collector round) — Spine skeletons built by
+// scripts/east_discovery_screens.py out of the game's own art, same contract as
+// the other games: `intro` (3s) then a looping `idle` until a click/tap, then a
+// 500ms fade. Authored on the design canvas (origin = canvas centre, 1 unit =
+// 1 design px), one skeleton per orientation, contain-fitted to the viewport via
+// its design box. The background stays a DOM layer (#featureScreen) under the
+// canvas. Unlike this game's own exports (straight alpha, see loadSpineResource)
+// these atlases ARE premultiplied. `?nofs` skips them.
 
-const INFO_FADE_MS = 500;
-const INFO_MIN_SHOW_MS = 900; // ignore the tap that dismissed the preloader / a stray double-tap
+const SCREEN_ROOT = `${ASSET_ROOT}/screens`;
+const SCREEN_BOX = {
+  desk: { x: -966, y: -470, width: 1932, height: 940 },
+  mob: { x: -390, y: -708, width: 780, height: 1416 },
+};
+const SCREEN_FADE_MS = 500;
+const SCREEN_MIN_SHOW_MS = 900; // ignore the tap that dismissed the preloader / a stray double-tap
+// Bonus screen: the sky lantern lands at ~1.5s of intro, then the free-spins
+// count counts up on it. Font size in skeleton units.
+const SCREEN_COUNT_AT = 1.5;
+const SCREEN_COUNT_UP_S = 0.5;
+const SCREEN_COUNT_UNITS = 86;
+const SCREEN_OF = { introScreen: 'feature', bonusScreen: 'bonus', holdWinScreen: 'holdwin' };
+const screenResourceCache = {};
 let infoScreenActive = false;
 
+function screenVariant() {
+  return isMobileLayout() ? 'mob' : 'desk';
+}
+
+function getScreenResource(kind, variant = screenVariant()) {
+  const key = `${kind}_${variant}`;
+  if (!screenResourceCache[key]) {
+    screenResourceCache[key] = SpineEngine.SpineResource.load(stage.assetManager, `${SCREEN_ROOT}/${key}`, {
+      premultipliedAlpha: true,
+    });
+    screenResourceCache[key].catch(() => { delete screenResourceCache[key]; });
+  }
+  return screenResourceCache[key];
+}
+
+// `id` keeps the old DOM ids so the call sites (and the dev panel) are unchanged.
 async function showInfoScreen(id, { value = null, autoCloseMs = 0, force = false } = {}) {
-  const root = document.getElementById(id);
-  if (!root || infoScreenActive) return;
+  const kind = SCREEN_OF[id];
+  const root = document.getElementById('featureScreen');
+  if (!kind || !root || !stage || infoScreenActive) return;
   if (!force && new URLSearchParams(location.search).has('nofs')) return;
   infoScreenActive = true;
 
-  root.querySelector('.info-screen__bg').style.setProperty('--info-bg', `url(${new URL(bgSrcFor(root.dataset.screen === 'bonus' ? 'bonus' : 'base'), location.href).href})`);
-  fillAmbientFx(root.querySelector('.info-screen__fx'), root.dataset.screen === 'bonus' ? 'lanterns' : 'petals', { count: 22 });
-  if (value !== null) {
-    const v = root.querySelector('#bonusIntroValue');
-    if (v) v.textContent = value;
+  const bgMode = kind === 'feature' ? 'base' : 'bonus';
+  const canvasEl = document.getElementById('spineCanvas');
+  const countEl = document.getElementById('fscreenCount');
+  const total = Math.max(0, Number(value) || 0);
+  const counting = kind === 'bonus' && total > 0 && !!countEl;
+  if (countEl) {
+    countEl.textContent = '0';
+    countEl.style.opacity = '0';
+    countEl.hidden = !counting;
   }
 
-  root.hidden = false; // must be laid out before the anchors can be measured
-  const entries = [];
-  const created = [];
-  for (const el of root.querySelectorAll('[data-spine]')) {
-    if (el.getBoundingClientRect().width < 8) continue; // e.g. hero hidden in portrait
-    try {
-      const resource = await loadSpineResource(`${ASSET_ROOT}/Export/${el.dataset.spine}`);
-      const inst = resource.createInstance();
-      inst.anchorEl = el;
-      inst.fit = parseFloat(el.dataset.fit) || 1;
-      inst.play(el.dataset.clip, true);
-      inst.verticalOffsetRatio = parseFloat(el.dataset.voff) || 0; // wild's big_idle is posed below its skeleton bounds' center
-      inst.skeleton.color.set(1, 1, 1, 0);
-      entries.push({ el, inst });
-      created.push(inst);
-    } catch (err) {
-      console.warn('[info-screen] spine failed', el.dataset.spine, err);
-    }
+  let resource;
+  try {
+    resource = await getScreenResource(kind);
+  } catch (err) {
+    console.warn('[info-screen] spine failed', kind, err);
+    infoScreenActive = false;
+    if (countEl) countEl.hidden = true;
+    return;
   }
 
-  stage.baseHidden = true;
-  document.body.classList.add('is-info-screen');
-  for (const inst of created) stage.addOverlay(inst);
-
-  let running = true;
-  const opacityOf = (el) => {
-    let a = 1;
-    for (let n = el; n && n !== root.parentElement; n = n.parentElement) a *= parseFloat(getComputedStyle(n).opacity) || 0;
-    return a;
-  };
-  const tick = () => {
-    if (!running) return;
-    for (const { el, inst } of entries) inst.skeleton.color.set(1, 1, 1, opacityOf(el));
-    requestAnimationFrame(tick);
-  };
-  requestAnimationFrame(tick);
-  requestAnimationFrame(() => requestAnimationFrame(() => root.classList.add('is-shown')));
-
-  const openedAt = performance.now();
   await new Promise((resolve) => {
-    let timer = null;
+    let variant = screenVariant();
+    let inst = null;
+    let alpha = 1;
+    let done = false;
+    let closing = false;
+    let autoTimer = null;
+
+    // (Re)mount for the current orientation; `fromEntry` carries the clip and
+    // time over when the device is rotated mid-screen.
+    const mount = (res, fromEntry) => {
+      const next = res.createInstance();
+      next.anchorEl = root;
+      next.fit = 1;
+      next.boundsOverride = SCREEN_BOX[variant];
+      if (fromEntry && fromEntry.animation) {
+        const entry = next.animationState.setAnimation(0, fromEntry.animation.name, fromEntry.loop);
+        entry.trackTime = fromEntry.trackTime;
+        if (!fromEntry.loop) next.queue('idle', true);
+      } else {
+        next.play('intro', false);
+        next.queue('idle', true);
+      }
+      next.skeleton.color.a = alpha;
+      if (inst) stage.removeOverlay(inst);
+      inst = next;
+      stage.addOverlay(inst);
+    };
+    // Absolute: a relative url() inside a custom property resolves against the
+    // stylesheet that uses it (css/), not the page.
+    const setBg = () => root.style.setProperty('--fs-bg', `url("${new URL(bgSrcFor(bgMode), location.href).href}")`);
+    const onResize = () => {
+      setBg();
+      const v = screenVariant();
+      if (v === variant || closing) return;
+      variant = v;
+      const entry = inst && inst.animationState.getCurrent(0);
+      getScreenResource(kind, v).then((res) => { if (!done) mount(res, entry); }).catch(() => {});
+    };
+
+    setBg();
+    mount(resource, null);
+    window.addEventListener('resize', onResize);
+    stage.baseHidden = true;   // reel symbols share the canvas — keep them off the screen
+    document.body.classList.add('is-info-screen');
+    root.hidden = false;
+    void root.offsetWidth;
+    root.classList.add('is-open');
+
+    const frame = () => {
+      if (done) return;
+      if (counting && inst) {
+        const bone = inst.skeleton.findBone('count');
+        if (bone) {
+          const dpr = window.devicePixelRatio || 1;
+          const pos = worldToScreen(bone.worldX, bone.worldY, canvasEl);
+          countEl.style.left = `${pos.left}px`;
+          countEl.style.top = `${pos.top}px`;
+          countEl.style.fontSize = `${(SCREEN_COUNT_UNITS * Math.hypot(bone.b, bone.d)) / dpr}px`;
+          const entry = inst.animationState.getCurrent(0);
+          const inIntro = entry && entry.animation && entry.animation.name === 'intro';
+          const t = inIntro ? entry.trackTime : Infinity;
+          const k = Math.max(0, Math.min(1, (t - SCREEN_COUNT_AT) / SCREEN_COUNT_UP_S));
+          countEl.textContent = String(Math.round(total * k));
+          countEl.style.opacity = t < SCREEN_COUNT_AT ? '0' : String(alpha);
+        }
+      }
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+
+    const openedAt = performance.now();
     const finish = () => {
-      root.removeEventListener('pointerup', onTap);
+      if (done) return;
+      done = true;
+      window.removeEventListener('resize', onResize);
+      root.removeEventListener('click', close);
       document.removeEventListener('keydown', onKey);
-      clearTimeout(timer);
+      clearTimeout(autoTimer);
+      if (inst) stage.removeOverlay(inst);
+      root.hidden = true;
+      root.classList.remove('is-open');
+      root.style.transition = '';
+      if (countEl) countEl.hidden = true;
+      stage.baseHidden = false;
+      document.body.classList.remove('is-info-screen');
+      infoScreenActive = false;
       resolve();
     };
-    const onTap = () => { if (performance.now() - openedAt >= INFO_MIN_SHOW_MS) finish(); };
-    const onKey = (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onTap(); } };
-    root.addEventListener('pointerup', onTap);
+    function close() {
+      if (closing || performance.now() - openedAt < SCREEN_MIN_SHOW_MS) return;
+      closing = true;
+      // Skeleton alpha and the DOM layer fade together; the clip keeps playing
+      // underneath so nothing freezes mid-fade.
+      root.style.transition = `opacity ${SCREEN_FADE_MS}ms ease-out`;
+      root.classList.remove('is-open');
+      const start = performance.now();
+      const tick = (now) => {
+        if (done) return;
+        const t = Math.min(1, (now - start) / SCREEN_FADE_MS);
+        alpha = 1 - t;
+        if (inst) inst.skeleton.color.a = alpha;
+        if (t < 1) requestAnimationFrame(tick);
+        else finish();
+      };
+      requestAnimationFrame(tick);
+      setTimeout(finish, SCREEN_FADE_MS + 200); // hidden tab: rAF frozen
+    }
+    function onKey(e) {
+      if (e.key !== ' ' && e.key !== 'Enter') return;
+      e.preventDefault();
+      close();
+    }
+    root.addEventListener('click', close);
     document.addEventListener('keydown', onKey);
-    if (autoCloseMs > 0) timer = setTimeout(finish, autoCloseMs);
+    if (autoCloseMs) autoTimer = setTimeout(close, autoCloseMs);
   });
-
-  root.classList.remove('is-shown'); // 500ms CSS fade; the tick loop fades the Spine art with it
-  await wait(INFO_FADE_MS + 30);
-  running = false;
-  for (const inst of created) stage.removeOverlay(inst);
-  root.hidden = true;
-  stage.baseHidden = false;
-  document.body.classList.remove('is-info-screen');
-  infoScreenActive = false;
 }
 
 function preloadAssets() {
