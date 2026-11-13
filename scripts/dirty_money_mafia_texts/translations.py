@@ -2,6 +2,7 @@
 # the EN art. Turkish/Azerbaijani upper case keeps dotted İ. pt = Brazilian Portuguese.
 # French: no-break space before : and !. Wording shared with Amy's Fruit Farm where the
 # string is the same (FREE SPINS, BUY BONUS, YOU WON...).
+# Uzbek: the modifier letter ʻ is written as ’ — no game font has U+02BB (ʻ -> ’).
 LANGS = ['ru', 'uk', 'kk', 'az', 'de', 'es', 'fr', 'pl', 'pt', 'tr', 'uz']
 NB = ' '
 
@@ -66,10 +67,10 @@ TR = {
                tap_continue='DEVAM ETMEK İÇİN DOKUNUN', t_you_won='KAZANDINIZ', t_free_spins='BEDAVA DÖNÜŞ',
                chip_wild="WILD'LAR HER MAKARADA GENİŞLER", chip_fs='3+ SCATTER EK DÖNÜŞ VERİR',
                tap_start='BAŞLAMAK İÇİN DOKUNUN'),
-    'uz': dict(t_wild='KENGAYUVCHI WILD', t_fs='BEPUL SPINLAR', t_wheel='OMAD GʻILDIRAGI', t_buy='BONUS OLISH',
+    'uz': dict(t_wild='KENGAYUVCHI WILD', t_fs='BEPUL SPINLAR', t_wheel='OMAD G’ILDIRAGI', t_buy='BONUS OLISH',
                d_wild='WILD BUTUN BARABANNI EGALLAYDI', d_fs='3 / 4 / 5 SKATTER = 10 / 15 / 20 SPIN',
-               d_wheel='3 TA GʻILDIRAK BELGISI: x2 - x8 YOKI BEPUL SPIN', d_buy='100x TIKISHGA BEPUL SPIN RAUNDI',
+               d_wheel='3 TA G’ILDIRAK BELGISI: x2 - x8 YOKI BEPUL SPIN', d_buy='100x TIKISHGA BEPUL SPIN RAUNDI',
                tap_continue='DAVOM ETISH UCHUN BOSING', t_you_won='SIZ YUTDINGIZ', t_free_spins='BEPUL SPIN',
-               chip_wild='WILDLAR ISTALGAN BARABANDA KENGAYADI', chip_fs='3+ SKATTER QOʻSHIMCHA SPIN BERADI',
+               chip_wild='WILDLAR ISTALGAN BARABANDA KENGAYADI', chip_fs='3+ SKATTER QO’SHIMCHA SPIN BERADI',
                tap_start='BOSHLASH UCHUN BOSING'),
 }

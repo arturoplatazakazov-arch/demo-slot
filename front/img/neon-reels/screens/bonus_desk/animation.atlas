@@ -30,10 +30,10 @@ spark
 bounds:48,1965,32,12
 
 animation2.png
-size:1071,114
+size:1117,108
 filter:Linear,Linear
 pma:true
 t_free_spins_desk
-bounds:0,0,648,114
+bounds:0,0,726,108
 tap_start_desk
-bounds:650,0,419,104
+bounds:728,0,387,86

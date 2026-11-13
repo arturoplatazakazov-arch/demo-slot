@@ -1,5 +1,5 @@
 animation.png
-size:2029,1626
+size:2047,1626
 filter:Linear,Linear
 pma:true
 rays
@@ -23,11 +23,11 @@ bounds:462,1376,334,199
 glow
 bounds:798,1376,128,128
 tap_start_mob
-bounds:928,1376,437,108
+bounds:928,1376,437,97
 coin
 bounds:1367,1376,119,96
 t_free_spins_mob
-bounds:1488,1376,539,95
+bounds:1488,1376,557,83
 petal
 bounds:0,1596,46,30
 spark

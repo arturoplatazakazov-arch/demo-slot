@@ -19,7 +19,9 @@ ARIAL_BLACK = '/System/Library/Fonts/Supplemental/Arial Black.ttf'
 
 # --- the game: font and text styles exactly as neon_reels_screens.py draws them ----------------
 GAME = dict(slug='neon-reels', xlsx='neon_reels_тексты.xlsx', hdr='#3A1466', tile=(27, 13, 61), sheet=(10, 6, 32))
-FAM = {'luckiest': ('Luckiest Guy', 'luckiest-guy', ARIAL_BLACK)}   # family -> (name, file prefix, stand-in)
+# Shantell Sans 800 replaces Luckiest Guy (which has no Cyrillic): one subset covering all
+# 12 client languages, the same file the game loads (front/fonts/shantell-sans-800-*.woff2).
+FAM = {'luckiest': ('Shantell Sans 800', 'shantell-sans', ARIAL_BLACK)}   # family -> (name, file prefix, stand-in)
 FAM_USE = {'luckiest': 'все тексты'}
 GOLD = [(0, hexc('fff6b8')), (0.45, hexc('ffc928')), (1, hexc('ff7a00'))]
 CYAN = [(0, hexc('e9ffff')), (0.5, hexc('5ff4ff')), (1, hexc('1aa8ff'))]

@@ -2,6 +2,7 @@
 # the EN art. Turkish/Azerbaijani upper case keeps dotted İ. pt = Brazilian Portuguese.
 # French: no-break space before : and !. Wording shared with Dirty Money / Amy's Fruit Farm
 # where the string is the same (FREE SPINS, BUY BONUS, YOU HAVE WON, TAP TO ...).
+# Uzbek: the modifier letter ʻ is written as ’ — no game font has U+02BB (ʻ -> ’).
 LANGS = ['ru', 'uk', 'kk', 'az', 'de', 'es', 'fr', 'pl', 'pt', 'tr', 'uz']
 NB = ' '
 
@@ -77,11 +78,11 @@ TR = {
                t_free_spins='BEDAVA DÖNÜŞ', t_you_won='KAZANDINIZ',
                chip_multi='ÇARPANLAR HER KASKADDA TOPLANIR', chip_fs="SCATTER'LAR +12 DÖNÜŞE KADAR EKLER",
                tap_start='BAŞLAMAK İÇİN DOKUNUN'),
-    'uz': dict(t_tumble='KOʻCHKI', t_multi='KOʻPAYTIRGICH', t_bomb='BOMBALAR', t_fs='BEPUL SPINLAR',
+    'uz': dict(t_tumble='KO’CHKI', t_multi='KO’PAYTIRGICH', t_bomb='BOMBALAR', t_fs='BEPUL SPINLAR',
                d_tumble='8+ BIR XIL BELGI HAR JOYDA YUTADI', d_multi='x2 x3 x5 JETONLARI KASKADNI KUCHAYTIRADI',
                d_bomb='BUTUN QATOR VA USTUNNI TOZALAYDI', d_fs='3 / 4 / 5 SKATTER 8 / 10 / 12 SPIN BERADI',
                d_buy='BONUS OLISH: 100x TIKISH', tap_continue='DAVOM ETISH UCHUN BOSING',
                t_free_spins='BEPUL SPIN', t_you_won='SIZ YUTDINGIZ',
-               chip_multi='KOʻPAYTIRUVCHILAR HAR KASKADDA QOʻSHILADI', chip_fs='SKATTERLAR +12 TAGACHA SPIN QOʻSHADI',
+               chip_multi='KO’PAYTIRUVCHILAR HAR KASKADDA QO’SHILADI', chip_fs='SKATTERLAR +12 TAGACHA SPIN QO’SHADI',
                tap_start='BOSHLASH UCHUN BOSING'),
 }

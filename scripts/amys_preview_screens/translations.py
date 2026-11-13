@@ -2,6 +2,7 @@
 # **word** = drawn in gold in the game (bold in the table). Plaque/title strings are upper
 # case like the EN art (Luckiest Guy is a caps face). Turkish/Azerbaijani upper case keeps
 # dotted İ. pt = Brazilian Portuguese (bônus). French uses a no-break space before ! and :.
+# Uzbek: the modifier letter ʻ is written as ’ — no game font has U+02BB (ʻ -> ’).
 LANGS = ['ru', 'uk', 'kk', 'az', 'de', 'es', 'fr', 'pl', 'pt', 'tr', 'uz']
 NB = ' '
 
@@ -147,7 +148,7 @@ TR = {
         't_congrats': 'TABRIKLAYMIZ!',
         't_youwon': 'SIZ YUTDINGIZ',
         't_freespins': 'BEPUL SPIN',
-        'b_fs': '3+ **SKATTER** = KOʻPROQ AYLANISH',
+        'b_fs': '3+ **SKATTER** = KO’PROQ AYLANISH',
     },
 }
 

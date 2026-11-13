@@ -5,6 +5,7 @@
 # Copy follows app/seed/east_discovery.py: the wild expands AND walks right (50/50), 3/4/5
 # scatters pay 10/15/20 free spins, 3+ tigers start Hold & Win respins with coin values up to
 # x100, and both bonuses can be bought for 100x the bet.
+# Uzbek: the modifier letter ʻ is written as ’ — no game font has U+02BB (ʻ -> ’).
 LANGS = ['ru', 'uk', 'kk', 'az', 'de', 'es', 'fr', 'pl', 'pt', 'tr', 'uz']
 NB = ' '
 HW = 'HOLD & WIN'
@@ -91,11 +92,11 @@ TR = {
                b_title='BONUS OYUNU', b_sub='BEDAVA DÖNÜŞ', hw_title=HW, hw_sub='PARALARI TOPLA',
                tap_start='BAŞLAMAK İÇİN DOKUNUN'),
     'uz': dict(t_wild='KENGAYUVCHI WILD', t_fs='BEPUL SPINLAR', t_hw=HW, t_buy='BONUS OLISH',
-               d_wild='Wild barabanni egallaydi va oʻngga siljiydi',
+               d_wild='Wild barabanni egallaydi va o’ngga siljiydi',
                d_fs='3 / 4 / 5 skatter = 10 / 15 / 20 bepul spin',
-               d_hw='3+ yoʻlbars respin boshlaydi, tangalar x100 gacha toʻlaydi',
+               d_hw='3+ yo’lbars respin boshlaydi, tangalar x100 gacha to’laydi',
                d_buy='100x tikishga bepul spin yoki Hold & Win',
                tap_continue='DAVOM ETISH UCHUN BOSING',
-               b_title='BONUS OʻYIN', b_sub='BEPUL SPIN', hw_title=HW, hw_sub='TANGALARNI YIGʻING',
+               b_title='BONUS O’YIN', b_sub='BEPUL SPIN', hw_title=HW, hw_sub='TANGALARNI YIG’ING',
                tap_start='BOSHLASH UCHUN BOSING'),
 }
