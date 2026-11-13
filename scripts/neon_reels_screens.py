@@ -35,7 +35,46 @@ FPS = 30
 INTRO = 3.0
 IDLE = 4.0
 
-LAYERS, FX, FONTS, OUT = sys.argv[1:5]
+import argparse
+
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _HERE)
+sys.path.insert(0, os.path.join(_HERE, 'neon_reels_texts'))
+import fitlib  # noqa: E402
+
+# Texts are drawn by neon_reels_texts/fitlib.py — the same code the localisation table is
+# measured with. Every field has ONE fixed font size (product rule 2026-11-12: the engine
+# never resizes plaques or fonts per language) at which EN and every translation fit the
+# field's box, so --lang only changes the glyphs, never the layout. --notext drops the baked
+# strings and leaves a bare bone per field (+ text_fields.json) for the engine.
+_ap = argparse.ArgumentParser()
+_ap.add_argument('layers'); _ap.add_argument('fx'); _ap.add_argument('fonts'); _ap.add_argument('out')
+_ap.add_argument('--lang', default='en')
+_ap.add_argument('--notext', action='store_true')
+_A = _ap.parse_args()
+LAYERS, FX, FONTS, OUT = _A.layers, _A.fx, _A.fonts, _A.out
+LANG, NOTEXT = _A.lang, _A.notext
+RECS = {(r['screen'], r['dev'], r['key']): r for r in fitlib.fields()}
+TEXT_FIELDS = []
+
+
+def field(screen, dev, key):
+    r = RECS[(screen, dev, key)]
+    im, sc = fitlib.block(key, LANG, r)
+    return dict(rec=r, im=im, reg=f'{key}_{dev}', w=im.width * sc, h=im.height * sc,
+                bw=r['box_w'], bh=r['box_h'])
+
+
+def place(sk, slot, bone, f, **kw):
+    r = f['rec']
+    if NOTEXT:
+        TEXT_FIELDS.append(dict(skeleton=sk.name, screen=r['screen'], device=r['dev'], key=r['key'],
+                                bone=bone, slot=slot, box_w=r['box_w'], box_h=r['box_h'],
+                                font_px=r['px'], en_font_px=r['en_px'], limit=r['limit'],
+                                style=fitlib.TEXTS[r['key']]['style']))
+        return sk.slot_empty(slot, bone)
+    sk.image(f['reg'], f['im'])
+    return sk.slot(slot, bone, f['reg'], w=f['w'], **kw)
 
 
 # --------------------------------------------------------------------------
@@ -314,6 +353,12 @@ class Skel:
         self._bone_names.add(name)
         return name
 
+    def slot_empty(self, name, bone):
+        """Slot with no attachment: a place for the engine to draw a localised string,
+        still carrying the clips' alpha timelines."""
+        self.slots.append({'name': name, 'bone': bone})
+        return name
+
     def slot(self, name, bone, region, w=None, h=None, x=0, y=0, rot=0, blend=None, color=None):
         """Region attachment sized w (or h) in units, aspect from the image."""
         im = self.images[region]
@@ -502,11 +547,8 @@ ART['logo_flash'] = flash_of(ART['logo'], 0.85)
 for k in ('scatter', 'wild', 'coinx', 'emblem'):
     ART[k + '_flash'] = flash_of(ART[k], 0.8)
 
-CARDS = [
-    ('scatter', 'FREE SPINS', '3+ SCATTERS'),
-    ('wild', 'WILD', 'SUBSTITUTES ALL'),
-    ('coinx', 'COIN MULTIPLIER', 'UP TO x100'),
-]
+# (icon, texts key suffix) — the strings live in neon_reels_texts/texts.py
+CARDS = [('scatter', 'fs'), ('wild', 'wild'), ('coinx', 'coin')]
 
 
 def add_common(sk, keys):
@@ -625,11 +667,10 @@ def logo(sk, x, y, w, t0=0.45):
     return b
 
 
-def tap_text(sk, text, x, y, w):
-    im = text_img(text, 'luckiest', 72, fill=WHITE, stroke='12052a', glow='35e8ff', slant=0)
-    sk.image('t_tap', im)
+def tap_text(sk, screen, dev, key, x, y, w):
     b = sk.bone('tap_b', 'main', x, y)
-    sk.slot('tap', b, 't_tap', w=w)
+    place(sk, 'tap', b, field(screen, dev, key))
+    _ = w
     sk.both(b, 'scale', lambda t: (seg(t, 2.25, 2.7, 0.7, 1, out_back),) * 2,
             lambda t: (1 + 0.03 * (1 - math.cos(2 * math.pi * t / 2)) / 2,) * 2)
     sk.both('tap', 'alpha', lambda t: seg(t, 2.25, 2.55, 0, 1, lambda u: u),
@@ -647,14 +688,14 @@ def feature(variant):
                     'scatter', 'wild', 'coinx', 'scatter_flash', 'wild_flash', 'coinx_flash'])
     sk.bone('main')
     if desk:
-        L = dict(logo=(0, 328, 450), card_y=14, card_x=340, panel=(300, 310), icon=(225, 38),
-                 sub=(-100, 38), rib=(-170, 340, 68), cap=44, tap=(0, -345, 430),
+        L = dict(logo=(0, 328, 450), card_y=14, card_x=450, panel=(370, 310), icon=(225, 38),
+                 sub=(-100, 38), rib=(-170, 440, 68), cap=44, tap=(0, -345, 430),
                  geisha=(-700, -470, 830), samurai=(640, -470, 680),
                  petal_area=(-1000, 1000, 560, -560), stars=[(-300, 420, 0.5), (285, 255, 0.4),
                                                              (-170, 190, 0.35), (510, 160, 0.45), (-505, -60, 0.4)])
     else:
-        L = dict(logo=(0, 565, 520), card_y=255, card_x=258, panel=(236, 255), icon=(176, 32),
-                 sub=(-82, 28), rib=(-142, 252, 56), cap=32, tap=(0, -615, 470),
+        L = dict(logo=(0, 565, 520), card_y=255, card_x=258, panel=(244, 255), icon=(176, 32),
+                 sub=(-82, 28), rib=(-142, 258, 56), cap=32, tap=(0, -615, 470),
                  geisha=(-200, -708, 800), samurai=(175, -708, 610),
                  petal_area=(-430, 430, 780, -780), stars=[(-240, 660, 0.45), (230, 470, 0.4),
                                                            (-130, 395, 0.35), (370, 400, 0.4), (-370, 120, 0.35)])
@@ -673,7 +714,7 @@ def feature(variant):
     rw, rh = L['rib'][1], L['rib'][2]
     sk.image('ribbon', neon_ribbon(int(rw * sk.res), int(rh * sk.res)))
     rib_pad = 24 / sk.res
-    for i, (icon, title, sub) in enumerate(CARDS):
+    for i, (icon, sub) in enumerate(CARDS):
         tc = 1.0 + 0.22 * i
         cx = (i - 1) * L['card_x']
         cb = sk.bone(f'card{i}', 'main', cx, L['card_y'])
@@ -685,16 +726,10 @@ def feature(variant):
         sk.slot(f'iflash{i}', ib, icon + '_flash', w=L['icon'][0] if icon != 'coinx' else L['icon'][0] * 0.88,
                 blend='additive')
         sb = sk.bone(f'sub{i}', cb, 0, L['sub'][0])
-        sim = text_img(sub, 'luckiest', 64, fill=CYAN, stroke='0b0420', glow='1a6bff', slant=0.06)
-        sk.image(f't_sub{i}', sim)
-        sk.slot(f'sub{i}', sb, f't_sub{i}', h=L['sub'][1], w=min(pw * 0.86, L['sub'][1] * sim.width / sim.height))
+        place(sk, f'sub{i}', sb, field('feature', variant, f'd_{sub}'))
         rb = sk.bone(f'rib{i}', cb, 0, L['rib'][0])
         sk.slot(f'rib{i}', rb, 'ribbon', w=rw + 2 * rib_pad, h=rh + 2 * rib_pad)
-        cim = text_img(title, 'luckiest', 80, fill=GOLD, stroke='2a0638', glow=None, slant=0.08)
-        sk.image(f't_cap{i}', cim)
-        cap_h = L['cap']
-        cap_w = min(rw * 0.8, cap_h * cim.width / cim.height)
-        sk.slot(f'cap{i}', rb, f't_cap{i}', w=cap_w, y=2)
+        place(sk, f'cap{i}', rb, field('feature', variant, f't_{sub}'), y=2)
 
         # intro: card pops, neon border ignites, ribbon slides in, icon flashes
         sk.both(cb, 'scale', lambda t, tc=tc: (seg(t, tc, tc + 0.45, 0.2, 1, out_back),) * 2,
@@ -726,7 +761,7 @@ def feature(variant):
 
     petals(sk, 'main', 12 if desk else 9, L['petal_area'], seed=7, size=1.0 if desk else 0.9)
     stars(sk, 'main', L['stars'], seed=3)
-    tap_text(sk, 'TAP TO CONTINUE', *L['tap'])
+    tap_text(sk, 'feature', variant, 'tap_continue', *L['tap'])
     sk.write()
 
 
@@ -812,17 +847,15 @@ def bonus(variant):
             lambda t: 0.22 * max(0.0, math.sin(2 * math.pi * (t / IDLE - 0.1))) ** 12)
 
     # title FREE / SPINS slamming in from both sides
+    # Title: drawn as text (Luckiest Guy, the PSB look — gold with the last word cyan) so it
+    # can be translated; the old export had it as two baked PSB words sliding in from both
+    # sides, which no translation could reuse.
     ty = L['title_y']
-    fb = sk.bone('free_b', 'main', L['free'][0], ty)
-    sk.slot('t_free', fb, 't_free', w=L['free'][1])
-    spb = sk.bone('spins_b', 'main', L['spins'][0], ty)
-    sk.slot('t_spins', spb, 't_spins', w=L['spins'][1])
-    for b, x, dx, t0, s in ((fb, L['free'][0], -500, 1.05, 't_free'), (spb, L['spins'][0], 500, 1.15, 't_spins')):
-        sk.both(b, 'translate', lambda t, dx=dx, t0=t0: (seg(t, t0, t0 + 0.4, dx, 0, out_back), 0),
-                lambda t: (0, 0))
-        sk.both(b, 'scale', lambda t: (1, 1),
-                lambda t, t0=t0: (1 + 0.03 * (1 - math.cos(2 * math.pi * (t / 1.0 - (t0 - 1.05)))) / 2,) * 2)
-        sk.both(s, 'alpha', lambda t, t0=t0: seg(t, t0, t0 + 0.12, 0, 1, lambda u: u), lambda t: 1)
+    tb = sk.bone('title_b', 'main', 0, ty)
+    place(sk, 'title', tb, field('bonus', variant, 't_free_spins'))
+    sk.both(tb, 'scale', lambda t: (seg(t, 1.05, 1.5, 2.1, 1, out_back),) * 2,
+            lambda t: (1 + 0.03 * (1 - math.cos(2 * math.pi * t / 1.0)) / 2,) * 2)
+    sk.both('title', 'alpha', lambda t: seg(t, 1.05, 1.2, 0, 1, lambda u: u), lambda t: 1)
     sparks(sk, 'main', 'tspk', 1.5, 12, 380 if desk else 300, 'ffd36aff', seed=31)
 
     # counter plate (the DOM draws the real spin count over bone "count")
@@ -837,7 +870,7 @@ def bonus(variant):
 
     logo(sk, *L['logo'], t0=0.5)
     petals(sk, 'main', 12 if desk else 9, L['petal_area'], seed=17, size=1.0 if desk else 0.9)
-    tap_text(sk, 'TAP TO START', *L['tap'])
+    tap_text(sk, 'bonus', variant, 'tap_start', *L['tap'])
     sk.write()
 
 
@@ -845,3 +878,7 @@ if __name__ == '__main__':
     for v in ('desk', 'mob'):
         feature(v)
         bonus(v)
+    if NOTEXT:
+        with open(os.path.join(OUT, 'text_fields.json'), 'w') as f:
+            json.dump(TEXT_FIELDS, f, ensure_ascii=False, indent=1)
+        print('text fields', len(TEXT_FIELDS))
