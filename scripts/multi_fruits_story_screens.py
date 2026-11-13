@@ -14,14 +14,22 @@ popups' wood-and-gold style. The multiplier wilds (x2/x3/x5/x7) have no static
 art — they are rendered here from the wild Spine export's setup pose with the
 matching skin (`render_setup` below; a tiny region + weighted-mesh rasteriser).
 
-Usage:
-  python scripts/multi_fruits_story_screens.py <fonts_dir> [out_dir]
+Texts (titles, captions, prompts) are drawn by multi_fruits_story_texts/fitlib.py, the same
+code the localisation table is measured with. Every text field has ONE fixed font size
+(product rule 2026-11-12: the engine never resizes plaques or fonts per language) at which EN
+and every translation fit the field's box — so --lang only changes the glyphs, never the
+layout. --notext drops the baked strings and leaves a bare bone per field (+ text_fields.json).
 
-fonts_dir — luckiest.ttf, baloo.ttf (front/fonts woff2 converted with
-            fontTools: TTFont(woff2).flavor = None; .save(ttf))
+Usage:
+  python scripts/multi_fruits_story_screens.py <fonts_dir> [out_dir] [--lang ru] [--notext]
+
+fonts_dir — the game's own font files for the art-only "= x15" plate (luckiest.ttf,
+            baloo.ttf: front/fonts woff2 converted with fontTools,
+            TTFont(woff2).flavor = None; .save(ttf))
 out_dir   — default front/img/multi-fruits-story/screens
 """
 
+import argparse
 import json
 import math
 import os
@@ -30,22 +38,33 @@ import sys
 
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(HERE, 'multi_fruits_story_texts'))
 from spine_screen_kit import (  # noqa: E402
     FPS, Skel, breathe, pack, premultiply, clamp, flash_of, hexc, out_back, out_cubic, pulse, rays, seg,
     soft_glow, spark, text_img, trim, vgrad, wave,
 )
+import fitlib  # noqa: E402
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(HERE)
 ART_DIR = os.path.join(ROOT, 'front', 'img', 'multi-fruits-story')
+
+_ap = argparse.ArgumentParser()
+_ap.add_argument('fonts')
+_ap.add_argument('out', nargs='?', default=os.path.join(ART_DIR, 'screens'))
+_ap.add_argument('--lang', default='en')
+_ap.add_argument('--notext', action='store_true')
+_A = _ap.parse_args()
+FONTS, OUT, LANG, NOTEXT = _A.fonts, _A.out, _A.lang, _A.notext
+RECS = {(r['screen'], r['dev'], r['key']): r for r in fitlib.fields()}
+TEXT_FIELDS = []
 
 INTRO = 3.0
 IDLE = 4.0
 DESK = (1932, 940)
 MOB = (780, 1416)
 
-FONTS = None
-OUT = None
 ART = {}
 
 
@@ -381,20 +400,35 @@ INK = '3a1a06'
 
 
 def title(text, size, fill=GOLD, glow=None):
+    """Art-only lettering ("= x15"): the game's own Luckiest Guy, never translated."""
     return text_img(text, font('luckiest', size), fill, stroke=INK, stroke_w=max(3, size // 9),
                     glow=glow, glow_r=max(5, size // 6), shadow='1a0c02')
 
 
-def lines(rows, size, fill=CREAM, gap=0.06, weight=800):
-    ims = [text_img(r, font('baloo', size, weight), fill, stroke=INK, stroke_w=max(3, size // 8),
-                    glow=None, shadow='1a0c02') for r in rows]
-    w = max(i.width for i in ims)
-    step = int(size * (1 + gap))
-    h = step * (len(ims) - 1) + ims[-1].height
-    out = Image.new('RGBA', (w, h))
-    for k, im in enumerate(ims):
-        out.alpha_composite(im, ((w - im.width) // 2, k * step))
-    return out
+# --------------------------------------------------------------------------
+# translatable text fields
+#
+# A field is a fixed box on the screen (the same for every language). `field()` draws the
+# string of LANG at the box's one fixed font size; `place()` either attaches it or, under
+# --notext, leaves the bone bare and records the box for the localisation hand-off.
+
+def field(screen, dev, key):
+    r = RECS[(screen, dev, key)]
+    im, sc = fitlib.block(key, LANG, r)
+    return dict(rec=r, im=im, reg=f'{key}_{dev}', w=im.width * sc, h=im.height * sc,
+                bw=r['box_w'], bh=r['box_h'])
+
+
+def place(sk, slot, bone, f, **kw):
+    r = f['rec']
+    if NOTEXT:
+        TEXT_FIELDS.append(dict(skeleton=sk.name, screen=r['screen'], device=r['dev'], key=r['key'],
+                                bone=bone, slot=slot, box_w=r['box_w'], box_h=r['box_h'],
+                                font_px=r['px'], en_font_px=r['en_px'], limit=r['limit'],
+                                style=fitlib.TEXTS[r['key']]['style']))
+        return sk.slot_empty(slot, bone)
+    sk.image(f['reg'], f['im'])
+    return sk.slot(slot, bone, f['reg'], w=f['w'], **kw)
 
 
 # Panel sizes (units). PANEL_PAD = shadow pad baked into the panel PNGs.
@@ -408,12 +442,7 @@ PANEL_PAD = {}
 # lines, only 3-of-a-kind pays; multiplier_wild variants x2/x3/x5/x7 (plain
 # WILD otherwise) and several wilds on one line multiply together; 3 scatters
 # = 10 free spins with every win x2 (retriggerable).
-CARDS = [
-    ('line', '3 IN A ROW', ['3 SAME SYMBOLS', 'ON A LINE WIN']),
-    ('mwild', 'MULTI WILDS', ['WILDS LAND WITH', 'x2  x3  x5  x7']),
-    ('stack', 'WILDS COMBINE', ['WILDS ON ONE LINE', 'MULTIPLY TOGETHER']),
-    ('fs', 'FREE SPINS', ['3 SCATTERS = 10 SPINS', 'ALL WINS x2']),
-]
+CARDS = ['line', 'mwild', 'stack', 'fs']   # the copy itself lives in multi_fruits_story_texts/texts.py
 
 
 def build_art():
@@ -446,16 +475,9 @@ def build_art():
         ART[key], PANEL_PAD[key] = shadowed(three_slice(plaque, w, h))
     ART['plate_big'], PANEL_PAD['plate_big'] = shadowed(plate, r=18, dy=12)
 
-    for key, head, desc in CARDS:
-        ART[f't_{key}'] = title(head, 60)
-        ART[f'd_{key}'] = lines(desc, 38)
+    # "= x15" is art (digits only, listed as not translated); every other string on the
+    # screens is a text field drawn through fitlib (field() / place()).
     ART['t_eq'] = title('= x15', 64, fill=LIME)
-    ART['tap_continue'] = title('TAP TO CONTINUE', 58, fill=CREAM, glow='ffd23a')
-    ART['tap_start'] = title('TAP TO START', 64, fill=CREAM, glow='ffd23a')
-    ART['t_free_spins'] = title('FREE SPINS', 150, glow='fff3a0')
-    ART['t_you_won'] = title('YOU HAVE WON', 64, fill=LIME)
-    ART['d_chip_x2'] = lines(['EVERY WIN IN THE', 'BONUS PAYS DOUBLE'], 40)
-    ART['d_chip_fs'] = lines(['3 SCATTERS AGAIN', 'GIVE +10 SPINS'], 40)
 
 
 # --------------------------------------------------------------------------
@@ -552,9 +574,9 @@ def floater(sk, name, region, parent, x, y, w, t0, amp=10, period=IDLE, phase=0.
     return b
 
 
-def tap_hint(sk, region, y, w):
+def tap_hint(sk, screen, variant, key, y):
     b = sk.bone('tap', 'root', 0, y)
-    sk.slot('tap', b, region, w=w)
+    place(sk, 'tap', b, field(screen, variant, key))
     sk.both(b, 'scale', uniform(lambda t: seg(t, 2.2, 2.7, 0.8, 1.0, out_back)), uniform(lambda t: breathe(t, 2.0, 0.04)))
     sk.both('tap', 'alpha', lambda t: fade(t, 2.2, 0.5),
             lambda t: 0.775 + 0.225 * math.cos(2 * math.pi * t / 2.0))
@@ -615,7 +637,7 @@ def card_icons(sk, key, parent, t0, s):
         sk.both(fl, 'alpha', lambda t: 0, lambda t: 0.5 * pulse(t, 4.0, 0.5, 8))
 
 
-def feature_card(sk, idx, key, x, y, panel, pw, ph, t0, s):
+def feature_card(sk, variant, idx, key, x, y, panel, pw, ph, t0, s):
     c = sk.bone(f'card{idx}', 'root', x, y)
     panel_slot(sk, f'card{idx}', c, panel, pw)
     sk.both(c, 'scale', uniform(lambda t: pop(t, t0, 0.55, 0.4)), uniform(lambda t: 1))
@@ -623,23 +645,22 @@ def feature_card(sk, idx, key, x, y, panel, pw, ph, t0, s):
          lambda t: (0, bob(t, 5, IDLE, idx * 0.25)))
     sk.both(f'card{idx}', 'alpha', lambda t: fade(t, t0, 0.25), lambda t: 1)
 
-    ti, di = ART[f't_{key}'], ART[f'd_{key}']
-    inner = pw - 96  # the gold frame eats ~48 units a side
-    t_w = min(ti.width * 0.9 * s, inner)
-    d_w = min(di.width * 0.82 * s, inner)
+    tf, df = field('feature', variant, f't_{key}'), field('feature', variant, f'd_{key}')
     t_y = ph * 0.5 - 70 * s
     d_y = -ph * 0.5 + 76 * s
     tb = sk.bone(f'card{idx}_t', c, 0, t_y)
-    sk.slot(f'card{idx}_t', tb, f't_{key}', w=t_w)
+    place(sk, f'card{idx}_t', tb, tf)
     sk.both(f'card{idx}_t', 'alpha', lambda t: fade(t, t0 + 0.15), lambda t: 1)
 
-    gap_top = t_y - t_w * ti.height / ti.width / 2
-    gap_bot = d_y + d_w * di.height / di.width / 2
+    # the icon re-centres in whatever the two text blocks leave (the boxes are the same in
+    # every language, so the layout never moves)
+    gap_top = t_y - tf['bh'] / 2
+    gap_bot = d_y + df['bh'] / 2
     ib = sk.bone(f'card{idx}_icon', c, 0, (gap_top + gap_bot) / 2)
     card_icons(sk, key, ib, t0 + 0.25, s)
 
     db = sk.bone(f'card{idx}_d', c, 0, d_y)
-    sk.slot(f'card{idx}_d', db, f'd_{key}', w=d_w)
+    place(sk, f'card{idx}_d', db, df)
     sk.both(f'card{idx}_d', 'alpha', lambda t: fade(t, t0 + 0.3), lambda t: 1)
 
 
@@ -647,9 +668,9 @@ def build_feature(variant):
     w, h = DESK if variant == 'desk' else MOB
     sk = TrueColorSkel(f'feature_{variant}', w, h, res=1.0, out_dir=OUT, intro=INTRO, idle=IDLE)
     panel = f'card_{variant}'
-    add_art(sk, 'logo', 'logo_flash', 'burst', 'rays', 'glow', 'blik', 'leaf', 'clover', 'gem', 'tap_continue',
+    add_art(sk, 'logo', 'logo_flash', 'burst', 'rays', 'glow', 'blik', 'leaf', 'clover', 'gem',
             '777', 'bell', 'diamond', 'scatter', 'scatter_flash', 'wild_x2', 'wild_x3', 'wild_x5', 'wild_x7',
-            't_eq', panel, *[f't_{k}' for k, _, _ in CARDS], *[f'd_{k}' for k, _, _ in CARDS])
+            't_eq', panel)
 
     if variant == 'desk':
         logo_y, logo_w = 295, 390
@@ -686,34 +707,33 @@ def build_feature(variant):
     sk.both('logo_flash', 'alpha', lambda t: seg(t, 0.6, 1.1, 0.85, 0.0) if t >= 0.6 else 0,
             lambda t: 0.35 * pulse(t, IDLE, 0.55, 10))
 
-    for i, ((x, y), (key, _, _)) in enumerate(zip(cards, CARDS)):
-        feature_card(sk, i, key, x, y, panel, pw, ph, 0.75 + 0.18 * i, s)
+    for i, ((x, y), key) in enumerate(zip(cards, CARDS)):
+        feature_card(sk, variant, i, key, x, y, panel, pw, ph, 0.75 + 0.18 * i, s)
 
     twinkles(sk, 'root', spots, seed=7)
-    tap_hint(sk, 'tap_continue', tap_y, tap_w)
+    tap_hint(sk, 'feature', variant, 'tap_continue', tap_y)
     sk.write()
 
 
 # --------------------------------------------------------------------------
 # bonus screen
 
-def info_chip(sk, idx, panel, icon, text, x, y, cw, t0, from_x, icon_w):
+def info_chip(sk, variant, idx, panel, icon, key, x, y, cw, t0, from_x, icon_w):
     """Wooden plaque with an icon + 2-line caption."""
     c = sk.bone(f'chip{idx}', 'root', x, y)
     panel_slot(sk, f'chip{idx}', c, panel, cw)
     sk.both(f'chip{idx}', 'alpha', lambda t: fade(t, t0, 0.4), lambda t: 1)
     move(sk, c, lambda t: (seg(t, t0, t0 + 0.6, from_x, 0), 0), lambda t: (0, bob(t, 4, IDLE, idx * 0.5)))
-    inner = cw - 150  # ornate end caps
-    tw_ = min(ART[text].width * 0.8, inner - icon_w - 24)
+    f = field('bonus', variant, key)
     gap = 24
-    total = icon_w + gap + tw_
+    total = icon_w + gap + f['bw']            # the caption box, not this language's width
     ib = sk.bone(f'chip{idx}_i', c, -total / 2 + icon_w / 2, 4)
     sk.slot(f'chip{idx}_i', ib, icon, w=icon_w)
     sk.both(ib, 'scale', uniform(lambda t: pop(t, t0 + 0.3, 0.5, 0.0)),
             uniform(lambda t: 1 + 0.1 * pulse(t, 2.0, idx * 0.25, 6)))
     sk.both(ib, 'rotate', lambda t: 0, lambda t: bob(t, 7, 2.0, idx * 0.5))
-    tb = sk.bone(f'chip{idx}_t', c, total / 2 - tw_ / 2, 0)
-    sk.slot(f'chip{idx}_t', tb, text, w=tw_)
+    tb = sk.bone(f'chip{idx}_t', c, total / 2 - f['bw'] / 2, 0)
+    place(sk, f'chip{idx}_t', tb, f)
     sk.both(f'chip{idx}_t', 'alpha', lambda t: fade(t, t0 + 0.25, 0.4), lambda t: 1)
 
 
@@ -722,8 +742,7 @@ def build_bonus(variant):
     sk = TrueColorSkel(f'bonus_{variant}', w, h, res=1.0, out_dir=OUT, intro=INTRO, idle=IDLE)
     panel = f'chip_{variant}'
     add_art(sk, 'burst', 'rays', 'glow', 'blik', 'gold', 'plate_big', 'leaf', 'clover', 'gem', 'ruby',
-            'klubnika', 'limon', 'grusha', 'vinograd', 'wild_x2', 'wild_x7', 'scatter',
-            't_free_spins', 't_you_won', 'd_chip_x2', 'd_chip_fs', 'tap_start', panel)
+            'klubnika', 'limon', 'grusha', 'vinograd', 'wild_x2', 'wild_x7', 'scatter', panel)
 
     if variant == 'desk':
         won_y, title_y, title_w = 405, 268, 720
@@ -766,14 +785,18 @@ def build_bonus(variant):
 
     # "YOU HAVE WON" drops in, "FREE SPINS" slams down with a flash
     yb = sk.bone('won', 'root', 0, won_y)
-    sk.slot('won', yb, 't_you_won', w=title_w * 0.52)
+    place(sk, 'won', yb, field('bonus', variant, 't_you_won'))
     move(sk, yb, lambda t: (0, seg(t, 0.2, 0.7, 50, 0)), lambda t: (0, 0))
     sk.both('won', 'alpha', lambda t: fade(t, 0.2, 0.4), lambda t: 1)
 
     tb = sk.bone('title', 'root', 0, title_y)
-    sk.slot('title', tb, 't_free_spins', w=title_w)
-    sk.image('t_free_spins_flash', flash_of(ART['t_free_spins'], 0.9))
-    sk.slot('title_flash', tb, 't_free_spins_flash', w=title_w, blend='additive', color='ffffff00')
+    tfs = field('bonus', variant, 't_free_spins')
+    place(sk, 'title', tb, tfs)
+    if NOTEXT:
+        sk.slot_empty('title_flash', tb)
+    else:
+        sk.image('t_free_spins_flash', flash_of(tfs['im'], 0.9))
+        sk.slot('title_flash', tb, 't_free_spins_flash', w=tfs['w'], blend='additive', color='ffffff00')
 
     def slam(t):
         return seg(t, 0.35, 0.8, 2.2, 0.94, out_cubic) if t < 0.8 else seg(t, 0.8, 1.05, 0.94, 1.0, out_back)
@@ -799,18 +822,20 @@ def build_bonus(variant):
     sk.both('plate', 'alpha', lambda t: fade(t, 1.0, 0.2), lambda t: 1)
 
     (x0, y0, f0), (x1, y1, f1) = chips
-    info_chip(sk, 0, panel, 'wild_x2', 'd_chip_x2', x0, y0, cw, 1.6, f0, chip_icon)
-    info_chip(sk, 1, panel, 'scatter', 'd_chip_fs', x1, y1, cw, 1.75, f1, chip_icon)
+    info_chip(sk, variant, 0, panel, 'wild_x2', 'chip_x2', x0, y0, cw, 1.6, f0, chip_icon)
+    info_chip(sk, variant, 1, panel, 'scatter', 'chip_fs', x1, y1, cw, 1.75, f1, chip_icon)
 
     twinkles(sk, 'root', spots, seed=11)
-    tap_hint(sk, 'tap_start', tap_y, tap_w)
+    tap_hint(sk, 'bonus', variant, 'tap_start', tap_y)
     sk.write()
 
 
 if __name__ == '__main__':
-    FONTS = sys.argv[1]
-    OUT = sys.argv[2] if len(sys.argv) > 2 else os.path.join(ART_DIR, 'screens')
     build_art()
     for v in ('desk', 'mob'):
         build_feature(v)
         build_bonus(v)
+    if NOTEXT:
+        with open(os.path.join(OUT, 'text_fields.json'), 'w') as f:
+            json.dump(TEXT_FIELDS, f, ensure_ascii=False, indent=1)
+        print('text fields', len(TEXT_FIELDS))

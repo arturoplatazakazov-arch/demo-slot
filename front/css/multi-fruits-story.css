@@ -63,7 +63,8 @@ body {
   display: flex;
   flex-direction: column;
   background: #0b1406;
-  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-family: 'Nunito', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 900;
   color: var(--text-cream);
 }
 
@@ -339,8 +340,8 @@ body {
   /* The plate's number window sits in its lower half. */
   top: 62%;
   transform: translate(-50%, -50%);
-  font-family: 'Luckiest Guy', cursive;
-  font-weight: 400;
+  font-family: 'Shantell Sans', 'Luckiest Guy', cursive;
+  font-weight: 800;
   font-size: 44px;
   color: var(--gold);
   -webkit-text-stroke: 2px var(--ink);
@@ -378,8 +379,8 @@ body {
   left: 0;
   top: 0;
   transform: translate(-50%, -50%);
-  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
-  font-weight: 400;
+  font-family: 'Shantell Sans', 'Luckiest Guy', 'Nunito', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
   font-size: clamp(16px, 2.2vw, 34px);
   color: var(--text-cream);
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85), 0 0 14px rgba(255, 204, 61, 0.65);
@@ -402,20 +403,6 @@ body {
   pointer-events: none;
 }
 .buy-dialog-hits[hidden] { display: none; }
-/* While the dialog is up the whole layer catches taps: a tap that misses the
-   ✓/✗ (the backdrop) cancels. */
-.buy-dialog-hits.is-open { pointer-events: auto; }
-.buy-dialog-note {
-  position: absolute;
-  transform: translate(-50%, 95%);
-  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
-  font-size: clamp(11px, 1.1vw, 17px);
-  color: var(--text-cream);
-  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.9);
-  white-space: nowrap;
-  pointer-events: none;
-}
-.popup-amount.popup-amount--notice { font-size: clamp(14px, 1.8vw, 28px); }
 .buy-dialog-hit {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -449,8 +436,8 @@ body {
 .reel-win-amount.is-visible { opacity: 1; }
 .reel-win-amount::before {
   content: attr(data-amount);
-  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
-  font-weight: 400;
+  font-family: 'Shantell Sans', 'Luckiest Guy', 'Nunito', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
   font-size: 64px;
   color: var(--gold);
   -webkit-text-stroke: 2px var(--ink);
@@ -479,63 +466,6 @@ img.is-missing {
   pointer-events: none;
   z-index: 5;
 }
-
-/* ---------- Feature preview / bonus screens ----------
-   Art is a Spine skeleton on #spineCanvas (scripts/multi_fruits_story_screens.py);
-   this layer is only the game's own static bg (cover, any aspect) with a soft
-   green vignette, and it catches the tap that closes the screen. */
-.fscreen {
-  position: fixed;
-  inset: 0;
-  z-index: 58;
-  background: #0b1406;
-  opacity: 0;
-  transition: opacity 420ms ease;
-  cursor: pointer;
-  overflow: hidden;
-}
-.fscreen::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--fs-bg) center / cover no-repeat;
-}
-.fscreen.is-open::before { animation: fscreen-zoom 1.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
-@keyframes fscreen-zoom { from { transform: scale(1.12); } }
-.fscreen::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse at 50% 45%, rgba(8, 24, 4, 0) 0%, rgba(8, 24, 4, 0.35) 62%, rgba(8, 24, 4, 0.8) 100%),
-    linear-gradient(rgba(10, 25, 5, 0.3), rgba(10, 25, 5, 0.3));
-}
-.fscreen[hidden] { display: none; }
-.fscreen.is-open { opacity: 1; }
-body.is-feature-screen #spineCanvas { position: fixed; z-index: 59; }
-body.is-feature-screen .dev-panel,
-body.is-feature-screen .to-catalog-btn { visibility: hidden; }
-
-/* Live free-spins count over the bonus screen's counter plate. */
-.fscreen-count {
-  position: fixed;
-  left: 0;
-  top: 0;
-  z-index: 60;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  font-family: 'Luckiest Guy', cursive;
-  line-height: 1;
-  padding-top: 0.08em; /* Luckiest Guy sits high in its line box */
-  color: #ffd23a;
-  background: linear-gradient(#fffbd0 10%, #ffd23a 50%, #f08a00 95%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 3px 0 #3a1a06) drop-shadow(0 0 2px #3a1a06) drop-shadow(0 0 14px rgba(190, 255, 90, 0.7));
-  opacity: 0;
-}
-.fscreen-count[hidden] { display: none; }
 
 /* ---------- Paytable info popup ---------- */
 .info-popup {
@@ -578,8 +508,8 @@ body.is-feature-screen .to-catalog-btn { visibility: hidden; }
 .info-popup__title {
   margin: 0 0 6px;
   color: var(--gold);
-  font-family: 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
-  font-weight: 400;
+  font-family: 'Shantell Sans', 'Luckiest Guy', 'Nunito', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 800;
   font-size: 24px;
   text-align: center;
   -webkit-text-stroke: 1px var(--ink);

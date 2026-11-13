@@ -60,7 +60,8 @@ body {
   display: flex;
   flex-direction: column;
   background: #100208;
-  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-family: 'Nunito', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 900;
   color: var(--text-cream);
 }
 
@@ -271,8 +272,8 @@ body {
   left: 0;
   top: 0;
   transform: translate(-50%, -50%);
-  font-family: 'Cinzel', 'Baloo 2', system-ui, sans-serif;
-  font-weight: 800;
+  font-family: 'Nunito', 'Cinzel', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 900;
   font-size: clamp(16px, 2.2vw, 34px);
   color: #fff6df;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85), 0 0 14px rgba(255, 211, 92, 0.65);
@@ -307,7 +308,8 @@ body {
   opacity: 1;
 }
 .cascade-banner__mult {
-  font-family: 'Luckiest Guy', cursive;
+  font-family: 'Shantell Sans', 'Luckiest Guy', cursive;
+  font-weight: 800;
   font-size: 64px;
   color: var(--gold);
   -webkit-text-stroke: 2px var(--ink);
@@ -315,8 +317,8 @@ body {
   white-space: nowrap;
 }
 .cascade-banner__win {
-  font-family: 'Baloo 2', system-ui, sans-serif;
-  font-weight: 800;
+  font-family: 'Nunito', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 900;
   font-size: 24px;
   color: var(--text-cream);
   background: rgba(10, 4, 6, 0.6);
@@ -349,8 +351,8 @@ body {
 .reel-win-amount.is-visible { opacity: 1; }
 .reel-win-amount::before {
   content: attr(data-amount);
-  font-family: 'Cinzel', 'Baloo 2', system-ui, sans-serif;
-  font-weight: 800;
+  font-family: 'Nunito', 'Cinzel', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 900;
   font-size: 48px;
   color: var(--gold);
   -webkit-text-stroke: 2px var(--ink);
@@ -389,8 +391,8 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-family: 'Cinzel', 'Baloo 2', system-ui, sans-serif;
-  font-weight: 800;
+  font-family: 'Nunito', 'Cinzel', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 900;
   font-size: 40px;
   line-height: 1.05;
   text-align: center;
@@ -443,7 +445,8 @@ img.is-missing {
   left: 50%;
   top: 54%;
   transform: translate(-50%, -50%);
-  font-family: 'Luckiest Guy', cursive;
+  font-family: 'Shantell Sans', 'Luckiest Guy', cursive;
+  font-weight: 800;
   font-size: 44px;
   color: var(--gold);
   text-shadow: 0 2px 0 var(--ink);
@@ -494,7 +497,8 @@ img.is-missing {
 .screen[data-mode="freespins"] .fs-counter { display: block; }
 .fs-counter__label {
   display: block;
-  font-family: 'Cinzel', 'Baloo 2', system-ui, sans-serif;
+  font-family: 'Nunito', 'Cinzel', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 900;
   font-size: 18px;
   letter-spacing: 0.08em;
   color: var(--text-cream);
@@ -502,7 +506,8 @@ img.is-missing {
 }
 .fs-counter__value {
   display: block;
-  font-family: 'Luckiest Guy', cursive;
+  font-family: 'Shantell Sans', 'Luckiest Guy', cursive;
+  font-weight: 800;
   font-size: 40px;
   color: var(--gold);
   text-shadow: 0 2px 0 var(--ink);
@@ -578,7 +583,7 @@ img.is-missing {
 .ui-spin-btn:active { transform: scale(0.94); }
 .ui-spin-btn.is-spinning svg { animation: spin-rotate 0.7s linear infinite; }
 @keyframes spin-rotate { to { transform: rotate(360deg); } }
-.ui-icon-btn--auto svg text { font-family: 'Baloo 2', sans-serif; }
+.ui-icon-btn--auto svg text { font-family: 'Nunito', 'Baloo 2', sans-serif; font-weight: 900; }
 .ui-balance { display: flex; align-items: baseline; gap: 6px; font-weight: 700; white-space: nowrap; }
 .ui-balance__label { opacity: 0.75; font-size: 13px; font-weight: 600; }
 .ui-balance__value { color: var(--gold); font-size: 18px; }
@@ -636,7 +641,8 @@ body.is-feature-screen .to-catalog-btn { visibility: hidden; }
   z-index: 60;
   transform: translate(-50%, -50%);
   pointer-events: none;
-  font-family: 'Luckiest Guy', cursive;
+  font-family: 'Shantell Sans', 'Luckiest Guy', cursive;
+  font-weight: 800;
   line-height: 1;
   padding-top: 0.08em; /* Luckiest Guy sits high in its line box */
   color: #fff4c2;
@@ -690,8 +696,8 @@ body.is-feature-screen .to-catalog-btn { visibility: hidden; }
 .info-popup__title {
   margin: 0 0 6px;
   color: var(--gold);
-  font-family: 'Cinzel', 'Baloo 2', system-ui, sans-serif;
-  font-weight: 700;
+  font-family: 'Nunito', 'Cinzel', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 900;
   font-size: 22px;
   text-align: center;
   -webkit-text-stroke: 1px var(--ink);
@@ -793,26 +799,3 @@ body.is-feature-screen .to-catalog-btn { visibility: hidden; }
   --pl-border: rgba(255,122,224,0.45);
   --pl-shadow: rgba(255,122,224,0.6);
 }
-
-/* ---------- Buy Bonus confirmation dialog (slot.js showBuyBonusDialog) ------
-   Full-screen layer over the Spine buy card: invisible hit-areas track the
-   card's own ✓/✗ art, labels reuse the popup-amount look. A tap on the layer
-   outside the card cancels. */
-.buy-dialog {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-}
-.buy-dialog__hit {
-  position: fixed;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  border-radius: 24px;
-  -webkit-tap-highlight-color: transparent;
-}
-.buy-dialog__hit:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.85); outline-offset: 2px; }
-.buy-dialog__label { position: fixed; transition: none; line-height: 1; }
-.buy-dialog__note { font-weight: 700; letter-spacing: 0.04em; }
