@@ -256,3 +256,20 @@
   font-display: swap;
   src: url(../fonts/shantell-sans-800-e463a569.woff2) format('woff2');
 }
+
+/* Cormorant SC 700 — замена Cinzel (капитель с засечками), Nunito 900 — замена Baloo 2.
+   Те же подмножества на все 12 языков, нарезаны из Google Fonts. */
+@font-face {
+  font-family: 'Cormorant SC';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(../fonts/cormorant-sc-700-d95cde82.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url(../fonts/nunito-900-cde3a996.woff2) format('woff2');
+}

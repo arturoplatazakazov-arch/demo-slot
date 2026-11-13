@@ -62,7 +62,8 @@ body {
   display: flex;
   flex-direction: column;
   background: #100208;
-  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-family: 'Nunito', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 900;
   color: var(--text-cream);
 }
 
@@ -291,7 +292,8 @@ body {
   left: 0;
   top: 0;
   transform: translate(-50%, -50%);
-  font-family: 'Cinzel', 'Baloo 2', system-ui, sans-serif;
+  font-family: 'Cormorant SC', 'Cinzel', serif;
+  font-weight: 700;
   font-weight: 800;
   font-size: clamp(16px, 2.2vw, 34px);
   color: #fff6df;
@@ -324,7 +326,8 @@ body {
   transform: translate(-50%, -50%) scale(1);
 }
 .cascade-banner__mult {
-  font-family: 'Luckiest Guy', cursive;
+  font-family: 'Shantell Sans', 'Luckiest Guy', cursive;
+  font-weight: 800;
   font-size: clamp(28px, 5vw, 64px);
   color: var(--gold);
   -webkit-text-stroke: 2px var(--ink);
@@ -332,7 +335,8 @@ body {
   white-space: nowrap;
 }
 .cascade-banner__win {
-  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-family: 'Nunito', 'Baloo 2', system-ui, sans-serif;
+  font-weight: 900;
   font-weight: 800;
   font-size: clamp(14px, 1.8vw, 24px);
   color: var(--text-cream);
@@ -366,7 +370,8 @@ body {
 .reel-win-amount.is-visible { opacity: 1; }
 .reel-win-amount::before {
   content: attr(data-amount);
-  font-family: 'Cinzel', 'Baloo 2', system-ui, sans-serif;
+  font-family: 'Cormorant SC', 'Cinzel', serif;
+  font-weight: 700;
   font-weight: 800;
   font-size: 48px;
   color: var(--gold);
@@ -409,7 +414,8 @@ body {
   align-items: center;
   justify-content: center;
   transform: translateY(-10px);
-  font-family: 'Cinzel', 'Baloo 2', system-ui, sans-serif;
+  font-family: 'Cormorant SC', 'Cinzel', serif;
+  font-weight: 700;
   font-weight: 800;
   font-size: 1.3vw;
   line-height: 1.05;
@@ -516,7 +522,8 @@ body.is-preview-screen .to-catalog-btn { visibility: hidden; }
   left: 50%;
   top: 80%;
   transform: translate(-50%, -50%) translateY(-10px);
-  font-family: 'Luckiest Guy', cursive;
+  font-family: 'Shantell Sans', 'Luckiest Guy', cursive;
+  font-weight: 800;
   font-size: 2vw;
   color: var(--gold);
   text-shadow: 0 2px 0 var(--ink);
@@ -564,7 +571,8 @@ body.is-preview-screen .to-catalog-btn { visibility: hidden; }
 .screen[data-mode="freespins"] .fs-counter { display: block; }
 .fs-counter__label {
   display: block;
-  font-family: 'Cinzel', 'Baloo 2', system-ui, sans-serif;
+  font-family: 'Cormorant SC', 'Cinzel', serif;
+  font-weight: 700;
   font-size: 0.8vw;
   letter-spacing: 0.08em;
   color: var(--text-cream);
@@ -572,7 +580,8 @@ body.is-preview-screen .to-catalog-btn { visibility: hidden; }
 }
 .fs-counter__value {
   display: block;
-  font-family: 'Luckiest Guy', cursive;
+  font-family: 'Shantell Sans', 'Luckiest Guy', cursive;
+  font-weight: 800;
   font-size: 1.8vw;
   color: var(--gold);
   text-shadow: 0 2px 0 var(--ink);
@@ -697,7 +706,8 @@ body.is-preview-screen .to-catalog-btn { visibility: hidden; }
 .info-popup__title {
   margin: 0 0 6px;
   color: var(--gold);
-  font-family: 'Cinzel', 'Baloo 2', system-ui, sans-serif;
+  font-family: 'Cormorant SC', 'Cinzel', serif;
+  font-weight: 700;
   font-weight: 700;
   font-size: 22px;
   text-align: center;
@@ -856,28 +866,3 @@ body.layout-fit .ui-bar {
   --pl-border: rgba(122,184,255,0.45);
   --pl-shadow: rgba(122,184,255,0.6);
 }
-
-/* ---------- Buy Bonus confirmation dialog (slot.js showBuyBonusDialog) ------
-   Full-screen layer over the Spine buy card: invisible hit-areas track the
-   card's own ✓/✗ art, labels reuse the popup-amount look. A tap on the layer
-   outside the card cancels. */
-.buy-dialog {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-}
-.buy-dialog__hit {
-  position: fixed;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  border-radius: 24px;
-  -webkit-tap-highlight-color: transparent;
-}
-.buy-dialog__hit:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.85); outline-offset: 2px; }
-.buy-dialog__label { position: fixed; transition: none; line-height: 1; }
-.buy-dialog__note { font-weight: 700; letter-spacing: 0.04em; }
-/* The Buy Bonus sign is DOM above the Spine canvas — fade it under the card. */
-body.is-buy-dialog .sign-buy-bonus { opacity: 0; transition: opacity 200ms ease; }

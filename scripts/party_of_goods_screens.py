@@ -23,12 +23,13 @@ fonts_dir — cinzel.ttf, luckiest.ttf (front/fonts woff2 -> ttf)
 out_dir   — front/img/party-of-goods/screens
 """
 
+import json
 import math
 import os
 import random
 import sys
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from spine_screen_kit import (  # noqa: E402
@@ -36,12 +37,109 @@ from spine_screen_kit import (  # noqa: E402
     soft_glow, spark, text_img, trim, wave,
 )
 
-SO, FONTS, OUT = sys.argv[1:4]
+import argparse
+
+_HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(_HERE)
+sys.path.insert(0, _HERE)
+sys.path.insert(0, os.path.join(_HERE, 'party_of_goods_texts'))
+import fitlib  # noqa: E402
+
+# Texts come from party_of_goods_texts/fitlib.py — the code the localisation table is measured
+# with. One fixed font size per field (product rule 2026-11-12), so --lang only changes the
+# glyphs, never the layout; --notext leaves a bare bone per field (+ text_fields.json).
+_ap = argparse.ArgumentParser()
+_ap.add_argument('so'); _ap.add_argument('fonts'); _ap.add_argument('out')
+_ap.add_argument('--lang', default='en')
+_ap.add_argument('--notext', action='store_true')
+_A = _ap.parse_args()
+SO, FONTS, OUT = _A.so, _A.fonts, _A.out
+LANG, NOTEXT = _A.lang, _A.notext
+RECS = {(r['screen'], r['dev'], r['key']): r for r in fitlib.fields()}
+TEXT_FIELDS = []
+
+
+def field(screen, dev, key):
+    r = RECS[(screen, dev, key)]
+    im, sc = fitlib.block(key, LANG, r)
+    return dict(rec=r, im=im, reg=f'{key}_{dev}', w=im.width * sc, h=im.height * sc,
+                bw=r['box_w'], bh=r['box_h'])
+
+
+def place(sk, slot, bone, f, **kw):
+    r = f['rec']
+    if NOTEXT:
+        TEXT_FIELDS.append(dict(skeleton=sk.name, screen=r['screen'], device=r['dev'], key=r['key'],
+                                bone=bone, slot=slot, box_w=r['box_w'], box_h=r['box_h'],
+                                font_px=r['px'], en_font_px=r['en_px'], limit=r['limit'],
+                                style=fitlib.TEXTS[r['key']]['style']))
+        return sk.slot_empty(slot, bone)
+    sk.image(f['reg'], f['im'])
+    return sk.slot(slot, bone, f['reg'], w=f['w'], **kw)
 INTRO, IDLE = 3.0, 4.0
 
 
+# The PSB smart-object dump this screen was first built from is gone; every piece it used
+# survives inside the built export's atlases, so a missing source file falls back to the
+# region of the same name there (pages are premultiplied — undo that on the way out).
+SO_FALLBACK = {
+    'Final__Logo__Layer_39': 'logo', 'Final__icons__zeus': 'zeus', 'Final__icons__afrodita': 'afrodita',
+    'Final__icons__cupidonn': 'apollo', 'Final__icons__Scatter__Layer_42': 'key',
+    'Final__icons__bomb_flash': 'bolt', 'Final__icons__x2': 'x2', 'Final__icons__x3': 'x3',
+    'Final__icons__x5': 'x5', 'Final__icons__x7': 'x7', 'Popups__bonus_spins_win__circle': 'medal',
+    'Popups__Buy_Free_Spins__input__input': 'plate', 'Popups__bonus_spins_win__bg': 'theatre',
+    'Popups__bonus_spins_win__bonus_spins_Win': 'title', 'Final__frame__pigin2': 'doves',
+    'Popups__Big_win__coin__coin': 'coin', 'Popups__Big_win__rays_copy__rays1': 'flare',
+}
+_ATLAS_DIRS = [os.path.join(ROOT, 'front', 'img', 'party-of-goods', 'screens', d)
+               for d in ('feature_desk', 'bonus_desk', 'feature_mob', 'bonus_mob')]
+_atlas_cache = {}
+
+
+def _atlas_region(region):
+    """One region of the built export, un-premultiplied. Every folder names its page
+    `animation.png`, so the index is built folder by folder and the first hit wins."""
+    if not _atlas_cache:
+        for folder in _ATLAS_DIRS:
+            ap = os.path.join(folder, 'animation.atlas')
+            if not os.path.exists(ap):
+                continue
+            here, page, cur = {}, None, None
+            for line in open(ap):
+                line = line.rstrip('\n')
+                if not line.strip():
+                    cur = None
+                    continue
+                if ':' not in line:
+                    if cur is None and line.endswith('.png'):
+                        page = line.strip()
+                    else:
+                        cur = line.strip()
+                        here[cur] = {'page': page}
+                    continue
+                if cur is not None:
+                    k, v = (x.strip() for x in line.split(':', 1))
+                    here[cur][k] = v
+            for name, meta in here.items():
+                _atlas_cache.setdefault(name, (folder, meta))
+    if region not in _atlas_cache:
+        raise SystemExit(f'region {region!r} is in neither the smart objects nor the built export')
+    folder, meta = _atlas_cache[region]
+    im = Image.open(os.path.join(folder, meta['page'])).convert('RGBA')
+    x, y, w, h = map(int, meta['bounds'].split(','))
+    crop = im.crop((x, y, x + h, y + w)).rotate(-90, expand=True) if meta.get('rotate') in ('90', 'true') \
+        else im.crop((x, y, x + w, y + h))
+    r, g, b, a = crop.split()                      # premultiplied -> straight
+    inv = a.point(lambda v: 0 if v == 0 else min(255, round(255 * 255 / v)))
+    return Image.merge('RGBA', (ImageChops.multiply(r, inv), ImageChops.multiply(g, inv),
+                                ImageChops.multiply(b, inv), a))
+
+
 def load(name):
-    return trim(Image.open(os.path.join(SO, name + '.png')).convert('RGBA'))
+    p = os.path.join(SO, name + '.png')
+    if os.path.exists(p):
+        return trim(Image.open(p).convert('RGBA'))
+    return trim(_atlas_region(SO_FALLBACK[name]))
 
 
 def font(name, size, weight=None):
@@ -270,11 +368,10 @@ def sunburst(sk, x, y, size, t0, color='ffc24a'):
     return b
 
 
-def tap_text(sk, text, x, y, h, t0=2.3):
-    im = text_img(text, font('cinzel', 80, 900), GOLD, stroke=WINE, stroke_w=7, glow='ff7a2a', glow_r=12, track=6)
-    sk.image('t_tap', im)
+def tap_text(sk, screen, dev, key, x, y, h, t0=2.3):
     b = sk.bone('tap_b', 'main', x, y)
-    sk.slot('tap', b, 't_tap', h=h)
+    place(sk, 'tap', b, field(screen, dev, key))
+    _ = h
     sk.both(b, 'scale', lambda t: (seg(t, t0, t0 + 0.45, 0.6, 1, out_back),) * 2,
             lambda t: (breathe(t, 2, 0.04),) * 2)
     sk.both('tap', 'alpha', fade_in(t0, 0.3), lambda t: 0.8 + 0.2 * math.cos(2 * math.pi * t / 2))
@@ -283,20 +380,16 @@ def tap_text(sk, text, x, y, h, t0=2.3):
 # --------------------------------------------------------------------------
 # FEATURE screen
 
-CARDS = [
-    # icon(s), title, sub-line
-    (['key'], 'FREE SPINS', '3+ SCATTERS · UP TO 20 SPINS'),
-    (['x2', 'x3', 'x5', 'x7'], 'MULTIPLIERS', 'x2 x3 x5 x7 ADD UP ON A WIN'),
-    (['bolt'], 'ZEUS BOLT', 'CLEARS ITS ROW & COLUMN'),
-]
+# icon(s) + the texts key suffix; the strings live in party_of_goods_texts/texts.py
+CARDS = [(['key'], 'fs'), (['x2', 'x3', 'x5', 'x7'], 'multi'), (['bolt'], 'bolt')]
 ICON_SIZE = {'key': ('h', 0.9), 'bolt': ('h', 0.95), 'x2': ('w', 0.8), 'x3': ('w', 0.8),
              'x5': ('w', 0.82), 'x7': ('w', 0.84)}
 
 
-def card(sk, i, cx, cy, L):
+def card(sk, variant, i, cx, cy, L):
     """Laurel medallion with the feature icon + crimson plate with the title +
     sub-line under it. Desk: stacked vertically. Mob: medallion left, text right."""
-    icons, title, sub = CARDS[i]
+    icons, key = CARDS[i]
     tc = 1.0 + 0.25 * i
     mw = L['medal_w']
     cb = sk.bone(f'card{i}', 'main', cx, cy)
@@ -317,16 +410,9 @@ def card(sk, i, cx, cy, L):
     pw = L['plate_w']
     ph = pw * ART['plate'].height / ART['plate'].width
     sk.slot(f'plate{i}', pb, 'plate', w=pw)
-    tim = text_img(title, font('luckiest', 96), GOLD, stroke=WINE, stroke_w=8, shadow='000000')
-    sk.image(f't_cap{i}', tim)
-    cap_h = ph * 0.42
-    cap_w = min(pw * 0.66, cap_h * tim.width / tim.height)
-    sk.slot(f'cap{i}', pb, f't_cap{i}', w=cap_w, y=ph * PLATE_DY + 2)
-    sim = text_img(sub, font('cinzel', 64, 800), CREAM, stroke=WINE, stroke_w=6, glow='000000', glow_r=6)
-    sk.image(f't_sub{i}', sim)
+    place(sk, f'cap{i}', pb, field('feature', variant, f't_{key}'), y=ph * PLATE_DY + 2)
     sb = sk.bone(f'sub{i}', cb, *L['sub_at'])
-    sh = L['sub_h']
-    sk.slot(f'sub{i}', sb, f't_sub{i}', w=min(L['sub_w'], sh * sim.width / sim.height))
+    place(sk, f'sub{i}', sb, field('feature', variant, f'd_{key}'))
 
     # intro: medallion spins in, icon flashes, plate unrolls, sub fades
     sk.both(mb, 'scale', lambda t: (seg(t, tc, tc + 0.5, 0.1, 1, out_back),) * 2, lambda t: (1, 1))
@@ -410,21 +496,17 @@ def feature(variant):
     doves(sk, *L['doves'], t0=0.55)
     logo(sk, *L['logo'], t0=0.35)
 
-    tag = text_img('CASCADING WINS  ·  8+ ANYWHERE PAYS', font('cinzel', 64, 900), GOLD, stroke=WINE, stroke_w=6,
-                   glow='000000', glow_r=8, track=3)
-    sk.image('t_tag', tag)
     tb = sk.bone('tag_b', 'main', L['tag'][0], L['tag'][1])
-    tag_h = L['tag'][2]
-    sk.slot('tag', tb, 't_tag', w=min(W * 0.9, tag_h * tag.width / tag.height))
+    place(sk, 'tag', tb, field('feature', variant, 'tag'))
     sk.both(tb, 'scale', lambda t: (seg(t, 0.85, 1.25, 0.5, 1, out_back), 1), lambda t: (1, 1))
     sk.both('tag', 'alpha', fade_in(0.85, 0.3), one)
 
     for i, (cx, cy) in enumerate(L['cards']):
-        card(sk, i, cx, cy, L)
+        card(sk, variant, i, cx, cy, L)
 
     petals(sk, 14 if desk else 10, L['petal_area'], seed=7, size=1.0 if desk else 0.9)
     twinkles(sk, L['twinkles'], seed=3)
-    tap_text(sk, 'TAP TO CONTINUE', L['tap'][0], L['tap'][1], L['tap'][2])
+    tap_text(sk, 'feature', variant, 'tap_continue', L['tap'][0], L['tap'][1], L['tap'][2])
     sk.write()
 
 
@@ -492,8 +574,15 @@ def bonus(variant):
     # "BONUS SPINS WIN" title stamps in
     tb = sk.bone('title_b', fb, 0, title_y - ty)
     sk.slot('title_glow', tb, 'glow', w=title_w * 1.6, blend='additive', color='ffb648a0')
-    sk.slot('title', tb, 'title', w=title_w)
-    sk.slot('title_fl', tb, 'title_fl', w=title_w, blend='additive')
+    # The PSB raster title (BONUS / SPINS / WIN) is drawn as text in the same gold look, so a
+    # translation can take its place.
+    tf = field('bonus', variant, 't_bonus_win')
+    place(sk, 'title', tb, tf)
+    if NOTEXT:
+        sk.slot_empty('title_fl', tb)
+    else:
+        sk.image('title_fl_tx', flash_of(tf['im'], 0.9) if 'flash_of' in dir() else tf['im'])
+        sk.slot('title_fl', tb, 'title_fl_tx', w=tf['w'], blend='additive')
     sk.both(tb, 'scale', lambda t: (seg(t, 1.15, 1.5, 2.4, 1, out_back),) * 2,
             lambda t: (breathe(t, 1, 0.035),) * 2)
     sk.both('title', 'alpha', fade_in(1.15, 0.1), one)
@@ -523,7 +612,7 @@ def bonus(variant):
     logo(sk, *L['logo'], t0=0.4)
     petals(sk, 16 if desk else 12, L['petal_area'], seed=17, size=1.0 if desk else 0.9, intro_from=0.6)
     twinkles(sk, L['twinkles'], seed=9)
-    tap_text(sk, 'TAP TO START', L['tap'][0], L['tap'][1], L['tap'][2])
+    tap_text(sk, 'bonus', variant, 'tap_start', L['tap'][0], L['tap'][1], L['tap'][2])
     sk.write()
 
 
@@ -531,3 +620,7 @@ if __name__ == '__main__':
     for v in ('desk', 'mob'):
         feature(v)
         bonus(v)
+    if NOTEXT:
+        with open(os.path.join(OUT, 'text_fields.json'), 'w') as f:
+            json.dump(TEXT_FIELDS, f, ensure_ascii=False, indent=1)
+        print('text fields', len(TEXT_FIELDS))
