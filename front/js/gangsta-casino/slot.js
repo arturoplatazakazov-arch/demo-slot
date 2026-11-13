@@ -1899,44 +1899,33 @@ function showSpineScreen(baseCode, { onFrame = null, onClose = null, onCreate = 
 // the text is fitted INTO it: one line if it fits, else up to `lines` lines with a smaller font.
 const PACK_CAPTIONS = {
   feature_screen: {
-    desk: [['text_free_spins', 'FREE SPINS', 240, 66, 2], ['text_expanding_wild', 'EXPANDING WILD', 279, 66, 2],
-      ['text_multiplier', 'MULTIPLIER', 240, 42, 1], ['text_multiplier_note', 'ACCUMULATED IN BONUS GAME', 273, 27, 1],
-      ['text_tap_to_continue', 'TAP TO CONTINUE', 400, 116, 2, 58]],
-    mob: [['text_free_spins', 'FREE SPINS', 240, 74, 2], ['text_expanding_wild', 'EXPANDING WILD', 279, 86, 2],
-      ['text_multiplier', 'MULTIPLIER', 240, 47, 1], ['text_multiplier_note', 'ACCUMULATED IN BONUS GAME', 244, 27, 1],
-      ['text_tap_to_continue', 'TAP TO CONTINUE', 400, 116, 2, 58]],
+    desk: [['text_free_spins', 'FREE SPINS', 240, 66, 2, 66, 0.794], ['text_expanding_wild', 'EXPANDING WILD', 279, 66, 2, 66, 0.762],
+      ['text_multiplier', 'MULTIPLIER', 240, 42, 1, 42, 0.985], ['text_multiplier_note', 'ADD UP IN FREE SPINS', 273, 27, 1, 27, 0.854],
+      ['text_tap_to_continue', 'TAP TO CONTINUE', 400, 116, 2, 58, 0.999]],
+    mob: [['text_free_spins', 'FREE SPINS', 240, 74, 2, 74, 0.794], ['text_expanding_wild', 'EXPANDING WILD', 279, 86, 2, 86, 0.585],
+      ['text_multiplier', 'MULTIPLIER', 240, 47, 1, 47, 0.879], ['text_multiplier_note', 'ADD UP IN FREE SPINS', 244, 27, 1, 27, 0.762],
+      ['text_tap_to_continue', 'TAP TO CONTINUE', 400, 116, 2, 58, 1.001]],
   },
-  bonus_screen: [['text_bonus_game', 'BONUS GAME', 266, 71], ['text_tap_to_start', 'TAP TO START', 211, 58]],
+  bonus_screen: [['text_bonus_game', 'BONUS GAME', 266, 71, 0, 71, 0.698], ['text_tap_to_start', 'TAP TO START', 211, 58, 0, 58, 0.385]],
 };
 const PACK_CAPTION_SLOTS = { text_free_spins: 'capL', text_expanding_wild: 'capC', text_multiplier: 'capR', text_multiplier_note: 'noteR',
   text_tap_to_continue: 'cont', text_bonus_game: 't_bonus', text_tap_to_start: 't_start' };
 function packCaptions(base, lay) {
   const pre = lay === 'mob' ? 'm_' : '';
   const list = PACK_CAPTIONS[base] || [];
-  return (Array.isArray(list) ? list : list[lay] || list.desk).map(([bone, text, w, h, lines = 0, line = h]) => {
+  return (Array.isArray(list) ? list : list[lay] || list.desk).map(([bone, text, w, h, lines = 0, line = h, fix = 1]) => {
     const el = document.createElement('div');
     el.className = lines ? 'pack-caption pack-caption--fit' : 'pack-caption';
     el.textContent = text;
     document.body.appendChild(el);
-    return { el, bone: pre + bone, slot: pre + PACK_CAPTION_SLOTS[bone], w, h, lines, line };
+    return { el, bone: pre + bone, slot: pre + PACK_CAPTION_SLOTS[bone], w, h, lines, line, f: fix };
   });
 }
-// Fit a caption into its box (w x h, text-bone units): one line at the box's font if it fits,
-// else wrap to c.lines lines and shrink. The ratio is scale-free, so it's found once.
-function fitCaption(c, s) {
-  const W = c.w * s, H = c.h * s;
-  c.el.style.width = `${W}px`;
-  c.el.style.height = `${H}px`;
-  if (c.f || s < 0.15 || (document.fonts && document.fonts.status !== 'loaded')) return; // measure with the real font
-  const size = (f) => { c.el.style.fontSize = `${c.line * 0.62 * s * f}px`; };
-  c.el.style.whiteSpace = 'nowrap'; size(1);
-  if (c.el.scrollWidth <= W + 0.5) { c.f = 1; return; }
-  if (c.lines < 2) { c.f = W / c.el.scrollWidth; return; }
-  c.el.style.whiteSpace = 'normal';
-  let f = 1;
-  for (; f > 0.3; f *= 0.94) { size(f); if (c.el.scrollWidth <= W + 0.5 && c.el.scrollHeight <= H + 0.5) break; }
-  c.f = f;
-}
+// Captions are NOT fitted at run time any more. Each one carries `fix`: the one font factor
+// (scripts/gangsta_casino_texts) at which the English copy AND every translation fit the box,
+// so a language never changes the layout — the product rule for all these screens. The old
+// fitCaption() measured each string and shrank it on the fly, which made the same caption a
+// different size per language.
 function pinCaption(inst, c, alpha) {
   const o = boneOnScreen(inst, c.bone);
   if (!o) return;
@@ -1945,7 +1934,8 @@ function pinCaption(inst, c, alpha) {
   c.el.style.top = `${o.y}px`;
   c.el.style.fontSize = `${(c.line || c.h) * 0.62 * o.s * (c.f || 1)}px`;
   c.el.style.maxWidth = `${c.w * o.s}px`;
-  if (c.lines) fitCaption(c, o.s);
+  c.el.style.width = `${c.w * o.s}px`;
+  c.el.style.height = `${c.h * o.s}px`;
   c.el.style.opacity = (slot ? slot.color.a : 1) * alpha * inst.skeleton.color.a;
 }
 
