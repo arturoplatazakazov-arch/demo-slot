@@ -1384,6 +1384,11 @@ function setupDevPanel() {
   document.querySelectorAll('[data-popup]').forEach((btn) => {
     btn.addEventListener('click', () => playPopup(btn.dataset.popup, 12345));
   });
+
+  // Both preview screens on demand — the bonus one otherwise needs a real
+  // free-spins entry, which makes reviewing it (and its translations) a chore.
+  document.getElementById('devFeatureScreen')?.addEventListener('click', () => showFeatureScreen());
+  document.getElementById('devBonusScreen')?.addEventListener('click', () => showBonusScreen(10));
 }
 
 // --- Boot preloader --------------------------------------------------------
