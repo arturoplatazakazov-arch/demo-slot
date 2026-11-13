@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Шрифты игр — тест загрузки и покрытия языков</title>
+<link rel="stylesheet" href="css/fonts.css">
+<style>
+  :root { color-scheme: dark; --bg:#0f0d14; --panel:#191622; --line:#39334a; --ink:#ece7f5; --dim:#a79fbd;
+          --gold:#ffcf6a; --ok:#6fcf7a; --bad:#ff6a6a; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  header { padding:18px 20px 12px; border-bottom:1px solid var(--line); }
+  h1 { margin:0 0 6px; font-size:20px; color:var(--gold); }
+  header p { margin:4px 0 0; color:var(--dim); max-width:1000px; font-size:13.5px; }
+  .wrap { padding:16px 20px 48px; max-width:1500px; margin:0 auto; }
+  h2 { font-size:16px; margin:26px 0 8px; color:var(--gold); }
+  .status { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 4px; }
+  .pill { font-size:12.5px; padding:5px 10px; border-radius:999px; border:1px solid var(--line); background:var(--panel); }
+  .pill.ok { border-color:#2f6b38; } .pill.bad { border-color:#7a2f2f; color:#ffb3b3; }
+  table { border-collapse:collapse; width:100%; font-size:14px; margin-top:10px; }
+  th, td { border:1px solid var(--line); padding:8px 10px; vertical-align:middle; text-align:left; }
+  th { background:#241f31; color:var(--gold); font-weight:600; font-size:13px; white-space:nowrap; }
+  td.lang { white-space:nowrap; color:var(--dim); font-size:13px; }
+  .sample { font-size:26px; line-height:1.25; }
+  .miss { color:var(--bad); outline:1px dashed rgba(255,106,106,.6); border-radius:2px; }
+  .legend { color:var(--dim); font-size:12.5px; margin-top:8px; }
+  .chars { font-family:ui-monospace,monospace; font-size:13px; color:var(--bad); }
+  .good { color:var(--ok); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Шрифты игр — что реально загружается и какие буквы есть</h1>
+  <p>Страница грузит те же файлы шрифтов, что и игры (<code>css/fonts.css</code>), и проверяет каждую букву
+     из наших 12 языков. Красным подсвечены символы, которых в шрифте нет — браузер подставляет системный,
+     поэтому в игре они выглядят «другим шрифтом». Проверка идёт по факту загрузки в этом браузере,
+     а не по списку файлов.</p>
+</header>
+<div class="wrap">
+  <div class="status" id="status"></div>
+  <p class="legend" id="legend"></p>
+  <div id="out"></div>
+</div>
+<script>
+const FONTS = [
+  { fam: 'Luckiest Guy', w: 400, use: 'Neon Reels, East Discovery, Amy’s — заголовки и подсказки' },
+  { fam: 'Cinzel', w: 900, use: 'Dirty Money, Golden Caravan — заголовки' },
+  { fam: 'Baloo 2', w: 800, use: 'Dirty Money — описания; интерфейс' },
+  { fam: 'Fredoka', w: 600, use: 'East Discovery, Amy’s — описания' },
+  { fam: 'Rye', w: 400, use: 'Wild Western Story' },
+  { fam: 'Roboto Mono', w: 400, use: 'служебный (единственный с кириллицей)' },
+];
+// Строки из наших таблиц: по одной характерной на язык, плюс полный алфавит для проверки букв.
+const LANGS = [
+  ['EN', 'FREE SPINS · WILD · BUY BONUS'],
+  ['RU русский', 'ФРИСПИНЫ · ВАЙЛД · КУПИТЬ БОНУС'],
+  ['UK українська', 'ФРІСПІНИ · ВАЙЛД · КУПИТИ БОНУС'],
+  ['KK қазақша', 'ФРИСПИНДЕР · БОНУС АЛУ · ҰТЫС ӘЙНЕГІ'],
+  ['AZ azərbaycan', 'PULSUZ SPİN · BONUSU AL · GENİŞLƏNƏN'],
+  ['DE Deutsch', 'FREISPIELE · BONUS KAUFEN · MÜNZEN'],
+  ['ES español', 'TIRADAS GRATIS · COMPRAR BONO · SÍMBOLOS'],
+  ['FR français', 'TOURS GRATUITS · ACHAT BONUS · PIÈCES'],
+  ['PL polski', 'DARMOWE SPINY · KUP BONUS · MNOŻNIK ŚĆĘĄŹŻ'],
+  ['PT português', 'RODADAS GRÁTIS · COMPRAR BÔNUS · MOEDAS'],
+  ['TR Türkçe', 'BEDAVA DÖNÜŞ · BONUS SATIN AL · ÇARPAN'],
+  ['UZ oʻzbek', 'BEPUL SPINLAR · BONUS OLISH · KOʻPAYTIRGICH'],
+];
+
+// Буква есть в шрифте, если её ширина одинакова при трёх разных запасных семействах:
+// когда глифа нет, браузер подставляет запасной шрифт и ширина «уезжает» вслед за ним.
+// (document.fonts.check() здесь не годится: он отвечает про загрузку файла, а не про глиф.)
+const cv = document.createElement('canvas').getContext('2d');
+function widthIn(ch, font) { cv.font = font; return cv.measureText(ch).width; }
+function has(ch, fam, w) {
+  if (!ch.trim()) return true;
+  const a = widthIn(ch, `${w} 40px "${fam}", monospace`);
+  const b = widthIn(ch, `${w} 40px "${fam}", sans-serif`);
+  const c = widthIn(ch, `${w} 40px "${fam}", serif`);
+  return Math.abs(a - b) < 0.05 && Math.abs(a - c) < 0.05 && a > 0;
+}
+
+function render() {
+  const st = document.getElementById('status');
+  st.innerHTML = FONTS.map((f) => {
+    const loaded = document.fonts.check(`${f.w} 40px "${f.fam}"`, 'A');
+    return `<span class="pill ${loaded ? 'ok' : 'bad'}">${f.fam} — ${loaded ? 'загружен' : 'НЕ ЗАГРУЖЕН'}</span>`;
+  }).join('');
+  document.getElementById('legend').textContent =
+    `Файлов шрифтов в документе: ${document.fonts.size}; статус загрузки: ${document.fonts.status}.`;
+
+  const out = document.getElementById('out');
+  out.innerHTML = FONTS.map((f) => {
+    const rows = LANGS.map(([name, text]) => {
+      const missing = new Set();
+      const html = [...text].map((ch) => {
+        if (has(ch, f.fam, f.w)) return ch === ' ' ? ' ' : escapeHtml(ch);
+        if (ch.trim()) missing.add(ch);
+        return `<span class="miss">${escapeHtml(ch)}</span>`;
+      }).join('');
+      const verdict = missing.size
+        ? `<span class="chars">нет: ${[...missing].join(' ')}</span>`
+        : '<span class="good">все буквы есть</span>';
+      return `<tr><td class="lang">${name}</td>
+        <td class="sample" style="font-family:'${f.fam}';font-weight:${f.w}">${html}</td>
+        <td>${verdict}</td></tr>`;
+    }).join('');
+    return `<h2>${f.fam} <span style="color:var(--dim);font-weight:400;font-size:13px">— ${f.use}</span></h2>
+      <table><tr><th>Язык</th><th>Как выглядит в этом шрифте</th><th>Покрытие</th></tr>${rows}</table>`;
+  }).join('');
+}
+
+function escapeHtml(s) { return s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
+
+// Шрифты подгружаются лениво — попросим браузер загрузить каждый и только потом мерить.
+Promise.all(FONTS.flatMap((f) => LANGS.map(([, t]) => document.fonts.load(`${f.w} 40px "${f.fam}"`, t))))
+  .catch(() => {})
+  .then(() => document.fonts.ready)
+  .then(render);
+</script>
+</body>
+</html>
