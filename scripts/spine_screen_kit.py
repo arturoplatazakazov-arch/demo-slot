@@ -287,6 +287,12 @@ class Skel:
         self.need[region] = (max(pw, w), max(ph, h))
         return name
 
+    def slot_empty(self, name, bone):
+        """Slot with no attachment: a place for the engine to draw something of its own
+        (a localised string, a live counter) that still carries the clips' alpha timelines."""
+        self.slots.append({'name': name, 'bone': bone})
+        return name
+
     def _sample(self, fn, dur):
         n = int(round(dur * FPS))
         return [(k / FPS, fn(k / FPS)) for k in range(n + 1)]
