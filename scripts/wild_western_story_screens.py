@@ -16,30 +16,51 @@ bullet holes). Card/plaque panels are 9-sliced out of the reel frame
 Every animated property is a python function of time, sampled at 30 fps and
 thinned (a key is dropped when linear interpolation reproduces it).
 
-Usage:
-  python scripts/wild_western_story_screens.py <fonts_dir> [out_dir]
+Texts (titles, descriptions, prompts) are drawn by wild_western_story_texts/fitlib.py, the
+same code the localisation table is measured with. Every text field has ONE fixed font size
+(product rule 2026-11-12: the engine never resizes plaques or fonts per language) at which EN
+and every translation fit the field's box — so --lang only changes the glyphs, never the
+layout. --notext drops the baked strings and leaves a bare bone per field (+ text_fields.json).
+The game's own Rye / Luckiest Guy have no Cyrillic, so fitlib draws in their stand-ins
+(Bitter 900 / Shantell Sans 800), the same families front/css/fonts.css declares.
 
-fonts_dir — rye.ttf, luckiest.ttf (convert from front/fonts/*.woff2 with
-            fontTools: TTFont(woff2).flavor=None; .save(ttf))
+Usage:
+  python scripts/wild_western_story_screens.py [fonts_dir] [out_dir] [--lang ru] [--notext]
+
+fonts_dir — legacy and unused: the text fonts now come from
+            scripts/wild_western_story_texts/fonts/
 out_dir   — default front/img/wild-western-story/screens
 """
 
+import argparse
 import json
 import math
 import os
 import random
 import sys
 
-from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
+import numpy as np
+from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 FPS = 30
 INTRO = 2.8
 IDLE = 4.0
 
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+HERE = os.path.dirname(os.path.abspath(__file__))
+REPO = os.path.dirname(HERE)
 ASSETS = os.path.join(REPO, 'front', 'img', 'wild-western-story')
-FONTS = sys.argv[1]
-OUT = sys.argv[2] if len(sys.argv) > 2 else os.path.join(ASSETS, 'screens')
+sys.path.insert(0, os.path.join(HERE, 'wild_western_story_texts'))
+import fitlib  # noqa: E402
+
+_ap = argparse.ArgumentParser()
+_ap.add_argument('fonts', nargs='?', default='', help='legacy, unused (texts come from fitlib)')
+_ap.add_argument('out', nargs='?', default=os.path.join(ASSETS, 'screens'))
+_ap.add_argument('--lang', default='en')
+_ap.add_argument('--notext', action='store_true')
+_A = _ap.parse_args()
+OUT, LANG, NOTEXT = _A.out, _A.lang, _A.notext
+RECS = {(r['screen'], r['dev'], r['key']): r for r in fitlib.fields()}
+TEXT_FIELDS = []
 
 
 # --------------------------------------------------------------------------
@@ -102,10 +123,6 @@ def load(rel):
     return im.crop(im.getchannel('A').point(lambda a: 255 if a > 8 else 0).getbbox())
 
 
-def font(name, size):
-    return ImageFont.truetype(os.path.join(FONTS, name + '.ttf'), size)
-
-
 def trim(im, pad=0):
     im = im.crop(im.getchannel('A').getbbox())
     if pad:
@@ -139,51 +156,30 @@ CREAM = [(0, hexc('fffaf0')), (1, hexc('f3d9a6'))]
 EMBER = [(0, hexc('fff3d0')), (0.5, hexc('ffb347')), (1, hexc('e2571b'))]
 
 
-def text_line(text, fnt, size, fill, stroke, stroke_w, glow, glow_r, shadow):
-    f = font(fnt, size)
-    pad = stroke_w + glow_r * 3 + 16
-    bb = f.getbbox(text, stroke_width=stroke_w)
-    w, h = bb[2] - bb[0] + pad * 2, bb[3] - bb[1] + pad * 2
-    org = (pad - bb[0], pad - bb[1])
-    mask, smask = Image.new('L', (w, h)), Image.new('L', (w, h))
-    ImageDraw.Draw(mask).text(org, text, font=f, fill=255)
-    ImageDraw.Draw(smask).text(org, text, font=f, fill=255, stroke_width=stroke_w, stroke_fill=255)
-    out = Image.new('RGBA', (w, h))
-    if glow:
-        gl = smask.filter(ImageFilter.GaussianBlur(glow_r)).point(lambda a: min(255, int(a * 1.5)))
-        out.paste(Image.new('RGBA', (w, h), hexc(glow)), (0, 0), gl)
-    if shadow:
-        sh = smask.transform(smask.size, Image.AFFINE, (1, 0, 0, 0, 1, -shadow))
-        out.paste(Image.new('RGBA', (w, h), (20, 8, 2, 230)), (0, 0), sh)
-    out.paste(Image.new('RGBA', (w, h), hexc(stroke)), (0, 0), smask)
-    mb = mask.getbbox()
-    fill_im = Image.new('RGBA', (w, h))
-    fill_im.paste(vgrad((w, mb[3] - mb[1]), fill), (0, mb[1]))
-    out.paste(fill_im, (0, 0), mask)
-    # thin top highlight on the letters, carved-gold look
-    hl = ImageChops.subtract(mask, mask.transform(mask.size, Image.AFFINE, (1, 0, 0, 0, 1, -max(1, size // 28))))
-    out.paste(Image.new('RGBA', (w, h), (255, 255, 240, 170)), (0, 0), hl)
-    return trim(out)
+# --------------------------------------------------------------------------
+# translatable text fields
+#
+# A field is a fixed box on the screen (the same for every language). `field()` draws the
+# string of LANG at the box's one fixed font size; `place()` either attaches it or, under
+# --notext, leaves the bone bare and records the box for the localisation hand-off.
+
+def field(screen, dev, key):
+    r = RECS[(screen, dev, key)]
+    im, sc = fitlib.block(key, LANG, r)
+    return dict(rec=r, im=im, reg=f'{key}_{dev}', w=im.width * sc, h=im.height * sc,
+                bw=r['box_w'], bh=r['box_h'])
 
 
-def text_img(text, fnt, size, fill=GOLD, stroke='3a1806', stroke_w=None, glow=None, glow_r=None,
-             shadow=None, line_gap=0.12):
-    """Multi-line ('\\n') centred text block."""
-    stroke_w = stroke_w if stroke_w is not None else max(2, size // 9)
-    glow_r = glow_r if glow_r is not None else max(4, size // 6)
-    shadow = shadow if shadow is not None else max(2, size // 14)
-    lines = [text_line(t, fnt, size, fill, stroke, stroke_w, glow, glow_r, shadow) for t in text.split('\n')]
-    if len(lines) == 1:
-        return lines[0]
-    gap = int(size * line_gap)
-    w = max(l.width for l in lines)
-    h = sum(l.height for l in lines) + gap * (len(lines) - 1)
-    out = Image.new('RGBA', (w, h))
-    y = 0
-    for l in lines:
-        out.alpha_composite(l, ((w - l.width) // 2, y))
-        y += l.height + gap
-    return out
+def place(sk, slot, bone, f):
+    r = f['rec']
+    if NOTEXT:
+        TEXT_FIELDS.append(dict(skeleton=sk.name, screen=r['screen'], device=r['dev'], key=r['key'],
+                                bone=bone, slot=slot, box_w=r['box_w'], box_h=r['box_h'],
+                                font_px=r['px'], en_font_px=r['en_px'], limit=r['limit'],
+                                style=fitlib.TEXTS[r['key']]['style']))
+        return sk.slot_empty(slot, bone)
+    sk.image(f['reg'], f['im'])
+    return sk.slot(slot, bone, f['reg'], w=f['w'])
 
 
 def soft_glow(size=256):
@@ -283,6 +279,48 @@ def bullet_hole(size=64):
     d.polygon(hole, fill=(12, 6, 2, 255))
     im = im.filter(ImageFilter.GaussianBlur(2))
     return im.resize((size, size), Image.LANCZOS)
+
+
+def blank_sign():
+    """The signpost with its baked "Buy Bonus" lettering wiped off: the card draws the title
+    as text, so the art may not carry an English word. The lettered strip is covered with the
+    clean plank to its left, tiled and mirrored, then the original alpha is put back."""
+    src = Image.open(os.path.join(ASSETS, 'img', 'Buy-bonus-button.png')).convert('RGBA')
+    sx0, sx1, sy0, sy1 = 24, 76, 26, 118         # clean plank, left of the lettering
+    tx0, tx1 = 74, 216                            # the lettered strip
+    a = np.asarray(src.crop((sx0, sy0, sx1, sy1))).copy()
+    for x in range(a.shape[1]):                   # vertical nearest-opaque fill: no black edges
+        col = a[:, x]
+        op = np.nonzero(col[:, 3] > 200)[0]
+        if not len(op):
+            continue
+        col[:op[0]] = col[op[0]]
+        col[op[-1] + 1:] = col[op[-1]]
+        for y in range(op[0], op[-1] + 1):
+            if col[y, 3] <= 200:
+                col[y] = col[y - 1]
+    sample = Image.fromarray(a)
+    patch = Image.new('RGBA', (tx1 - tx0, sy1 - sy0))
+    x, flip = 0, False
+    while x < patch.width:
+        patch.paste(sample.transpose(Image.FLIP_LEFT_RIGHT) if flip else sample, (x, 0))
+        x += sample.width
+        flip = not flip
+    m = Image.new('L', patch.size, 255)
+    d = ImageDraw.Draw(m)
+    for i in range(8):                            # feathered edges
+        v = int(255 * i / 8)
+        d.line([(i, 0), (i, patch.height)], fill=v)
+        d.line([(patch.width - 1 - i, 0), (patch.width - 1 - i, patch.height)], fill=v)
+        d.line([(0, i), (patch.width, i)], fill=v)
+        d.line([(0, patch.height - 1 - i), (patch.width, patch.height - 1 - i)], fill=v)
+    m = m.filter(ImageFilter.GaussianBlur(2))
+    alpha = src.getchannel('A')
+    m = Image.fromarray(np.minimum(np.asarray(m), np.asarray(alpha.crop((tx0, sy0, tx1, sy1)))))
+    out = src.copy()
+    out.paste(patch, (tx0, sy0), m)
+    out.putalpha(alpha)
+    return trim(out)
 
 
 def silhouette(im, k=1.0, col=(255, 255, 255)):
@@ -398,6 +436,12 @@ class Skel:
             s['color'] = color
         self.slots.append(s)
         self.atts[name] = {region: self._att(region, w, h, x, y, rot)}
+        return name
+
+    def slot_empty(self, name, bone):
+        """Slot with no attachment: a place for the engine to draw something of its own (a
+        localised string, a live counter) that still carries the clips' alpha timelines."""
+        self.slots.append({'name': name, 'bone': bone})
         return name
 
     def extra(self, slot, region, w=None, h=None, x=0, y=0):
@@ -549,7 +593,7 @@ ART = {
     'wolf': load('Export/wolf/statik.png'),
     'gun': load('Export/gun/statik.png'),
     'whiskey': load('Export/whickey/static.png'),
-    'buy_sign': load('img/Buy-bonus-button.png'),
+    'buy_sign': blank_sign(),
     'cactus1': load('img/cactus_1.png'),
     'cactus2': load('img/cactus_2.png'),
     'glow': soft_glow(),
@@ -738,11 +782,9 @@ def sun_rays(sk, parent, x, y, size, t0, alpha=0.5, color='ffc86aff'):
                 lambda t, a=a: a * (0.85 + 0.15 * math.cos(2 * math.pi * t / 2)))
 
 
-def tap_text(sk, text, x, y, h, t0):
-    im = text_img(text, 'luckiest', 72, fill=CREAM, stroke='2a1204', glow='ff9a3c', glow_r=10)
-    sk.image('t_tap', im)
+def tap_text(sk, screen, variant, key, x, y, t0):
     b = sk.bone('tap_b', 'main', x, y)
-    sk.slot('tap', b, 't_tap', h=h)
+    place(sk, 'tap', b, field(screen, variant, key))
     sk.both(b, 'scale', lambda t: (seg(t, t0, t0 + 0.45, 0.6, 1, out_back),) * 2,
             lambda t: (1 + 0.035 * (1 - math.cos(2 * math.pi * t / 2)) / 2,) * 2)
     sk.both('tap', 'alpha', lambda t: seg(t, t0, t0 + 0.3, 0, 1, linear),
@@ -763,23 +805,10 @@ def cacti(sk, W, H, t0, scale=1.0):
         sk.both(name, 'alpha', lambda t: seg(t, t0, t0 + 0.2, 0, 1, linear), lambda t: 1)
 
 
-def text_slot(sk, region, im, bone, w=None, h=None, x=0, y=0, maxw=None):
-    sk.image(region, im)
-    if maxw is not None:
-        hh = h if h is not None else w * im.height / im.width
-        if hh * im.width / im.height > maxw:
-            w, h = maxw, None
-    return sk.slot(region, bone, region, w=w, h=h, x=x, y=y)
-
-
 # --------------------------------------------------------------------------
 # FEATURE screen
 
-CARDS = [
-    ('wild', 'EXPANDING WILD', 'WILD EXPANDS TO COVER\nTHE WHOLE REEL'),
-    ('scatter', 'FREE SPINS', '3+ SCATTERS AWARD\nUP TO 20 FREE SPINS'),
-    ('buy', 'BUY BONUS', 'INSTANT FREE SPINS\nFOR 100X BET'),
-]
+CARDS = [('wild', 'wild'), ('scatter', 'fs'), ('buy', 'buy')]   # (art kind, text key suffix)
 
 
 def card_art(sk, kind, i, parent, cx, cy, size, desk):
@@ -855,15 +884,15 @@ def feature(variant):
     sk.bone('main')
     if desk:
         L = dict(logo=(0, 330, 400), rays=(0, 330, 1000), card_y=-70, card_dx=545, panel=(470, 520),
-                 title=(0, 182, 44, 330), art=(0, 32), desc=(0, -126, 27, 330),
+                 title=(0, 178), art=(0, 32), desc=(0, -135),
                  sizes={'wild': (128, 240), 'scatter': (118, 0), 'buy': (0, 236)},
-                 tap=(0, -397, 48), motes=(-960, 960, -470, 470),
+                 tap=(0, -397), motes=(-960, 960, -470, 470),
                  tw=[(-200, 450, 0.5), (215, 205, 0.4), (-640, 260, 0.45), (690, 280, 0.4), (-60, -340, 0.35)])
     else:
         L = dict(logo=(0, 548, 460), rays=(0, 548, 900), card_y=None, cards_y=(205, -85, -375), panel=(700, 270),
-                 title=(92, 50, 42, 370), art=(-195, 22), desc=(92, -24, 25, 370),
+                 title=(92, 50), art=(-195, 22), desc=(92, -16),
                  sizes={'wild': (110, 215), 'scatter': (100, 0), 'buy': (0, 185)},
-                 tap=(0, -600, 48), motes=(-390, 390, -708, 708),
+                 tap=(0, -600), motes=(-390, 390, -708, 708),
                  tw=[(-250, 650, 0.45), (240, 430, 0.4), (-330, 380, 0.35), (330, 700, 0.35), (0, -680, 0.3)])
 
     sun_rays(sk, 'main', *L['rays'], t0=0.0, alpha=0.42)
@@ -871,7 +900,7 @@ def feature(variant):
 
     pw, ph = L['panel']
     sk.image('panel', log_panel(int(pw * sk.res), int(ph * sk.res)))
-    for i, (kind, title, desc) in enumerate(CARDS):
+    for i, (kind, tk) in enumerate(CARDS):
         tc = 0.65 + 0.2 * i
         if desk:
             cx, cy = (i - 1) * L['card_dx'], L['card_y']
@@ -881,14 +910,12 @@ def feature(variant):
         sk.slot(f'panel{i}', cb, 'panel', w=pw, h=ph)
         ax, ay = L['art']
         _, art_slots = card_art(sk, kind, i, cb, ax, ay, L['sizes'][kind], desk)
-        tx, ty, th, tmax = L['title']
+        tx, ty = L['title']
         tb = sk.bone(f'title{i}', cb, tx, ty)
-        text_slot(sk, f't_title{i}', text_img(title, 'rye', 88, fill=GOLD, stroke='2a1204', glow='ff8a2a', glow_r=9),
-                  tb, h=th, maxw=tmax)
-        dx, dy, dh, dmax = L['desc']
+        place(sk, f't_title{i}', tb, field('feature', variant, f't_{tk}'))
+        dx, dy = L['desc']
         db = sk.bone(f'desc{i}', cb, dx, dy)
-        dim = text_img(desc, 'luckiest', 56, fill=CREAM, stroke='2a1204', glow=None)
-        text_slot(sk, f't_desc{i}', dim, db, h=dh * 2.3, maxw=dmax)
+        place(sk, f't_desc{i}', db, field('feature', variant, f'd_{tk}'))
 
         # intro: the card swings down on its nail, title stamps, art pops
         side = (-1, 1, -1)[i] if desk else (1, -1, 1)[i]
@@ -914,7 +941,7 @@ def feature(variant):
     logo(sk, *L['logo'], t0=0.1, shine_at=(1.3, 0.55))
     dust_motes(sk, 'main', 16 if desk else 12, L['motes'], seed=7)
     twinkles(sk, 'main', L['tw'], seed=3)
-    tap_text(sk, 'CLICK TO CONTINUE' if desk else 'TAP TO CONTINUE', *L['tap'], t0=2.2)
+    tap_text(sk, 'feature', variant, 'tap_continue', *L['tap'], t0=2.2)
     sk.write()
 
 
@@ -930,15 +957,15 @@ def bonus(variant):
     # shake bone: everything hangs off it, the gunshots kick it
     sk.bone('main')
     if desk:
-        L = dict(logo=(0, 350, 330), rays=(0, -20, 1150), won=(0, 196, 56), plaque=(0, -22, 420, 268),
-                 title=(0, -240, 100, 720), tap=(0, -400, 48),
+        L = dict(logo=(0, 350, 330), rays=(0, -20, 1150), won=(0, 196), plaque=(0, -22, 420, 268),
+                 title=(0, -240), tap=(0, -400),
                  wild=(-585, -55, 640), tiles=[('wolf', 575, 95, 270, -6), ('gun', 490, -205, 200, 9),
                                                ('whiskey', 680, -215, 200, -8)],
                  holes=[(-165, 82), (170, -75), (150, 88)], motes=(-960, 960, -470, 470),
                  tw=[(-300, 250, 0.5), (300, 230, 0.45), (-230, -130, 0.4), (240, -150, 0.4), (0, 300, 0.35)])
     else:
-        L = dict(logo=(0, 572, 380), rays=(0, 170, 1000), won=(0, 392, 54), plaque=(0, 205, 420, 268),
-                 title=(0, -2, 100, 680), tap=(0, -640, 48),
+        L = dict(logo=(0, 572, 380), rays=(0, 170, 1000), won=(0, 400), plaque=(0, 205, 420, 268),
+                 title=(0, -2), tap=(0, -640),
                  wild=(-185, -385, 420), tiles=[('wolf', 160, -265, 210, -6), ('gun', 100, -478, 150, 9),
                                                 ('whiskey', 250, -468, 150, -8)],
                  holes=[(-165, 82), (170, -75), (150, 88)], motes=(-390, 390, -708, 708),
@@ -980,9 +1007,8 @@ def bonus(variant):
     logo(sk, *L['logo'], t0=0.05, shine_at=(2.2, 0.55))
 
     # "YOU HAVE WON"
-    ob = sk.bone('won_b', 'main', L['won'][0], L['won'][1])
-    text_slot(sk, 't_won', text_img('YOU HAVE WON', 'luckiest', 72, fill=CREAM, stroke='2a1204', glow='ff8a2a', glow_r=10),
-              ob, h=L['won'][2])
+    ob = sk.bone('won_b', 'main', *L['won'])
+    place(sk, 't_won', ob, field('bonus', variant, 't_you_won'))
     sk.both(ob, 'scale', lambda t: (seg(t, 0.75, 1.1, 0.4, 1, out_back),) * 2, lambda t: (1, 1))
     sk.both('t_won', 'alpha', lambda t: seg(t, 0.75, 0.9, 0, 1, linear), lambda t: 1)
 
@@ -1009,24 +1035,26 @@ def bonus(variant):
         sparks(sk, hb, f'hspk{k}_', st, 6, 110, 'ffd36aff', seed=50 + k)
 
     # FREE SPINS title stamps in after the shots
-    tx, ty, th, tmax = L['title']
+    tx, ty = L['title']
     tb = sk.bone('title_b', 'main', tx, ty)
-    tim = text_img('FREE SPINS', 'rye', 120, fill=GOLD, stroke='2a1204', glow='ff7a1a', glow_r=14)
-    text_slot(sk, 't_title', tim, tb, h=th, maxw=tmax)
-    sk.image('t_title_flash', silhouette(tim, 0.9, (255, 240, 200)))
-    tw_ = min(tmax, th * tim.width / tim.height)
-    sk.slot('t_title_flash', tb, 't_title_flash', w=tw_, blend='additive')
+    tfs = field('bonus', variant, 't_free_spins')
+    place(sk, 't_title', tb, tfs)
+    if NOTEXT:
+        sk.slot_empty('t_title_flash', tb)
+    else:
+        sk.image('t_title_flash', silhouette(tfs['im'], 0.9, (255, 240, 200)))
+        sk.slot('t_title_flash', tb, 't_title_flash', w=tfs['w'], blend='additive')
     sk.both(tb, 'scale', lambda t: (seg(t, 1.82, 2.05, 2.4, 1, in_cubic),) * 2,
             lambda t: (1 + 0.03 * (1 - math.cos(2 * math.pi * t / 2)) / 2,) * 2)
     sk.both('t_title', 'alpha', lambda t: seg(t, 1.82, 1.92, 0, 1, linear), lambda t: 1)
     sk.both('t_title_flash', 'alpha', lambda t: 0 if t < 2.05 else seg(t, 2.05, 2.45, 0.9, 0),
             lambda t: 0.4 * bump(t, 1.6, 0.5))
     sparks(sk, tb, 'ttspk', 2.05, 14, 360 if desk else 300, 'ffd36aff', seed=31)
-    dust_puff(sk, tb, 'tpuff', 2.05, 260, -th * 0.4, seed=8, n=8)
+    dust_puff(sk, tb, 'tpuff', 2.05, 260, -tfs['bh'] * 0.4, seed=8, n=8)
 
     dust_motes(sk, 'main', 16 if desk else 12, L['motes'], seed=17)
     twinkles(sk, 'main', L['tw'], seed=5, start=2.2)
-    tap_text(sk, 'CLICK TO START' if desk else 'TAP TO START', *L['tap'], t0=2.35)
+    tap_text(sk, 'bonus', variant, 'tap_start', *L['tap'], t0=2.35)
     sk.write()
 
 
@@ -1034,3 +1062,7 @@ if __name__ == '__main__':
     for v in ('desk', 'mob'):
         feature(v)
         bonus(v)
+    if NOTEXT:
+        with open(os.path.join(OUT, 'text_fields.json'), 'w') as f:
+            json.dump(TEXT_FIELDS, f, ensure_ascii=False, indent=1)
+        print('text fields', len(TEXT_FIELDS))
