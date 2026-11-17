@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Olympus Thunder · Zeus lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&display=swap">
+<style>
+  /* Zeus pseudo-3D rig lab (Tides 2). Built by scripts/olympus_zeus_rig.py; not part of the slot yet. */
+  :root { --gold: #ffd75a; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #082a36; font-family: system-ui, sans-serif; color: #e8fbff; }
+  .sky { position: fixed; inset: 0; background: url("img/olympus-thunder/tides2/sky.jpg?v=1") center / cover; }
+  @media (orientation: portrait) { .sky { background-image: url("img/olympus-thunder/tides2/sky_mob_b.jpg?v=1"); } }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #fx { pointer-events: none; z-index: 5; }
+  #zeus { z-index: 2; }
+  .grid { position: fixed; z-index: 3; display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; padding: 10px;
+    border-radius: 6px; background: linear-gradient(180deg, rgba(6, 46, 62, .45), rgba(4, 30, 44, .55)); backdrop-filter: blur(4px);
+    box-shadow: 0 0 0 3px rgba(255, 215, 90, .55), 0 10px 30px rgba(0, 0, 0, .4); }
+  .cell { position: relative; aspect-ratio: 1; }
+  .cell img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .cell[data-low] img { scale: .86; }
+  .cell .num { position: absolute; inset: 0; display: grid; place-items: center; font: 900 clamp(14px, 2.6vw, 34px)/1 'Cinzel', serif;
+    color: #fff; -webkit-text-stroke: 5px #3b1800; paint-order: stroke fill; text-shadow: 0 0 12px rgba(255, 190, 40, .95);
+    opacity: 0; transform: scale(.3); transition: opacity .15s, transform .35s cubic-bezier(.2, 1.8, .4, 1); }
+  .cell.is-hit .num { opacity: 1; transform: none; }
+  .cell.is-target img { filter: drop-shadow(0 0 10px rgba(120, 230, 255, .9)) brightness(.8) saturate(.6); }
+  .cell.is-flash img { animation: flash .5s ease-out; }
+  @keyframes flash { 0% { filter: brightness(3) drop-shadow(0 0 30px #bff); } 100% { filter: none; } }
+  .ui { position: fixed; z-index: 10; left: 10px; bottom: 10px; display: flex; flex-wrap: wrap; gap: 6px; max-width: calc(100% - 20px);
+    background: rgba(0, 18, 26, .72); padding: 8px; border-radius: 10px; font-size: 13px; align-items: center; }
+  .ui button { font: 600 13px/1 system-ui; color: #1a1200; background: var(--gold); border: 0; border-radius: 7px; padding: 8px 11px; cursor: pointer; }
+  .ui button.alt { background: rgba(255, 255, 255, .12); color: #e8fbff; border: 1px solid rgba(160, 240, 255, .3); }
+  .ui label { display: flex; align-items: center; gap: 5px; }
+  .ui input[type=range] { width: 110px; }
+  .hint { position: fixed; z-index: 10; left: 10px; top: 10px; font-size: 12px; opacity: .75; background: rgba(0, 18, 26, .6); padding: 6px 9px; border-radius: 8px; }
+</style>
+</head>
+<body>
+<div class="sky"></div>
+<canvas id="zeus"></canvas>
+<div class="grid" id="grid"></div>
+<canvas id="fx"></canvas>
+<div class="hint">Zeus lab · Tides 2 — псевдо-3D риг (Spine из кода). Клик по сфере = выбрать цель.</div>
+<div class="ui">
+  <button id="bThrow1">Бросок → 1 сфера</button>
+  <button id="bThrow3">Бросок → 3 сферы</button>
+  <button id="bCharge" class="alt">Заряд шара</button>
+  <button id="bReset" class="alt">Сброс множителей</button>
+  <label><input type="checkbox" id="cTurn"> Поворот</label>
+  <input type="range" id="rTurn" min="-1" max="1" step="0.01" value="0">
+  <label>Скорость <input type="range" id="rSpeed" min="0.25" max="1.5" step="0.05" value="1"></label>
+  <label><input type="checkbox" id="cBones"> Кости</label>
+</div>
+
+<script src="vendor/spine-webgl.js"></script>
+<script>
+(function () {
+  const RIG = 'img/olympus-thunder/tides2/zeus_rig/';
+  const V = '?v=' + Date.now();
+  const SYM = 'img/olympus-thunder/tides2/symbols/';
+  const LAYOUT = [
+    ['helmet', 'ruby', 'lyre', 'emerald', 'amphora', 'sapphire'],
+    ['citrine', 'wreath', 'orb', 'amethyst', 'ruby', 'lyre'],
+    ['emerald', 'orb', 'helmet', 'citrine', 'eagle', 'wreath'],
+    ['sapphire', 'amphora', 'ruby', 'orb', 'amethyst', 'citrine'],
+    ['wreath', 'emerald', 'sapphire', 'orb', 'helmet', 'scatter'],
+  ];
+  const LOW = ['ruby', 'emerald', 'sapphire', 'citrine', 'amethyst'];
+  const MULTS = [2, 5, 10, 25, 50, 100];
+  const grid = document.getElementById('grid');
+  const orbs = [];
+  LAYOUT.forEach((row) => row.forEach((code) => {
+    const c = document.createElement('div');
+    c.className = 'cell';
+    if (LOW.includes(code)) c.dataset.low = '1';
+    c.innerHTML = `<img src="${SYM}${code}.webp?v=1" alt=""><span class="num"></span>`;
+    if (code === 'orb') { orbs.push(c); c.addEventListener('click', () => c.classList.toggle('is-picked')); }
+    grid.appendChild(c);
+  }));
+
+  // ---------- layout: Zeus on the left / top, grid right / bottom ----------
+  let zeusBox = { x: 0, y: 0, w: 0, h: 0 };
+  function layout() {
+    const W = innerWidth, H = innerHeight, portrait = H > W;
+    if (portrait) {
+      const gw = Math.min(W - 16, 520);
+      Object.assign(grid.style, { width: gw + 'px', left: (W - gw) / 2 + 'px', top: (H * 0.40) + 'px' });
+      zeusBox = { x: -W * 0.05, y: H * 0.02, w: W * 0.62, h: H * 0.38 };
+    } else {
+      const gw = Math.min(W * 0.46, H * 0.95);
+      Object.assign(grid.style, { width: gw + 'px', left: (W * 0.5) + 'px', top: ((H - gw * 5 / 6) / 2 - 20) + 'px' });
+      zeusBox = { x: W * 0.0, y: H * 0.06, w: W * 0.46, h: H * 0.86 };
+    }
+    for (const c of [zc, fx]) { c.width = innerWidth * devicePixelRatio; c.height = innerHeight * devicePixelRatio; }
+  }
+
+  // ---------- Spine ----------
+  const zc = document.getElementById('zeus'), fx = document.getElementById('fx');
+  const g = fx.getContext('2d');
+  let skel, state, K = 1, ZX = 0, ZY = 0, meta = { release: 0.6, size: [600, 656] };
+  let speed = 1, turnOn = false, turnV = 0, showBones = false;
+  let pending = [];   // targets waiting for the release event
+
+  fetch(RIG + 'meta.json' + V).then((r) => r.json()).then((m) => { meta = m; });
+
+  new spine.SpineCanvas(zc, {
+    pathPrefix: RIG,
+    app: {
+      loadAssets(c) { c.assetManager.loadTextureAtlas('animation.atlas' + V); c.assetManager.loadJson('animation.json' + V); },
+      initialize(c) {
+        const atlas = c.assetManager.require('animation.atlas' + V);
+        const json = new spine.SkeletonJson(new spine.AtlasAttachmentLoader(atlas));
+        const data = json.readSkeletonData(c.assetManager.require('animation.json' + V));
+        skel = new spine.Skeleton(data);
+        const sd = new spine.AnimationStateData(data);
+        sd.defaultMix = 0.2;
+        state = new spine.AnimationState(sd);
+        state.setAnimation(0, 'idle', true);
+        state.addListener({ event: (_e, ev) => { if (ev.data.name === 'release') release(); } });
+        layout();
+      },
+      update(c, delta) {
+        if (!skel) return;
+        state.update(delta * speed);
+        state.apply(skel);
+        if (turnOn) { const tt = (turnV + 1); const a = skel.data.findAnimation('turn'); a.apply(skel, 0, tt, false, null, 1, spine.MixBlend.replace, spine.MixDirection.mixIn); }
+        skel.updateWorldTransform();
+      },
+      render(c) {
+        if (!skel) return;
+        const r = c.renderer, dpr = devicePixelRatio;
+        // fit the rig (meta.size skeleton units) into zeusBox, bottom-aligned
+        const [sw, sh] = meta.size;
+        K = Math.min(zeusBox.w / sw, zeusBox.h / sh);
+        ZX = zeusBox.x + zeusBox.w / 2; ZY = zeusBox.y + zeusBox.h - (sh / 2) * K;
+        r.resize(spine.ResizeMode.Expand);
+        const cam = r.camera;
+        cam.zoom = 1 / (K * dpr);
+        cam.position.x = (innerWidth / 2 - ZX) / K;
+        cam.position.y = (ZY - innerHeight / 2) / K;
+        cam.update();
+        c.gl.clearColor(0, 0, 0, 0); c.gl.clear(c.gl.COLOR_BUFFER_BIT);
+        r.begin();
+        r.drawSkeleton(skel, true);
+        if (showBones) r.drawSkeletonDebug(skel, true);
+        r.end();
+        drawFx();
+      },
+    },
+  });
+
+  const toScreen = (bone) => { const b = skel.findBone(bone); return { x: ZX + b.worldX * K, y: ZY - b.worldY * K }; };
+
+  // ---------- lightning ----------
+  let bolts = [];   // {from, to, t0, dur, seed, hit}
+  function jagged(a, b, rough, depth, out) {
+    if (depth === 0) { out.push(b); return; }
+    const mx = (a.x + b.x) / 2 + (Math.random() - .5) * rough, my = (a.y + b.y) / 2 + (Math.random() - .5) * rough;
+    const m = { x: mx, y: my };
+    jagged(a, m, rough / 2, depth - 1, out); jagged(m, b, rough / 2, depth - 1, out);
+  }
+  function strokePath(pts, w, col, blur) {
+    g.beginPath(); g.moveTo(pts[0].x, pts[0].y); for (const p of pts) g.lineTo(p.x, p.y);
+    g.lineWidth = w; g.strokeStyle = col; g.shadowColor = '#7fe6ff'; g.shadowBlur = blur; g.stroke();
+  }
+  function drawFx() {
+    const dpr = devicePixelRatio;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, innerWidth, innerHeight);
+    const now = performance.now();
+    bolts = bolts.filter((b) => now - b.t0 < b.dur);
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    for (const b of bolts) {
+      const k = (now - b.t0) / b.dur;                     // 0..1
+      const reach = Math.min(1, k / 0.18);                // the bolt shoots out in the first 18%
+      const from = toScreen('bolt_tip');
+      const to = { x: from.x + (b.to.x - from.x) * reach, y: from.y + (b.to.y - from.y) * reach };
+      const alpha = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3;
+      for (let i = 0; i < 2; i++) {                        // re-jag every frame = crackling
+        const pts = [from]; const d = Math.hypot(to.x - from.x, to.y - from.y);
+        jagged(from, to, d * 0.22, 6, pts);
+        g.globalAlpha = alpha * (i ? 0.55 : 1);
+        strokePath(pts, i ? 10 : 4, i ? 'rgba(90,210,255,.5)' : '#f2feff', i ? 30 : 18);
+        // a branch
+        if (!i && Math.random() < 0.6) { const p = pts[(pts.length * (0.3 + Math.random() * 0.4)) | 0]; const br = [p]; jagged(p, { x: p.x + (Math.random() - .3) * 120, y: p.y + (Math.random() - .5) * 120 }, 30, 3, br); strokePath(br, 2, '#cff8ff', 12); }
+      }
+      if (reach >= 1 && !b.hit) { b.hit = true; hit(b.cell, b.mult); }
+    }
+    g.globalAlpha = 1; g.shadowBlur = 0;
+  }
+  function hit(cell, mult) {
+    cell.classList.remove('is-target');
+    cell.querySelector('.num').textContent = '×' + mult;
+    cell.classList.add('is-hit', 'is-flash');
+    setTimeout(() => cell.classList.remove('is-flash'), 520);
+  }
+  function release() {
+    const now = performance.now();
+    pending.forEach((cell, i) => {
+      const r = cell.getBoundingClientRect();
+      bolts.push({ cell, to: { x: r.left + r.width / 2, y: r.top + r.height / 2 }, t0: now + i * 90, dur: 650,
+        mult: MULTS[(Math.random() * MULTS.length) | 0] });
+    });
+    pending = [];
+  }
+
+  // ---------- controls ----------
+  function pickTargets(n) {
+    const picked = orbs.filter((c) => c.classList.contains('is-picked'));
+    const free = orbs.filter((c) => !c.classList.contains('is-hit'));
+    const list = (picked.length ? picked : (free.length ? free : orbs)).slice(0, n);
+    orbs.forEach((c) => c.classList.remove('is-picked'));
+    list.forEach((c) => { c.classList.remove('is-hit'); c.classList.add('is-target'); });
+    return list;
+  }
+  function doThrow(n) {
+    if (!state) return;
+    pending = pickTargets(n);
+    state.setAnimation(0, 'throw', false);
+    state.addAnimation(0, 'idle', true, 0);
+  }
+  document.getElementById('bThrow1').onclick = () => doThrow(1);
+  document.getElementById('bThrow3').onclick = () => doThrow(3);
+  document.getElementById('bCharge').onclick = () => { if (state) { state.setAnimation(0, 'charge', false); state.addAnimation(0, 'idle', true, 0); } };
+  document.getElementById('bReset').onclick = () => orbs.forEach((c) => c.classList.remove('is-hit', 'is-target', 'is-picked'));
+  document.getElementById('cTurn').onchange = (e) => { turnOn = e.target.checked; };
+  document.getElementById('rTurn').oninput = (e) => { turnV = +e.target.value; };
+  document.getElementById('rSpeed').oninput = (e) => { speed = +e.target.value; };
+  document.getElementById('cBones').onchange = (e) => { showBones = e.target.checked; };
+  addEventListener('resize', layout);
+  window.ZeusLab = { doThrow, get skel() { return skel; }, get state() { return state; } };
+})();
+</script>
+</body>
+</html>
