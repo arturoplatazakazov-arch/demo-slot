@@ -181,107 +181,155 @@ sz_s = np.bincount(lab_s.ravel()); sz_s[0] = 0
 sgm = np.isin(lab_s, np.where(sz_s > 800)[0])
 # the patch is taken from the ORIGINAL (bolt-free) image: its strap sits exactly on the original arm
 n0_, n1_, n2_ = NB[..., 0], NB[..., 1], NB[..., 2]
-ngold = (n0_ > 120) & (n1_ > 80) & (n2_ < 140) & (n0_ - n2_ > 45) & (poly(STRAP, 0) > 0.5)
-ngold = _bd(binary_closing(binary_opening(ngold, iterations=1), iterations=3), iterations=3) & (NB[..., 3] > 128)
+ngold = (n0_ > 15) & (n2_ < 0.18 * n0_ + 3) & (poly(STRAP, 0) > 0.5)   # gold: b/r < .12, skin: b/r > .29
+ngold = _bd(binary_closing(binary_opening(ngold, iterations=1), iterations=1), iterations=1) & (NB[..., 3] > 128)
 lab_n, _ = label(ngold)
 sz_n = np.bincount(lab_n.ravel()); sz_n[0] = 0
 ngold = np.isin(lab_n, np.where(sz_n > 800)[0])
 sgm = ngold
 save('strap', layer(NB, gaussian_filter(ngold.astype(float), 1.0)))
 
-# ---- arms from the bolt-free edit ----
-if UA is not None:
-    # clean upper arm: what the forearm-less edit keeps inside the upper-arm zone, grown to its rounded elbow
-    # upper arm = the bolt-free original inside a polygon whose top runs UNDER the shoulder strap.
-    # Where the forearm polygon overlaps it (the bracer's lower end) the pixels are repainted as skin
-    # from the biceps around it, inside a rounded elbow cap — no ghost bracer when the forearm turns.
-    import cv2
-    # the inner end now runs UNDER the shoulder strap and the diagonal strap (drawn over it as 'strap')
-    up = [(205, 578), (140, 592), (60, 612), (22, 650), (28, 720), (80, 775), (170, 795), (300, 805), (360, 822),
-          (398, 792), (432, 700), (470, 622), (492, 578), (420, 552), (330, 556)]
-    zone = poly(up, 1.2)
-    over = (poly(POLY['r_fore'], 0) > 0.5) & (zone > 0.5)
-    cap = Image.new('L', (W, H), 0)
-    ImageDraw.Draw(cap).ellipse((105 - 82, 612, 105 + 82, 708), fill=255)
-    cap = np.array(cap) > 0
-    solid = (NB[..., 3] > 200) & (zone > 0.5) & ~over          # trusted biceps skin
-    base = NB[..., :3].copy()
-    num = np.stack([gaussian_filter(base[..., c] * solid, 6) for c in range(3)], -1)
-    den = gaussian_filter(solid.astype(float), 6)[..., None]
-    base = np.where(solid[..., None], base, num / np.maximum(den, 1e-3))  # no black from transparent pixels
-    hole = over | (cap & ~solid)
-    rgb = cv2.inpaint(np.ascontiguousarray(np.clip(base, 0, 255).astype(np.uint8)), np.uint8(hole) * 255, 15, cv2.INPAINT_TELEA)
-    arm = NB.copy()
-    arm[..., :3] = np.where(hole[..., None], rgb, NB[..., :3])
-    alpha = np.maximum((NB[..., 3] / 255) * ~over, cap.astype(float))
-    alpha = np.where(over & ~cap, 0, alpha)
-    # gold of the straps that lay on the arm -> skin (the strap layer covers this band anyway)
-    a0, a1, a2 = arm[..., 0], arm[..., 1], arm[..., 2]
-    sgold = (a0 > 130) & (a1 > 85) & (a2 < 130) & (a0 - a2 > 55) & (zone > 0.3) & ~over
-    sgold = binary_closing(sgold, iterations=3)
-    from scipy.ndimage import binary_dilation
-    white = (np.minimum(np.minimum(a0, a1), a2) > 165) & (np.max(arm[..., :3], -1) - np.min(arm[..., :3], -1) < 50) & (zone > 0.3)
-    sg = binary_dilation(sgold | white, iterations=3) & (zone > 0.3)
-    rgb2 = cv2.inpaint(np.ascontiguousarray(np.clip(arm[..., :3], 0, 255).astype(np.uint8)), np.uint8(sg) * 255, 18, cv2.INPAINT_TELEA)
-    arm[..., :3] = np.where(sg[..., None], rgb2, arm[..., :3])
-    alpha = np.where(sg, np.maximum(alpha, (zone > 0.5).astype(float)), alpha)
-    # the arm's top edge ends 8 px UNDER the strap's lower edge (no repainted band peeking out above it)
-    strap_m = sgm & (np.arange(H)[:, None] < 640)
-    ys_idx = np.arange(H)[:, None].repeat(W, 1)
-    low = np.where(strap_m, ys_idx, -1).max(0)                         # strap bottom per column (-1 = none)
-    above = (ys_idx < (low[None, :] - 8)) & (low[None, :] > 0)
-    alpha = np.where(above & (np.arange(W)[None, :] > 200), 0, alpha)
-    dark = (arm[..., :3].sum(-1) < 200) & (np.arange(H)[:, None] < 660) & (np.arange(W)[None, :] < 230)  # bracer's shadow rim above the elbow cap
-    alpha = np.where(dark, 0, alpha)
-    arm[..., 3] = gaussian_filter(alpha, 1.0) * 255
-    save('r_upper', layer(arm, zone))
-else:
-    save('r_upper', layer(NB, poly(POLY['r_upper'])))
-from scipy.ndimage import binary_dilation as _bdf
-fore_m = _bdf(poly(POLY['r_fore'], 0) > 0.5, iterations=5)
-save('r_fore', layer(NB, gaussian_filter(fore_m.astype(float), 1.2)))
 save('l_fore', layer(NB, poly(POLY['l_fore'])))
+# ---- RIGHT ARM v6: a cut-out puppet, one rigid piece per joint, clothing on top of the joints ----
+#   r_upper  shoulder -> elbow (skin only; under the bracer the hidden top of the arm is painted in)
+#   r_bracer the gold bracer = forearm (pivot at the elbow); its bottom rim hides the elbow joint
+#   r_fist   fist + wrist that continues INTO the bracer (drawn under it; the bracer's top rim hides the wrist)
+#   strap    shoulder + diagonal straps (on the torso) drawn over the upper arm's root
+#   body     under the whole arm: the ARMLESS edit (cloak / tunic), so a moving arm uncovers clothing, not a hole
+import cv2
+from scipy.ndimage import binary_dilation as _bd2, distance_transform_edt
+yy, xx = np.mgrid[0:H, 0:W]
 
-# ---- BODY v3: the ORIGINAL (bolt-free) picture with its real shoulders and upper arm, so the arm's root
-# has no seam — the rig bends it as a mesh. Removed from it: the head (-> headless edit underneath the
-# separate head layer) and the right forearm/fist (separate layer); the bracer's lower end is replaced by
-# the skin elbow cap made above.
+
+def diffuse_fill(rgb, known, sigmas=(2, 5, 10, 20, 40, 80)):
+    """unknown pixels <- smooth continuation of the known colours (multi-scale normalised convolution)"""
+    out = rgb.copy()
+    k = known.astype(float)
+    filled = known.copy()
+    for s in sigmas:
+        num = np.stack([gaussian_filter(rgb[..., c] * k, s) for c in range(3)], -1)
+        den = gaussian_filter(k, s)
+        take = (~filled) & (den > 0.03)
+        est = num / np.maximum(den, 1e-6)[..., None]
+        out[take] = est[take]
+        filled |= take
+    return out
+
+
+def biggest(m):
+    lab_, _ = label(m)
+    sz = np.bincount(lab_.ravel()); sz[0] = 0
+    return lab_ == sz.argmax()
+
+
+r_, g_, b_ = NB[..., 0], NB[..., 1], NB[..., 2]
+gold_px = (r_ > 15) & (b_ < 0.18 * r_ + 3) & (NB[..., 3] > 100)
+skin_px = (r_ > 40) & (r_ > g_ + 10) & (g_ > b_) & (b_ >= 0.24 * r_) & (NB[..., 3] > 200)
+
+# -- bracer
+BRACER = [(132, 350), (165, 343), (205, 356), (234, 395), (238, 440), (232, 520), (234, 600), (206, 626), (140, 643),
+          (80, 641), (34, 624), (10, 596), (12, 555), (45, 490), (90, 420), (118, 375)]
+bz = poly(BRACER, 0) > 0.5
+br = binary_closing(gold_px & bz, iterations=3)
+br = binary_fill_holes(br) & bz
+br &= ~(binary_opening(skin_px, iterations=2) & (yy < 455))          # the top opening shows the wrist (fist layer)
+br = binary_opening(biggest(br), iterations=1)
+bracer = NB.copy()
+bracer[..., 3] = gaussian_filter(br.astype(float), 0.8) * 255
+save('r_bracer', bracer)
+
+# -- upper arm
+UP = [(255, 545), (300, 528), (380, 538), (455, 560), (484, 600), (462, 660), (430, 715), (380, 760), (330, 800),
+      (300, 812), (250, 808), (150, 798), (40, 778), (0, 728), (0, 560), (120, 530), (230, 525)]
+FILL = [(268, 547), (215, 556), (150, 568), (90, 583), (45, 600), (24, 624), (17, 660), (24, 700), (120, 700), (300, 660), (300, 540)]
+upz = poly(UP, 0) > 0.5
+under = _bd2(br, iterations=2) & upz
+rim = _bd2(br, iterations=7) & (NB[..., :3].mean(-1) < 95) & upz          # bracer's dark outline / contact shadow on the skin                                   # hidden behind the bracer
+fillz = (poly(FILL, 0) > 0.5) & under
+blue_px = (b_ > r_ + 10) & (b_ > 90)                                  # cloak below the arm stays on the body
+vis = (NB[..., 3] > 8) & upz & ~under & ~blue_px
+known = vis & ~_bd2(gold_px, iterations=3) & (NB[..., 3] > 200) & ~rim
+rgb = diffuse_fill(NB[..., :3], known)
+hole_ = ~known
+sm = np.stack([gaussian_filter(rgb[..., c], 7) for c in range(3)], -1)     # no ring steps from the fill scales
+fb = np.clip(distance_transform_edt(hole_) / 6.0, 0, 1)[..., None]
+rgb = np.where(known[..., None], NB[..., :3], rgb * (1 - fb) + sm * fb)
+sil = vis | fillz
+# painted part: round the limb — darker toward its outline, as the visible biceps is
+d = distance_transform_edt(binary_fill_holes(sil))
+shade = 0.74 + 0.26 * np.clip(d / 30.0, 0, 1)
+rgb = np.where(fillz[..., None], rgb * shade[..., None], rgb)
+alpha = np.where(vis, NB[..., 3] / 255.0, 0.0)
+alpha = np.maximum(alpha, gaussian_filter(fillz.astype(float), 1.0) * (binary_fill_holes(sil)))
+alpha *= gaussian_filter(biggest(alpha > 0.5).astype(float), 0.7) > 0.02   # no loose bracer flecks
+# root: fades out over ~60 px toward the shoulder pivot — the body keeps the original skin there, so a few
+# degrees of shoulder rotation slide skin over the same skin (no cut line on the chest)
+PIV = np.array([405.0, 625.0]); AX = np.array([-0.985, 0.17])
+u = (xx - PIV[0]) * AX[0] + (yy - PIV[1]) * AX[1]
+root_w = np.clip((u - 10) / 60.0, 0, 1)
+root_w = root_w * root_w * (3 - 2 * root_w)
+alpha_full = alpha.copy()
+alpha = alpha * root_w
+# the root ends 8 px UNDER the shoulder strap's lower edge (the strap layer covers the cut)
+strap_top = ngold & (yy < 640)
+low = np.where(strap_top, yy, -1).max(0)
+alpha = np.where((yy < low[None, :] - 8) & (low[None, :] > 0) & (xx > 240), 0, alpha)
+up_img = NB.copy()
+up_img[..., :3] = rgb
+up_img[..., 3] = np.clip(alpha, 0, 1) * 255
+save('r_upper', up_img)
+
+# -- fist (+ wrist under the bracer)
+FIST = [(138, 335), (160, 282), (200, 240), (260, 220), (334, 243), (372, 295), (370, 352), (334, 400), (272, 432),
+        (234, 447), (205, 430), (170, 398)]
+WRIST = [(136, 340), (210, 380), (234, 418), (228, 495), (150, 478), (118, 425)]
+fz = poly(FIST, 0) > 0.5
+from scipy.ndimage import binary_erosion as _be
+wz = (poly(WRIST, 0) > 0.5) & _be(bz, iterations=7)          # stays inside the bracer
+fvis = fz & (NB[..., 3] > 8) & ~br
+fknown = fvis & ~_bd2(gold_px, iterations=2) & (NB[..., 3] > 200)
+frgb = diffuse_fill(NB[..., :3], fknown)
+frgb = np.where(fknown[..., None], NB[..., :3], frgb)
+fal = np.where(fvis, NB[..., 3] / 255.0, 0.0)
+fal = np.maximum(fal, gaussian_filter((wz | (fz & br)).astype(float), 1.0))
+fist = NB.copy()
+fist[..., :3] = frgb
+fist[..., 3] = np.clip(fal, 0, 1) * 255
+save('r_fist', fist)
+
+# -- body: the original with head swap (as before) but the whole right arm replaced by the armless edit
 body = NB.copy()
-from scipy.ndimage import binary_dilation as _bd2
-import cv2 as _cv
-# under the head layer only (grown 6 px): the headless edit's neck/collar, with its grey smudges repainted
 R = _bd2(hm > 0.05, iterations=6)
-lum = HL[..., :3].mean(-1)
-sat = np.max(HL[..., :3], -1) - np.min(HL[..., :3], -1)
 hr_, hg_, hb_ = HL[..., 0], HL[..., 1], HL[..., 2]
+sat = np.max(HL[..., :3], -1) - np.min(HL[..., :3], -1)
 is_skin = (hr_ > 110) & (hr_ > hg_ + 10) & (hg_ > hb_) & (hr_ - hb_ > 40)
 is_cloak = (hb_ - hr_ > 40) & (sat > 60)
 is_gold = (hr_ > 130) & (hg_ > 90) & (hb_ < 130) & (hr_ - hb_ > 55)
-is_white = (np.minimum(np.minimum(hr_, hg_), hb_) > 200)                       # tunic
+is_white = (np.minimum(np.minimum(hr_, hg_), hb_) > 200)
 smudge = R & ~(is_skin | is_cloak | is_gold | is_white) & (HL[..., 3] > 100)
-hl_rgb = _cv.inpaint(np.ascontiguousarray(np.clip(HL[..., :3], 0, 255).astype(np.uint8)), np.uint8(_bd2(smudge, iterations=2)) * 255, 8, _cv.INPAINT_TELEA)
+hl_rgb = cv2.inpaint(np.ascontiguousarray(np.clip(HL[..., :3], 0, 255).astype(np.uint8)), np.uint8(_bd2(smudge, iterations=2)) * 255, 8, cv2.INPAINT_TELEA)
 HLc = HL.copy(); HLc[..., :3] = hl_rgb
-# outside it the ORIGINAL stays (cloak over the shoulder keeps its shape); loose light hair strands of the
-# original lying on the cloak/skin just outside the head are repainted from their surroundings
 ring = _bd2(R, iterations=40) & ~R & (poly(POLY['head_zone'], 0) > 0.5)
 nlum = NB[..., :3].mean(-1)
 nsat = np.max(NB[..., :3], -1) - np.min(NB[..., :3], -1)
 strands = ring & (nsat < 55) & (nlum > 140) & (NB[..., 3] > 100)
-nb_rgb = _cv.inpaint(np.ascontiguousarray(np.clip(NB[..., :3], 0, 255).astype(np.uint8)), np.uint8(_bd2(strands, iterations=2)) * 255, 8, _cv.INPAINT_TELEA)
-body = NB.copy(); body[..., :3] = nb_rgb
+nb_rgb = cv2.inpaint(np.ascontiguousarray(np.clip(NB[..., :3], 0, 255).astype(np.uint8)), np.uint8(_bd2(strands, iterations=2)) * 255, 8, cv2.INPAINT_TELEA)
+body[..., :3] = nb_rgb
 hmask = gaussian_filter(R.astype(float), 1.5)
 body[..., :3] = body[..., :3] * (1 - hmask[..., None]) + HLc[..., :3] * hmask[..., None]
 body[..., 3] = body[..., 3] * (1 - hmask) + HLc[..., 3] * hmask
-fore = poly(POLY['r_fore'], 1.5)
-cap_rgb = arm[..., :3] if UA is not None else NB[..., :3]
-cap_a = (arm[..., 3] / 255.0) if UA is not None else np.zeros((H, W))
-# under the forearm: the forearm-less ChatGPT edit (a real painted elbow, sky around it, no bracer bits)
-if UA is not None:
-    fill_rgb, fill_a = UA[..., :3], UA[..., 3] / 255.0
-else:
-    fill_rgb, fill_a = cap_rgb, cap_a
-body[..., :3] = body[..., :3] * (1 - fore[..., None]) + fill_rgb * fore[..., None]
-body[..., 3] = body[..., 3] * (1 - fore) + fill_a * 255 * fore
+# armless edit, its electric-cyan rim light toned down to the cloak's royal blue
+NAc = NA.copy()
+n0, n1, n2 = NA[..., 0], NA[..., 1], NA[..., 2]
+cy = np.clip((n1 - n0 - 40) / 80.0, 0, 1) * np.clip((n2 - 120) / 80.0, 0, 1)
+blue = np.array([28, 58, 170], float) * (0.55 + 0.45 * np.clip(NA[..., :3].mean(-1) / 200.0, 0, 1))[..., None]
+NAc[..., :3] = NA[..., :3] * (1 - cy[..., None] * 0.85) + blue * cy[..., None] * 0.85
+armz = br | (fist[..., 3] > 10) | (poly(BRACER, 0) > 0.5) | (poly(FIST, 0) > 0.5)
+armz = _bd2(armz, iterations=10) & ~R
+am = np.maximum(gaussian_filter(armz.astype(float), 2.0), np.clip(alpha_full * root_w / 0.97, 0, 1) * (gaussian_filter(_bd2(alpha_full > 0.02, iterations=6).astype(float), 2.0)))
+am = np.where(upz & (root_w > 0.99), np.maximum(am, gaussian_filter(_bd2(alpha_full > 0.02, iterations=6).astype(float), 2.0)), am)
+body[..., :3] = body[..., :3] * (1 - am[..., None]) + NAc[..., :3] * am[..., None]
+body[..., 3] = body[..., 3] * (1 - am) + NAc[..., 3] * am
 save('body', body)
 # fingers in FRONT of the plasma ball (the palm stays behind it)
 FING = [(888, 965), (893, 880), (960, 848), (1060, 810), (1150, 798), (1180, 850), (1172, 930), (1100, 938), (1020, 944), (950, 955)]
@@ -316,7 +364,7 @@ bolt_img = Image.new('L', (W * 4, H * 4), 0)
 ImageDraw.Draw(bolt_img).polygon([tuple((B0 + ax * u * L + nv * v * L) * 4) for u, v in ZZ], fill=255)
 zz = np.array(bolt_img.resize((W, H), Image.LANCZOS)) / 255.0
 upper = (np.arange(H)[:, None] < 300) | ((np.arange(W)[None, :] > 330) & (np.arange(H)[:, None] < 360))
-coremask = (coremask & ~upper) | (zz > 0.5)
+coremask = zz > 0.5          # only the zig-zag from the fist up: no spike across the bracer
 cs = np.clip((gaussian_filter(coremask.astype(float), 1.0) - 0.25) / 0.5, 0, 1)
 cs = np.maximum(cs, zz * (zz > 0.02))
 g1 = np.clip(gaussian_filter(coremask.astype(float), 7) * 2.2, 0, 1)
@@ -343,7 +391,7 @@ for nm, zone in (('orb', 'orb_zone'),):
     save(nm, fx)
 
 # ---- check: re-assemble in rig order over grey ----
-order = ['body', 'l_fore', 'orb', 'head', 'r_upper', 'r_fore', 'bolt']
+order = ['body', 'l_fore', 'orb', 'head', 'r_upper', 'strap', 'bolt', 'r_fist', 'r_bracer']
 comp = Image.new('RGBA', (W, H), (60, 60, 68, 255))
 for nm in order:
     comp.alpha_composite(Image.open(os.path.join(OUT, f'p_{nm}.png')))

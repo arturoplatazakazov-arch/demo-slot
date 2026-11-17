@@ -59,7 +59,7 @@ rig = Rig('zeus_rig', W * S, H * S, OUT, res=1 / S)
 # ---------------------------------------------------------------- bones ----
 J = {'hips': (560, 1090), 'chest': (560, 760), 'neck': (640, 560), 'beard': (700, 470),
      'hair_l': (420, 380), 'hair_r': (860, 420),
-     'r_shoulder': (300, 585), 'r_elbow': (70, 655), 'r_fist': (285, 330),
+     'r_shoulder': (405, 625), 'r_elbow': (115, 640), 'r_wrist': (188, 405), 'r_fist': (285, 330),
      'l_elbow': (900, 1090), 'orb': (1010, 795), 'cloak_l': (240, 800), 'cloak_r': (900, 700)}
 B = rig.bone_at
 B('hips', 'root', *sk(*J['hips']))
@@ -76,7 +76,7 @@ B('cloak_l', 'hips', *sk(*J['cloak_l']))
 B('cloak_r', 'chest', *sk(*J['cloak_r']))
 B('r_shoulder', 'chest_f', *sk(*J['r_shoulder']))
 B('r_elbow', 'r_shoulder', *sk(*J['r_elbow']))
-B('r_fist', 'r_elbow', *sk(*J['r_fist']))
+B('r_fist', 'r_elbow', *sk(*J['r_wrist']))
 B('bolt', 'r_fist', *sk(*J['r_fist']))
 B('bolt_tip', 'r_fist', *sk(330, 250))         # thrown lightning starts here (the lab reads it)
 B('l_elbow', 'chest_f', *sk(*J['l_elbow']))
@@ -125,7 +125,7 @@ def body_w(px, py):
     x, y = img_xy(px, py)
     ua, lfa = arm_maps()
     xi, yi = int(min(max(x, 0), W - 1)), int(min(max(y, 0), H - 1))
-    rs, le = float(ua[yi, xi]), float(lfa[yi, xi])
+    rs, le = 0.0, float(lfa[yi, xi])   # right arm = separate rigid parts now
     chest = 1 - sstep(820, 990, y)
     hips = 1 - chest
     cl = hips * sstep(330, 120, x) * sstep(820, 1000, y) + chest * sstep(300, 90, x) * sstep(700, 880, y) * (1 - rs)
@@ -230,9 +230,13 @@ region('l_fingers', 'l_elbow', 'l_fingers')
 mesh('head', ['head'], head_w, 14, 14, 'head')
 # emotions = the same head mesh on a FACE slot above it, cross-faded in ~50 ms (no visible swap)
 mesh('face', ['head_blink', 'head_shout'], head_w, 14, 14, 'head', box_of='head', color='ffffff00')
-region('r_fore', 'r_elbow', 'r_fore')
+# right arm, one rigid piece per joint; the strap (torso) covers the shoulder root, the bracer's rims cover elbow and wrist
+region('r_upper', 'r_shoulder', 'r_upper')
+region('strap', 'chest_f', 'strap')
 region('bolt', 'bolt', 'bolt')
 region('bolt_glow', 'bolt', 'bolt_glow', blend='additive', src='bolt')
+region('r_fist', 'r_fist', 'r_fist')
+region('r_bracer', 'r_elbow', 'r_bracer')
 rig.event('release')
 
 
@@ -285,11 +289,10 @@ T_REL = 0.60
 a = rig.anim('throw', 1.8)
 breathe(a, k=0.5)
 plasma(a)
-a.bone('r_shoulder', 'rotate', lambda t: keys(t, [(0, 0), (0.45, -5), (0.62, 4), (0.9, 3), (1.8, 0)]))
-a.bone('r_shoulder', 'scale', lambda t: (keys(t, [(0, 1), (0.45, 0.9), (0.62, 1.07), (0.95, 1.03), (1.8, 1)]), 1))
-a.bone('r_elbow', 'rotate', lambda t: keys(t, [(0, 0), (0.45, 40), (0.52, 32), (0.62, -28), (0.9, -24), (1.8, 0)]))
-a.bone('r_elbow', 'scale', lambda t: (keys(t, [(0, 1), (0.45, 0.93), (0.62, 1.08), (0.95, 1.04), (1.8, 1)]),) * 2)
-a.bone('r_fist', 'rotate', lambda t: keys(t, [(0, 0), (0.45, 14), (0.62, -16), (1.0, -10), (1.8, 0)]))
+a.bone('r_shoulder', 'rotate', lambda t: keys(t, [(0, 0), (0.45, -8), (0.62, 7), (0.9, 5), (1.8, 0)]))
+a.bone('r_elbow', 'rotate', lambda t: keys(t, [(0, 0), (0.45, 20), (0.52, 16), (0.62, -18), (0.9, -14), (1.8, 0)]))
+a.bone('r_elbow', 'scale', lambda t: (keys(t, [(0, 1), (0.45, 0.96), (0.62, 1.04), (0.95, 1.02), (1.8, 1)]),) * 2)
+a.bone('r_fist', 'rotate', lambda t: keys(t, [(0, 0), (0.45, 18), (0.62, -20), (1.0, -12), (1.8, 0)]))
 a.bone('chest', 'rotate', lambda t: keys(t, [(0, 0), (0.45, 2.5), (0.66, -3.5), (1.8, 0)]))
 a.bone('hips', 'translate', lambda t: (keys(t, [(0, 0), (0.45, -6), (0.66, 9), (1.8, 0)]), 0))
 a.bone('head', 'rotate', lambda t: keys(t, [(0, 0), (0.45, 3), (0.66, -4), (1.2, -2), (1.8, 0)]))
@@ -304,8 +307,8 @@ a.event('release', T_REL)
 a = rig.anim('win', 2.2)
 breathe(a, k=0.6)
 plasma(a, lambda t: math.sin(math.pi * clamp((t - 0.2) / 1.6)))
-a.bone('r_shoulder', 'rotate', lambda t: keys(t, [(0, 0), (0.35, -4), (0.55, -3), (1.6, -3), (2.2, 0)]))
-a.bone('r_elbow', 'rotate', lambda t: keys(t, [(0, 0), (0.35, 28), (0.5, 24), (1.6, 24), (2.2, 0)]))
+a.bone('r_shoulder', 'rotate', lambda t: keys(t, [(0, 0), (0.35, -7), (0.55, -6), (1.6, -6), (2.2, 0)]))
+a.bone('r_elbow', 'rotate', lambda t: keys(t, [(0, 0), (0.35, 16), (0.5, 13), (1.6, 13), (2.2, 0)]))
 a.bone('r_fist', 'rotate', lambda t: 4 * math.sin(TAU * t / 0.35) * clamp((t - 0.5) / 0.2) * (1 - clamp((t - 1.5) / 0.3)))
 a.bone('chest', 'scale', lambda t: (1, 1 + 0.03 * math.sin(math.pi * clamp(t / 2.0))))
 a.bone('head', 'rotate', lambda t: keys(t, [(0, 0), (0.35, 5), (1.6, 4), (2.2, 0)]))
