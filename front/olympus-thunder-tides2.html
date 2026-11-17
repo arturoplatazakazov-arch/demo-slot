@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/preloader.css?v=1">
 <link rel="stylesheet" href="css/olympus-thunder.css?v=22">
-<link rel="stylesheet" href="css/olympus-thunder-tides2.css?v=11">
+<link rel="stylesheet" href="css/olympus-thunder-tides2.css?v=12">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Marcellus+SC&family=Forum&display=swap">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
@@ -175,6 +175,7 @@
       <div class="v3-group">
         <div class="v3-menu">
           <div class="v3-menu__flyout" id="v3Flyout">
+            <button class="ui-icon-btn v3-btn v3-btn--buy" id="v3BuyBtn" type="button" aria-label="Buy Bonus"><svg viewBox="0 0 24 24"><path d="M5 8.2h14l-1.2 11.6a1.6 1.6 0 0 1-1.6 1.4H7.8a1.6 1.6 0 0 1-1.6-1.4L5 8.2Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M9 8.2V7a3 3 0 0 1 6 0v1.2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M12.9 10.6 9.8 15h2.3l-1 3.4 3.3-4.6h-2.3l.8-3.2Z" fill="currentColor"/></svg></button>
             <button class="ui-icon-btn v3-btn" data-action="home" type="button" aria-label="В каталог">
               <svg viewBox="0 0 24 24"><path d="M3 11.4 12 4l9 7.4" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.6 10v9.2h4.2v-5.6h4.4v5.6h4.2V10" fill="currentColor" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"/></svg>
             </button>
@@ -257,6 +258,13 @@
   <script src="js/olympus-thunder/ui.js?v=7"></script>
   <script src="js/olympus-thunder/game.js?v=12"></script>
   <script src="js/ui-bar-v3.js?v=4"></script>
+<script>
+  document.getElementById('v3BuyBtn').addEventListener('click', function () {
+    var m = document.getElementById('v3MenuBtn');
+    if (m.getAttribute('aria-expanded') === 'true') m.click();   // close the flyout
+    document.getElementById('buyBtn').click();                     // same handler as the old Buy Bonus button
+  });
+</script>
 <script>
   (function () {
     var b = document.body.dataset, q = new URLSearchParams(location.search);

@@ -222,3 +222,12 @@ body[data-var="tides2"] .zeus__fallback { animation: t2-zeus-glow 3.2s ease-in-o
   0%, 100% { filter: drop-shadow(0 0 10px rgba(110, 220, 255, .35)); }
   50% { filter: drop-shadow(0 0 26px rgba(150, 235, 255, .7)) brightness(1.04); }
 }
+
+/* ---------- Buy Bonus as the first item of the bar menu (4 items: re-stagger the fly-out) ---------- */
+body[data-var="tides2"] .v3-menu.is-open .v3-menu__flyout > .v3-btn:nth-child(4) { transition-delay: 0s; }
+body[data-var="tides2"] .v3-menu.is-open .v3-menu__flyout > .v3-btn:nth-child(3) { transition-delay: .05s; }
+body[data-var="tides2"] .v3-menu.is-open .v3-menu__flyout > .v3-btn:nth-child(2) { transition-delay: .1s; }
+body[data-var="tides2"] .v3-menu.is-open .v3-menu__flyout > .v3-btn:nth-child(1) { transition-delay: .15s; }
+body[data-var="tides2"] .v3-bar .ui-icon-btn.v3-btn--buy { color: #ffd75a; border-color: #ffd75a; box-shadow: 0 0 12px rgba(255, 200, 60, .45); }
+body[data-var="tides2"] .screen[data-mode="fs"] ~ .v3-bar .v3-btn--buy,
+body[data-var="tides2"].is-busy .v3-bar .v3-btn--buy { opacity: .35 !important; pointer-events: none !important; }
