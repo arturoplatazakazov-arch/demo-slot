@@ -36,6 +36,7 @@ body = (f'<body data-game-id="olympus-thunder" data-var="tides2" data-under="gla
     var q = new URLSearchParams(location.search), b = document.body.dataset;
     if (q.get('under')) b.under = q.get('under');
     if (q.get('title')) b.title = q.get('title');
+    if (q.get('bgm') === 'a' || q.get('bgm') === 'b') b.sky = 'tides2/sky.jpg?v=""" + str(V) + """|tides2/sky_mob_' + q.get('bgm') + '.jpg?v=""" + str(V) + """';
     if (q.get('clean')) b.clean = '1';
     if (q.get('shot')) { b.clean = '1'; document.head.insertAdjacentHTML('beforeend', '<style>#access-gate,#preloader{display:none!important}</style>'); }
     if (q.get('low') === 'letters') { b.low = 'letters'; b.symbols = '""" + T + """symbols_letters/'; }
@@ -97,19 +98,20 @@ h = h.replace('<div class="screen" id="screen"', """<div class="demo-switch" id=
     <div><b>Low</b><button data-k="low" data-v="gems">Gems</button><button data-k="low" data-v="letters">Letters</button></div>
     <div><b>Title</b><button data-k="title" data-v="1">1</button><button data-k="title" data-v="2">2</button><button data-k="title" data-v="3">3</button></div>
     <div><b>Zeus</b><button data-k="hero" data-v="a">A</button><button data-k="hero" data-v="b">B</button></div>
+    <div><b>Mob BG</b><button data-k="bgm" data-v="0">Base</button><button data-k="bgm" data-v="a">A</button><button data-k="bgm" data-v="b">B</button></div>
   </div>
   <div class="screen" id="screen\"""", 1)
 h = h.replace("</body>", """<script>
   (function () {
     var b = document.body.dataset, q = new URLSearchParams(location.search);
-    var cur = { under: b.under, low: b.low, title: b.title, hero: q.get('hero') === 'b' ? 'b' : 'a' };
+    var cur = { under: b.under, low: b.low, title: b.title, hero: q.get('hero') === 'b' ? 'b' : 'a', bgm: q.get('bgm') || '0' };
     var box = document.getElementById('demoSwitch');
     function paint() { box.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', cur[x.dataset.k] === x.dataset.v); }); }
     box.addEventListener('click', function (e) {
       var x = e.target.closest('button'); if (!x) return;
       cur[x.dataset.k] = x.dataset.v;
       q.set(x.dataset.k, x.dataset.v); history.replaceState(null, '', '?' + q);
-      if (x.dataset.k === 'low' || x.dataset.k === 'hero') { location.reload(); return; }  // symbol set / hero are read at start
+      if (x.dataset.k === 'low' || x.dataset.k === 'hero' || x.dataset.k === 'bgm') { location.reload(); return; }  // symbol set / hero are read at start
       b[x.dataset.k] = x.dataset.v; paint();
     });
     paint();

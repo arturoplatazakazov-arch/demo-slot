@@ -113,6 +113,10 @@ def bg():
     save(d, "sky.jpg", q=86)
     m = raw("S", "bg_mob"); m = m.resize((1080, round(m.size[1] * 1080 / m.size[0])), Image.LANCZOS)
     save(m, "sky_mob.jpg", q=86)
+    for k in ("a", "b"):   # mobile backgrounds with a filled lower third (client: "the bottom is empty")
+        if (RAW / "S" / f"bg_mob_{k}.png").exists():
+            m = raw("S", f"bg_mob_{k}"); m = m.resize((1080, round(m.size[1] * 1080 / m.size[0])), Image.LANCZOS)
+            save(m, f"sky_mob_{k}.jpg", q=86)
 
 
 def bands(im, n):
