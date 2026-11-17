@@ -145,6 +145,14 @@ lab_m, _ = label(m)
 sz_m = np.bincount(lab_m.ravel()); sz_m[0] = 0
 m = lab_m == sz_m.argmax()                       # one piece: no loose crumbs along the beard / collar
 m = binary_fill_holes(binary_closing(m, iterations=3))
+# neck skin between the beard strands belongs to the body's neck, not to the moving head
+sk0, sk1, sk2 = NA[..., 0], NA[..., 1], NA[..., 2]
+neck_skin = (sk0 > 120) & (sk0 > sk1 + 10) & (sk1 > sk2) & (sk0 - sk2 > 45) & (np.arange(H)[:, None] > 470)
+neck_skin &= ~(poly(POLY['face'], 0) > 0.5)
+m &= ~binary_opening(neck_skin, iterations=1)
+lab_m2, _ = label(m)
+sz_m2 = np.bincount(lab_m2.ravel()); sz_m2[0] = 0
+m = lab_m2 == sz_m2.argmax()
 hm = gaussian_filter(m.astype(float), 1.2)
 # outer hair edge: where nothing of the body is behind the head, keep the painting's own soft alpha
 from scipy.ndimage import maximum_filter
@@ -229,7 +237,9 @@ if UA is not None:
     save('r_upper', layer(arm, zone))
 else:
     save('r_upper', layer(NB, poly(POLY['r_upper'])))
-save('r_fore', layer(NB, poly(POLY['r_fore'])))
+from scipy.ndimage import binary_dilation as _bdf
+fore_m = _bdf(poly(POLY['r_fore'], 0) > 0.5, iterations=5)
+save('r_fore', layer(NB, gaussian_filter(fore_m.astype(float), 1.2)))
 save('l_fore', layer(NB, poly(POLY['l_fore'])))
 
 # ---- BODY v3: the ORIGINAL (bolt-free) picture with its real shoulders and upper arm, so the arm's root
@@ -243,7 +253,12 @@ import cv2 as _cv
 R = _bd2(hm > 0.05, iterations=6)
 lum = HL[..., :3].mean(-1)
 sat = np.max(HL[..., :3], -1) - np.min(HL[..., :3], -1)
-smudge = R & (sat < 40) & (lum > 50) & (lum < 215) & (HL[..., 3] > 100)
+hr_, hg_, hb_ = HL[..., 0], HL[..., 1], HL[..., 2]
+is_skin = (hr_ > 110) & (hr_ > hg_ + 10) & (hg_ > hb_) & (hr_ - hb_ > 40)
+is_cloak = (hb_ - hr_ > 40) & (sat > 60)
+is_gold = (hr_ > 130) & (hg_ > 90) & (hb_ < 130) & (hr_ - hb_ > 55)
+is_white = (np.minimum(np.minimum(hr_, hg_), hb_) > 200)                       # tunic
+smudge = R & ~(is_skin | is_cloak | is_gold | is_white) & (HL[..., 3] > 100)
 hl_rgb = _cv.inpaint(np.ascontiguousarray(np.clip(HL[..., :3], 0, 255).astype(np.uint8)), np.uint8(_bd2(smudge, iterations=2)) * 255, 8, _cv.INPAINT_TELEA)
 HLc = HL.copy(); HLc[..., :3] = hl_rgb
 # outside it the ORIGINAL stays (cloak over the shoulder keeps its shape); loose light hair strands of the
@@ -260,16 +275,21 @@ body[..., 3] = body[..., 3] * (1 - hmask) + HLc[..., 3] * hmask
 fore = poly(POLY['r_fore'], 1.5)
 cap_rgb = arm[..., :3] if UA is not None else NB[..., :3]
 cap_a = (arm[..., 3] / 255.0) if UA is not None else np.zeros((H, W))
-cap_a = cap_a * (np.arange(H)[:, None] > 560)                           # only the elbow end, not the fist area
-body[..., :3] = body[..., :3] * (1 - fore[..., None]) + cap_rgb * fore[..., None]
-body[..., 3] = body[..., 3] * (1 - fore) + cap_a * 255 * fore
+# under the forearm: the forearm-less ChatGPT edit (a real painted elbow, sky around it, no bracer bits)
+if UA is not None:
+    fill_rgb, fill_a = UA[..., :3], UA[..., 3] / 255.0
+else:
+    fill_rgb, fill_a = cap_rgb, cap_a
+body[..., :3] = body[..., :3] * (1 - fore[..., None]) + fill_rgb * fore[..., None]
+body[..., 3] = body[..., 3] * (1 - fore) + fill_a * 255 * fore
 save('body', body)
 # fingers in FRONT of the plasma ball (the palm stays behind it)
 FING = [(888, 965), (893, 880), (960, 848), (1060, 810), (1150, 798), (1180, 850), (1172, 930), (1100, 938), (1020, 944), (950, 955)]
 k0, k1, k2 = NB[..., 0], NB[..., 1], NB[..., 2]
 skin = (k0 > 110) & (k0 > k1 + 8) & (k1 > k2) & (k0 - k2 > 35)          # fingers only, not the cloak behind them
 skin = binary_closing(binary_opening(skin, iterations=1), iterations=2)
-fa = poly(POLY['l_fore']) * poly(FING, 3) * gaussian_filter(skin.astype(float), 1.0) * (NB[..., 3] / 255)
+HAND = [(880, 1000), (888, 880), (960, 845), (1060, 808), (1150, 795), (1182, 850), (1172, 980), (1150, 1050), (1060, 1075), (960, 1070)]
+fa = poly(POLY['l_fore']) * poly(HAND, 3) * gaussian_filter(skin.astype(float), 1.0) * (NB[..., 3] / 255)
 solid_f = binary_opening(fa > 0.35, iterations=3)                   # no 1-2 px threads along the polygon edge
 lab_f, _ = label(solid_f)
 sz_f = np.bincount(lab_f.ravel()); sz_f[0] = 0

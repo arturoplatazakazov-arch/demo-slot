@@ -3,9 +3,9 @@ size:1967,1968
 filter:Linear,Linear
 pma:true
 body
-bounds:0,0,1164,982
+bounds:0,0,1163,982
 bolt
-bounds:1174,0,683,666
+bounds:1173,0,683,666
 bolt_glow
 bounds:0,992,683,666
 head
@@ -23,13 +23,13 @@ bounds:930,1668,300,300
 plasma_core
 bounds:1240,1668,300,300
 l_fingers
-bounds:1550,1668,271,164
+bounds:1550,1668,277,276
 
 animation2.webp
-size:996,473
+size:998,473
 filter:Linear,Linear
 pma:true
 head_shout
 bounds:0,0,627,473
 r_fore
-bounds:637,0,349,451
+bounds:637,0,351,456

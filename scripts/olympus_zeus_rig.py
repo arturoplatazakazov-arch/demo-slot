@@ -60,7 +60,7 @@ rig = Rig('zeus_rig', W * S, H * S, OUT, res=1 / S)
 J = {'hips': (560, 1090), 'chest': (560, 760), 'neck': (640, 560), 'beard': (700, 470),
      'hair_l': (420, 380), 'hair_r': (860, 420),
      'r_shoulder': (300, 585), 'r_elbow': (70, 655), 'r_fist': (285, 330),
-     'l_elbow': (900, 1090), 'orb': (1008, 830), 'cloak_l': (240, 800), 'cloak_r': (900, 700)}
+     'l_elbow': (900, 1090), 'orb': (1010, 795), 'cloak_l': (240, 800), 'cloak_r': (900, 700)}
 B = rig.bone_at
 B('hips', 'root', *sk(*J['hips']))
 B('chest', 'hips', *sk(*J['chest']))
@@ -112,7 +112,12 @@ def arm_maps():
               (392, 780), (412, 690), (420, 612), (380, 575), (330, 560)]
         lf = [(855, 1150), (866, 1030), (888, 955), (905, 880), (960, 850), (1060, 812), (1150, 800), (1178, 850),
               (1168, 980), (1160, 1100), (1120, 1152), (990, 1162)]
-        _ARM = (m(up, 22), m(lf, 18))
+        ua = m(up, 22)
+        yy, xx = np.mgrid[0:H, 0:W]
+        # the shoulder strap / cloak above the arm stay on the torso: no arm weight above the strap's lower edge
+        ramp = np.clip((yy - 555) / 70.0, 0, 1) ** 1.5
+        ramp = np.where(xx < 150, 1.0, ramp)
+        _ARM = (ua * ramp, m(lf, 18))
     return _ARM
 
 
@@ -280,9 +285,9 @@ T_REL = 0.60
 a = rig.anim('throw', 1.8)
 breathe(a, k=0.5)
 plasma(a)
-a.bone('r_shoulder', 'rotate', lambda t: keys(t, [(0, 0), (0.45, -12), (0.62, 6), (0.9, 4), (1.8, 0)]))
+a.bone('r_shoulder', 'rotate', lambda t: keys(t, [(0, 0), (0.45, -5), (0.62, 4), (0.9, 3), (1.8, 0)]))
 a.bone('r_shoulder', 'scale', lambda t: (keys(t, [(0, 1), (0.45, 0.9), (0.62, 1.07), (0.95, 1.03), (1.8, 1)]), 1))
-a.bone('r_elbow', 'rotate', lambda t: keys(t, [(0, 0), (0.45, 34), (0.52, 26), (0.62, -24), (0.9, -20), (1.8, 0)]))
+a.bone('r_elbow', 'rotate', lambda t: keys(t, [(0, 0), (0.45, 40), (0.52, 32), (0.62, -28), (0.9, -24), (1.8, 0)]))
 a.bone('r_elbow', 'scale', lambda t: (keys(t, [(0, 1), (0.45, 0.93), (0.62, 1.08), (0.95, 1.04), (1.8, 1)]),) * 2)
 a.bone('r_fist', 'rotate', lambda t: keys(t, [(0, 0), (0.45, 14), (0.62, -16), (1.0, -10), (1.8, 0)]))
 a.bone('chest', 'rotate', lambda t: keys(t, [(0, 0), (0.45, 2.5), (0.66, -3.5), (1.8, 0)]))
@@ -299,8 +304,8 @@ a.event('release', T_REL)
 a = rig.anim('win', 2.2)
 breathe(a, k=0.6)
 plasma(a, lambda t: math.sin(math.pi * clamp((t - 0.2) / 1.6)))
-a.bone('r_shoulder', 'rotate', lambda t: keys(t, [(0, 0), (0.35, -10), (0.55, -8), (1.6, -8), (2.2, 0)]))
-a.bone('r_elbow', 'rotate', lambda t: keys(t, [(0, 0), (0.35, 24), (0.5, 20), (1.6, 20), (2.2, 0)]))
+a.bone('r_shoulder', 'rotate', lambda t: keys(t, [(0, 0), (0.35, -4), (0.55, -3), (1.6, -3), (2.2, 0)]))
+a.bone('r_elbow', 'rotate', lambda t: keys(t, [(0, 0), (0.35, 28), (0.5, 24), (1.6, 24), (2.2, 0)]))
 a.bone('r_fist', 'rotate', lambda t: 4 * math.sin(TAU * t / 0.35) * clamp((t - 0.5) / 0.2) * (1 - clamp((t - 1.5) / 0.3)))
 a.bone('chest', 'scale', lambda t: (1, 1 + 0.03 * math.sin(math.pi * clamp(t / 2.0))))
 a.bone('head', 'rotate', lambda t: keys(t, [(0, 0), (0.35, 5), (1.6, 4), (2.2, 0)]))
