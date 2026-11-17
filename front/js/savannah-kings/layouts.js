@@ -18,7 +18,7 @@
 (function () {
   const screen = document.getElementById('screen');
   const sw = document.getElementById('layoutSwitch');
-  if (!screen || !sw) return;
+  if (!screen) return;   // the «Варианты» switch is optional (savannah-lodge has none)
   const KEY = `savannah.layout.v2.${location.pathname.split('/').pop()}`;
 
   const W = 1920, H = 1080;
@@ -268,7 +268,7 @@
   function set(v) {
     const next = ['1', '2', '3'].includes(String(v)) ? String(v) : '1';
     screen.dataset.layout = next;
-    sw.querySelectorAll('[data-layout]').forEach((b) => {
+    if (sw) sw.querySelectorAll('[data-layout]').forEach((b) => {
       b.setAttribute('aria-pressed', String(b.dataset.layout === next));
     });
     try { localStorage.setItem(KEY, next); } catch (e) { /* private mode */ }
@@ -276,10 +276,11 @@
   }
 
   if (new URLSearchParams(location.search).has('shot')) document.body.classList.add('is-shot');
-  let saved = new URLSearchParams(location.search).get('layout');
+  // SK_FORCE_LAYOUT: one fixed layout, no switch, nothing remembered.
+  let saved = window.SK_FORCE_LAYOUT || new URLSearchParams(location.search).get('layout');
   if (!saved) { try { saved = localStorage.getItem(KEY); } catch (e) { /* ignore */ } }
   set(saved || window.SK_DEFAULT_LAYOUT || '1');
-  sw.querySelectorAll('[data-layout]').forEach((b) => {
+  if (sw) sw.querySelectorAll('[data-layout]').forEach((b) => {
     b.addEventListener('click', () => {
       if (window.Sound && Sound.playSfx) { try { Sound.playSfx('click'); } catch (e) { /* no sfx */ } }
       set(b.dataset.layout);

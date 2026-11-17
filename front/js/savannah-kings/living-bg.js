@@ -45,6 +45,11 @@
   function placeLeo() {
     const { c, s, ox, oy } = map();
     const [x, y, w, flip, rot] = c.leopard;
+    // leopardCut: the sprite without its own branch (fx/*_cut.webp) lies on
+    // the painted branch, aligned to its top edge.
+    const suf = c.leopardCut ? '_cut' : '';
+    leo.querySelector('.living__leo-sleep').src = `${FX}/leopard_sleep${suf}.webp`;
+    leo.querySelector('.living__leo-awake').src = `${FX}/leopard_awake${suf}.webp`;
     Object.assign(leo.style, {
       left: `${ox + x * s}px`, top: `${oy + y * s}px`, width: `${w * s}px`,
       scale: flip ? '-1 1' : '', rotate: rot ? `${rot}deg` : '',

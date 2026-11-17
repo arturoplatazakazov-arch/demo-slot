@@ -1148,7 +1148,8 @@ body.is-portrait.is-jp-row .crown--ladder .crown__top { order: 0; flex-basis: au
    kit). The win-medal stays only in Free Spins, where it carries the spins
    counter. Desktop: the logo takes the Buy medallion's place, centred on it. */
 .medal--buy, .screen:not([data-mode="freespins"]) .medal--status { display: none !important; }
-body:not(.is-portrait) .logo { left: 30px; top: 448px; width: 340px; }
+/* Desktop logo over the painted birds, top right of the scene. */
+body:not(.is-portrait) .logo { left: 1440px; top: 92px; width: 312px; z-index: 8; }
 
 /* Portrait: jackpots in two columns beside the logo (layouts.js SK_PORTRAIT_LOGO). */
 body.is-portrait.is-jp-sides .crown--ladder { display: block; left: 0; right: auto; width: 1080px; height: 0; }

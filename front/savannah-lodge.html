@@ -6,7 +6,7 @@
 <title>Savannah Kings · Lodge</title>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/preloader.css?v=1">
-<link rel="stylesheet" href="css/savannah-lodge.css?v=9">
+<link rel="stylesheet" href="css/savannah-lodge.css?v=11">
 <link rel="stylesheet" href="css/savannah-layouts.css?v=8">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 </head>
@@ -18,12 +18,6 @@
     <div class="preloader__pct" id="preloaderPct">0%</div>
   </div>
 
-  <div class="layout-switch" id="layoutSwitch" role="group" aria-label="Варианты раскладки">
-    <span class="layout-switch__label">Варианты</span>
-    <button type="button" data-layout="1" aria-pressed="true">1</button>
-    <button type="button" data-layout="2" aria-pressed="false">2</button>
-    <button type="button" data-layout="3" aria-pressed="false">3</button>
-  </div>
   <div class="screen" id="screen" data-mode="base" data-layout="1">
     <!-- Day and night backgrounds both live in the DOM and cross-fade
          (GDD §3.2: the switch to night is the free-spins signal). -->
@@ -285,11 +279,11 @@
     </div>
   </div>
 
-  <script>window.SK_ASSET_ROOT = 'img/savannah-lodge'; window.SK_POPUP_ART = true; window.SK_WIN_LINE = 'a'; window.SK_DEFAULT_LAYOUT = '2'; window.SK_PORTRAIT_LOGO = true; window.SK_PORTRAIT_DROP = 0.08;
+  <script>window.SK_ASSET_ROOT = 'img/savannah-lodge'; window.SK_POPUP_ART = true; window.SK_WIN_LINE = 'a'; window.SK_FORCE_LAYOUT = '2'; window.SK_PORTRAIT_LOGO = true; window.SK_PORTRAIT_DROP = 0.08;
     window.SK_LIVING_BG = { root: 'img/savannah-lodge', posY: 0.58,
-      desk: { size: [1672, 941], leopard: [-40, 128, 371, false, 4], leopardFade: true, horizon: 590, animalK: 0.66, waterX: 980, sky: [40, 200],
+      desk: { size: [1672, 941], leopard: [0, 131, 371, false, -1.8], leopardCut: true, horizon: 590, animalK: 0.66, waterX: 980, sky: [40, 200],
         occ: [[0, 150], [1205, 1525], [1535, 1590]],
-        night: { leopard: [-40, 238, 371, false, -5], horizon: 652, occ: [[0, 175], [1095, 1570]] } },
+        night: { leopard: [0, 238, 371, false, 0.5], horizon: 652, occ: [[0, 175], [1095, 1570]] } },
       mob: { size: [941, 1672], leopard: [-10, 920, 420], horizon: 1337, animalK: 0.54, waterX: 520, sky: [820, 960],
         occ: [[0, 120], [570, 880]], night: { occ: [[0, 150], [570, 880]] } } };</script>
   <script src="js/savannah-kings/sound.js?v=1"></script>
@@ -298,8 +292,8 @@
   <script src="js/savannah-kings/fx.js?v=1"></script>
   <script src="js/savannah-kings/slot.js?v=11"></script>
   <script src="js/savannah-kings/app.js?v=3"></script>
-  <script src="js/savannah-kings/living-bg.js?v=12"></script>
-  <script src="js/savannah-kings/layouts.js?v=25"></script>
+  <script src="js/savannah-kings/living-bg.js?v=13"></script>
+  <script src="js/savannah-kings/layouts.js?v=26"></script>
   <script src="js/savannah-kings/demo.js?v=5"></script>
   <script src="js/ui-bar-v3.js?v=4"></script>
   <script>
