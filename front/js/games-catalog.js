@@ -98,6 +98,9 @@ const OT_VARIANTS = {
   tides: { page: 'olympus-thunder-tides.html', name: 'Olympus Thunder · Tides', badge: 'Sea storm',
     desc: 'Храм на морском утёсе в изумрудный шторм: светящиеся волны, патинированная бронза с жемчугом.',
     cover: 'img/olympus-thunder/tides/cover.jpg?v=2' },
+  tides2: { page: 'olympus-thunder-tides2.html', name: 'Olympus Thunder · Tides 2', badge: 'Sea storm',
+    desc: 'Храм на морском утёсе в изумрудный шторм, вторая версия: крупный слот, GRAND на раме, два мобильных фона.',
+    cover: 'img/olympus-thunder/tides/cover.jpg?v=2' },
 };
 const ot = (key, extra) => ({ code: 'olympus-thunder', ...OT_VARIANTS[key], ...extra });
 const njs = (key, extra) => ({ code: 'neon-joker-spins', ...NJS_VARIANTS[key], ...extra });
@@ -137,13 +140,11 @@ const KOI_VARIANTS = {
 };
 const koi = (key, extra) => ({ code: 'koi-fortune', ...KOI_VARIANTS[key], ...extra });
 // Secret Room: hand-placed cards shown first, before the CRE8_CODES games —
-// the former Illuminator cards (Volt Coins, Neon Joker Spins, Savannah V1-V5),
+// the earlier Savannah variants V1-V5 (out of Illuminator, 2026-11-17),
 // Koi Fortune, Sugar Blast, then every Olympus Thunder version (moved here
 // from Illuminator / Spin Factory, 2026-11-11).
 const CRE8_TOP_CARDS = [
-  // moved out of Illuminator (2026-11-17): only Savannah V6 «Lodge» stays there
-  'volt-coins',
-  njs('c', { name: 'Neon Joker Spins', badge: null, desc: null }),
+  // the five earlier Savannah variants, moved out of Illuminator (2026-11-17)
   savannah('carved'), savannah('canyon'), savannah('toon'), savannah('timber'), savannah('crisp'),
   koi('silk'), koi('jade'), koi('lantern'), koi('paper'),
   sugar('forest'), sugar('meadow'), sugar('gummy'), sugar('night'),
@@ -155,6 +156,9 @@ const CRE8_TOP_CARDS = [
 // or { code, page, name, badge, desc, cover } overriding the /catalog entry;
 // badge: null keeps the game's own badge.
 const ILLUMINATOR_CARDS = [
+  'volt-coins',
+  njs('c', { name: 'Neon Joker Spins', badge: null, desc: null }),
+  ot('tides2'),
   savannah('lodge'),
 ];
 // Spin Factory: its own games newest first, then the variants moved out of
