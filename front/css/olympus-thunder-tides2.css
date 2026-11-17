@@ -92,7 +92,8 @@ body[data-title="2"] .logo { font-family: 'Marcellus SC', serif; font-weight: 40
 body[data-title="2"] .logo .logo__b { letter-spacing: .06em; }
 body[data-title="3"] .logo { font-family: 'Forum', serif; font-weight: 400; }
 body[data-title="3"] .logo .logo__b { letter-spacing: .1em; }
-.logo--pre { position: static; left: auto; top: auto; width: auto; font-size: 64px; }
+body[data-var="tides2"] .preloader__logo { width: auto; display: flex; justify-content: center; }
+body[data-var="tides2"] .preloader .logo.logo--pre { position: static; left: auto; top: auto; width: auto; height: auto; margin: 0 auto; font-size: clamp(34px, 9vw, 64px); }
 
 /* ---------- jackpots: one light plate, dark text, bolts = tier ---------- */
 body[data-var="tides2"] .jp {
@@ -130,6 +131,9 @@ body[data-var="tides2"] .win-plate__value { font: 900 38px/1 'Cinzel', serif; }
 body[data-var="tides2"] .fs-counter { background: linear-gradient(180deg, rgba(8, 52, 66, .9), rgba(6, 30, 42, .94)); box-shadow: 0 10px 30px rgba(0, 0, 0, .5), inset 0 0 20px rgba(120, 230, 255, .25); }
 body[data-var="tides2"] .medallion { height: auto; }
 
+/* Buy Bonus removed from the main screen (client) */
+body[data-var="tides2"] .buy-btn { display: none; }
+
 /* ---------- presentation switches ---------- */
 .demo-switch {
   position: fixed; left: 8px; top: 8px; z-index: 300; display: flex; flex-direction: column; gap: 4px;
@@ -145,10 +149,10 @@ body[data-clean] .demo-switch { display: none; }
 @media (orientation: landscape) {
   :root { --cell: 140px; --cell-x: 166px; }
   body[data-var="tides2"] .board { left: 463px; top: 162px; width: 994px; height: 724px; }
-  body[data-var="tides2"] .win-plate { left: 670px; top: 56px; width: 580px; z-index: 6; }
-  body[data-var="tides2"] .medallion { left: 1262px; top: 18px; width: 150px; z-index: 6; }
-  body[data-var="tides2"] .logo { left: 1478px; top: 40px; width: 430px; height: auto; font-size: 86px; }
-  body[data-var="tides2"] .jackpots { left: 1500px; top: 232px; width: 400px; height: auto; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  body[data-var="tides2"] .win-plate { left: 670px; top: 904px; width: 580px; z-index: 6; }
+  body[data-var="tides2"] .medallion { left: 1270px; top: 870px; width: 150px; z-index: 6; }
+  body[data-var="tides2"] .logo { left: 610px; top: 26px; width: 700px; height: auto; font-size: 96px; }
+  body[data-var="tides2"] .jackpots { left: 1500px; top: 190px; width: 400px; height: auto; display: flex; flex-direction: column; align-items: center; gap: 14px; }
   body[data-var="tides2"] .jp { flex: none; width: 360px; height: 86px; }
   body[data-var="tides2"] .jp[data-tier="grand"] { width: 400px; height: 100px; }
   body[data-var="tides2"] .jp[data-tier="grand"] .jp__name { font-size: 26px; }
@@ -162,9 +166,9 @@ body[data-clean] .demo-switch { display: none; }
 @media (orientation: portrait) {
   :root { --design-h: 1860px; --cell: 164px; --cell-x: 174px; }
   body[data-var="tides2"] .zeus { left: -30px; top: 30px; width: 500px; height: 600px; z-index: 1; }
-  body[data-var="tides2"] .logo { left: 440px; top: 100px; width: 620px; height: auto; font-size: 104px; }
+  body[data-var="tides2"] .logo { left: 190px; top: 480px; width: 700px; height: auto; font-size: 112px; }
   body[data-var="tides2"] .jackpots {
-    left: 440px; top: 282px; width: 620px; height: auto;
+    left: 440px; top: 150px; width: 620px; height: auto;
     display: grid; grid-template-columns: repeat(3, 1fr); grid-template-areas: "grand grand grand" "major minor mini"; gap: 10px;
   }
   body[data-var="tides2"] .jp { width: auto; height: 96px; column-gap: 5px; }
@@ -176,9 +180,9 @@ body[data-clean] .demo-switch { display: none; }
   body[data-var="tides2"] .jp[data-tier="mini"]  { grid-area: mini; }
   body[data-var="tides2"] .jp[data-tier="grand"] .jp__name { font-size: 28px; }
   body[data-var="tides2"] .jp[data-tier="grand"] .jp__val { font-size: 34px; }
-  body[data-var="tides2"] .win-plate { left: 220px; top: 512px; width: 640px; z-index: 6; }
+  body[data-var="tides2"] .win-plate { left: 220px; top: 1504px; width: 640px; z-index: 6; }
   body[data-var="tides2"] .win-plate__label { font-size: 30px; }
-  body[data-var="tides2"] .medallion { left: 890px; top: 476px; width: 150px; z-index: 6; }
+  body[data-var="tides2"] .medallion { left: 880px; top: 1480px; width: 150px; z-index: 6; }
   body[data-var="tides2"] .board { left: 11px; top: 640px; width: 1058px; height: 844px; }
   body[data-var="tides2"] .board::after { inset: -12px; border-width: 26px; }
   body[data-var="tides2"] .cell__num { font-size: 62px; }
@@ -186,7 +190,7 @@ body[data-clean] .demo-switch { display: none; }
   body[data-var="tides2"] .cell__num.is-huge { font-size: 50px; }
   body[data-var="tides2"] .cell[data-code="scatter"]::after { font-size: 26px; }
   body[data-var="tides2"] .buy-btn { left: 40px; top: 1512px; width: 220px; height: 229px; }
-  body[data-var="tides2"] .fs-counter { left: 760px; top: 1540px; width: 280px; height: 130px; }
+  body[data-var="tides2"] .fs-counter { left: 400px; top: 1620px; width: 280px; height: 120px; }
   body[data-var="tides2"] .cloud { width: 110%; }
   body[data-var="tides2"] .cloud--3, body[data-var="tides2"] .cloud--4 { width: 95%; }
 }
