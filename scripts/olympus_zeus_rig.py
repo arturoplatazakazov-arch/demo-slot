@@ -95,17 +95,44 @@ def img_xy(px, py):
 
 
 # ----------------------------------------------------------- body mesh -----
+_ARM = None
+
+
+def arm_maps():
+    """soft weight maps (hero px) for the parts of the body mesh that belong to the arms"""
+    global _ARM
+    if _ARM is None:
+        from PIL import ImageDraw as _D
+        from scipy.ndimage import gaussian_filter as _g
+        def m(pts, blur):
+            im = Image.new('L', (W, H), 0)
+            _D.Draw(im).polygon(pts, fill=255)
+            return _g(np.array(im) / 255.0, blur)
+        up = [(205, 578), (140, 592), (60, 612), (10, 650), (16, 730), (80, 785), (170, 800), (300, 805), (360, 815),
+              (392, 780), (412, 690), (420, 612), (380, 575), (330, 560)]
+        lf = [(855, 1150), (866, 1030), (888, 955), (905, 880), (960, 850), (1060, 812), (1150, 800), (1178, 850),
+              (1168, 980), (1160, 1100), (1120, 1152), (990, 1162)]
+        _ARM = (m(up, 22), m(lf, 18))
+    return _ARM
+
+
 def body_w(px, py):
     x, y = img_xy(px, py)
+    ua, lfa = arm_maps()
+    xi, yi = int(min(max(x, 0), W - 1)), int(min(max(y, 0), H - 1))
+    rs, le = float(ua[yi, xi]), float(lfa[yi, xi])
     chest = 1 - sstep(820, 990, y)
     hips = 1 - chest
-    cl = hips * sstep(330, 120, x) * sstep(820, 1000, y) + chest * sstep(300, 90, x) * sstep(700, 880, y)
-    cr = sstep(880, 1060, x) * sstep(620, 760, y) * (1 - sstep(1150, 1260, y))
+    cl = hips * sstep(330, 120, x) * sstep(820, 1000, y) + chest * sstep(300, 90, x) * sstep(700, 880, y) * (1 - rs)
+    cr = sstep(880, 1060, x) * sstep(620, 760, y) * (1 - sstep(1150, 1260, y)) * (1 - le)
     chest = max(0.0, chest - cr)
     hips = max(0.0, hips - cl)
     cf = chest * (1 - sstep(130, 300, abs(x - 600)))
     cb = chest - cf
-    ws = [(b, w) for b, w in (('hips', hips), ('chest_f', cf), ('chest_b', cb), ('cloak_l', cl), ('cloak_r', cr)) if w > 1e-3]
+    rest = max(0.0, 1 - rs - le)
+    ws = [(b, w * rest) for b, w in (('hips', hips), ('chest_f', cf), ('chest_b', cb), ('cloak_l', cl), ('cloak_r', cr))]
+    ws += [('r_shoulder', rs), ('l_elbow', le)]
+    ws = [(b, w) for b, w in ws if w > 1e-3]
     return ws or [('hips', 1.0)]
 
 
@@ -186,8 +213,7 @@ def plasma_images(size=300, seed=7):
 
 
 # ---------------------------------------------------------------- slots ----
-mesh('body', ['body'], body_w, 20, 22, 'hips')
-region('l_fore', 'l_elbow', 'l_fore')
+mesh('body', ['body'], body_w, 34, 36, 'hips')    # finer grid: the shoulder / left arm bend inside it
 PL = plasma_images()
 D = 330 * S                                     # ball diameter (hero px * S)
 for name, bone, blend in (('plasma_halo', 'orb', 'additive'), ('plasma_glass', 'orb', None), ('plasma_f1', 'orb_f1', 'additive'),
@@ -199,7 +225,6 @@ region('l_fingers', 'l_elbow', 'l_fingers')
 mesh('head', ['head'], head_w, 14, 14, 'head')
 # emotions = the same head mesh on a FACE slot above it, cross-faded in ~50 ms (no visible swap)
 mesh('face', ['head_blink', 'head_shout'], head_w, 14, 14, 'head', box_of='head', color='ffffff00')
-region('r_upper', 'r_shoulder', 'r_upper')
 region('r_fore', 'r_elbow', 'r_fore')
 region('bolt', 'bolt', 'bolt')
 region('bolt_glow', 'bolt', 'bolt_glow', blend='additive', src='bolt')

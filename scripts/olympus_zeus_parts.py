@@ -156,6 +156,27 @@ for nm, src, zone in (('head_blink', BL, 'eyes'), ('head_shout', SH, 'face')):
     v[..., :3] = head[..., :3] * (1 - fm[..., None]) + src[..., :3] * fm[..., None]
     save(nm, v)
 
+# ---- straps over the right shoulder, cut from the body: drawn ABOVE the upper arm so its root hides under them ----
+STRAP = [(215, 470), (505, 535), (548, 598), (510, 660), (452, 780), (392, 905), (330, 895), (392, 760), (440, 640),
+         (380, 592), (225, 565)]
+h0, h1, h2 = HL[..., 0], HL[..., 1], HL[..., 2]
+sgm = (h0 > 120) & (h1 > 80) & (h2 < 140) & (h0 - h2 > 45) & (poly(STRAP, 0) > 0.5)
+sgm = binary_closing(binary_opening(sgm, iterations=1), iterations=3)
+from scipy.ndimage import binary_dilation as _bd
+sgm = _bd(sgm, iterations=2) & (poly(STRAP, 0) > 0.5) & (HL[..., 3] > 128)     # keep the strap's dark rim
+lab_s, _ = label(sgm)
+sz_s = np.bincount(lab_s.ravel()); sz_s[0] = 0
+sgm = np.isin(lab_s, np.where(sz_s > 800)[0])
+# the patch is taken from the ORIGINAL (bolt-free) image: its strap sits exactly on the original arm
+n0_, n1_, n2_ = NB[..., 0], NB[..., 1], NB[..., 2]
+ngold = (n0_ > 120) & (n1_ > 80) & (n2_ < 140) & (n0_ - n2_ > 45) & (poly(STRAP, 0) > 0.5)
+ngold = _bd(binary_closing(binary_opening(ngold, iterations=1), iterations=3), iterations=3) & (NB[..., 3] > 128)
+lab_n, _ = label(ngold)
+sz_n = np.bincount(lab_n.ravel()); sz_n[0] = 0
+ngold = np.isin(lab_n, np.where(sz_n > 800)[0])
+sgm = ngold
+save('strap', layer(NB, gaussian_filter(ngold.astype(float), 1.0)))
+
 # ---- arms from the bolt-free edit ----
 if UA is not None:
     # clean upper arm: what the forearm-less edit keeps inside the upper-arm zone, grown to its rounded elbow
@@ -163,8 +184,9 @@ if UA is not None:
     # Where the forearm polygon overlaps it (the bracer's lower end) the pixels are repainted as skin
     # from the biceps around it, inside a rounded elbow cap — no ghost bracer when the forearm turns.
     import cv2
-    up = [(205, 592), (140, 598), (60, 612), (22, 650), (28, 720), (80, 775), (170, 795), (300, 800), (335, 800),
-          (375, 760), (400, 680), (412, 612), (330, 596)]
+    # the inner end now runs UNDER the shoulder strap and the diagonal strap (drawn over it as 'strap')
+    up = [(205, 578), (140, 592), (60, 612), (22, 650), (28, 720), (80, 775), (170, 795), (300, 805), (360, 822),
+          (398, 792), (432, 700), (470, 622), (492, 578), (420, 552), (330, 556)]
     zone = poly(up, 1.2)
     over = (poly(POLY['r_fore'], 0) > 0.5) & (zone > 0.5)
     cap = Image.new('L', (W, H), 0)
@@ -181,7 +203,23 @@ if UA is not None:
     arm[..., :3] = np.where(hole[..., None], rgb, NB[..., :3])
     alpha = np.maximum((NB[..., 3] / 255) * ~over, cap.astype(float))
     alpha = np.where(over & ~cap, 0, alpha)
-    dark = (arm[..., :3].sum(-1) < 200) & (np.arange(H)[:, None] < 660)   # bracer's shadow rim left above the cap
+    # gold of the straps that lay on the arm -> skin (the strap layer covers this band anyway)
+    a0, a1, a2 = arm[..., 0], arm[..., 1], arm[..., 2]
+    sgold = (a0 > 130) & (a1 > 85) & (a2 < 130) & (a0 - a2 > 55) & (zone > 0.3) & ~over
+    sgold = binary_closing(sgold, iterations=3)
+    from scipy.ndimage import binary_dilation
+    white = (np.minimum(np.minimum(a0, a1), a2) > 165) & (np.max(arm[..., :3], -1) - np.min(arm[..., :3], -1) < 50) & (zone > 0.3)
+    sg = binary_dilation(sgold | white, iterations=3) & (zone > 0.3)
+    rgb2 = cv2.inpaint(np.ascontiguousarray(np.clip(arm[..., :3], 0, 255).astype(np.uint8)), np.uint8(sg) * 255, 18, cv2.INPAINT_TELEA)
+    arm[..., :3] = np.where(sg[..., None], rgb2, arm[..., :3])
+    alpha = np.where(sg, np.maximum(alpha, (zone > 0.5).astype(float)), alpha)
+    # the arm's top edge ends 8 px UNDER the strap's lower edge (no repainted band peeking out above it)
+    strap_m = sgm & (np.arange(H)[:, None] < 640)
+    ys_idx = np.arange(H)[:, None].repeat(W, 1)
+    low = np.where(strap_m, ys_idx, -1).max(0)                         # strap bottom per column (-1 = none)
+    above = (ys_idx < (low[None, :] - 8)) & (low[None, :] > 0)
+    alpha = np.where(above & (np.arange(W)[None, :] > 200), 0, alpha)
+    dark = (arm[..., :3].sum(-1) < 200) & (np.arange(H)[:, None] < 660) & (np.arange(W)[None, :] < 230)  # bracer's shadow rim above the elbow cap
     alpha = np.where(dark, 0, alpha)
     arm[..., 3] = gaussian_filter(alpha, 1.0) * 255
     save('r_upper', layer(arm, zone))
@@ -189,6 +227,26 @@ else:
     save('r_upper', layer(NB, poly(POLY['r_upper'])))
 save('r_fore', layer(NB, poly(POLY['r_fore'])))
 save('l_fore', layer(NB, poly(POLY['l_fore'])))
+
+# ---- BODY v3: the ORIGINAL (bolt-free) picture with its real shoulders and upper arm, so the arm's root
+# has no seam — the rig bends it as a mesh. Removed from it: the head (-> headless edit underneath the
+# separate head layer) and the right forearm/fist (separate layer); the bracer's lower end is replaced by
+# the skin elbow cap made above.
+body = NB.copy()
+from scipy.ndimage import binary_dilation as _bd2
+# head + hair + beard zone grown by 14 px, plus any light hair strand of the original lying on the cloak
+nb_hair = (np.minimum(np.minimum(NB[..., 0], NB[..., 1]), NB[..., 2]) > 120) & (np.max(NB[..., :3], -1) - np.min(NB[..., :3], -1) < 60)
+nb_hair &= _bd2(hm > 0.05, iterations=40) & (poly(POLY['head_zone'], 0) > 0.5)
+hmask = gaussian_filter(_bd2((hm > 0.05) | nb_hair, iterations=14).astype(float), 2.0)
+body[..., :3] = body[..., :3] * (1 - hmask[..., None]) + HL[..., :3] * hmask[..., None]
+body[..., 3] = body[..., 3] * (1 - hmask) + HL[..., 3] * hmask
+fore = poly(POLY['r_fore'], 1.5)
+cap_rgb = arm[..., :3] if UA is not None else NB[..., :3]
+cap_a = (arm[..., 3] / 255.0) if UA is not None else np.zeros((H, W))
+cap_a = cap_a * (np.arange(H)[:, None] > 560)                           # only the elbow end, not the fist area
+body[..., :3] = body[..., :3] * (1 - fore[..., None]) + cap_rgb * fore[..., None]
+body[..., 3] = body[..., 3] * (1 - fore) + cap_a * 255 * fore
+save('body', body)
 # fingers in FRONT of the plasma ball (the palm stays behind it)
 FING = [(888, 965), (893, 880), (960, 848), (1060, 810), (1150, 798), (1180, 850), (1172, 930), (1100, 938), (1020, 944), (950, 955)]
 k0, k1, k2 = NB[..., 0], NB[..., 1], NB[..., 2]
