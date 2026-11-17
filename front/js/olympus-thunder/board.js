@@ -27,13 +27,16 @@
   let gridEl = null;
   let fxEl = null;
   let cell = 126;
+  let cellX = 126; // column pitch; = cell unless the page sets --cell-x (wider gaps between reels)
   const cells = []; // cells[col][row] = { el, code }
 
   const wait = (ms) => new Promise((r) => setTimeout(r, ms * speed));
 
   function readCell() {
-    const v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell'));
+    const cs = getComputedStyle(document.documentElement);
+    const v = parseFloat(cs.getPropertyValue('--cell'));
     if (v) cell = v;
+    cellX = parseFloat(cs.getPropertyValue('--cell-x')) || cell;
   }
 
   function orbValue(code) {
@@ -46,7 +49,7 @@
   }
 
   function place(c, col, row, dy = 0) {
-    c.el.style.transform = `translate3d(${col * cell}px, ${row * cell + dy}px, 0)`;
+    c.el.style.transform = `translate3d(${col * cellX}px, ${row * cell + dy}px, 0)`;
   }
 
   function makeCell(code) {
@@ -63,7 +66,7 @@
       el.classList.add('is-orb');
       const num = document.createElement('span');
       num.className = 'cell__num' + (v >= 50 ? ' is-huge' : v >= 10 ? ' is-big' : '');
-      num.textContent = `x${v}`;
+      num.textContent = `${document.body.dataset.numPrefix || 'x'}${v}`;
       el.appendChild(num);
     }
     el.dataset.code = code;

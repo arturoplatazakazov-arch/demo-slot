@@ -108,16 +108,24 @@
     });
   }
 
+  // per-page label translation (<script>window.OT_I18N = {'ВЫИГРЫШ': 'WIN', ...}</script>);
+  // longest phrases first so 'ВЫИГРЫШ ДО' wins over 'ВЫИГРЫШ'
+  const tr = (s) => {
+    const d = window.OT_I18N;
+    if (!d) return s;
+    for (const k of Object.keys(d).sort((a, b) => b.length - a.length)) s = s.split(k).join(d[k]);
+    return s;
+  };
   const plate = {
     reset() {
       $('winPlate').classList.remove('has-value');
-      $('winPlateLabel').textContent = state.mode === 'fs' ? 'ВЫИГРЫШ БОНУСА' : `ВЫИГРЫШ ДО ${fmt(state.rules ? state.rules.max_win_multiplier : 10000)}×`;
+      $('winPlateLabel').textContent = tr(state.mode === 'fs' ? 'ВЫИГРЫШ БОНУСА' : `ВЫИГРЫШ ДО ${fmt(state.rules ? state.rules.max_win_multiplier : 10000)}×`);
       $('winPlateValue').textContent = '';
       if (state.mode === 'fs') this.set(state.fsWin || 0, 'ВЫИГРЫШ БОНУСА');
     },
     set(amount, label = 'ВЫИГРЫШ') {
       $('winPlate').classList.add('has-value');
-      $('winPlateLabel').textContent = label;
+      $('winPlateLabel').textContent = tr(label);
       $('winPlateValue').textContent = fmt(amount);
       const p = $('winPlate');
       p.classList.remove('is-bump');
@@ -126,7 +134,7 @@
     },
     text(label, value) {
       $('winPlate').classList.add('has-value');
-      $('winPlateLabel').textContent = label;
+      $('winPlateLabel').textContent = tr(label);
       $('winPlateValue').textContent = value;
     },
   };
