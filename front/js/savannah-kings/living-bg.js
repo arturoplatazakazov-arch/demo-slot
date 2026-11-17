@@ -189,7 +189,24 @@
   }
   requestAnimationFrame(occlude);
 
-  function layoutAll() { placeLeo(); }
+  // c.logo = [cx, cy, w] in bg px: the desktop logo is pinned to a spot of
+  // the painted scene (over the birds), whatever the screen ratio. The logo
+  // lives in the scaled stage, so bg px -> screen px -> stage px.
+  const logoEl = document.querySelector('.stage .logo:not(.logo--wide)');
+  function placeLogo() {
+    const { c, s, ox, oy } = map();
+    if (!logoEl || !c.logo || document.body.classList.contains('is-portrait')) return;
+    const st = logoEl.offsetParent.getBoundingClientRect();
+    const k = st.width / logoEl.offsetParent.offsetWidth;          // stage scale
+    const L = layer.getBoundingClientRect();
+    const [cx, cy, w] = c.logo;
+    const ww = w * s / k, hh = ww * (logoEl.naturalHeight / logoEl.naturalWidth || 0.704);
+    const sx = (L.left + ox + cx * s - st.left) / k, sy = (L.top + oy + cy * s - st.top) / k;
+    Object.assign(logoEl.style, { left: `${sx - ww / 2}px`, top: `${sy - hh / 2}px`, width: `${ww}px`, zIndex: '8' });
+  }
+  function layoutAll() { placeLeo(); placeLogo(); }
+  // layouts.js re-arranges (and clears inline styles) on resize: pin after it.
+  addEventListener('resize', () => setTimeout(placeLogo, 60));
   addEventListener('resize', layoutAll);
   new MutationObserver(layoutAll).observe(document.body, { attributes: true, attributeFilter: ['class'] });
   new MutationObserver(() => {
