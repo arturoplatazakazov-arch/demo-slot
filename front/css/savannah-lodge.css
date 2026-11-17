@@ -1169,3 +1169,24 @@ body .layout-switch { bottom: 64px; }
 /* While the buy window is up the V3 bar steps back, like the old pill did. */
 body.is-buying .v3-bar { opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
 body.is-buying .v3-bar * { pointer-events: none !important; }
+
+/* Reel backdrop: square, 16px under the logs on every side (no sky in the
+   rounded corners); the column dividers sit exactly on the reel seams
+   (period = --cell, offset by the 16px overhang). */
+.reel__bg { inset: -16px; border-radius: 0; }
+.screen:not([data-mode="freespins"]) .reel__bg {
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 220, 160, 0.13) 0 1px, transparent 1px calc(var(--cell) - 1px), rgba(255, 220, 160, 0.13) calc(var(--cell) - 1px) var(--cell)),
+    linear-gradient(180deg, rgba(40, 22, 10, 0.78), rgba(26, 14, 6, 0.86));
+  background-position: 16px 0, 0 0;
+  background-size: var(--win-w) 100%, 100% 100%;
+  background-repeat: no-repeat;
+}
+.screen[data-mode="freespins"] .reel__bg {
+  background:
+    repeating-linear-gradient(90deg, rgba(160, 190, 255, 0.13) 0 1px, transparent 1px calc(var(--cell) - 1px), rgba(160, 190, 255, 0.13) calc(var(--cell) - 1px) var(--cell)),
+    linear-gradient(180deg, rgba(8, 14, 34, 0.80), rgba(4, 8, 22, 0.88));
+  background-position: 16px 0, 0 0;
+  background-size: var(--win-w) 100%, 100% 100%;
+  background-repeat: no-repeat;
+}
