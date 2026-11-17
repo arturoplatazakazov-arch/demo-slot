@@ -81,6 +81,9 @@ const SAVANNAH_VARIANTS = {
   crisp: { page: 'savannah-crisp.html', name: 'Savannah Kings · Crisp', badge: 'Morning',
     desc: 'Пастельное утро в тумане: белая жемчужная рама с ледяными кристаллами, фламинго.',
     cover: 'img/savannah-crisp/cover.jpg?v=2' },
+  lodge: { page: 'savannah-lodge.html', name: 'Savannah Kings · Lodge', badge: 'V6',
+    desc: 'Тёплый закат и стилизованный реализм: рама из дерева с верёвками, живой фон — леопард на акации, стада, птицы.',
+    cover: 'img/savannah-lodge/cover.jpg?v=1' },
 };
 const OT_VARIANTS = {
   sunny: { page: 'olympus-thunder-sunny.html', name: 'Olympus Thunder · Sunny', badge: 'Midday',
@@ -134,9 +137,14 @@ const KOI_VARIANTS = {
 };
 const koi = (key, extra) => ({ code: 'koi-fortune', ...KOI_VARIANTS[key], ...extra });
 // Secret Room: hand-placed cards shown first, before the CRE8_CODES games —
+// the former Illuminator cards (Volt Coins, Neon Joker Spins, Savannah V1-V5),
 // Koi Fortune, Sugar Blast, then every Olympus Thunder version (moved here
 // from Illuminator / Spin Factory, 2026-11-11).
 const CRE8_TOP_CARDS = [
+  // moved out of Illuminator (2026-11-17): only Savannah V6 «Lodge» stays there
+  'volt-coins',
+  njs('c', { name: 'Neon Joker Spins', badge: null, desc: null }),
+  savannah('carved'), savannah('canyon'), savannah('toon'), savannah('timber'), savannah('crisp'),
   koi('silk'), koi('jade'), koi('lantern'), koi('paper'),
   sugar('forest'), sugar('meadow'), sugar('gummy'), sugar('night'),
   'olympus-thunder', 'olympus-thunder-v2', 'olympus-thunder-v3',
@@ -147,13 +155,7 @@ const CRE8_TOP_CARDS = [
 // or { code, page, name, badge, desc, cover } overriding the /catalog entry;
 // badge: null keeps the game's own badge.
 const ILLUMINATOR_CARDS = [
-  'volt-coins',
-  njs('c', { name: 'Neon Joker Spins', badge: null, desc: null }),
-  savannah('carved'),
-  savannah('canyon'),
-  savannah('toon'),
-  savannah('timber'),
-  savannah('crisp'),
+  savannah('lodge'),
 ];
 // Spin Factory: its own games newest first, then the variants moved out of
 // Illuminator, in this order.
