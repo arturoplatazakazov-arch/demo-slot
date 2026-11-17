@@ -1163,3 +1163,9 @@ body.is-portrait.is-jp-sides .crown--ladder .jp { position: absolute; }
 
 /* The V3 bar owns the bottom edge: the layout switch sits above its readout row. */
 body .layout-switch { bottom: 64px; }
+
+/* Buy Bonus in the V3 menu flyout (as in Sugar Blast). */
+.v3-btn--buy svg { width: 60%; height: 60%; }
+/* While the buy window is up the V3 bar steps back, like the old pill did. */
+body.is-buying .v3-bar { opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
+body.is-buying .v3-bar * { pointer-events: none !important; }
