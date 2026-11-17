@@ -83,7 +83,7 @@ const SAVANNAH_VARIANTS = {
     cover: 'img/savannah-crisp/cover.jpg?v=2' },
   lodge: { page: 'savannah-lodge.html', name: 'Savannah Kings · Lodge', badge: 'V6',
     desc: 'Тёплый закат и стилизованный реализм: рама из дерева с верёвками, живой фон — леопард на акации, стада, птицы.',
-    cover: 'img/savannah-lodge/cover.jpg?v=1' },
+    cover: 'img/savannah-lodge/cover.jpg?v=2' },
 };
 const OT_VARIANTS = {
   sunny: { page: 'olympus-thunder-sunny.html', name: 'Olympus Thunder · Sunny', badge: 'Midday',
