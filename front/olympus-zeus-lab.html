@@ -47,6 +47,7 @@
 <div class="ui">
   <button id="bThrow1">Бросок → 1 сфера</button>
   <button id="bThrow3">Бросок → 3 сферы</button>
+  <button id="bWin">Победа</button>
   <button id="bCharge" class="alt">Заряд шара</button>
   <button id="bReset" class="alt">Сброс множителей</button>
   <label><input type="checkbox" id="cTurn"> Поворот</label>
@@ -119,6 +120,10 @@
         sd.defaultMix = 0.2;
         state = new spine.AnimationState(sd);
         state.setAnimation(0, 'idle', true);
+        // ?pose=<anim>&t=<sec> freezes a pose (screenshots / review)
+        const q = new URLSearchParams(location.search);
+        if (q.get('pose')) { const e = state.setAnimation(0, q.get('pose'), false); e.mixDuration = 0; e.trackTime = +q.get('t') || 0; state.timeScale = 0; }
+        if (q.get('ui') === '0') document.querySelectorAll('.ui,.hint').forEach((el) => el.remove());
         state.addListener({ event: (_e, ev) => { if (ev.data.name === 'release') release(); } });
         layout();
       },
@@ -224,6 +229,7 @@
   }
   document.getElementById('bThrow1').onclick = () => doThrow(1);
   document.getElementById('bThrow3').onclick = () => doThrow(3);
+  document.getElementById('bWin').onclick = () => { if (state) { state.setAnimation(0, 'win', false); state.addAnimation(0, 'idle', true, 0); } };
   document.getElementById('bCharge').onclick = () => { if (state) { state.setAnimation(0, 'charge', false); state.addAnimation(0, 'idle', true, 0); } };
   document.getElementById('bReset').onclick = () => orbs.forEach((c) => c.classList.remove('is-hit', 'is-target', 'is-picked'));
   document.getElementById('cTurn').onchange = (e) => { turnOn = e.target.checked; };

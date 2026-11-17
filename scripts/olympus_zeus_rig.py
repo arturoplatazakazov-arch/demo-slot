@@ -1,41 +1,42 @@
-"""Olympus Thunder · Tides 2 — pseudo-3D Zeus rig (Spine 4.1, built in code).
+"""Olympus Thunder · Tides 2 — pseudo-3D Zeus rig (Spine 4.1, built in code), v2.
 
+    ~/.venvs/art/bin/python scripts/olympus_zeus_parts.py      # layers -> ~/ot2-work/rig/p_*.png
     ~/.venvs/art/bin/python scripts/olympus_zeus_rig.py [PARTS_DIR]
 
-Parts (PARTS_DIR, default ~/ot2-work/rig, made by its parts.py):
-  p_body.png   — the SAME Zeus with both arms erased (ChatGPT edit of the hero, aligned to it)
-  p_r_upper / p_r_fore / p_bolt — raised right arm (viewer's left) cut from the original hero
-  p_l_fore / p_orb               — lower left arm with the energy ball
-All parts share the hero canvas (1199x1312), so they re-assemble pixel-exactly.
+Layers (all on the hero's 1199x1312 canvas, so they re-assemble exactly), back to front:
+  body      armless + HEADLESS torso (neck stump, clasp, straps, cloak, cloud)  — weighted mesh
+  l_fore    left forearm + open hand
+  plasma_*  Tesla plasma ball in the palm (generated here: halo, glass, core, 2 filament layers)
+  head      head + hair + beard (never covered by an arm) — weighted mesh, attachments head /
+            head_blink / head_shout share the mesh (same crop box)
+  r_upper   clean upper arm with a rounded elbow;  r_fore  bracer + fist
+  bolt, bolt_glow   the bolt in the fist (+ additive copy for the candle flicker)
 
-Pseudo-3D: the body is ONE weighted mesh; the head is split into a front layer (face, beard
-centre) and a back layer (hair rim) by weights on head_f / head_b, the torso into chest_f / chest_b —
-moving front and back by different amounts reads as a turn. Arms are rigid regions on a bone chain.
-
-Clips: idle (loop), windup, throw (event 'release' = the moment the bolt leaves the fist; the lab /
-game draws the flying lightning itself from the bolt bone to the targets), charge (orb hand),
-turn (debug sweep).
-Output: front/img/olympus-thunder/tides2/zeus_rig/animation.{json,atlas,webp}  (PMA)
+Pseudo-3D: head mesh skinned to head_f (face, beard centre) / head_b (hair rim) + hair_l / hair_r /
+beard sway bones; torso to chest_f (centre) / chest_b (sides). Turning = moving front vs back.
+Clips: idle (loop, blink), throw (event 'release'), win, charge, turn (debug sweep).
+Output: front/img/olympus-thunder/tides2/zeus_rig/animation.{json,atlas,webp} (+meta.json)
 """
 import json
 import math
 import os
+import random
 import sys
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFilter
 
 sys.path.insert(0, os.path.dirname(__file__))
-from olympus_spine_lib import Rig, clamp, smooth, seg, keys, loop_sin, out_cubic, in_cubic, in_out, out_back  # noqa: E402
+from olympus_spine_lib import Rig, clamp, smooth, keys  # noqa: E402
 
 PARTS = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser('~/ot2-work/rig')
 OUT = os.path.join(os.path.dirname(__file__), '..', 'front/img/olympus-thunder/tides2')
 W, H = 1199, 1312
-S = 0.5           # skeleton units per image px (rig is 600x656 units; textures keep full res)
+S = 0.5           # skeleton units per hero px (textures keep full resolution)
+TAU = 2 * math.pi
 
 
 def sk(x, y):
-    """image px -> skeleton units (origin = image centre, y up)."""
     return ((x - W / 2) * S, (H / 2 - y) * S)
 
 
@@ -43,11 +44,10 @@ def load(n):
     return Image.open(os.path.join(PARTS, f'p_{n}.png')).convert('RGBA')
 
 
-def crop(im):
+def bbox(im):
     a = np.array(im)[:, :, 3]
     ys, xs = np.where(a > 4)
-    x0, y0, x1, y1 = xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
-    return im.crop((x0, y0, x1, y1)), (x0 + x1) / 2, (y0 + y1) / 2
+    return xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
 
 
 def sstep(a, b, v):
@@ -57,120 +57,169 @@ def sstep(a, b, v):
 rig = Rig('zeus_rig', W * S, H * S, OUT, res=1 / S)
 
 # ---------------------------------------------------------------- bones ----
-J = {  # joints in hero image px
-    'hips': (560, 1090), 'chest': (560, 760), 'head': (650, 520), 'beard': (690, 470),
-    'r_shoulder': (300, 585), 'r_elbow': (70, 655), 'r_fist': (285, 330), 'bolt': (285, 330),
-    'l_elbow': (900, 1090), 'orb': (1010, 850), 'cloak_l': (240, 800), 'cloak_r': (900, 700),
-}
-rig.bone_at('hips', 'root', *sk(*J['hips']))
-rig.bone_at('chest', 'hips', *sk(*J['chest']))
-rig.bone_at('chest_f', 'chest', *sk(*J['chest']))
-rig.bone_at('chest_b', 'chest', *sk(*J['chest']))
-rig.bone_at('head', 'chest', *sk(*J['head']))
-rig.bone_at('head_f', 'head', *sk(*J['head']))
-rig.bone_at('head_b', 'head', *sk(*J['head']))
-rig.bone_at('beard', 'head_f', *sk(*J['beard']))
-rig.bone_at('cloak_l', 'hips', *sk(*J['cloak_l']))
-rig.bone_at('cloak_r', 'chest', *sk(*J['cloak_r']))
-rig.bone_at('r_shoulder', 'chest_f', *sk(*J['r_shoulder']))
-rig.bone_at('r_elbow', 'r_shoulder', *sk(*J['r_elbow']))
-rig.bone_at('r_fist', 'r_elbow', *sk(*J['r_fist']))
-rig.bone_at('bolt', 'r_fist', *sk(*J['bolt']))
-rig.bone_at('l_elbow', 'chest_f', *sk(*J['l_elbow']))
-rig.bone_at('orb', 'l_elbow', *sk(*J['orb']))
-rig.bone_at('bolt_tip', 'r_fist', *sk(330, 250))   # where the thrown lightning starts: just above the fist (lab reads it)
+J = {'hips': (560, 1090), 'chest': (560, 760), 'neck': (640, 560), 'beard': (700, 470),
+     'hair_l': (420, 380), 'hair_r': (860, 420),
+     'r_shoulder': (300, 585), 'r_elbow': (70, 655), 'r_fist': (285, 330),
+     'l_elbow': (900, 1090), 'orb': (1008, 830), 'cloak_l': (240, 800), 'cloak_r': (900, 700)}
+B = rig.bone_at
+B('hips', 'root', *sk(*J['hips']))
+B('chest', 'hips', *sk(*J['chest']))
+B('chest_f', 'chest', *sk(*J['chest']))
+B('chest_b', 'chest', *sk(*J['chest']))
+B('head', 'chest_f', *sk(*J['neck']))
+B('head_f', 'head', *sk(*J['neck']))
+B('head_b', 'head', *sk(*J['neck']))
+B('beard', 'head_f', *sk(*J['beard']))
+B('hair_l', 'head_b', *sk(*J['hair_l']))
+B('hair_r', 'head_b', *sk(*J['hair_r']))
+B('cloak_l', 'hips', *sk(*J['cloak_l']))
+B('cloak_r', 'chest', *sk(*J['cloak_r']))
+B('r_shoulder', 'chest_f', *sk(*J['r_shoulder']))
+B('r_elbow', 'r_shoulder', *sk(*J['r_elbow']))
+B('r_fist', 'r_elbow', *sk(*J['r_fist']))
+B('bolt', 'r_fist', *sk(*J['r_fist']))
+B('bolt_tip', 'r_fist', *sk(330, 250))         # thrown lightning starts here (the lab reads it)
+B('l_elbow', 'chest_f', *sk(*J['l_elbow']))
+B('orb', 'l_elbow', *sk(*J['orb']))
+B('orb_f1', 'orb', *sk(*J['orb']))
+B('orb_f2', 'orb', *sk(*J['orb']))
 
 
-def world_xy(bone):
+def wxy(bone):
     m = rig.world(bone)
     return m[0, 2], m[1, 2]
 
 
+def img_xy(px, py):
+    return px / S + W / 2, H / 2 - py / S
+
+
 # ----------------------------------------------------------- body mesh -----
-def weights(px, py):
-    """skeleton (px,py) -> [(bone, w)]: hips/chest blend, head with front/back depth, beard, cloak."""
-    x = px / S + W / 2
-    y = H / 2 - py / S
-    ws = []
-    head = (1 - sstep(470, 570, y)) * (sstep(380, 470, x))
-    torso = 1 - head
-    chest = torso * (1 - sstep(820, 990, y))
-    hips = torso - chest
-    # cloak flaps swing from their own bones
+def body_w(px, py):
+    x, y = img_xy(px, py)
+    chest = 1 - sstep(820, 990, y)
+    hips = 1 - chest
     cl = hips * sstep(330, 120, x) * sstep(820, 1000, y) + chest * sstep(300, 90, x) * sstep(700, 880, y)
-    cr = torso * sstep(880, 1060, x) * sstep(620, 760, y) * (1 - sstep(1150, 1260, y))
-    chest -= min(chest, cr) if chest > 0 else 0
-    hips -= min(hips, cl)
-    # torso depth: centre (clasp, straps) front, sides back
-    cf = chest * (1 - sstep(130, 300, abs(x - 560)))
+    cr = sstep(880, 1060, x) * sstep(620, 760, y) * (1 - sstep(1150, 1260, y))
+    chest = max(0.0, chest - cr)
+    hips = max(0.0, hips - cl)
+    cf = chest * (1 - sstep(130, 300, abs(x - 600)))
     cb = chest - cf
-    # head depth: face + beard centre front, hair rim back
-    dx, dy = (x - 690) / 190, (y - 380) / 230
-    face = head * clamp(1.25 - math.hypot(dx, dy))
-    beard = face * sstep(440, 560, y) * (1 - sstep(140, 230, abs(x - 700)))
-    face -= beard
-    back = head - face - beard
-    for b, w in (('hips', hips), ('chest_f', cf), ('chest_b', cb), ('cloak_l', cl), ('cloak_r', cr),
-                 ('head_f', face), ('head_b', back), ('beard', beard)):
-        if w > 1e-3:
-            ws.append((b, w))
+    ws = [(b, w) for b, w in (('hips', hips), ('chest_f', cf), ('chest_b', cb), ('cloak_l', cl), ('cloak_r', cr)) if w > 1e-3]
     return ws or [('hips', 1.0)]
 
 
-body, bcx, bcy = crop(load('body'))
-rig.image('body', body)
-cx, cy = sk(bcx, bcy)
-rig.mesh_grid('body', 'body', cx, cy, body.width * S, body.height * S, weights, nx=20, ny=22, bone='hips')
+def head_w(px, py):
+    x, y = img_xy(px, py)
+    dx, dy = (x - 690) / 170, (y - 360) / 200
+    face = clamp(1.3 - math.hypot(dx, dy))
+    beard = sstep(430, 540, y) * (1 - sstep(120, 220, abs(x - 700)))
+    hl = sstep(520, 380, x) * sstep(280, 420, y)
+    hr = sstep(820, 920, x) * sstep(320, 460, y)
+    beard = max(0.0, min(beard, 1 - hl - hr))
+    face = max(0.0, face * (1 - beard))
+    back = max(0.0, 1 - face - beard - hl - hr)
+    ws = [(b, w) for b, w in (('head_f', face), ('head_b', back), ('beard', beard), ('hair_l', hl), ('hair_r', hr)) if w > 1e-3]
+    return ws or [('head_b', 1.0)]
 
-# ------------------------------------------------------------- arms --------
-def part(slot, bone, name, blend=None):
-    im, pcx, pcy = crop(load(name))
-    rig.image(name, im)
-    wx, wy = sk(pcx, pcy)
-    bx, by = world_xy(bone)
-    rig.region(slot, bone, name, x=wx - bx, y=wy - by, w=im.width * S, h=im.height * S, blend=blend)
+
+def mesh(slot, names, weights, nx, ny, bone):
+    """one grid mesh for names[0]; the other names reuse it (same crop box) as alternative attachments."""
+    ims = [load(n) for n in names]
+    x0, y0, x1, y1 = bbox(ims[0])
+    for n, im in zip(names, ims):
+        rig.image(n, im.crop((x0, y0, x1, y1)))
+    cx, cy = sk((x0 + x1) / 2, (y0 + y1) / 2)
+    w, h = (x1 - x0) * S, (y1 - y0) * S
+    rig.mesh_grid(slot, names[0], cx, cy, w, h, weights, nx=nx, ny=ny, bone=bone)
+    for n in names[1:]:
+        att = dict(rig.atts[slot][names[0]])
+        att['path'] = n
+        rig.atts[slot][n] = att
+        rig.need[n] = (w, h)
 
 
-part('l_fore', 'l_elbow', 'l_fore')
-part('orb', 'orb', 'orb')
-im_o = load('orb')
-o_im, o_x, o_y = crop(im_o)
-rig.image('orb_glow', o_im)
-ox, oy = sk(o_x, o_y); obx, oby = world_xy('orb')
-rig.region('orb_glow', 'orb', 'orb_glow', x=ox - obx, y=oy - oby, w=o_im.width * S, h=o_im.height * S, blend='additive')
-part('r_upper', 'r_shoulder', 'r_upper')
-part('r_fore', 'r_elbow', 'r_fore')
-part('bolt', 'bolt', 'bolt')
-# bright copies for the glow pulses (additive)
-im_b = load('bolt')
-rig.image('bolt_glow', crop(im_b)[0])
-bx, by = world_xy('bolt')
-c_im, c_x, c_y = crop(im_b)
-gx, gy = sk(c_x, c_y)
-rig.region('bolt_glow', 'bolt', 'bolt_glow', x=gx - bx, y=gy - by, w=c_im.width * S, h=c_im.height * S, blend='additive')
+def region(slot, bone, name, blend=None, src=None):
+    im = load(src or name)
+    x0, y0, x1, y1 = bbox(im)
+    rig.image(name, im.crop((x0, y0, x1, y1)))
+    wx, wy = sk((x0 + x1) / 2, (y0 + y1) / 2)
+    bx, by = wxy(bone)
+    rig.region(slot, bone, name, x=wx - bx, y=wy - by, w=(x1 - x0) * S, h=(y1 - y0) * S, blend=blend)
+
+
+# ---------------------------------------------- Tesla plasma ball (code) ----
+def plasma_images(size=300, seed=7):
+    rnd = random.Random(seed)
+    c = size / 2
+    yy, xx = np.mgrid[0:size, 0:size]
+    r = np.hypot(xx - c, yy - c) / c
+
+    def rgba(col, a):
+        out = np.zeros((size, size, 4), np.uint8)
+        out[..., :3] = col
+        out[..., 3] = np.uint8(np.clip(a, 0, 1) * 255)
+        return Image.fromarray(out)
+
+    halo = rgba((120, 225, 255), np.clip(1 - r, 0, 1) ** 1.8)
+    glass = rgba((170, 235, 255), np.exp(-((r - 0.62) / 0.05) ** 2) * 0.75 + (r < 0.64) * 0.18)
+    core = rgba((240, 253, 255), np.clip(1 - r / 0.38, 0, 1) ** 1.2)
+
+    def filaments(n):
+        im = Image.new('RGBA', (size, size))
+        d = ImageDraw.Draw(im)
+        for _ in range(n):
+            ang = rnd.uniform(0, TAU)
+            pts = [(c, c)]
+            steps = 9
+            for k in range(1, steps + 1):
+                rad = 0.6 * c * k / steps
+                ang += rnd.uniform(-0.35, 0.35)
+                pts.append((c + rad * math.cos(ang), c + rad * math.sin(ang)))
+            d.line(pts, fill=(215, 248, 255, 255), width=4, joint='curve')
+        glow = im.filter(ImageFilter.GaussianBlur(5))
+        out = Image.alpha_composite(glow, glow)
+        return Image.alpha_composite(out, im.filter(ImageFilter.GaussianBlur(0.8)))
+
+    return {'plasma_halo': halo, 'plasma_glass': glass, 'plasma_core': core,
+            'plasma_f1': filaments(7), 'plasma_f2': filaments(6)}
+
+
+# ---------------------------------------------------------------- slots ----
+mesh('body', ['body'], body_w, 20, 22, 'hips')
+region('l_fore', 'l_elbow', 'l_fore')
+PL = plasma_images()
+D = 330 * S                                     # ball diameter (hero px * S)
+for name, bone, blend in (('plasma_halo', 'orb', 'additive'), ('plasma_glass', 'orb', None), ('plasma_f1', 'orb_f1', 'additive'),
+                          ('plasma_f2', 'orb_f2', 'additive'), ('plasma_core', 'orb', 'additive')):
+    rig.image(name, PL[name])
+    sc = 1.7 if name == 'plasma_halo' else 1.0
+    rig.region(name, bone, name, x=0, y=0, w=D * sc, h=D * sc, blend=blend)
+mesh('head', ['head', 'head_blink', 'head_shout'], head_w, 14, 14, 'head')
+region('r_upper', 'r_shoulder', 'r_upper')
+region('r_fore', 'r_elbow', 'r_fore')
+region('bolt', 'bolt', 'bolt')
+region('bolt_glow', 'bolt', 'bolt_glow', blend='additive', src='bolt')
 rig.event('release')
 
-# ---------------------------------------------------------- animations -----
-TAU = 2 * math.pi
 
-
+# ----------------------------------------------------------- animations ----
 def breathe(a, period=4.0, k=1.0):
-    a.bone('chest', 'scale', lambda t: (1 + 0.006 * k * math.sin(TAU * t / period), 1 + 0.012 * k * math.sin(TAU * t / period)))
-    a.bone('head', 'rotate', lambda t: 1.2 * k * math.sin(TAU * t / period + 0.8))
-    a.bone('beard', 'rotate', lambda t: 2.2 * k * math.sin(TAU * t / period + 1.6))
-    a.bone('cloak_l', 'rotate', lambda t: 1.6 * k * math.sin(TAU * t / period + 0.4))
-    a.bone('cloak_r', 'rotate', lambda t: -1.4 * k * math.sin(TAU * t / period + 1.1))
+    s = lambda t, ph=0.0: math.sin(TAU * t / period + ph)  # noqa: E731
+    a.bone('chest', 'scale', lambda t: (1 + 0.006 * k * s(t), 1 + 0.013 * k * s(t)))
+    a.bone('beard', 'rotate', lambda t: 2.4 * k * s(t, 1.6))
+    a.bone('hair_l', 'rotate', lambda t: -2.0 * k * s(t, 1.1))
+    a.bone('hair_r', 'rotate', lambda t: 2.2 * k * s(t, 1.9))
+    a.bone('cloak_l', 'rotate', lambda t: 1.6 * k * s(t, 0.4))
+    a.bone('cloak_r', 'rotate', lambda t: -1.4 * k * s(t, 1.1))
 
 
-# idle: breathing, arms float, bolt burns like a candle, orb pulses (4 s loop)
-a = rig.anim('idle', 4.0)
-breathe(a)
-a.bone('r_shoulder', 'rotate', lambda t: 1.8 * math.sin(TAU * t / 4 + 0.3))
-a.bone('r_elbow', 'rotate', lambda t: 2.5 * math.sin(TAU * t / 4 + 0.9))
-a.bone('l_elbow', 'rotate', lambda t: 1.5 * math.sin(TAU * t / 4 + 2.0))
-a.bone('orb', 'scale', lambda t: 1 + 0.05 * math.sin(TAU * t / 1.0))
-a.rgba('bolt_glow', lambda t: 0.25 + 0.2 * (0.5 + 0.5 * math.sin(TAU * t / 0.5)) * (0.6 + 0.4 * math.sin(TAU * t / 1.3)))
-a.rgba('orb_glow', lambda t: 0.2 + 0.25 * (0.5 + 0.5 * math.sin(TAU * t / 0.5)))
+def plasma(a, boost=lambda t: 0.0):
+    a.bone('orb_f1', 'rotate', lambda t: -360 * t / 2.0)
+    a.bone('orb_f2', 'rotate', lambda t: 360 * t / 1.33)
+    a.bone('orb', 'scale', lambda t: 1 + 0.04 * math.sin(TAU * t / 0.8) + 0.3 * boost(t))
+    a.rgba('plasma_core', lambda t: min(1.0, 0.75 + 0.12 * math.sin(TAU * t / 0.4) + 0.25 * boost(t)))
+    a.rgba('plasma_halo', lambda t: min(1.0, 0.55 + 0.15 * math.sin(TAU * t / 1.0) + 0.45 * boost(t)))
 
 
 def turn(a, fn):
@@ -179,39 +228,66 @@ def turn(a, fn):
     a.bone('head_b', 'translate', lambda t: (-5 * fn(t), 0))
     a.bone('chest_f', 'translate', lambda t: (6 * fn(t), 0))
     a.bone('chest_b', 'translate', lambda t: (-3 * fn(t), 0))
-    a.bone('head', 'rotate', lambda t: -3 * fn(t))
 
 
-# throw: wind-up (0-0.5), whip (0.5-0.68, release at 0.6), follow-through, recover (to 1.8)
+def face(a, keys_):
+    a.attach('head', keys_)
+
+
+# idle — 4 s loop: breathing, hair/beard/cloak sway, arms float, blink, bolt candle, plasma
+a = rig.anim('idle', 4.0)
+breathe(a)
+plasma(a)
+a.bone('head', 'rotate', lambda t: 1.3 * math.sin(TAU * t / 4 + 0.8))
+a.bone('r_shoulder', 'rotate', lambda t: 1.8 * math.sin(TAU * t / 4 + 0.3))
+a.bone('r_elbow', 'rotate', lambda t: 2.5 * math.sin(TAU * t / 4 + 0.9))
+a.bone('l_elbow', 'rotate', lambda t: 1.5 * math.sin(TAU * t / 4 + 2.0))
+a.rgba('bolt_glow', lambda t: 0.25 + 0.2 * (0.5 + 0.5 * math.sin(TAU * t / 0.5)) * (0.6 + 0.4 * math.sin(TAU * t / 1.3)))
+face(a, [(0, 'head'), (2.6, 'head_blink'), (2.73, 'head')])
+
+# throw — wind-up 0-0.45, whip 0.45-0.62 (release 0.60), follow-through, recover to 1.8
 T_REL = 0.60
 a = rig.anim('throw', 1.8)
 breathe(a, k=0.5)
+plasma(a)
 a.bone('r_shoulder', 'rotate', lambda t: keys(t, [(0, 0), (0.45, -12), (0.62, 6), (0.9, 4), (1.8, 0)]))
-# foreshortening = depth: arm goes back (shorter) on the wind-up, comes at the viewer (longer) on the whip
 a.bone('r_shoulder', 'scale', lambda t: (keys(t, [(0, 1), (0.45, 0.9), (0.62, 1.07), (0.95, 1.03), (1.8, 1)]), 1))
 a.bone('r_elbow', 'rotate', lambda t: keys(t, [(0, 0), (0.45, 34), (0.52, 26), (0.62, -24), (0.9, -20), (1.8, 0)]))
 a.bone('r_elbow', 'scale', lambda t: (keys(t, [(0, 1), (0.45, 0.93), (0.62, 1.08), (0.95, 1.04), (1.8, 1)]),) * 2)
 a.bone('r_fist', 'rotate', lambda t: keys(t, [(0, 0), (0.45, 14), (0.62, -16), (1.0, -10), (1.8, 0)]))
 a.bone('chest', 'rotate', lambda t: keys(t, [(0, 0), (0.45, 2.5), (0.66, -3.5), (1.8, 0)]))
 a.bone('hips', 'translate', lambda t: (keys(t, [(0, 0), (0.45, -6), (0.66, 9), (1.8, 0)]), 0))
+a.bone('head', 'rotate', lambda t: keys(t, [(0, 0), (0.45, 3), (0.66, -4), (1.2, -2), (1.8, 0)]))
 turn(a, lambda t: keys(t, [(0, 0), (0.4, -0.6), (0.66, 1.0), (1.2, 0.8), (1.8, 0)]))
 a.bone('l_elbow', 'rotate', lambda t: keys(t, [(0, 0), (0.45, -4), (0.7, 6), (1.8, 0)]))
 a.rgba('bolt', lambda t: 1.0 if t < T_REL else (0.0 if t < 1.25 else smooth((t - 1.25) / 0.35)))
 a.rgba('bolt_glow', lambda t: (0.3 + 0.7 * smooth(t / 0.5)) if t < T_REL else (0.0 if t < 1.25 else 0.3 * smooth((t - 1.25) / 0.35)))
+face(a, [(0, 'head'), (0.42, 'head_shout'), (1.15, 'head')])
 a.event('release', T_REL)
 
-# charge: the orb hand lifts and the orb swells (for "Zeus charges a multiplier")
+# win — triumph: fist up high, chest out, head back with a shout, plasma flares (2.2 s)
+a = rig.anim('win', 2.2)
+breathe(a, k=0.6)
+plasma(a, lambda t: math.sin(math.pi * clamp((t - 0.2) / 1.6)))
+a.bone('r_shoulder', 'rotate', lambda t: keys(t, [(0, 0), (0.35, -10), (0.55, -8), (1.6, -8), (2.2, 0)]))
+a.bone('r_elbow', 'rotate', lambda t: keys(t, [(0, 0), (0.35, 24), (0.5, 20), (1.6, 20), (2.2, 0)]))
+a.bone('r_fist', 'rotate', lambda t: 4 * math.sin(TAU * t / 0.35) * clamp((t - 0.5) / 0.2) * (1 - clamp((t - 1.5) / 0.3)))
+a.bone('chest', 'scale', lambda t: (1, 1 + 0.03 * math.sin(math.pi * clamp(t / 2.0))))
+a.bone('head', 'rotate', lambda t: keys(t, [(0, 0), (0.35, 5), (1.6, 4), (2.2, 0)]))
+a.bone('l_elbow', 'rotate', lambda t: keys(t, [(0, 0), (0.4, 10), (1.6, 8), (2.2, 0)]))
+a.rgba('bolt_glow', lambda t: 0.35 + 0.65 * math.sin(math.pi * clamp((t - 0.2) / 1.6)))
+face(a, [(0, 'head'), (0.3, 'head_shout'), (1.6, 'head')])
+
+# charge — the orb hand lifts, the plasma swells
 a = rig.anim('charge', 1.2)
 breathe(a, k=0.5)
+plasma(a, lambda t: math.sin(math.pi * clamp(t / 1.2)))
 a.bone('l_elbow', 'rotate', lambda t: keys(t, [(0, 0), (0.5, 9), (0.8, 7), (1.2, 0)]))
-a.bone('orb', 'scale', lambda t: keys(t, [(0, 1), (0.5, 1.35), (0.8, 1.2), (1.2, 1)], out_back))
-a.rgba('orb_glow', lambda t: 0.2 + 0.8 * math.sin(math.pi * clamp(t / 1.2)))
 turn(a, lambda t: keys(t, [(0, 0), (0.5, 0.5), (1.2, 0)]))
 
-# turn: debug sweep for the lab slider (2 s: -1 -> +1)
+# turn — debug sweep for the lab slider (2 s: -1 -> +1)
 a = rig.anim('turn', 2.0)
 turn(a, lambda t: -1 + t)
 
 rig.write(max_page=2048, webp=True)
-meta = {'release': T_REL, 'size': [W * S, H * S]}
-json.dump(meta, open(os.path.join(OUT, 'zeus_rig', 'meta.json'), 'w'))
+json.dump({'release': T_REL, 'size': [W * S, H * S]}, open(os.path.join(OUT, 'zeus_rig', 'meta.json'), 'w'))
