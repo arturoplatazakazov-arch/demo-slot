@@ -21,7 +21,7 @@
     if (q.get('title')) b.title = q.get('title');
     var bgm = q.get('bgm'); if (bgm === '0' || bgm === 'a' || bgm === 'b') b.sky = 'tides2/sky.jpg?v=1|tides2/sky_mob' + (bgm === '0' ? '' : '_' + bgm) + '.jpg?v=1';
     if (q.get('clean')) b.clean = '1';
-    if (q.get('shot')) { b.clean = '1'; document.head.insertAdjacentHTML('beforeend', '<style>#access-gate,#preloader{display:none!important}</style>'); }
+    if (q.get('shot')) { b.clean = '1'; document.head.insertAdjacentHTML('beforeend', '<style>#access-gate,#preloader,.to-catalog-btn{display:none!important}</style>'); }
     if (q.get('low') === 'letters') { b.low = 'letters'; b.symbols = 'img/olympus-thunder/tides2/symbols_letters/'; }
     if (q.get('hero') === 'b') b.hero = 'tides2/hero_b.webp?v=1';
   })();

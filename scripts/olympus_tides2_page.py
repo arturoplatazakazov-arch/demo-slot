@@ -38,7 +38,7 @@ body = (f'<body data-game-id="olympus-thunder" data-var="tides2" data-under="gla
     if (q.get('title')) b.title = q.get('title');
     var bgm = q.get('bgm'); if (bgm === '0' || bgm === 'a' || bgm === 'b') b.sky = 'tides2/sky.jpg?v=""" + str(V) + """|tides2/sky_mob' + (bgm === '0' ? '' : '_' + bgm) + '.jpg?v=""" + str(V) + """';
     if (q.get('clean')) b.clean = '1';
-    if (q.get('shot')) { b.clean = '1'; document.head.insertAdjacentHTML('beforeend', '<style>#access-gate,#preloader{display:none!important}</style>'); }
+    if (q.get('shot')) { b.clean = '1'; document.head.insertAdjacentHTML('beforeend', '<style>#access-gate,#preloader,.to-catalog-btn{display:none!important}</style>'); }
     if (q.get('low') === 'letters') { b.low = 'letters'; b.symbols = '""" + T + """symbols_letters/'; }
     if (q.get('hero') === 'b') b.hero = 'tides2/hero_b.webp?v=""" + str(V) + """';
   })();
