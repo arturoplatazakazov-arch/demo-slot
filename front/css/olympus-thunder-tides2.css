@@ -139,6 +139,9 @@ body[data-var="tides2"] .buy-btn { display: none; }
   position: fixed; left: 8px; top: 8px; z-index: 300; display: flex; flex-direction: column; gap: 4px;
   font: 600 11px/1 system-ui, sans-serif; color: #dff; opacity: .9;
 }
+.demo-switch .demo-switch__toggle { align-self: flex-start; width: 30px; height: 26px; padding: 0; font-size: 15px; background: rgba(0, 20, 28, .72); }
+.demo-switch.is-collapsed div { display: none; }
+.demo-switch.is-collapsed .demo-switch__toggle { opacity: .45; }
 .demo-switch div { display: flex; align-items: center; gap: 3px; background: rgba(0, 20, 28, .72); padding: 3px 5px; border-radius: 8px; }
 .demo-switch b { width: 54px; font-weight: 600; opacity: .75; }
 .demo-switch button { font: inherit; color: inherit; background: rgba(255, 255, 255, .08); border: 1px solid rgba(160, 240, 255, .25); border-radius: 6px; padding: 3px 7px; cursor: pointer; }
@@ -157,7 +160,7 @@ body[data-clean] .demo-switch { display: none; }
   body[data-var="tides2"] .jp[data-tier="grand"] { width: 400px; height: 100px; }
   body[data-var="tides2"] .jp[data-tier="grand"] .jp__name { font-size: 26px; }
   body[data-var="tides2"] .jp[data-tier="grand"] .jp__val { font-size: 36px; }
-  body[data-var="tides2"] .zeus { left: -70px; top: 100px; width: 600px; height: 690px; z-index: 1; }
+  body[data-var="tides2"] .zeus { left: -96px; top: 110px; width: 540px; height: 640px; z-index: 1; }
   body[data-var="tides2"] .buy-btn { left: 120px; top: 740px; width: 210px; height: 218px; z-index: 7; }
   body[data-var="tides2"] .fs-counter { left: 1550px; top: 730px; width: 300px; height: 120px; }
 }
@@ -166,7 +169,8 @@ body[data-clean] .demo-switch { display: none; }
 @media (orientation: portrait) {
   :root { --design-h: 1860px; --cell: 164px; --cell-x: 174px; }
   body[data-var="tides2"] .zeus { left: -30px; top: 30px; width: 500px; height: 600px; z-index: 1; }
-  body[data-var="tides2"] .logo { left: 190px; top: 480px; width: 700px; height: auto; font-size: 112px; }
+  /* logo under the jackpots, exactly as wide as the GRAND plate (fitted by the page script) */
+  body[data-var="tides2"] .logo { left: 440px; top: 384px; width: 620px; height: auto; font-size: 104px; }
   body[data-var="tides2"] .jackpots {
     left: 440px; top: 150px; width: 620px; height: auto;
     display: grid; grid-template-columns: repeat(3, 1fr); grid-template-areas: "grand grand grand" "major minor mini"; gap: 10px;

@@ -13,7 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 FRONT = ROOT / "front"
 V = 1          # art cache-bust
-CSS_V = 7
+CSS_V = 8
 T = "img/olympus-thunder/tides2/"
 OLD = "img/olympus-thunder/tides/"
 
@@ -92,6 +92,7 @@ h = re.sub(r'<div class="preloader__logo" id="preloaderLogo">.*?</div>',
 
 # presentation switches
 h = h.replace('<div class="screen" id="screen"', """<div class="demo-switch" id="demoSwitch">
+    <button class="demo-switch__toggle" id="demoToggle" type="button" title="Hide / show switches">⚙</button>
     <div><b>Underlay</b><button data-k="under" data-v="glass">Glass</button><button data-k="under" data-v="solid">Solid</button></div>
     <div><b>Low</b><button data-k="low" data-v="gems">Gems</button><button data-k="low" data-v="letters">Letters</button></div>
     <div><b>Title</b><button data-k="title" data-v="1">1</button><button data-k="title" data-v="2">2</button><button data-k="title" data-v="3">3</button></div>
@@ -112,6 +113,23 @@ h = h.replace("</body>", """<script>
       b[x.dataset.k] = x.dataset.v; paint();
     });
     paint();
+    // the switch panel can be collapsed to the gear (remembered per browser)
+    var tg = document.getElementById('demoToggle');
+    function setCollapsed(c) { box.classList.toggle('is-collapsed', c); try { localStorage.setItem('ot2Switches', c ? 'off' : 'on'); } catch (e) {} }
+    try { setCollapsed(localStorage.getItem('ot2Switches') === 'off'); } catch (e) {}
+    tg.addEventListener('click', function (e) { e.stopPropagation(); setCollapsed(!box.classList.contains('is-collapsed')); });
+
+    // portrait: the logo is exactly as wide as the GRAND plate — fit the font to its box
+    var logo = document.getElementById('logo');
+    function fitLogo() {
+      logo.style.fontSize = '';
+      if (!matchMedia('(orientation: portrait)').matches) return;
+      var main = logo.querySelector('.logo__b'), want = logo.clientWidth, have = main.scrollWidth;
+      if (want && have) logo.style.fontSize = (parseFloat(getComputedStyle(logo).fontSize) * want / have) + 'px';
+    }
+    (document.fonts ? document.fonts.ready : Promise.resolve()).then(fitLogo);
+    addEventListener('resize', fitLogo);
+    new MutationObserver(function () { setTimeout(fitLogo, 60); setTimeout(fitLogo, 600); }).observe(document.body, { attributes: true, attributeFilter: ['data-title'] });
   })();
 </script>
 </body>""", 1)
