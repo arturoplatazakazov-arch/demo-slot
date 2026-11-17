@@ -171,7 +171,6 @@ body[data-clean] .demo-switch { display: none; }
   body[data-var="tides2"] .zeus { left: -112px; top: 110px; width: 540px; height: 640px; z-index: 1; }
   body[data-var="tides2"] .buy-btn { left: 120px; top: 740px; width: 210px; height: 218px; z-index: 7; }
 }
-}
 
 /* ================= portrait 1080x1860 (phone first) ================= */
 @media (orientation: portrait) {
