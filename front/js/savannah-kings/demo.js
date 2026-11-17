@@ -22,6 +22,14 @@
     <button class="demo-btn" type="button" data-line="b">Линия · монеты</button>
     <button class="demo-btn" type="button" data-line="c">Линия · поток</button>
     <button class="demo-btn" type="button" data-line="classic">Линия · классика</button>`;
+  // Living background (savannah-lodge): call the scenes on demand.
+  if (window.SK_LIVING) {
+    panel.insertAdjacentHTML('beforeend', `
+    <button class="demo-btn" type="button" data-live="leopard">Фон · леопард</button>
+    <button class="demo-btn" type="button" data-live="herd">Фон · стадо</button>
+    <button class="demo-btn" type="button" data-live="elephant">Фон · слон на водопой</button>
+    <button class="demo-btn" type="button" data-live="birds">Фон · птицы</button>`);
+  }
   document.body.appendChild(panel);
 
   const WIN_X = { bigWin: 25, megaWin: 60, epicWin: 150 };
@@ -79,6 +87,8 @@
   panel.addEventListener('click', (e) => {
     const l = e.target.closest('[data-line]');
     if (l) showLineSample(l.dataset.line);
+    const lv = e.target.closest('[data-live]');
+    if (lv) { const k = lv.dataset.live; if (k === 'elephant') window.SK_LIVING.herd('elephant'); else window.SK_LIVING[k](); }
     const b = e.target.closest('[data-demo]');
     if (b) run(b.dataset.demo);
   });

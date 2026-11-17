@@ -194,15 +194,54 @@
   function layoutPortrait() {
     const f = frameBox();
     const ps = plaqueRatios();
-    const wGrand = 380 * 1.05, wRow = 300 * 1.05;
+    // SK_PORTRAIT_ROW (lodge): MINI..GRAND in ONE row, a smaller banner and
+    // a calm band under the reels for the win, so the field sits higher.
+    const ROW = !!window.SK_PORTRAIT_ROW;
+    document.body.classList.toggle('is-jp-row', ROW);
+    const wGrand = ROW ? 300 : 380 * 1.05, wRow = ROW ? 232 : 300 * 1.05;
     ps.forEach((q) => sizePlaque(q, q.grand ? wGrand : wRow));
-    const crownTop = 20;
-    const crownH = ps.filter((q) => q.grand).reduce((a, q) => a + q.r * wGrand, 0)
-      + 8 + Math.max(...ps.filter((q) => !q.grand).map((q) => q.r * wRow));
+    const crownTop = ROW ? 104 : 20;   // ROW: the sun glows in the notch band above
+    const crownH = ROW
+      ? Math.max(...ps.map((q) => q.r * (q.grand ? wGrand : wRow)))
+      : ps.filter((q) => q.grand).reduce((a, q) => a + q.r * wGrand, 0)
+        + 8 + Math.max(...ps.filter((q) => !q.grand).map((q) => q.r * wRow));
     Object.assign(ladder.style, { top: `${crownTop}px` });
 
+    // SK_PORTRAIT_LOGO (lodge): the desktop (stacked) logo centred on the
+    // frame's top border, jackpots in two columns either side of it:
+    // left GRAND over MAJOR, right MINOR over MINI.
+    if (window.SK_PORTRAIT_LOGO) {
+      document.body.classList.remove('is-jp-row');
+      document.body.classList.add('is-jp-sides');
+      const wP = 310, gap = 10, edge = 22;
+      ps.forEach((q) => sizePlaque(q, wP));
+      const DY = 1920 * (window.SK_PORTRAIT_DROP || 0);   // whole group lower by a share of the height
+      const lw = 380, lh = lw * ratio(logo, 0.704), logoTop = 36 + DY;
+      const cy = logoTop + lh / 2;
+      const byTier = (t) => ps.find((q) => q.el.classList.contains(`jp--${t}`));
+      let colBottom = 0;
+      const column = (top, bottom, x) => {
+        const hT = top.r * wP, hB = bottom.r * wP;
+        const y0 = Math.max(24 + DY, cy - (hT + gap + hB) / 2);
+        Object.assign(top.el.style, { left: `${x}px`, top: `${y0}px` });
+        Object.assign(bottom.el.style, { left: `${x}px`, top: `${y0 + hT + gap}px` });
+        colBottom = Math.max(colBottom, y0 + hT + gap + hB);
+      };
+      column(byTier('grand'), byTier('major'), edge);
+      column(byTier('minor'), byTier('mini'), 1080 - edge - wP);
+      Object.assign(ladder.style, { top: '0px' });
+      // logo sits on the top border; the plaque columns stay above the frame
+      const winTop = Math.max(logoTop + lh - 6, colBottom + 6 - f.y * P_SCALE);
+      Object.assign(logo.style, { display: 'block', left: `${(1080 - lw) / 2}px`, top: `${logoTop}px`, width: `${lw}px`, zIndex: '7' });
+      Object.assign(reel.style, { top: `${winTop}px`, transform: `scale(${P_SCALE})`, transformOrigin: '50% 0' });
+      const fb = winTop + (f.y + f.h) * P_SCALE;
+      status.style.top = `${fb + 110}px`;
+      buy.style.top = `${fb + 110}px`;
+      return;
+    }
+    document.body.classList.remove('is-jp-sides');
     const bannerR = logoWide.naturalWidth ? logoWide.naturalHeight / logoWide.naturalWidth : 0.2;
-    const bannerW = Math.min(900, f.w * P_SCALE * BANNER_K);
+    const bannerW = ROW ? Math.min(620, f.w * P_SCALE * 0.6) : Math.min(900, f.w * P_SCALE * BANNER_K);
     const bannerH = bannerW * bannerR;
     const bannerTop = crownTop + crownH + 10;
     const winTop = bannerTop + bannerH + 4;
@@ -212,8 +251,9 @@
     });
     Object.assign(reel.style, { top: `${winTop}px`, transform: `scale(${P_SCALE})`, transformOrigin: '50% 0' });
     const frameBottom = winTop + (f.y + f.h) * P_SCALE;
-    status.style.top = `${frameBottom + 16}px`;
-    buy.style.top = `${frameBottom + 16}px`;
+    const calm = ROW ? 150 : 16;
+    status.style.top = `${frameBottom + calm}px`;
+    buy.style.top = `${frameBottom + calm}px`;
   }
 
   function arrange() {
@@ -238,7 +278,7 @@
   if (new URLSearchParams(location.search).has('shot')) document.body.classList.add('is-shot');
   let saved = new URLSearchParams(location.search).get('layout');
   if (!saved) { try { saved = localStorage.getItem(KEY); } catch (e) { /* ignore */ } }
-  set(saved || '1');
+  set(saved || window.SK_DEFAULT_LAYOUT || '1');
   sw.querySelectorAll('[data-layout]').forEach((b) => {
     b.addEventListener('click', () => {
       if (window.Sound && Sound.playSfx) { try { Sound.playSfx('click'); } catch (e) { /* no sfx */ } }
