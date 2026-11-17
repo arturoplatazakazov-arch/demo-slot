@@ -124,6 +124,7 @@
         // ?pose=<anim>&t=<sec> freezes a pose (screenshots / review)
         const q = new URLSearchParams(location.search);
         if (q.get('pose')) { const e = state.setAnimation(0, q.get('pose'), false); e.mixDuration = 0; e.trackTime = +q.get('t') || 0; state.timeScale = 0; }
+        if (q.get('debug')) showBones = true;
         if (q.get('ui') === '0') document.querySelectorAll('.ui,.hint').forEach((el) => el.remove());
         state.addListener({ event: (_e, ev) => { if (ev.data.name === 'release') release(); } });
         layout();

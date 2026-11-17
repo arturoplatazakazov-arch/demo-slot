@@ -137,10 +137,14 @@ sizes[0] = 0
 m = lab == sizes.argmax()
 # drop cloak blue and strap gold that the edit also repainted around the shoulders (hair/beard are light)
 r0, g0, b0 = NA[..., 0], NA[..., 1], NA[..., 2]
-cloak = (r0 < 95) & (b0 > 110) & (g0 < 130)
+cloak = ((r0 < 95) & (b0 > 110) & (g0 < 130)) | ((b0 - r0 > 40) & (NA[..., :3].mean(-1) < 150))   # incl. dark navy folds
 gold = (r0 > 170) & (g0 > 120) & (b0 < 95) & (np.arange(H)[:, None] > 430)
 m &= ~(cloak | gold)
-m = binary_opening(m, iterations=1)
+m = binary_opening(m, iterations=2)
+lab_m, _ = label(m)
+sz_m = np.bincount(lab_m.ravel()); sz_m[0] = 0
+m = lab_m == sz_m.argmax()                       # one piece: no loose crumbs along the beard / collar
+m = binary_fill_holes(binary_closing(m, iterations=3))
 hm = gaussian_filter(m.astype(float), 1.2)
 # outer hair edge: where nothing of the body is behind the head, keep the painting's own soft alpha
 from scipy.ndimage import maximum_filter
@@ -234,12 +238,25 @@ save('l_fore', layer(NB, poly(POLY['l_fore'])))
 # the skin elbow cap made above.
 body = NB.copy()
 from scipy.ndimage import binary_dilation as _bd2
-# head + hair + beard zone grown by 14 px, plus any light hair strand of the original lying on the cloak
-nb_hair = (np.minimum(np.minimum(NB[..., 0], NB[..., 1]), NB[..., 2]) > 120) & (np.max(NB[..., :3], -1) - np.min(NB[..., :3], -1) < 60)
-nb_hair &= _bd2(hm > 0.05, iterations=40) & (poly(POLY['head_zone'], 0) > 0.5)
-hmask = gaussian_filter(_bd2((hm > 0.05) | nb_hair, iterations=14).astype(float), 2.0)
-body[..., :3] = body[..., :3] * (1 - hmask[..., None]) + HL[..., :3] * hmask[..., None]
-body[..., 3] = body[..., 3] * (1 - hmask) + HL[..., 3] * hmask
+import cv2 as _cv
+# under the head layer only (grown 6 px): the headless edit's neck/collar, with its grey smudges repainted
+R = _bd2(hm > 0.05, iterations=6)
+lum = HL[..., :3].mean(-1)
+sat = np.max(HL[..., :3], -1) - np.min(HL[..., :3], -1)
+smudge = R & (sat < 40) & (lum > 50) & (lum < 215) & (HL[..., 3] > 100)
+hl_rgb = _cv.inpaint(np.ascontiguousarray(np.clip(HL[..., :3], 0, 255).astype(np.uint8)), np.uint8(_bd2(smudge, iterations=2)) * 255, 8, _cv.INPAINT_TELEA)
+HLc = HL.copy(); HLc[..., :3] = hl_rgb
+# outside it the ORIGINAL stays (cloak over the shoulder keeps its shape); loose light hair strands of the
+# original lying on the cloak/skin just outside the head are repainted from their surroundings
+ring = _bd2(R, iterations=40) & ~R & (poly(POLY['head_zone'], 0) > 0.5)
+nlum = NB[..., :3].mean(-1)
+nsat = np.max(NB[..., :3], -1) - np.min(NB[..., :3], -1)
+strands = ring & (nsat < 55) & (nlum > 140) & (NB[..., 3] > 100)
+nb_rgb = _cv.inpaint(np.ascontiguousarray(np.clip(NB[..., :3], 0, 255).astype(np.uint8)), np.uint8(_bd2(strands, iterations=2)) * 255, 8, _cv.INPAINT_TELEA)
+body = NB.copy(); body[..., :3] = nb_rgb
+hmask = gaussian_filter(R.astype(float), 1.5)
+body[..., :3] = body[..., :3] * (1 - hmask[..., None]) + HLc[..., :3] * hmask[..., None]
+body[..., 3] = body[..., 3] * (1 - hmask) + HLc[..., 3] * hmask
 fore = poly(POLY['r_fore'], 1.5)
 cap_rgb = arm[..., :3] if UA is not None else NB[..., :3]
 cap_a = (arm[..., 3] / 255.0) if UA is not None else np.zeros((H, W))
@@ -271,7 +288,17 @@ coremask = binary_opening(binary_closing(coremask, iterations=2), iterations=1)
 lab_, n_ = label(coremask)
 sz = np.bincount(lab_.ravel()); sz[0] = 0
 coremask = np.isin(lab_, np.where(sz > 60)[0])
-cs = np.clip((gaussian_filter(coremask.astype(float), 1.3) - 0.25) / 0.5, 0, 1)
+# the top half (above the fist) is redrawn as a readable zig-zag bolt; the spike under the fist stays
+B0, T0 = np.array([300.0, 262.0]), np.array([668.0, 22.0])          # base (at the fist) -> tip
+ax = T0 - B0; L = np.hypot(*ax); ax /= L; nv = np.array([-ax[1], ax[0]])
+ZZ = [(0.00, 0.075), (0.50, 0.125), (0.43, 0.025), (1.00, 0.0), (0.52, -0.115), (0.59, -0.012), (0.00, -0.07)]
+bolt_img = Image.new('L', (W * 4, H * 4), 0)
+ImageDraw.Draw(bolt_img).polygon([tuple((B0 + ax * u * L + nv * v * L) * 4) for u, v in ZZ], fill=255)
+zz = np.array(bolt_img.resize((W, H), Image.LANCZOS)) / 255.0
+upper = (np.arange(H)[:, None] < 300) | ((np.arange(W)[None, :] > 330) & (np.arange(H)[:, None] < 360))
+coremask = (coremask & ~upper) | (zz > 0.5)
+cs = np.clip((gaussian_filter(coremask.astype(float), 1.0) - 0.25) / 0.5, 0, 1)
+cs = np.maximum(cs, zz * (zz > 0.02))
 g1 = np.clip(gaussian_filter(coremask.astype(float), 7) * 2.2, 0, 1)
 g2 = np.clip(gaussian_filter(coremask.astype(float), 20) * 2.0, 0, 1) * 0.55
 bolt = np.zeros_like(H0)

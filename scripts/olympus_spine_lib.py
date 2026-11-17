@@ -408,7 +408,7 @@ class Rig:
                 # lossy WebP keeps 8-bit alpha and smooth PMA glows (a 256-colour
                 # quantise bands them) at a fraction of the PNG size
                 if lossless:   # no block artefacts in soft alpha (glass, hair) — bigger file
-                    page.save(os.path.join(out, fname), "WEBP", lossless=True, quality=100, method=6)
+                    page.save(os.path.join(out, fname), "WEBP", lossless=True, quality=100, method=6, exact=True)  # exact: keep RGB=0 under alpha=0 (PMA)
                 else:
                     page.save(os.path.join(out, fname), "WEBP", quality=90, alpha_quality=95, method=6)
             else:
