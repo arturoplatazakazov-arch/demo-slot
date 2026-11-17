@@ -381,7 +381,7 @@ class Rig:
         return a
 
     # -- output --------------------------------------------------------------
-    def write(self, max_page=2048, quantize=False, webp=True):
+    def write(self, max_page=2048, quantize=False, webp=True, lossless=False, gap=2):
         out = os.path.join(self.out_dir, self.name)
         os.makedirs(out, exist_ok=True)
         for f in os.listdir(out):
@@ -396,7 +396,7 @@ class Rig:
             scale = max(scale, min(1.0, 4 / max(1, min(im.size))))
             tw, th = max(2, round(im.width * scale)), max(2, round(im.height * scale))
             regions[r] = im.resize((tw, th), Image.LANCZOS) if (tw, th) != im.size else im
-        pages = pack(regions, max_page, max_page)
+        pages = pack(regions, max_page, max_page, gap=gap)
         lines = []
         for pi, (page, placed) in enumerate(pages):
             ext = "webp" if webp else "png"
@@ -407,7 +407,10 @@ class Rig:
             if webp:
                 # lossy WebP keeps 8-bit alpha and smooth PMA glows (a 256-colour
                 # quantise bands them) at a fraction of the PNG size
-                page.save(os.path.join(out, fname), "WEBP", quality=90, alpha_quality=95, method=6)
+                if lossless:   # no block artefacts in soft alpha (glass, hair) — bigger file
+                    page.save(os.path.join(out, fname), "WEBP", lossless=True, quality=100, method=6)
+                else:
+                    page.save(os.path.join(out, fname), "WEBP", quality=90, alpha_quality=95, method=6)
             else:
                 page.save(os.path.join(out, fname), optimize=True)
             lines += [fname, f"size:{page.width},{page.height}", "filter:Linear,Linear", "pma:true"]

@@ -83,7 +83,22 @@ def layer(src, m):
     return out
 
 
-def save(name, a):
+def defringe(a):
+    """semi-transparent edge pixels take the colour of the opaque pixels next to them (no light/dark halo)"""
+    al = a[..., 3] / 255.0
+    solid = (al > 0.85).astype(float)
+    num = np.stack([gaussian_filter(a[..., c] * solid, 2.0) for c in range(3)], -1)
+    den = gaussian_filter(solid, 2.0)[..., None]
+    fill = np.where(den > 1e-3, num / np.maximum(den, 1e-3), a[..., :3])
+    edge = ((al > 0) & (al <= 0.85))[..., None]
+    out = a.copy()
+    out[..., :3] = np.where(edge, fill, a[..., :3])
+    return out
+
+
+def save(name, a, clean=True):
+    if clean:
+        a = defringe(a)
     Image.fromarray(np.uint8(np.clip(a, 0, 255))).save(os.path.join(OUT, f'p_{name}.png'))
 
 
@@ -127,6 +142,11 @@ gold = (r0 > 170) & (g0 > 120) & (b0 < 95) & (np.arange(H)[:, None] > 430)
 m &= ~(cloak | gold)
 m = binary_opening(m, iterations=1)
 hm = gaussian_filter(m.astype(float), 1.2)
+# outer hair edge: where nothing of the body is behind the head, keep the painting's own soft alpha
+from scipy.ndimage import maximum_filter
+zone_h = poly(POLY['head_zone'], 0) > 0.5
+free = (HL[..., 3] < 20) & zone_h & (maximum_filter(m, 25))
+hm = np.where(free, 1.0, hm)
 head = layer(NA, hm)
 save('head', head)
 # face variants: the head with the face area replaced (soft edge)
@@ -139,15 +159,47 @@ for nm, src, zone in (('head_blink', BL, 'eyes'), ('head_shout', SH, 'face')):
 # ---- arms from the bolt-free edit ----
 if UA is not None:
     # clean upper arm: what the forearm-less edit keeps inside the upper-arm zone, grown to its rounded elbow
-    u0, u1, u2 = UA[..., 0], UA[..., 1], UA[..., 2]
-    tunic = (np.minimum(np.minimum(u0, u1), u2) > 185) & (np.max(UA[..., :3], -1) - np.min(UA[..., :3], -1) < 45)
-    blue = (u0 < 95) & (u2 > 110)
-    keep = binary_opening(~(tunic | blue), iterations=2)
-    save('r_upper', layer(UA, poly(POLY['r_upper']) * gaussian_filter(keep.astype(float), 1.0)))
+    # upper arm = the bolt-free original inside a polygon whose top runs UNDER the shoulder strap.
+    # Where the forearm polygon overlaps it (the bracer's lower end) the pixels are repainted as skin
+    # from the biceps around it, inside a rounded elbow cap — no ghost bracer when the forearm turns.
+    import cv2
+    up = [(205, 592), (140, 598), (60, 612), (22, 650), (28, 720), (80, 775), (170, 795), (300, 800), (335, 800),
+          (375, 760), (400, 680), (412, 612), (330, 596)]
+    zone = poly(up, 1.2)
+    over = (poly(POLY['r_fore'], 0) > 0.5) & (zone > 0.5)
+    cap = Image.new('L', (W, H), 0)
+    ImageDraw.Draw(cap).ellipse((105 - 82, 612, 105 + 82, 708), fill=255)
+    cap = np.array(cap) > 0
+    solid = (NB[..., 3] > 200) & (zone > 0.5) & ~over          # trusted biceps skin
+    base = NB[..., :3].copy()
+    num = np.stack([gaussian_filter(base[..., c] * solid, 6) for c in range(3)], -1)
+    den = gaussian_filter(solid.astype(float), 6)[..., None]
+    base = np.where(solid[..., None], base, num / np.maximum(den, 1e-3))  # no black from transparent pixels
+    hole = over | (cap & ~solid)
+    rgb = cv2.inpaint(np.ascontiguousarray(np.clip(base, 0, 255).astype(np.uint8)), np.uint8(hole) * 255, 15, cv2.INPAINT_TELEA)
+    arm = NB.copy()
+    arm[..., :3] = np.where(hole[..., None], rgb, NB[..., :3])
+    alpha = np.maximum((NB[..., 3] / 255) * ~over, cap.astype(float))
+    alpha = np.where(over & ~cap, 0, alpha)
+    dark = (arm[..., :3].sum(-1) < 200) & (np.arange(H)[:, None] < 660)   # bracer's shadow rim left above the cap
+    alpha = np.where(dark, 0, alpha)
+    arm[..., 3] = gaussian_filter(alpha, 1.0) * 255
+    save('r_upper', layer(arm, zone))
 else:
     save('r_upper', layer(NB, poly(POLY['r_upper'])))
 save('r_fore', layer(NB, poly(POLY['r_fore'])))
 save('l_fore', layer(NB, poly(POLY['l_fore'])))
+# fingers in FRONT of the plasma ball (the palm stays behind it)
+FING = [(888, 965), (893, 880), (960, 848), (1060, 810), (1150, 798), (1180, 850), (1172, 930), (1100, 938), (1020, 944), (950, 955)]
+k0, k1, k2 = NB[..., 0], NB[..., 1], NB[..., 2]
+skin = (k0 > 110) & (k0 > k1 + 8) & (k1 > k2) & (k0 - k2 > 35)          # fingers only, not the cloak behind them
+skin = binary_closing(binary_opening(skin, iterations=1), iterations=2)
+fa = poly(POLY['l_fore']) * poly(FING, 3) * gaussian_filter(skin.astype(float), 1.0) * (NB[..., 3] / 255)
+solid_f = binary_opening(fa > 0.35, iterations=3)                   # no 1-2 px threads along the polygon edge
+lab_f, _ = label(solid_f)
+sz_f = np.bincount(lab_f.ravel()); sz_f[0] = 0
+solid_f = np.isin(lab_f, np.where(sz_f > 400)[0])
+save('l_fingers', layer(NB, gaussian_filter(solid_f.astype(float), 1.0)))
 
 # ---- effects: original minus bolt-free, electric colours only ----
 diff = np.clip((np.abs(pre(H0) - pre(NB)).max(-1) - 18) / 70, 0, 1)
@@ -155,7 +207,25 @@ r_, g_, b_ = H0[..., 0], H0[..., 1], H0[..., 2]
 elec = np.clip((b_ - r_ - 10) / 50, 0, 1)
 core = np.clip((np.minimum(np.minimum(r_, g_), b_) - 200) / 40, 0, 1) * (b_ >= r_ - 6)
 gate = (H0[..., :3].sum(-1) > 300) * np.maximum(elec, core)
-for nm, zone in (('bolt', 'bolt_zone'), ('orb', 'orb_zone')):
+# clean bolt: the original's white-hot core (smoothed) + painted cyan glow
+coremask = (np.minimum(np.minimum(r_, g_), b_) > 205) & (H0[..., 3] > 200) & (poly(POLY['bolt_zone'], 0) > 0.5)
+coremask = binary_opening(binary_closing(coremask, iterations=2), iterations=1)
+lab_, n_ = label(coremask)
+sz = np.bincount(lab_.ravel()); sz[0] = 0
+coremask = np.isin(lab_, np.where(sz > 60)[0])
+cs = np.clip((gaussian_filter(coremask.astype(float), 1.3) - 0.25) / 0.5, 0, 1)
+g1 = np.clip(gaussian_filter(coremask.astype(float), 7) * 2.2, 0, 1)
+g2 = np.clip(gaussian_filter(coremask.astype(float), 20) * 2.0, 0, 1) * 0.55
+bolt = np.zeros_like(H0)
+glow_a = np.maximum(g1 * 0.85, g2)
+col = np.array([110, 215, 255], float)
+white = np.array([245, 253, 255], float)
+a_out = np.maximum(cs, glow_a)
+mix = np.where(a_out > 0, cs / np.maximum(a_out, 1e-3), 0)[..., None]
+bolt[..., :3] = col * (1 - mix) + white * mix
+bolt[..., 3] = a_out * 255
+save('bolt', bolt, clean=False)
+for nm, zone in (('orb', 'orb_zone'),):
     g2 = gate.copy()
     if nm == 'bolt':   # over the fist keep only the white-hot core, not the cyan rim light on the skin
         from scipy.ndimage import maximum_filter

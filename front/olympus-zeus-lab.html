@@ -60,6 +60,7 @@
 <script>
 (function () {
   const RIG = 'img/olympus-thunder/tides2/zeus_rig/';
+  const HIDE = (new URLSearchParams(location.search).get('hide') || '').split(',').filter(Boolean);   // debug: ?hide=slot,slot
   const V = '?v=' + Date.now();
   const SYM = 'img/olympus-thunder/tides2/symbols/';
   const LAYOUT = [
@@ -89,11 +90,11 @@
     if (portrait) {
       const gw = Math.min(W - 16, 520);
       Object.assign(grid.style, { width: gw + 'px', left: (W - gw) / 2 + 'px', top: (H * 0.40) + 'px' });
-      zeusBox = { x: -W * 0.05, y: H * 0.02, w: W * 0.62, h: H * 0.38 };
+      zeusBox = { x: W * 0.02, y: H * 0.02, w: W * 0.6, h: H * 0.37 };
     } else {
       const gw = Math.min(W * 0.46, H * 0.95);
       Object.assign(grid.style, { width: gw + 'px', left: (W * 0.5) + 'px', top: ((H - gw * 5 / 6) / 2 - 20) + 'px' });
-      zeusBox = { x: W * 0.0, y: H * 0.06, w: W * 0.46, h: H * 0.86 };
+      zeusBox = { x: W * 0.04, y: H * 0.08, w: W * 0.42, h: H * 0.84 };
     }
     for (const c of [zc, fx]) { c.width = innerWidth * devicePixelRatio; c.height = innerHeight * devicePixelRatio; }
   }
@@ -132,6 +133,7 @@
         state.update(delta * speed);
         state.apply(skel);
         if (turnOn) { const tt = (turnV + 1); const a = skel.data.findAnimation('turn'); a.apply(skel, 0, tt, false, null, 1, spine.MixBlend.replace, spine.MixDirection.mixIn); }
+        if (HIDE.length) for (const n of HIDE) { const sl = skel.findSlot(n); if (sl) sl.color.a = 0; }
         skel.updateWorldTransform();
       },
       render(c) {

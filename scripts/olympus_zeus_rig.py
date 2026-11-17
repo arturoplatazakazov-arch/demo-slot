@@ -123,15 +123,15 @@ def head_w(px, py):
     return ws or [('head_b', 1.0)]
 
 
-def mesh(slot, names, weights, nx, ny, bone):
+def mesh(slot, names, weights, nx, ny, bone, box_of=None, color=None):
     """one grid mesh for names[0]; the other names reuse it (same crop box) as alternative attachments."""
     ims = [load(n) for n in names]
-    x0, y0, x1, y1 = bbox(ims[0])
+    x0, y0, x1, y1 = bbox(load(box_of) if box_of else ims[0])
     for n, im in zip(names, ims):
         rig.image(n, im.crop((x0, y0, x1, y1)))
     cx, cy = sk((x0 + x1) / 2, (y0 + y1) / 2)
     w, h = (x1 - x0) * S, (y1 - y0) * S
-    rig.mesh_grid(slot, names[0], cx, cy, w, h, weights, nx=nx, ny=ny, bone=bone)
+    rig.mesh_grid(slot, names[0], cx, cy, w, h, weights, nx=nx, ny=ny, bone=bone, color=color)
     for n in names[1:]:
         att = dict(rig.atts[slot][names[0]])
         att['path'] = n
@@ -195,7 +195,10 @@ for name, bone, blend in (('plasma_halo', 'orb', 'additive'), ('plasma_glass', '
     rig.image(name, PL[name])
     sc = 1.7 if name == 'plasma_halo' else 1.0
     rig.region(name, bone, name, x=0, y=0, w=D * sc, h=D * sc, blend=blend)
-mesh('head', ['head', 'head_blink', 'head_shout'], head_w, 14, 14, 'head')
+region('l_fingers', 'l_elbow', 'l_fingers')
+mesh('head', ['head'], head_w, 14, 14, 'head')
+# emotions = the same head mesh on a FACE slot above it, cross-faded in ~50 ms (no visible swap)
+mesh('face', ['head_blink', 'head_shout'], head_w, 14, 14, 'head', box_of='head', color='ffffff00')
 region('r_upper', 'r_shoulder', 'r_upper')
 region('r_fore', 'r_elbow', 'r_fore')
 region('bolt', 'bolt', 'bolt')
@@ -230,8 +233,10 @@ def turn(a, fn):
     a.bone('chest_b', 'translate', lambda t: (-3 * fn(t), 0))
 
 
-def face(a, keys_):
-    a.attach('head', keys_)
+def face(a, name, t_in, t_out, fade=0.05):
+    """show an emotion: fade in over `fade` s at t_in, hold, fade out by t_out (attachment set on the face slot)."""
+    a.attach('face', [(0, name)])
+    a.rgba('face', lambda t: smooth((t - t_in) / fade) * (1 - smooth((t - (t_out - fade)) / fade)))
 
 
 # idle — 4 s loop: breathing, hair/beard/cloak sway, arms float, blink, bolt candle, plasma
@@ -243,7 +248,7 @@ a.bone('r_shoulder', 'rotate', lambda t: 1.8 * math.sin(TAU * t / 4 + 0.3))
 a.bone('r_elbow', 'rotate', lambda t: 2.5 * math.sin(TAU * t / 4 + 0.9))
 a.bone('l_elbow', 'rotate', lambda t: 1.5 * math.sin(TAU * t / 4 + 2.0))
 a.rgba('bolt_glow', lambda t: 0.25 + 0.2 * (0.5 + 0.5 * math.sin(TAU * t / 0.5)) * (0.6 + 0.4 * math.sin(TAU * t / 1.3)))
-face(a, [(0, 'head'), (2.6, 'head_blink'), (2.73, 'head')])
+face(a, 'head_blink', 2.6, 2.74, fade=0.035)
 
 # throw — wind-up 0-0.45, whip 0.45-0.62 (release 0.60), follow-through, recover to 1.8
 T_REL = 0.60
@@ -262,7 +267,7 @@ turn(a, lambda t: keys(t, [(0, 0), (0.4, -0.6), (0.66, 1.0), (1.2, 0.8), (1.8, 0
 a.bone('l_elbow', 'rotate', lambda t: keys(t, [(0, 0), (0.45, -4), (0.7, 6), (1.8, 0)]))
 a.rgba('bolt', lambda t: 1.0 if t < T_REL else (0.0 if t < 1.25 else smooth((t - 1.25) / 0.35)))
 a.rgba('bolt_glow', lambda t: (0.3 + 0.7 * smooth(t / 0.5)) if t < T_REL else (0.0 if t < 1.25 else 0.3 * smooth((t - 1.25) / 0.35)))
-face(a, [(0, 'head'), (0.42, 'head_shout'), (1.15, 'head')])
+face(a, 'head_shout', 0.40, 0.98, fade=0.06)
 a.event('release', T_REL)
 
 # win — triumph: fist up high, chest out, head back with a shout, plasma flares (2.2 s)
@@ -276,7 +281,7 @@ a.bone('chest', 'scale', lambda t: (1, 1 + 0.03 * math.sin(math.pi * clamp(t / 2
 a.bone('head', 'rotate', lambda t: keys(t, [(0, 0), (0.35, 5), (1.6, 4), (2.2, 0)]))
 a.bone('l_elbow', 'rotate', lambda t: keys(t, [(0, 0), (0.4, 10), (1.6, 8), (2.2, 0)]))
 a.rgba('bolt_glow', lambda t: 0.35 + 0.65 * math.sin(math.pi * clamp((t - 0.2) / 1.6)))
-face(a, [(0, 'head'), (0.3, 'head_shout'), (1.6, 'head')])
+face(a, 'head_shout', 0.26, 1.58, fade=0.06)
 
 # charge — the orb hand lifts, the plasma swells
 a = rig.anim('charge', 1.2)
@@ -289,5 +294,5 @@ turn(a, lambda t: keys(t, [(0, 0), (0.5, 0.5), (1.2, 0)]))
 a = rig.anim('turn', 2.0)
 turn(a, lambda t: -1 + t)
 
-rig.write(max_page=2048, webp=True)
+rig.write(max_page=2048, webp=True, lossless=True, gap=10)
 json.dump({'release': T_REL, 'size': [W * S, H * S]}, open(os.path.join(OUT, 'zeus_rig', 'meta.json'), 'w'))
