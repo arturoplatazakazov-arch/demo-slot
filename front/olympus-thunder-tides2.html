@@ -12,14 +12,14 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Marcellus+SC&family=Forum&display=swap">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 </head>
-<body data-game-id="olympus-thunder" data-var="tides2" data-under="glass" data-low="gems" data-title="1" data-sky="tides2/sky.jpg?v=1|tides2/sky_mob.jpg?v=1" data-sky-fs="tides/sky_fs.jpg?v=2|tides/sky_fs_mob.jpg?v=2" data-temple="none" data-frame="none" data-symbols="img/olympus-thunder/tides2/symbols/" data-symbols-v="1" data-titles="img/olympus-thunder/tides/titles/" data-cards="img/olympus-thunder/tides/ui/" data-hero="tides2/hero.webp?v=1" data-num-prefix="×" data-spine-zeus="off" data-spine-logo="off" data-spine-symbols="off" data-spine-bg="off">
+<body data-game-id="olympus-thunder" data-var="tides2" data-under="glass" data-low="gems" data-title="1" data-sky="tides2/sky.jpg?v=1|tides2/sky_mob_b.jpg?v=1" data-sky-fs="tides/sky_fs.jpg?v=2|tides/sky_fs_mob.jpg?v=2" data-temple="none" data-frame="none" data-symbols="img/olympus-thunder/tides2/symbols/" data-symbols-v="1" data-titles="img/olympus-thunder/tides/titles/" data-cards="img/olympus-thunder/tides/ui/" data-hero="tides2/hero.webp?v=1" data-num-prefix="×" data-spine-zeus="off" data-spine-logo="off" data-spine-symbols="off" data-spine-bg="off">
 <script>
   // presentation switches (read before the game scripts build the board)
   (function () {
     var q = new URLSearchParams(location.search), b = document.body.dataset;
     if (q.get('under')) b.under = q.get('under');
     if (q.get('title')) b.title = q.get('title');
-    if (q.get('bgm') === 'a' || q.get('bgm') === 'b') b.sky = 'tides2/sky.jpg?v=1|tides2/sky_mob_' + q.get('bgm') + '.jpg?v=1';
+    var bgm = q.get('bgm'); if (bgm === '0' || bgm === 'a' || bgm === 'b') b.sky = 'tides2/sky.jpg?v=1|tides2/sky_mob' + (bgm === '0' ? '' : '_' + bgm) + '.jpg?v=1';
     if (q.get('clean')) b.clean = '1';
     if (q.get('shot')) { b.clean = '1'; document.head.insertAdjacentHTML('beforeend', '<style>#access-gate,#preloader{display:none!important}</style>'); }
     if (q.get('low') === 'letters') { b.low = 'letters'; b.symbols = 'img/olympus-thunder/tides2/symbols_letters/'; }
@@ -260,7 +260,7 @@
 <script>
   (function () {
     var b = document.body.dataset, q = new URLSearchParams(location.search);
-    var cur = { under: b.under, low: b.low, title: b.title, hero: q.get('hero') === 'b' ? 'b' : 'a', bgm: q.get('bgm') || '0' };
+    var cur = { under: b.under, low: b.low, title: b.title, hero: q.get('hero') === 'b' ? 'b' : 'a', bgm: q.get('bgm') || 'b' };
     var box = document.getElementById('demoSwitch');
     function paint() { box.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', cur[x.dataset.k] === x.dataset.v); }); }
     box.addEventListener('click', function (e) {

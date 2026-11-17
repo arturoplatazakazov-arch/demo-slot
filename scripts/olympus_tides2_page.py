@@ -25,7 +25,7 @@ h = re.sub(r'(<link rel="stylesheet" href="css/olympus-thunder\.css\?v=\d+">)',
            '\n<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Marcellus+SC&family=Forum&display=swap">',
            h, count=1)
 body = (f'<body data-game-id="olympus-thunder" data-var="tides2" data-under="glass" data-low="gems" data-title="1" '
-        f'data-sky="tides2/sky.jpg?v={V}|tides2/sky_mob.jpg?v={V}" data-sky-fs="tides/sky_fs.jpg?v=2|tides/sky_fs_mob.jpg?v=2" '
+        f'data-sky="tides2/sky.jpg?v={V}|tides2/sky_mob_b.jpg?v={V}" data-sky-fs="tides/sky_fs.jpg?v=2|tides/sky_fs_mob.jpg?v=2" '
         f'data-temple="none" data-frame="none" data-symbols="{T}symbols/" data-symbols-v="{V}" '
         f'data-titles="{OLD}titles/" data-cards="{OLD}ui/" data-hero="tides2/hero.webp?v={V}" data-num-prefix="×" '
         f'data-spine-zeus="off" data-spine-logo="off" data-spine-symbols="off" data-spine-bg="off">'
@@ -36,7 +36,7 @@ body = (f'<body data-game-id="olympus-thunder" data-var="tides2" data-under="gla
     var q = new URLSearchParams(location.search), b = document.body.dataset;
     if (q.get('under')) b.under = q.get('under');
     if (q.get('title')) b.title = q.get('title');
-    if (q.get('bgm') === 'a' || q.get('bgm') === 'b') b.sky = 'tides2/sky.jpg?v=""" + str(V) + """|tides2/sky_mob_' + q.get('bgm') + '.jpg?v=""" + str(V) + """';
+    var bgm = q.get('bgm'); if (bgm === '0' || bgm === 'a' || bgm === 'b') b.sky = 'tides2/sky.jpg?v=""" + str(V) + """|tides2/sky_mob' + (bgm === '0' ? '' : '_' + bgm) + '.jpg?v=""" + str(V) + """';
     if (q.get('clean')) b.clean = '1';
     if (q.get('shot')) { b.clean = '1'; document.head.insertAdjacentHTML('beforeend', '<style>#access-gate,#preloader{display:none!important}</style>'); }
     if (q.get('low') === 'letters') { b.low = 'letters'; b.symbols = '""" + T + """symbols_letters/'; }
@@ -104,7 +104,7 @@ h = h.replace('<div class="screen" id="screen"', """<div class="demo-switch" id=
 h = h.replace("</body>", """<script>
   (function () {
     var b = document.body.dataset, q = new URLSearchParams(location.search);
-    var cur = { under: b.under, low: b.low, title: b.title, hero: q.get('hero') === 'b' ? 'b' : 'a', bgm: q.get('bgm') || '0' };
+    var cur = { under: b.under, low: b.low, title: b.title, hero: q.get('hero') === 'b' ? 'b' : 'a', bgm: q.get('bgm') || 'b' };
     var box = document.getElementById('demoSwitch');
     function paint() { box.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', cur[x.dataset.k] === x.dataset.v); }); }
     box.addEventListener('click', function (e) {
