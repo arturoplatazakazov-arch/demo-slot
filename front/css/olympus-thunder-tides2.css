@@ -150,19 +150,27 @@ body[data-clean] .demo-switch { display: none; }
 
 /* ================= desktop 1920x1080 ================= */
 @media (orientation: landscape) {
-  :root { --cell: 140px; --cell-x: 166px; }
-  body[data-var="tides2"] .board { left: 463px; top: 162px; width: 994px; height: 724px; }
-  body[data-var="tides2"] .win-plate { left: 670px; top: 904px; width: 580px; z-index: 6; }
-  body[data-var="tides2"] .medallion { left: 1270px; top: 870px; width: 150px; z-index: 6; }
-  body[data-var="tides2"] .logo { left: 610px; top: 26px; width: 700px; height: auto; font-size: 96px; }
-  body[data-var="tides2"] .jackpots { left: 1500px; top: 190px; width: 400px; height: auto; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  /* slot 10% taller (rows 140 -> 154). Frame outer box = board + 24px: top 126, bottom 968, right 1488.
+     Right column: GRAND top = frame top, UP TO plate (GRAND width) bottom = frame bottom. */
+  :root { --cell: 154px; --cell-x: 166px; }
+  body[data-var="tides2"] .board { left: 456px; top: 150px; width: 1008px; height: 794px; }
+  body[data-var="tides2"] .logo { left: 610px; top: 6px; width: 700px; height: auto; font-size: 88px; }
+  body[data-var="tides2"] .jackpots { left: 1504px; top: 126px; width: 400px; height: auto; display: flex; flex-direction: column; align-items: center; gap: 14px; }
   body[data-var="tides2"] .jp { flex: none; width: 360px; height: 86px; }
   body[data-var="tides2"] .jp[data-tier="grand"] { width: 400px; height: 100px; }
   body[data-var="tides2"] .jp[data-tier="grand"] .jp__name { font-size: 26px; }
   body[data-var="tides2"] .jp[data-tier="grand"] .jp__val { font-size: 36px; }
-  body[data-var="tides2"] .zeus { left: -96px; top: 110px; width: 540px; height: 640px; z-index: 1; }
+  body[data-var="tides2"] .win-plate { left: 1504px; top: 892px; width: 400px; height: 76px; z-index: 6; }
+  body[data-var="tides2"] .win-plate img { height: 100%; object-fit: fill; }
+  body[data-var="tides2"] .win-plate__win { top: 14%; bottom: 14%; }
+  body[data-var="tides2"] .win-plate__label { font-size: 24px; }
+  body[data-var="tides2"] .win-plate.has-value .win-plate__label { font-size: 12px; }
+  body[data-var="tides2"] .win-plate__value { font-size: 30px; }
+  body[data-var="tides2"] .fs-counter { left: 1554px; top: 560px; width: 300px; height: 120px; }
+  body[data-var="tides2"] .medallion { left: 1629px; top: 700px; width: 150px; z-index: 6; }
+  body[data-var="tides2"] .zeus { left: -112px; top: 110px; width: 540px; height: 640px; z-index: 1; }
   body[data-var="tides2"] .buy-btn { left: 120px; top: 740px; width: 210px; height: 218px; z-index: 7; }
-  body[data-var="tides2"] .fs-counter { left: 1550px; top: 730px; width: 300px; height: 120px; }
+}
 }
 
 /* ================= portrait 1080x1860 (phone first) ================= */
