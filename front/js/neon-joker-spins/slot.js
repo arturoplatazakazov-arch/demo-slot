@@ -31,7 +31,9 @@ function fx(name, ...args) {
 }
 
 function assetSrc(path) {
-  return `${ASSET_ROOT}/${path}?v=${ASSET_VERSION}`;
+  // dev-sets.js (skin C) может подменить корень по кластеру ассета.
+  const root = (window.NJS_ASSET_ROOT_FOR && window.NJS_ASSET_ROOT_FOR(path)) || ASSET_ROOT;
+  return `${root}/${path}?v=${ASSET_VERSION}`;
 }
 
 // 1:1 контракт с app/seed/neon_joker_spins.py: код == имя файла в symbols/.
@@ -1219,7 +1221,7 @@ function showSpineScreen(kind, { dark = false, autoCloseMs = 0 } = {}) {
     };
     root.classList.toggle('is-dark', dark);
     const setBg = () => {
-      const src = `${ASSET_ROOT}/img/${isMobileLayout() ? 'bg_base_mob' : 'bg_base'}.jpg`;
+      const src = assetSrc(`img/${isMobileLayout() ? 'bg_base_mob' : 'bg_base'}.jpg`);
       root.style.setProperty('--fs-bg', `url("${new URL(src, location.href).href}")`);
     };
     const onResize = () => {
