@@ -167,34 +167,37 @@ body[data-clean] .demo-switch { display: none; }
 
 /* ================= portrait 1080x1860 (phone first) ================= */
 @media (orientation: portrait) {
-  :root { --design-h: 1860px; --cell: 164px; --cell-x: 174px; }
-  body[data-var="tides2"] .zeus { left: -30px; top: 30px; width: 500px; height: 600px; z-index: 1; }
-  /* logo under the jackpots, exactly as wide as the GRAND plate (fitted by the page script) */
-  body[data-var="tides2"] .logo { left: 440px; top: 384px; width: 620px; height: auto; font-size: 104px; }
+  /* Compact canvas so the stage is WIDTH-limited on real phones (Telegram header + V3 bar leave ~500 css px
+     of height): the frame takes 96% of the screen width. Frame outer = board + 2x12px = 1037 / 1080. */
+  :root { --design-h: 1360px; --cell: 158px; --cell-x: 166px; }
+  body[data-var="tides2"] .zeus { left: -30px; top: 0; width: 450px; height: 490px; z-index: 1; }
   body[data-var="tides2"] .jackpots {
-    left: 440px; top: 150px; width: 620px; height: auto;
-    display: grid; grid-template-columns: repeat(3, 1fr); grid-template-areas: "grand grand grand" "major minor mini"; gap: 10px;
+    left: 450px; top: 24px; width: 600px; height: auto;
+    display: grid; grid-template-columns: repeat(3, 1fr); grid-template-areas: "grand grand grand" "major minor mini"; gap: 8px;
   }
-  body[data-var="tides2"] .jp { width: auto; height: 96px; column-gap: 5px; }
+  body[data-var="tides2"] .jp { width: auto; height: 90px; column-gap: 5px; }
   body[data-var="tides2"] .jp .bolt { width: 13px; height: 22px; }
   body[data-var="tides2"] .jp__val { font-size: 26px; }
-  body[data-var="tides2"] .jp[data-tier="grand"] { grid-area: grand; height: 100px; }
+  body[data-var="tides2"] .jp[data-tier="grand"] { grid-area: grand; height: 96px; }
   body[data-var="tides2"] .jp[data-tier="major"] { grid-area: major; }
   body[data-var="tides2"] .jp[data-tier="minor"] { grid-area: minor; }
   body[data-var="tides2"] .jp[data-tier="mini"]  { grid-area: mini; }
   body[data-var="tides2"] .jp[data-tier="grand"] .jp__name { font-size: 28px; }
   body[data-var="tides2"] .jp[data-tier="grand"] .jp__val { font-size: 34px; }
-  body[data-var="tides2"] .win-plate { left: 220px; top: 1504px; width: 640px; z-index: 6; }
-  body[data-var="tides2"] .win-plate__label { font-size: 30px; }
-  body[data-var="tides2"] .medallion { left: 880px; top: 1480px; width: 150px; z-index: 6; }
-  body[data-var="tides2"] .board { left: 11px; top: 640px; width: 1058px; height: 844px; }
+  /* logo under the jackpots, exactly as wide as the GRAND plate (fitted by the page script) */
+  body[data-var="tides2"] .logo { left: 450px; top: 232px; width: 600px; height: auto; font-size: 100px; }
+  body[data-var="tides2"] .board { left: 33px; top: 404px; width: 1013px; height: 814px; }
   body[data-var="tides2"] .board::after { inset: -12px; border-width: 26px; }
-  body[data-var="tides2"] .cell__num { font-size: 62px; }
-  body[data-var="tides2"] .cell__num.is-big { font-size: 56px; }
-  body[data-var="tides2"] .cell__num.is-huge { font-size: 50px; }
-  body[data-var="tides2"] .cell[data-code="scatter"]::after { font-size: 26px; }
-  body[data-var="tides2"] .buy-btn { left: 40px; top: 1512px; width: 220px; height: 229px; }
-  body[data-var="tides2"] .fs-counter { left: 400px; top: 1620px; width: 280px; height: 120px; }
+  body[data-var="tides2"] .win-plate { left: 250px; top: 1236px; width: 580px; z-index: 6; }
+  body[data-var="tides2"] .win-plate__label { font-size: 28px; }
+  body[data-var="tides2"] .medallion { left: 880px; top: 1218px; width: 140px; z-index: 6; }
+  body[data-var="tides2"] .fs-counter { left: 30px; top: 1236px; width: 200px; height: 100px; }
+  body[data-var="tides2"] .fs-counter__label { font-size: 13px; }
+  body[data-var="tides2"] .fs-counter__value { font-size: 44px; }
+  body[data-var="tides2"] .cell__num { font-size: 60px; }
+  body[data-var="tides2"] .cell__num.is-big { font-size: 54px; }
+  body[data-var="tides2"] .cell__num.is-huge { font-size: 48px; }
+  body[data-var="tides2"] .cell[data-code="scatter"]::after { font-size: 25px; }
   body[data-var="tides2"] .cloud { width: 110%; }
   body[data-var="tides2"] .cloud--3, body[data-var="tides2"] .cloud--4 { width: 95%; }
 }
