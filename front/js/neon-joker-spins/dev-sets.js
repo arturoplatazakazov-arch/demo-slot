@@ -54,7 +54,7 @@
   const IMG_RE = new RegExp(`${esc(ROOT)}(?:/sets/[^/]+)?/((?:symbols|coins|img)/[^?]+)(\\?.*)?$`);
 
   function cssRules() {
-    const u = (p) => `url('${rootFor(p)}/${p}?v=m')`;
+    const u = (p) => `url('${rootFor(p)}/${p}?v=m2')`;
     let css = '';
     if (pick.bg && pick.bg !== '0' && has(pick.bg, 'bg')) {
       css += `.bg__img--base { background-image: ${u('img/bg_base.jpg')} !important; }
@@ -65,7 +65,7 @@
 }\n`;
     }
     else if (META.mob0) {  // the skin's own scene, with its drawn portrait background
-      const m0 = (f) => `url('${ROOT}/sets/s0/img/${f}?v=m')`;
+      const m0 = (f) => `url('${ROOT}/sets/s0/img/${f}?v=m2')`;
       css += `@media (orientation: portrait) {
   .bg__img--base { background-image: ${m0('bg_base_mob.jpg')} !important; }
   .bg__img--fs { background-image: ${m0('bg_fs_mob.jpg')} !important; }
