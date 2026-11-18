@@ -8,6 +8,7 @@
 .jp--grand { background-image: url('../img/neon-joker-spins/skins/c/sets/nr/img/jp_grand.webp?v=1') !important; left: 1140px !important; top: 253px !important; width: 228px !important; height: 93px !important; --win-l: 0.036; --win-t: 0.527; --win-ww: 0.923; --win-hh: 0.396; animation: none; }
 .reel { background: url('../img/neon-joker-spins/skins/c/sets/nr/img/reel_bg.webp?v=1') center / 100% 100% no-repeat !important; }
 .reel::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: url('../img/neon-joker-spins/skins/c/sets/nr/img/reel_grid.webp?v=1') center / 100% 100% no-repeat; }
+.reel__cell[data-symbol="wild"] > img.sym { scale: 1.2; }
 @media (orientation: portrait) {
   .logo { left: 207px !important; top: 8px !important; width: 305px !important; }
   .jp--grand { background-image: url('../img/neon-joker-spins/skins/c/sets/nr/img/jp_grand.webp?v=1') !important; left: 195px !important; top: 145px !important; width: 330px !important; height: 135px !important; --win-l: 0.036; --win-t: 0.527; --win-ww: 0.923; --win-hh: 0.396; animation: none; }
@@ -16,4 +17,5 @@
   .jp--mini { background-image: url('../img/neon-joker-spins/skins/c/sets/nr/img/jp_mini.webp?v=1') !important; left: 481px !important; top: 290px !important; width: 222px !important; height: 88px !important; --win-l: 0.037; --win-t: 0.533; --win-ww: 0.926; --win-hh: 0.387; animation: none; }
   :root { --fw-l: 0.0334; --fw-t: 0.0574; --fw-w: 0.9332; --fw-h: 0.8950; --frame-h: 674.2px; --frame-w: 707.2px; --frame-x: 6.4px; --frame-y: 387.9px; }
   .cabinet { background-image: url('../img/neon-joker-spins/skins/c/sets/nr/img/frame.webp?v=1') !important; }
+  .bg__img { filter: brightness(0.82) saturate(0.92) !important; transform: none !important; }
 }
