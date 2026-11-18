@@ -3,7 +3,7 @@
 // same layout as the skin (symbols/, coins/, img/); '0' = the skin's own art.
 // Loaded BEFORE slot.js: window.NJS_ASSET_ROOT_FOR(path) picks the root per
 // asset path, so preload and every later symbol/coin uses the chosen set.
-// The choice is kept in localStorage (per browser) and in ?sets=bg.logo.low.high.special.coins.frame.hlogo.
+// The choice is kept in localStorage (per browser) and in ?sets=bg.logo.low.high.special.coins.frame.hlogo.hero.jp.
 // 'Лого гориз.' (img/logo_h.webp, one-line logo) replaces the stacked logo while it is on.
 (function () {
   if (window.NJS_SKIN !== 'c') return;
@@ -19,6 +19,8 @@
     ['coins', 'Монеты', ['symbols/coin', 'coins/blank', 'coins/collector', 'coins/mini', 'coins/minor', 'coins/major', 'coins/grand']],
     ['frame', 'Рамка', ['img/frame.webp']],
     ['hlogo', 'Лого гориз.', []],
+    ['hero', 'Герой', ['img/mascot.webp']],
+    ['jp', 'Джекпоты', []],
   ];
 
   let pick = {};
@@ -74,6 +76,8 @@
     const hl = has(pick.hlogo, 'hlogo') && (META.logoH || {})[pick.hlogo];
     const lg = hl || (has(pick.logo, 'logo') && META.logo[pick.logo]);
     if (lg) css += `.logo { ${lg.desk} }\n@media (orientation: portrait) { .logo { ${lg.mob} } }\n`;
+    const jp = has(pick.jp, 'jp') && (META.jp || {})[pick.jp];
+    if (jp) css += `${jp.desk.replace(/url\('\.\.\/\.\.\//g, "url('")}\n@media (orientation: portrait) { ${jp.mob} }\n`;
     const fr = has(pick.frame, 'frame') && (META.frame || {})[pick.frame];
     if (fr) {
       css += `.cabinet { background-image: ${u('img/frame.webp')} !important; }
