@@ -29,7 +29,7 @@
   };
   const rig = RIGS[window.NJS_SKIN];
   const img = document.getElementById('mascot');
-  if (!rig || !img) return;
+  if (!rig || !img || window.NJS_MASCOT_STATIC) return;   // NJS_MASCOT_STATIC: hero stays a still picture
   const probe = document.createElement('canvas');
   const glProbe = probe.getContext('webgl', { premultipliedAlpha: true });
   if (!glProbe) return;

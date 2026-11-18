@@ -14,6 +14,12 @@
 // does not load this file.
 (function () {
   const img = document.getElementById('mascot');
+  if (img && window.NJS_MASCOT_STATIC) {   // hero stays a still picture: no rig, no CSS bob / cheer
+    const st = document.createElement('style');
+    st.textContent = '.mascot, .mascot.is-cheer { animation: none !important; transform: none !important; }';
+    document.head.appendChild(st);
+    return;
+  }
   if (!img || window.NJS_MASCOT_RIG_ACTIVE) return;   // mascot-rig.js took over (mesh rig)
 
   const STRIP = 3;            // source px per strip
