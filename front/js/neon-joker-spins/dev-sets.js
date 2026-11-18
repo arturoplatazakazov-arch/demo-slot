@@ -27,7 +27,10 @@
   try { pick = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { pick = {}; }
   const q = new URLSearchParams(location.search).get('sets');
   if (q) q.split('.').forEach((v, i) => { if (CLUSTERS[i]) pick[CLUSTERS[i][0]] = v; });
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(pick)); } catch (e) {} };
+  const save = () => { if (window.NJS_SETS_LOCK) return; try { localStorage.setItem(KEY, JSON.stringify(pick)); } catch (e) {} };
+  // A fixed variant page (e.g. neon-joker-spins-reels.html): its clusters are locked, no panel.
+  const LOCK = window.NJS_SETS_LOCK;
+  if (LOCK) pick = { ...LOCK };
 
   function clusterOf(path) {
     const p = path.replace(/(_blur)?\.(webp|jpg)$/, '');
@@ -123,6 +126,7 @@
 
   // --- panel ----------------------------------------------------------------
   function build() {
+    if (LOCK) return;
     const show = window.NJS_SETS_FORCE_DEV || (window.SLOT_CONFIG ? window.SLOT_CONFIG.showDevPanels !== false : true);
     if (!show || !META.ids.length) return;
     const css = document.createElement('style');
