@@ -35,7 +35,6 @@
       ['shape', 'spade', 1170, 430, 0.95, -6, CYAN],
       ['shape', 'bolt', 1214, 620, 0.9, -12, GOLD],
       ['shape', 'star', 1290, 230, 0.4, 0, GOLD],
-      ['shape', 'drip', 1160, 372, 1, 0, PINK],
     ],
     mob: [
       ['text', 'ROCK', 14, 336, 56, -10, CYAN],
