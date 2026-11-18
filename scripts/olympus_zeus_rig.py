@@ -235,8 +235,9 @@ region('r_upper', 'r_shoulder', 'r_upper')
 region('strap', 'chest_f', 'strap')
 region('bolt', 'bolt', 'bolt')
 region('bolt_glow', 'bolt', 'bolt_glow', blend='additive', src='bolt')
-region('r_fist', 'r_fist', 'r_fist')
 region('r_bracer', 'r_elbow', 'r_bracer')
+region('bolt_low', 'bolt', 'bolt_low')
+region('r_fist', 'r_fist', 'r_fist')
 rig.event('release')
 
 
@@ -298,6 +299,7 @@ a.bone('hips', 'translate', lambda t: (keys(t, [(0, 0), (0.45, -6), (0.66, 9), (
 a.bone('head', 'rotate', lambda t: keys(t, [(0, 0), (0.45, 3), (0.66, -4), (1.2, -2), (1.8, 0)]))
 turn(a, lambda t: keys(t, [(0, 0), (0.4, -0.6), (0.66, 1.0), (1.2, 0.8), (1.8, 0)]))
 a.bone('l_elbow', 'rotate', lambda t: keys(t, [(0, 0), (0.45, -4), (0.7, 6), (1.8, 0)]))
+a.rgba('bolt_low', lambda t: 1.0 if t < T_REL else (0.0 if t < 1.25 else smooth((t - 1.25) / 0.35)))
 a.rgba('bolt', lambda t: 1.0 if t < T_REL else (0.0 if t < 1.25 else smooth((t - 1.25) / 0.35)))
 a.rgba('bolt_glow', lambda t: (0.3 + 0.7 * smooth(t / 0.5)) if t < T_REL else (0.0 if t < 1.25 else 0.3 * smooth((t - 1.25) / 0.35)))
 face(a, 'head_shout', 0.40, 0.98, fade=0.06)

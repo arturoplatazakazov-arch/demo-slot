@@ -364,20 +364,25 @@ bolt_img = Image.new('L', (W * 4, H * 4), 0)
 ImageDraw.Draw(bolt_img).polygon([tuple((B0 + ax * u * L + nv * v * L) * 4) for u, v in ZZ], fill=255)
 zz = np.array(bolt_img.resize((W, H), Image.LANCZOS)) / 255.0
 upper = (np.arange(H)[:, None] < 300) | ((np.arange(W)[None, :] > 330) & (np.arange(H)[:, None] < 360))
-coremask = zz > 0.5          # only the zig-zag from the fist up: no spike across the bracer
-cs = np.clip((gaussian_filter(coremask.astype(float), 1.0) - 0.25) / 0.5, 0, 1)
-cs = np.maximum(cs, zz * (zz > 0.02))
-g1 = np.clip(gaussian_filter(coremask.astype(float), 7) * 2.2, 0, 1)
-g2 = np.clip(gaussian_filter(coremask.astype(float), 20) * 2.0, 0, 1) * 0.55
-bolt = np.zeros_like(H0)
-glow_a = np.maximum(g1 * 0.85, g2)
-col = np.array([110, 215, 255], float)
-white = np.array([245, 253, 255], float)
-a_out = np.maximum(cs, glow_a)
-mix = np.where(a_out > 0, cs / np.maximum(a_out, 1e-3), 0)[..., None]
-bolt[..., :3] = col * (1 - mix) + white * mix
-bolt[..., 3] = a_out * 255
-save('bolt', bolt, clean=False)
+low_mask = coremask & ~upper           # the original spike under the fist (drawn over the bracer, under the fist)
+
+
+def bolt_layer(cm, soft=None):
+    cs = np.clip((gaussian_filter(cm.astype(float), 1.0) - 0.25) / 0.5, 0, 1)
+    if soft is not None:
+        cs = np.maximum(cs, soft * (soft > 0.02))
+    g1 = np.clip(gaussian_filter(cm.astype(float), 7) * 2.2, 0, 1)
+    g2 = np.clip(gaussian_filter(cm.astype(float), 20) * 2.0, 0, 1) * 0.55
+    out = np.zeros_like(H0)
+    a_out = np.maximum(cs, np.maximum(g1 * 0.85, g2))
+    mix = np.where(a_out > 0, cs / np.maximum(a_out, 1e-3), 0)[..., None]
+    out[..., :3] = np.array([110, 215, 255], float) * (1 - mix) + np.array([245, 253, 255], float) * mix
+    out[..., 3] = a_out * 255
+    return out
+
+
+save('bolt', bolt_layer(zz > 0.5, zz), clean=False)       # zig-zag from the fist up (behind the fist)
+save('bolt_low', bolt_layer(low_mask), clean=False)
 for nm, zone in (('orb', 'orb_zone'),):
     g2 = gate.copy()
     if nm == 'bolt':   # over the fist keep only the white-hot core, not the cyan rim light on the skin
@@ -391,7 +396,7 @@ for nm, zone in (('orb', 'orb_zone'),):
     save(nm, fx)
 
 # ---- check: re-assemble in rig order over grey ----
-order = ['body', 'l_fore', 'orb', 'head', 'r_upper', 'strap', 'bolt', 'r_fist', 'r_bracer']
+order = ['body', 'l_fore', 'orb', 'head', 'r_upper', 'strap', 'bolt', 'r_bracer', 'bolt_low', 'r_fist']
 comp = Image.new('RGBA', (W, H), (60, 60, 68, 255))
 for nm in order:
     comp.alpha_composite(Image.open(os.path.join(OUT, f'p_{nm}.png')))
