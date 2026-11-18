@@ -75,6 +75,7 @@ const WIN_SOUND = { bigWin: 'bigWin', megaWin: 'megaWin', epicWin: 'epicWin' };
 function setBusyUi(busy) {
   document.querySelector('[data-action="spin"]').classList.toggle('is-spinning', busy);
   document.getElementById('buyBtn').disabled = busy;
+  document.querySelectorAll('[data-buy-open]').forEach((b) => { b.disabled = busy; });
   // lights off while hidden in a feature too (CSS fades the button there)
   const ns = window.NeonFx;
   if (ns && ns.ready) ns.buyState(!busy && !gameState.inFreeSpins);
@@ -224,18 +225,25 @@ function setupSpinButton() {
 }
 
 function setupBuyButton() {
-  const btn = document.getElementById('buyBtn');
-  btn.addEventListener('click', async () => {
+  // Buy Bonus lives in the V3 menu flyout (data-buy-open); the stage sign #buyBtn is hidden by CSS.
+  const open = async () => {
     // Недоступна во время фич и в автоигре (GDD §7.4).
     if (gameState.isSpinning || gameState.inFreeSpins || gameState.autoSpinsLeft > 0) return;
     const bet = currentBet();
     const ok = await showBuyDialog(bet * BUY_COST_MULTIPLIER, gameState.currency);
     if (!ok) return;
     runSpin(() => Api.buyFeature(gameState.sessionId, BUY_ID, bet), bet, { anticipate: false });
-  });
+  };
+  document.getElementById('buyBtn').addEventListener('click', open);
+  document.querySelectorAll('[data-buy-open]').forEach((b) => b.addEventListener('click', () => {
+    const menu = b.closest('.v3-menu');
+    if (menu && menu.classList.contains('is-open')) document.getElementById('v3MenuBtn')?.click();
+    open();
+  }));
   // Юрисдикция без покупки: ?buy=0 прячет кнопку (флаг buy_bonus_enabled).
   if (new URLSearchParams(location.search).get('buy') === '0') {
     document.getElementById('screen').classList.add('is-buy-off');
+    document.body.classList.add('is-buy-off');
   }
 }
 

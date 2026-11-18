@@ -593,3 +593,7 @@ body.is-feature-screen .v3-bar { visibility: hidden; }
 .mascot.is-live { visibility: hidden; animation: none; }
 .mascot-live { pointer-events: none; }
 @media (orientation: portrait) { .mascot-live { display: none; } }
+
+/* Buy Bonus moved into the V3 menu flyout (user, 2026-11-18): the stage sign is gone. */
+.obj.buy-btn { display: none !important; }
+body.is-buy-off .v3-btn--buy { display: none; }
