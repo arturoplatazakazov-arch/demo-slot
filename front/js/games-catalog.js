@@ -160,13 +160,13 @@ const ILLUMINATOR_CARDS = [
   njs('c', { name: 'Neon Joker Spins', badge: null, desc: null }),
   ot('tides2'),
   savannah('lodge'),
+  'gold-of-baku',
+  'gold-of-baku-2',
 ];
 // Spin Factory: its own games newest first, then the variants moved out of
 // Illuminator, in this order.
 const SPIN_FACTORY_CODES = new Set(['big-catch', 'caesars-fortune', 'ice-spin-deluxe', 'tesla-spins']);
 const SPIN_FACTORY_EXTRA_CARDS = [
-  'gold-of-baku',
-  'gold-of-baku-2',
   njs('original'),
   njs('a'),
   njs('b'),
