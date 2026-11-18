@@ -82,12 +82,50 @@
     const jp = has(pick.jp, 'jp') && (META.jp || {})[pick.jp];
     if (jp) css += `${jp.desk.replace(/url\('\.\.\/\.\.\//g, "url('")}\n@media (orientation: portrait) { ${jp.mob} }\n`;
     const fr = has(pick.frame, 'frame') && (META.frame || {})[pick.frame];
+    if (!LOCK && META.ar) css += portraitStack(hl);
     if (fr) {
       css += `.cabinet { background-image: ${u('img/frame.webp')} !important; }
 :root { ${fr.desk} }
 @media (orientation: portrait) { :root { ${fr.mob} } .cabinet { background-image: ${u('img/frame.webp')} !important; } }\n`;
     }
     return css;
+  }
+
+  // Portrait (user, 2026-11-18): GRAND a bit bigger on top, a row MAJOR · MINOR · MINI
+  // under it, then the logo sitting on the reel frame's top edge (its lower part overlaps
+  // the frame), then the reels in whatever frame is picked. Sizes come from the aspects.
+  function portraitStack(hl) {
+    const A = META.ar;
+    const arOf = (k, key) => {
+      const id = pick[k] && pick[k] !== '0' && has(pick[k], k) ? pick[k] : '0';
+      return (A[id] || {})[key] || (A['0'] || {})[key] || 1.6;
+    };
+    const logoAr = hl ? (A[pick.hlogo] || {}).logoH || 4 : arOf('logo', 'logo');
+    const CX = 360;
+    const GAP = 10;
+    let y = 8;
+    let r = '';
+    const gh = 128;
+    const gw = Math.min(330, gh * arOf('jp', 'grand'));
+    r += `.jp--grand { left: ${CX - gw / 2}px !important; top: ${y}px !important; width: ${gw}px !important; height: ${gw / arOf('jp', 'grand')}px !important; animation: none; }\n`;
+    y += gw / arOf('jp', 'grand') + GAP;
+    const rw = 222;
+    const rh = Math.min(104, Math.min(...['major', 'minor', 'mini'].map((n) => rw / arOf('jp', n))));
+    ['major', 'minor', 'mini'].forEach((n, k) => {
+      const w = Math.min(rw, rh * arOf('jp', n));
+      const x = CX - (3 * rw + 2 * GAP) / 2 + k * (rw + GAP) + (rw - w) / 2;
+      r += `.jp--${n} { left: ${x}px !important; top: ${y}px !important; width: ${w}px !important; height: ${w / arOf('jp', n)}px !important; }\n`;
+    });
+    y += rh + GAP;
+    const lh = hl ? 135 : 180;   // 1.5x the first pass (user)
+    const lw = Math.min(700, lh * logoAr);
+    const lH = lw / logoAr;
+    r += `.logo { left: ${CX - lw / 2}px !important; top: ${y}px !important; width: ${lw}px !important; z-index: 8 !important; }\n`;
+    // the logo's centre sits on the middle of the frame's top border (border = frame-h * fw-t)
+    // ...but never so high that the logo covers the top symbols: with thin frames (the
+    // skin's own, sets 1-3) the reel window starts at most 10 px above the logo's bottom.
+    r += `:root { --frame-y: max(calc(${y + lH / 2}px - var(--frame-h) * var(--fw-t) / 2), calc(${y + lH - 10}px - var(--frame-h) * var(--fw-t))) !important; }\n`;
+    return `@media (orientation: portrait) {\n${r}}\n`;
   }
 
   function apply() {
