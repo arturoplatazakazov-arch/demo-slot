@@ -49,6 +49,16 @@ const NJS_VARIANTS = {
   d: { page: 'neon-joker-spins-d.html', name: 'Neon Joker Spins · D', badge: 'Retro 80s',
     cover: 'img/neon-joker-spins/skins/d/img/cover.jpg',
     desc: 'Автомат 80-х: хромированный корпус, барабаны под стеклом, лампы и рычаг.' },
+  // three picks from the C sets explorer (user, 2026-11-18)
+  stage: { page: 'neon-joker-spins-c-sets.html?sets=s2.s2.s2.s2.s2.s2.s2.0.s2.s2', name: 'Neon Joker Spins · Stage Gear', badge: 'Stage Gear',
+    cover: 'img/neon-joker-spins/banners/stage-gear.jpg',
+    desc: 'Рок-концерт на арене: прожекторы, медиаторы и гитары, джокер-рокер с гитарой.' },
+  reels: { page: 'neon-joker-spins-reels.html', name: 'Neon Joker Spins · Neon Reels', badge: 'Neon Reels',
+    cover: 'img/neon-joker-spins/banners/neon-reels.jpg',
+    desc: 'Пакет дизайнера: панк-джокер с ирокезом, рама с сеткой, джекпоты лесенкой справа.' },
+  tubes: { page: 'neon-joker-spins-c-sets.html?sets=s6.s6.s6.s6.s6.s6.s6.0.s6.s6', name: 'Neon Joker Spins · Neon Tubes', badge: 'Neon Tubes',
+    cover: 'img/neon-joker-spins/banners/neon-tubes.jpg',
+    desc: 'Неоновые трубки: светящаяся рама, символы-вывески, ночной переулок.' },
 };
 const SAVANNAH_VARIANTS = {
   v3: { page: 'savannah-kings-v3.html', name: 'Savannah Kings',
@@ -144,6 +154,8 @@ const koi = (key, extra) => ({ code: 'koi-fortune', ...KOI_VARIANTS[key], ...ext
 // Koi Fortune, Sugar Blast, then every Olympus Thunder version (moved here
 // from Illuminator / Spin Factory, 2026-11-11).
 const CRE8_TOP_CARDS = [
+  // the earlier Illuminator Neon Joker Spins (Rock Chrome), moved here (2026-11-18)
+  njs('c', { name: 'Neon Joker Spins', badge: null, desc: null }),
   // the five earlier Savannah variants, moved out of Illuminator (2026-11-17)
   savannah('carved'), savannah('canyon'), savannah('toon'), savannah('timber'), savannah('crisp'),
   koi('silk'), koi('jade'), koi('lantern'), koi('paper'),
@@ -157,7 +169,9 @@ const CRE8_TOP_CARDS = [
 // badge: null keeps the game's own badge.
 const ILLUMINATOR_CARDS = [
   'volt-coins',
-  njs('c', { name: 'Neon Joker Spins', badge: null, desc: null }),
+  njs('stage'),
+  njs('reels'),
+  njs('tubes'),
   ot('tides2'),
   savannah('lodge'),
   'gold-of-baku',
