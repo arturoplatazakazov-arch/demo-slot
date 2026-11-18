@@ -3,7 +3,8 @@
 // same layout as the skin (symbols/, coins/, img/); '0' = the skin's own art.
 // Loaded BEFORE slot.js: window.NJS_ASSET_ROOT_FOR(path) picks the root per
 // asset path, so preload and every later symbol/coin uses the chosen set.
-// The choice is kept in localStorage (per browser) and in ?sets=bg.logo.low.high.special.coins.
+// The choice is kept in localStorage (per browser) and in ?sets=bg.logo.low.high.special.coins.frame.hlogo.
+// 'Лого гориз.' (img/logo_h.webp, one-line logo) replaces the stacked logo while it is on.
 (function () {
   if (window.NJS_SKIN !== 'c') return;
   const ROOT = window.NJS_ASSET_ROOT;
@@ -16,6 +17,8 @@
     ['high', 'Редкие', ['seven', 'bell', 'star'].map((c) => `symbols/${c}`)],
     ['special', 'Спец', ['wild', 'scatter'].map((c) => `symbols/${c}`)],
     ['coins', 'Монеты', ['symbols/coin', 'coins/blank', 'coins/collector', 'coins/mini', 'coins/minor', 'coins/major', 'coins/grand']],
+    ['frame', 'Рамка', ['img/frame.webp']],
+    ['hlogo', 'Лого гориз.', []],
   ];
 
   let pick = {};
@@ -61,17 +64,31 @@
       css += `.reel__cell .coin-val { left: ${cv.blank[0]}%; right: ${cv.blank[1]}%; top: ${cv.blank[2]}%; height: ${cv.blank[3]}%; }
 .reel__cell[data-symbol="collector"] .coin-val { left: ${cv.coll[0]}%; right: ${cv.coll[1]}%; top: ${cv.coll[2]}%; height: ${cv.coll[3]}%; }\n`;
     }
-    const lg = has(pick.logo, 'logo') && META.logo[pick.logo];
+    const hl = has(pick.hlogo, 'hlogo') && (META.logoH || {})[pick.hlogo];
+    const lg = hl || (has(pick.logo, 'logo') && META.logo[pick.logo]);
     if (lg) css += `.logo { ${lg.desk} }\n@media (orientation: portrait) { .logo { ${lg.mob} } }\n`;
+    const fr = has(pick.frame, 'frame') && (META.frame || {})[pick.frame];
+    if (fr) {
+      css += `.cabinet { background-image: ${u('img/frame.webp')} !important; }
+:root { ${fr.desk} }
+@media (orientation: portrait) { :root { ${fr.mob} } .cabinet { background-image: ${u('img/frame.webp')} !important; } }\n`;
+    }
     return css;
   }
 
   function apply() {
+    const before = style.textContent;
     style.textContent = cssRules();
+    // the frame decides the reel window: let slot.js re-measure the cells
+    if (before !== style.textContent) setTimeout(() => window.dispatchEvent(new Event('resize')), 30);
     document.querySelectorAll('img').forEach((img) => {
       const m = IMG_RE.exec(img.getAttribute('src') || '');
       if (!m) return;
-      const next = `${rootFor(m[1])}/${m[1]}${m[2] || ''}`;
+      let next = `${rootFor(m[1])}/${m[1]}${m[2] || ''}`;
+      if (/^img\/logo(_h)?\.webp$/.test(m[1])) {
+        next = has(pick.hlogo, 'hlogo') ? `${ROOT}/sets/${pick.hlogo}/img/logo_h.webp${m[2] || ''}`
+          : `${rootFor('img/logo.webp')}/img/logo.webp${m[2] || ''}`;
+      }
       if (img.getAttribute('src') !== next) img.src = next;
     });
   }
@@ -101,14 +118,14 @@
     css.textContent = `
 .njs-sets-btn { position: fixed; right: 8px; top: 8px; z-index: 10000; padding: 7px 12px; border-radius: 8px; border: 1px solid #ff2fb4;
   background: rgba(20, 8, 24, .85); color: #ffd2ef; font: 700 12px/1 system-ui, sans-serif; cursor: pointer; }
-.njs-sets { position: fixed; right: 8px; top: 42px; z-index: 10000; width: 236px; max-width: calc(100vw - 20px); padding: 10px; border-radius: 12px;
+.njs-sets { position: fixed; right: 8px; top: 42px; z-index: 10000; width: 330px; max-width: calc(100vw - 20px); padding: 10px; border-radius: 12px;
   background: rgba(14, 6, 18, .94); border: 1px solid #3a3344; color: #eee; font: 12px/1.3 system-ui, sans-serif; display: grid; gap: 8px; }
 .njs-sets[hidden] { display: none; }
 .njs-sets__row { display: grid; gap: 4px; }
 .njs-sets__row b { font-weight: 700; color: #c9ced8; display: flex; justify-content: space-between; }
 .njs-sets__row b small { font-weight: 400; color: #8f88a0; }
 .njs-sets__chips { display: flex; gap: 4px; }
-.njs-sets__chips button { flex: 1; padding: 5px 0; border-radius: 6px; border: 1px solid #3a3344; background: #1d1724; color: #ddd; cursor: pointer; font: 600 12px/1 system-ui, sans-serif; }
+.njs-sets__chips button { flex: 1; min-width: 0; padding: 5px 0; border-radius: 6px; border: 1px solid #3a3344; background: #1d1724; color: #ddd; cursor: pointer; font: 600 12px/1 system-ui, sans-serif; }
 .njs-sets__chips button:disabled { opacity: .3; cursor: default; }
 .njs-sets__chips button.is-on { background: #ff2fb4; border-color: #ff2fb4; color: #14000c; }
 .njs-sets__foot { display: flex; gap: 6px; }
@@ -123,19 +140,19 @@
     panel.className = 'njs-sets';
     panel.hidden = true;
     const ids = ['0', ...META.ids];
-    const nameOf = (id) => (id === '0' ? 'Оригинал' : META.names[id] || id);
+    const nameOf = (id, k) => (id === '0' ? (k === 'hlogo' ? 'выкл' : 'Оригинал') : META.names[id] || id);
     function render() {
       panel.innerHTML = '';
       for (const [k, label] of CLUSTERS) {
         const cur = pick[k] || '0';
         const row = document.createElement('div');
         row.className = 'njs-sets__row';
-        row.innerHTML = `<b>${label}<small>${nameOf(cur)}</small></b><div class="njs-sets__chips"></div>`;
+        row.innerHTML = `<b>${label}<small>${nameOf(cur, k)}</small></b><div class="njs-sets__chips"></div>`;
         const chips = row.querySelector('.njs-sets__chips');
         ids.forEach((id, i) => {
           const b = document.createElement('button');
           b.type = 'button';
-          b.textContent = i === 0 ? 'Ориг' : String(i);
+          b.textContent = i === 0 ? (k === 'hlogo' ? 'Выкл' : 'Ориг') : String(i);
           b.title = nameOf(id);
           b.classList.toggle('is-on', cur === id);
           b.disabled = id !== '0' && !has(id, k);
@@ -163,7 +180,7 @@
       foot.querySelector('[data-a="all"]').addEventListener('click', (e) => {
         const cur = pick.low || '0';
         const nxt = ids[(ids.indexOf(cur) + 1) % ids.length];
-        for (const [k] of CLUSTERS) pick[k] = nxt;
+        for (const [k] of CLUSTERS) pick[k] = k === 'hlogo' ? '0' : nxt;
         save(); apply(); render();
         e.target.textContent = `Весь сет: ${nameOf(nxt)}`;
       });
