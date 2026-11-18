@@ -1398,7 +1398,7 @@ async function init() {
   if (window.Preloader) window.Preloader.done();
   window.__slot = { cellInfos };
   Sound.music('base');   // пакет страницы: играет с первого касания
-  showFeatureScreen();
+  // Превью фич при входе убрано (юзер, 2026-11-18); экран открывается только кнопкой DEV «Превью».
 }
 
 window.slotReady = new Promise((resolve) => document.addEventListener('njs:ready', resolve, { once: true }));
