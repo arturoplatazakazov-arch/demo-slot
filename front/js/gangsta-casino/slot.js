@@ -1906,7 +1906,14 @@ const PACK_CAPTIONS = {
       ['text_multiplier', 'MULTIPLIER', 240, 47, 1, 47, 0.879], ['text_multiplier_note', 'ADD UP IN FREE SPINS', 244, 27, 1, 27, 0.762],
       ['text_tap_to_continue', 'TAP TO CONTINUE', 400, 116, 2, 58, 1.001]],
   },
-  bonus_screen: [['text_bonus_game', 'BONUS GAME', 266, 71, 0, 71, 0.698], ['text_tap_to_start', 'TAP TO START', 211, 58, 0, 58, 0.385]],
+  // TAP TO START: the 211-unit box was just the width of the English art, and fitting every
+  // translation into it shrank the line to ~18 design px. Under the BONUS GAME ribbon there
+  // are ~600 design px free on desk / ~700 on mob (gangsta_casino_texts, sheet «Поля»), so the
+  // box is widened to those and the factor is the one from the table (39.4 / 45.9 design px).
+  bonus_screen: {
+    desk: [['text_bonus_game', 'BONUS GAME', 266, 71, 0, 71, 0.698], ['text_tap_to_start', 'TAP TO START', 462, 58, 0, 58, 0.843]],
+    mob: [['text_bonus_game', 'BONUS GAME', 266, 71, 0, 71, 0.698], ['text_tap_to_start', 'TAP TO START', 538, 58, 0, 58, 0.982]],
+  },
 };
 const PACK_CAPTION_SLOTS = { text_free_spins: 'capL', text_expanding_wild: 'capC', text_multiplier: 'capR', text_multiplier_note: 'noteR',
   text_tap_to_continue: 'cont', text_bonus_game: 't_bonus', text_tap_to_start: 't_start' };

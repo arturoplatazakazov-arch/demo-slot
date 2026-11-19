@@ -137,7 +137,7 @@ def coverage(L):
     out = {}
     for st, (name, _, _, _, _) in FAM.items():
         keys = [k for k, v in TEXTS.items() if v['style'] == st]
-        chars = {c for k in keys for c in TR[L][k] if c not in '   ⁠\n'}
+        chars = {c for k in keys for c in TR[L][k] if c not in ' \u00a0\u2060\n' }
         out[st] = ''.join(sorted(c for c in chars if not any(ord(c) in CMAPS[p] for p in FILES[st])))
     return out
 
