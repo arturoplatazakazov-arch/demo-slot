@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="css/preloader.css?v=1">
 <link rel="stylesheet" href="css/gangsta-casino.css?v=42">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
+<link rel="stylesheet" href="css/dev-tools.css?v=4">
 </head>
 <body>
 
@@ -23,21 +24,6 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
     В каталог
   </a>
-
-  <!-- DEV-ONLY панель: режим и ручной запуск попапов/фич без бэкенда. -->
-  <div class="dev-panel">
-    <button class="dev-btn" id="devToggle" type="button">mode: base</button>
-    <button class="dev-btn" data-popup="bigWin" type="button">Big Win</button>
-    <button class="dev-btn" data-popup="megaWin" type="button">Mega Win</button>
-    <button class="dev-btn" data-popup="epicWin" type="button">Epic Win</button>
-    <button class="dev-btn" data-popup="bonusSpinsWin" type="button">Bonus Spins Win</button>
-    <button class="dev-btn" data-popup="bonusSpinsTotalWin" type="button">Bonus Total Win</button>
-    <button class="dev-btn" id="devBuy" type="button">Buy dialog</button>
-    <button class="dev-btn" id="devMult" type="button">Multiplier</button>
-    <button class="dev-btn" id="devBigWild" type="button">Big Wild</button>
-    <button class="dev-btn" id="devFeature" type="button">Feature screen</button>
-    <span class="dev-hint">клик по WILD в сетке — превью расширения; по остальным — win-анимация</span>
-  </div>
 
   <div class="screen" id="screen" data-mode="base">
 
@@ -295,10 +281,13 @@
   <script src="js/reel-math.js?v=6"></script>
   <script src="js/slot-core.js?v=1"></script>
   <script src="js/preloader.js?v=1"></script>
-  <script src="js/gangsta-casino/sound.js?v=1"></script>
-  <script src="js/gangsta-casino/slot.js?v=47"></script>
+  <script src="js/sound-kit.js?v=6"></script>
+  <script src="js/gangsta-casino/sound.js?v=7"></script>
+  <script src="js/gangsta-casino/slot.js?v=51"></script>
   <script src="js/buy-bonus.js?v=1"></script>
-  <script src="js/gangsta-casino/app.js?v=3"></script>
+  <script src="js/gangsta-casino/app.js?v=6"></script>
   <script src="js/ui-bar-v3.js?v=4"></script>
+  <script src="js/dev-tools.js?v=4"></script>
+  <script src="js/gangsta-casino/dev.js?v=1"></script>
 </body>
 </html>

@@ -330,16 +330,14 @@ function previewSymbolWin(info) {
   // that outlived its cell would keep re-adding its skeleton over the next
   // spin's grid — every teardown/re-symbol bumps the token to end it.
   const token = (info.winToken = {});
-  const playOnce = () => {
-    playWinAnimationOnce(info).then(() => {
-      if (info.winToken !== token) return;
-      info.winLoopTimeout = setTimeout(() => {
-        info.winLoopTimeout = null;
-        playOnce();
-      }, WIN_LOOP_PAUSE_MS);
-    });
-  };
-  playOnce();
+  const playOnce = () => playWinAnimationOnce(info).then(() => {
+    if (info.winToken !== token) return;
+    info.winLoopTimeout = setTimeout(() => {
+      info.winLoopTimeout = null;
+      playOnce();
+    }, WIN_LOOP_PAUSE_MS);
+  });
+  return playOnce(); // resolves after the first pass of the clip
 }
 
 function onCellClick(info, col) {
@@ -362,28 +360,86 @@ let multiLineSequenceTimeout = null;
 // after a teardown must not schedule the next one.
 let winSequenceEpoch = 0;
 
-function playMultiLineWinSequence(groups, allWinInfos) {
+// The symbol a win group pays for (a wild only when the line is all wilds).
+function groupSymbol(infos) {
+  const codes = infos.map((i) => i.symbol);
+  return codes.find((c) => c !== 'wild') || codes[0];
+}
+// Resolves when the symbol's win melody has finished playing.
+function playSymbolWinSound(infos) {
+  const code = infos.length ? groupSymbol(infos) : null;
+  return code ? Sound.playSfx(`symWin_${code}`).done : Promise.resolve();
+}
+
+// Product 2026-11-19: a big/mega/epic popup opens only once the win has played
+// one full cycle — every line's animation AND its melody. Capped so a stuck
+// clip or sound can never hold the popup back for good.
+const WIN_CYCLE_MAX_MS = 9000;
+
+function playMultiLineWinSequence(groups, allWinInfos, firstSound, onFirstCycle) {
   const epoch = winSequenceEpoch;
   let groupIndex = -1;
+  let firstCycle = true;
   const step = () => {
-    if (epoch !== winSequenceEpoch) return;
+    if (epoch !== winSequenceEpoch) { onFirstCycle(); return; }
     const activeInfos = groupIndex === -1 ? allWinInfos : groups[groupIndex];
+    // Sounds only on the first pass: the sequence loops until the next spin.
+    // That pass also waits for each melody to end before the next line.
+    let sound = groupIndex === -1 ? firstSound : null;
+    if (firstCycle && groupIndex >= 0) {
+      const line = Sound.playSfx('winLine').done;
+      sound = Promise.all([line, playSymbolWinSound(activeInfos)]);
+    }
     const activeSet = new Set(activeInfos);
     if (groupIndex === -1) showWinLines(currentLineWins);
     else showWinLines(currentLineWins[groupIndex] ? [currentLineWins[groupIndex]] : []);
     for (const info of cellInfos) {
       if (info) setCellDimmed(info, !activeSet.has(info));
     }
-    Promise.all(activeInfos.map((info) => playWinAnimationOnce(info))).then(() => {
-      if (epoch !== winSequenceEpoch) return;
+    const waits = activeInfos.map((info) => playWinAnimationOnce(info));
+    if (firstCycle && sound) waits.push(sound);
+    Promise.all(waits).then(() => {
+      if (epoch !== winSequenceEpoch) { onFirstCycle(); return; }
+      if (firstCycle && groupIndex === groups.length - 1) onFirstCycle();
       multiLineSequenceTimeout = setTimeout(() => {
         multiLineSequenceTimeout = null;
+        if (groupIndex === groups.length - 1) firstCycle = false;
         groupIndex = (groupIndex + 1) % groups.length;
         step();
       }, WIN_LOOP_PAUSE_MS);
     });
   };
   step();
+}
+
+// --- Game layer hidden under popups / screens -----------------------------
+//
+// Popups and the feature / bonus preview screens draw on #spineCanvas, which is
+// lifted above the screen dim while they are up — so the base layer of that
+// canvas (symbol win / land clips, multiplier chips) and its overlay big wilds
+// would draw OVER the dim, and the win lines on the back canvas shine through
+// it. Product 2026-11-19: nothing of the win may show through a popup or a
+// screen — while any is up the game layer is not drawn at all. Counted, since
+// a popup can open inside a screen's lifetime (bonus intro).
+let gameLayerHides = 0;
+function setGameLayerVisible(visible) {
+  if (stage) stage.baseHidden = !visible;
+  for (const el of bigWildEls) {
+    if (!el.__overlay || !stage) continue;
+    if (visible) { if (el.isConnected) stage.addOverlay(el.__overlay); } else stage.removeOverlay(el.__overlay);
+  }
+  if (winLinesInst && backStage) {
+    if (visible && winLinesShown) backStage.addOverlay(winLinesInst);
+    else if (!visible) backStage.removeOverlay(winLinesInst);
+  }
+}
+function hideGameLayer() {
+  gameLayerHides += 1;
+  if (gameLayerHides === 1) setGameLayerVisible(false);
+}
+function showGameLayer() {
+  gameLayerHides = Math.max(0, gameLayerHides - 1);
+  if (gameLayerHides === 0) setGameLayerVisible(true);
 }
 
 // --- Win lines (Spine, under the symbols) -----------------------------------
@@ -454,7 +510,7 @@ function showWinLines(lineWins) {
       state.addAnimation(i, `line${n}_loop`, true, 0).mixDuration = 0;
     });
     backStage.removeOverlay(inst);
-    backStage.addOverlay(inst);
+    if (!gameLayerHides) backStage.addOverlay(inst);
   }).catch((err) => console.warn('win lines:', err));
 }
 
@@ -491,11 +547,17 @@ function playWinCells(winningCells, lineWins, countWins) {
   // Line i of the sequence == lineWins[i] (count wins come after them).
   currentLineWins = lineWins || [];
   showWinLines(currentLineWins);
+  if (!allWinInfos.length) return Promise.resolve();
+  // Resolves after one full cycle of the presentation (see WIN_CYCLE_MAX_MS).
+  let done;
+  const cycle = new Promise((res) => { done = res; });
+  const firstSound = groups.length ? playSymbolWinSound(groups[0]) : Promise.resolve();
   if (groups.length > 1) {
-    playMultiLineWinSequence(groups, allWinInfos);
+    playMultiLineWinSequence(groups, allWinInfos, firstSound, done);
   } else {
-    for (const info of allWinInfos) previewSymbolWin(info);
+    Promise.all([...allWinInfos.map((info) => previewSymbolWin(info)), firstSound]).then(done);
   }
+  return Promise.race([cycle, wait(WIN_CYCLE_MAX_MS)]);
 }
 
 function applyGrid(grid) {
@@ -549,6 +611,22 @@ const REEL_SPEED = REEL_PHYS.MAX_SPEED * 60 / 1000; // design px per ms (3.3)
 const EASE_IN_QUAD = 'cubic-bezier(0.55, 0.085, 0.68, 0.53)';
 const EASE_OUT_QUAD = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)';
 const reelState = []; // per column: { stripEl, anim, stopping }
+let reelLoopSound = null;   // the "reels spinning" loop, cut on the last stop
+let spinScatterCount = 0;   // scatters landed so far this spin (scatterLand1/2/3)
+function stopReelLoopSound() {
+  if (reelLoopSound) reelLoopSound.stop(200);
+  reelLoopSound = null;
+}
+// Landing sounds of the special symbols, once per symbol per stopped reel.
+function playLandSounds(finalCodes) {
+  for (const code of finalCodes) {
+    if (code === 'scatter') {
+      spinScatterCount += 1;
+      Sound.playSfx(`scatterLand${Math.min(3, spinScatterCount)}`);
+    } else if (code === 'wild') Sound.playSfx('wildLand');
+    else if (code === 'wof') Sound.playSfx('multLand');
+  }
+}
 
 function currentStripY(stripEl) {
   const m = new DOMMatrixReadOnly(getComputedStyle(stripEl).transform);
@@ -564,6 +642,9 @@ function animateStrip(st, frames, opts) {
 const reelMotion = {
   startLoop() {
     Sound.playSfx('spinStart');
+    if (reelLoopSound) reelLoopSound.stop();
+    reelLoopSound = Sound.playSfx('reelLoop');
+    spinScatterCount = 0;
     const rs = rowStep, L = REEL_PHYS.LOOP_CELLS;
     for (let col = 0; col < GRID_COLS; col++) {
       const { stripEl } = reelCols[col];
@@ -596,6 +677,7 @@ const reelMotion = {
   },
   stopLoop() {
     // Error path: put the last known grid cells back, no motion.
+    stopReelLoopSound();
     for (let col = 0; col < GRID_COLS; col++) {
       const st = reelState[col];
       if (st) { st.stopping = true; clearTimeout(st.fastTimer); if (st.anim) st.anim.cancel(); }
@@ -658,6 +740,8 @@ const reelMotion = {
         if (st.anim) st.anim.cancel();
         st.anim = null;
         Sound.playSfx(col === GRID_COLS - 1 ? 'finalReelStop' : 'reelStop');
+        if (col === GRID_COLS - 1) stopReelLoopSound();
+        playLandSounds(finalCodes);
         if (isAnticipating) reelCols[col].colEl.classList.remove('is-anticipating');
         stripEl.innerHTML = '';
         for (const c of resultCells) stripEl.appendChild(c);
@@ -793,7 +877,7 @@ async function revealExpandedWildSpine(col, win) {
   }
   // Overlay layer, not base: base draws in insertion order, so a cell's win
   // clip added after the grow would paint over the big wild.
-  stage.addOverlay(overlay);
+  if (!gameLayerHides) stage.addOverlay(overlay);
   Sound.playSfx('wildGrow');
   await playClipOnce(overlay, 'expand');
   if (!el.isConnected) return el;
@@ -876,6 +960,7 @@ async function landReels(grid, anticipationColumns = [], wildEvents = [], lineWi
 }
 
 // Columns from the first anticipation column on land ONE AT A TIME.
+const ANTICIPATION_SYMBOL = 'scatter'; // free_spins trigger_symbol_code in the seed
 async function landReelsInner(grid, anticipationColumns, wildEvents, lineWins, countWins) {
   teardownCellInstances();
   const winningCols = winningColumnSet(lineWins, countWins);
@@ -894,13 +979,18 @@ async function landReelsInner(grid, anticipationColumns, wildEvents, lineWins, c
   await Promise.all(leadTasks);
   if (firstAnticipationCol === GRID_COLS) return;
 
-  Sound.playSfx('anticipation');
+  const anticipationSound = Sound.playSfx('anticipation');
   // The remaining reels keep spinning; they stop one at a time.
   for (let col = firstAnticipationCol; col < GRID_COLS; col++) {
     const finalCodes = [grid[0][col], grid[1][col], grid[2][col]];
     const isAnticipating = anticipationSet.has(col);
     if (isAnticipating) reelCols[col].colEl.classList.add('is-anticipating');
     const cellEls = await landReel(col, finalCodes, REEL_PHYS.NEXT_REEL_DELAY_FIGURES, isAnticipating);
+    if (isAnticipating) {
+      // Hit = the trigger symbol landed on the anticipated reel; miss = it didn't.
+      anticipationSound.stop(150);
+      Sound.playSfx(finalCodes.includes(ANTICIPATION_SYMBOL) ? 'anticipationWin' : 'anticipationFail');
+    }
     settleColumnCells(cellEls, col, finalCodes);
     await celebrateExpandedWild(col, wildEvents, winningCols);
   }
@@ -927,24 +1017,37 @@ function applyModeScreen(next) {
 
 const BONUS_INTRO_HOLD_MS = 3000;
 
-// Entering the bonus: blackout, then the Spine bonus screen (bfs) with the
-// real spin count — it waits for the player's tap ("TAP TO START") and the
-// club is switched in behind it. Without Spine, the CSS "YOU WON" card.
-async function enterBonusTransition(amount = 0) {
+// Entering the bonus. From scatters (withPopup, product 2026-11-19): the
+// caller has let the scatters play one full win cycle; here the
+// "YOU WON N FREE SPINS" popup plays over the base game, then — its dim kept
+// on, so the light never comes back in between — a blackout, the club is
+// switched in, the bonus music starts together with the Spine bonus preview
+// screen (bfs, "TAP TO START"), and the tap reveals the bonus game.
+// Without withPopup (bought round, dev): straight into the blackout. Without
+// Spine the CSS "YOU WON" card stands in for the preview screen.
+async function enterBonusTransition(amount = 0, { withPopup = false, popupAmount = amount } = {}) {
+  if (withPopup) {
+    pushScreenDim(false);
+    await playPopupSequence('bonusSpinsWin', popupAmount, 2500, { ownDim: false });
+  }
+  Sound.playSfx('baseToBonus');
   pushScreenDim(true);
   await wait(DIM_TRANSITION_MS);
   applyModeScreen('freespins');
+  Sound.playMusic('bonus');
   const ran = await showBonusScreen(amount);
-  if (!ran) await playPopupSequence('bonusSpinsWin', amount, BONUS_INTRO_HOLD_MS);
+  if (!ran && !withPopup) await playPopupSequence('bonusSpinsWin', amount, BONUS_INTRO_HOLD_MS);
   await wait(DIM_TRANSITION_MS);
   popScreenDim(true);
+  if (withPopup) popScreenDim(false);
 }
 
-function setFreeSpinsMode(active, amount = 0) {
+function setFreeSpinsMode(active, amount = 0, entry = {}) {
   const next = active ? 'freespins' : 'base';
   if (currentMode() === next) return Promise.resolve();
-  Sound.playMusic(next === 'freespins' ? 'bonus' : 'base');
-  if (next === 'freespins') return enterBonusTransition(amount);
+  if (next === 'freespins') return enterBonusTransition(amount, entry);
+  Sound.playMusic('base');
+  Sound.playSfx('bonusToBase');
   return withScreenDim(
     async () => {
       applyModeScreen(next);
@@ -958,6 +1061,7 @@ function setFreeSpinsMode(active, amount = 0) {
 function setFreeSpinsCounter(remaining) {
   const digits = String(Math.max(0, Math.min(999, remaining))).padStart(3, '0');
   playSceneClip('freespins', 'counter_update');
+  Sound.playSfx('fsCounter');
   document.querySelectorAll('.fs-counter__digit').forEach((el, i) => {
     el.textContent = digits[i];
   });
@@ -1032,7 +1136,7 @@ async function revealMultipliers(positions) {
     .filter(({ info }) => info && info.symbol === 'wof');
   if (!list.length) return [];
   const shown = await Promise.all(list.map(({ p, info }) => createMultiplierChip(info, p.value)));
-  Sound.playSfx('wildWin');
+  Sound.playSfx('multReveal');
   await wait(MULT_REVEAL_MS);
   return shown;
 }
@@ -1046,6 +1150,7 @@ function setMultiplierPlate(value, { lit = false, bump = false } = {}) {
   box.innerHTML = `<span>x${value}</span>`;
   plate.classList.toggle('is-lit', lit);
   if (bump) {
+    Sound.playSfx('multPlate');
     if (plateInst) {
       plateInst.play('update', false);
       plateInst.queue('idle', true, 0);
@@ -1134,6 +1239,7 @@ function flyMultipliersToPlate(shown) {
   const plate = document.getElementById('multPlateValue');
   if (!plate || !shown.length) return Promise.resolve();
   const to = plate.getBoundingClientRect();
+  Sound.playSfx('multFly');
   return Promise.all(shown.map(({ info, value }, i) => {
     const r = info.anchor.getBoundingClientRect();
     const k = r.width / 200; // stage scale
@@ -1190,11 +1296,25 @@ const POPUP_CONTENT = {
   bonusSpinsWin: { title: 'YOU WON', tier: 'spins', sub: 'FREE SPINS', count: true },
 };
 const POPUP_COUNT_MS = 1400;
+// Sound of each popup (besides popupOpen/popupClose).
+const POPUP_SOUNDS = {
+  bigWin: 'bigWin', megaWin: 'megaWin', epicWin: 'epicWin',
+  bonusSpinsWin: 'bonusSpinsWin', bonusSpinsTotalWin: 'bonusTotalWin',
+};
 const BILL_COUNT = 26;
 
 function countUp(el, target, ms, integer) {
   const start = performance.now();
-  return new Promise((resolve) => {
+  // Spin counts (integer) tick silently; money counts play the count loop.
+  const loop = integer || !target ? null : Sound.playSfx('countLoop');
+  let ended = false;
+  const end = () => {
+    if (ended) return;
+    ended = true;
+    if (loop) { loop.stop(120); Sound.playSfx('countEnd'); }
+  };
+  return new Promise((resolveRaw) => {
+    const resolve = () => { end(); resolveRaw(); };
     const tick = (now) => {
       const t = Math.min(1, (now - start) / ms);
       const eased = 1 - Math.pow(1 - t, 3);
@@ -1235,6 +1355,7 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = false } = 
   const content = POPUP_CONTENT[key];
   if (!content) return Promise.resolve();
   const run = async () => {
+    if (POPUP_SOUNDS[key]) Sound.playSfx(POPUP_SOUNDS[key]);
     if (SPINE_POPUPS[key] && stage) {
       for (const name of ['hero_man', 'hero_woman', 'hero_man_mob', 'hero_woman_mob']) playSceneClip(name, 'win');
       if (content.tier === 'spins') playSceneClip('freespins', 'win');
@@ -1270,6 +1391,7 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = false } = 
 
     if (ownDim) pushScreenDim(false);
     Sound.playSfx('popupOpen');
+    hideGameLayer();
     root.hidden = false;
     void root.offsetWidth;
     root.classList.add('is-open');
@@ -1279,6 +1401,7 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = false } = 
     root.classList.remove('is-open');
     await wait(DIM_TRANSITION_MS);
     root.hidden = true;
+    showGameLayer();
     if (ownDim) popScreenDim(false);
   };
   popupBusy = popupBusy.then(run, run);
@@ -1353,6 +1476,7 @@ async function runSpinePopup(slug, body) {
   blocker.className = 'spop-block';
   document.body.appendChild(blocker);
   document.body.classList.add('is-spine-popup');
+  hideGameLayer();
   stage.addOverlay(inst);
   inst.play('intro', false);
   inst.queue('idle', true);
@@ -1365,6 +1489,7 @@ async function runSpinePopup(slug, body) {
   for (const p of pins) p.el.remove();
   blocker.remove();
   document.body.classList.remove('is-spine-popup');
+  showGameLayer();
   return { value: outcome };
 }
 
@@ -1403,7 +1528,7 @@ function openBuyDialog(price, opts = {}) {
     const no = hit('decline', 'Отмена');
     const finish = (answer) => {
       document.removeEventListener('keydown', onKey);
-      Sound.playSfx(answer ? 'click' : 'popupClose');
+      Sound.playSfx(answer ? 'buyConfirm' : 'popupClose');
       resolve(answer && affordable);
     };
     const onKey = (e) => { if (e.key === 'Escape') finish(false); };
@@ -1432,7 +1557,7 @@ function openBuyDialogDom(price, { note = '', affordable = true } = {}) {
   return new Promise((resolve) => {
     const close = (answer) => {
       dlg.classList.remove('is-open');
-      Sound.playSfx('popupClose');
+      Sound.playSfx(answer ? 'buyConfirm' : 'popupClose');
       yes.removeEventListener('click', onYes);
       no.removeEventListener('click', onNo);
       dlg.removeEventListener('click', onBackdrop);
@@ -1476,25 +1601,6 @@ async function demoMultipliers() {
   showInlineWinAmount(21000 * (inRound ? devRoundMultiplier : 8));
 }
 
-function setupDevPanel() {
-  const toggleBtn = document.getElementById('devToggle');
-  toggleBtn.addEventListener('click', () => {
-    const next = currentMode() === 'base' ? 'freespins' : 'base';
-    setFreeSpinsMode(next === 'freespins', 10);
-    if (next === 'freespins') setFreeSpinsCounter(10);
-    toggleBtn.textContent = `mode: ${next}`;
-  });
-  document.querySelectorAll('[data-popup]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const key = btn.dataset.popup;
-      playPopup(key, key === 'bonusSpinsWin' ? 10 : 1234500);
-    });
-  });
-  document.getElementById('devBuy').addEventListener('click', () => openBuyDialog(10000000));
-  document.getElementById('devMult').addEventListener('click', () => demoMultipliers());
-  document.getElementById('devBigWild').addEventListener('click', () => previewBigWild(2, false));
-  document.getElementById('devFeature').addEventListener('click', () => showFeatureScreen());
-}
 
 // --- Viewport / background --------------------------------------------------
 //
@@ -1831,10 +1937,12 @@ function showSpineScreen(baseCode, { onFrame = null, onClose = null, onCreate = 
     window.addEventListener('resize', place);
 
     document.body.classList.add('is-feature-screen');
+    hideGameLayer();
     root.hidden = false;
     void root.offsetWidth;
     root.classList.add('is-open');
     stage.addOverlay(inst);
+    Sound.playSfx('screenOpen');
     inst.play('intro', false);
     inst.queue('idle', true);
     // ?seek=<s> — dev/screenshot: jump the intro to that moment.
@@ -1856,7 +1964,7 @@ function showSpineScreen(baseCode, { onFrame = null, onClose = null, onCreate = 
       if (closing) return;
       closing = true;
       root.removeEventListener('click', close);
-      Sound.playSfx('click');
+      Sound.playSfx('screenTap');
       // Plain fade-out: skeleton alpha and the dim go to 0 together; the
       // clip keeps playing underneath so nothing freezes mid-fade.
       root.style.transition = `opacity ${FEATURE_FADE_MS}ms ease-out`;
@@ -1872,6 +1980,7 @@ function showSpineScreen(baseCode, { onFrame = null, onClose = null, onCreate = 
         root.hidden = true;
         root.style.transition = '';
         document.body.classList.remove('is-feature-screen');
+        showGameLayer();
         resolve(true);
       };
       const tick = (now) => {
@@ -1985,7 +2094,6 @@ function init() {
     stage = null;
     backStage = null;
   }
-  setupDevPanel();
   // Bounded like the other games' preloaders: on a slow phone link one heavy
   // atlas (the screens are 2-4 MB) must not hold the game behind the bar — the
   // feature screen still waits for its own skeleton when it opens.

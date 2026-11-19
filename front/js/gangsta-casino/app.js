@@ -19,7 +19,7 @@ const gameState = {
   freeSpinsTrigger: null,
 };
 
-const WIN_TIER_SOUNDS = { bigWin: 'bigWin', epicWin: 'epicWin', megaWin: 'megaWin' };
+const TIER_POPUPS = new Set(['bigWin', 'megaWin', 'epicWin']);
 
 function formatNumber(n) {
   return Number(n).toLocaleString('en-US');
@@ -77,10 +77,15 @@ async function applySpinResult(data) {
   // Multipliers flip in on their chips first (and fly into the plate when
   // they count), then the wins play — total_win already includes them.
   await playMultipliers(data.coin_multiplier, wasInRound);
-  playWinCells(data.winning_cells, data.line_wins, data.count_wins);
+  const winCycle = playWinCells(data.winning_cells, data.line_wins, data.count_wins);
 
   if (remaining > 0) updateFreeSpinsCounter(remaining);
-  await setFreeSpinsMode(remaining > 0, remaining);
+  // Scatter entry: the scatters play one full cycle (animation + win melody)
+  // first; the transition then shows the YOU WON popup, the blackout and the
+  // bonus preview screen (slot.js enterBonusTransition).
+  const scatterEntry = enteringBonus && !!data.popup && data.popup.type === 'bonusSpinsWin';
+  if (scatterEntry) await winCycle;
+  await setFreeSpinsMode(remaining > 0, remaining, { withPopup: scatterEntry, popupAmount: scatterEntry ? data.popup.amount : remaining });
 
   if (data.popup) {
     // The entry's bonusSpinsWin is shown by the intro transition itself; a
@@ -89,8 +94,10 @@ async function applySpinResult(data) {
     // buyFreeSpins: the purchase was already confirmed in our own ✓/✗ dialog
     // — replaying a card for it after the fact would just repeat it.
     if (!shownByIntro && data.popup.type !== 'buyFreeSpins') {
-      const tierSound = WIN_TIER_SOUNDS[data.popup.type];
-      if (tierSound) Sound.playSfx(tierSound);
+      // Big/mega/epic: the lines first play one full cycle (animation +
+      // melody), then the popup opens. The tier sound comes with the popup.
+      // (a retrigger's YOU WON inside the bonus waits for the scatters too)
+      if (TIER_POPUPS.has(data.popup.type) || data.popup.type === 'bonusSpinsWin') await winCycle;
       playPopup(data.popup.type, data.popup.amount);
     }
   } else if (data.total_win > 0) {
@@ -101,8 +108,8 @@ async function applySpinResult(data) {
   }
 }
 
-async function runSpin(request) {
-  if (gameState.isSpinning || !gameState.sessionId) return;
+async function runSpin(request, { dev = false } = {}) {
+  if (gameState.isSpinning || (!gameState.sessionId && !dev)) return;
   gameState.isSpinning = true;
 
   const spinBtn = document.querySelector('[data-action="spin"]');
@@ -141,6 +148,7 @@ function setupBuyBonusButton() {
   const buyBtn = document.getElementById('buyBonusBtn');
   if (!buyBtn) return;
   buyBtn.addEventListener('click', async () => {
+    Sound.playSfx('buyOpen');
     if (gameState.isSpinning || gameState.freeSpinsRemaining > 0 || !gameState.sessionId) return;
     // Base game only, and never over another popup / transition (screen dim),
     // the wheel, the Spine preview screens or an already open dialog.
@@ -192,7 +200,9 @@ async function bootstrapSession() {
 
 function setupClickSounds() {
   document.querySelectorAll('.ui-icon-btn, .ui-spin-btn').forEach((btn) => {
-    btn.addEventListener('click', () => Sound.playSfx('click'));
+    const action = btn.dataset.action;
+    const name = action === 'spin' ? 'spinPress' : action === 'bet-minus' || action === 'bet-plus' ? 'betChange' : 'click';
+    btn.addEventListener('click', () => Sound.playSfx(name));
   });
 }
 
@@ -242,6 +252,10 @@ function setupInfoPopup() {
     }
   });
 }
+
+// Dev panel (js/gangsta-casino/dev.js): a made-up spin response played through
+// the real pipeline — reels, anticipation, wins, popups, sounds — no backend.
+window.__devSpin = (data) => runSpin(() => Promise.resolve({ balance: gameState.balance, ...data }), { dev: true });
 
 setupBetStepper();
 setupSpinButton();
