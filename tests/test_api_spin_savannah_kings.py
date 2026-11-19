@@ -1,6 +1,6 @@
 """Integration coverage for "savannah-kings" (GDD-03) through the API.
 
-Pinned here: the lion only expands inside free spins; a mask it expands over
+Pinned here: the lion expands in the base game too; a mask it expands over
 still counts (retrigger + scatter pay) while the client gets the grid as it
 landed; both purchases (GDD §6.4) — the purchase spin shows only its own
 trigger, pays nothing itself, and a bought wheel spin draws on the second
@@ -40,7 +40,7 @@ async def _start(api_client) -> tuple[str, int]:
     return body["session_id"], body["balance"]
 
 
-async def test_base_game_lion_stays_one_cell(api_client, set_rng):
+async def test_base_game_lion_expands_over_its_reel(api_client, set_rng):
     session_id, _ = await _start(api_client)
     set_rng([
         _K, _Q, _J,
@@ -50,8 +50,11 @@ async def test_base_game_lion_stays_one_cell(api_client, set_rng):
         _Q, _A, _J,
     ])
     body = (await api_client.post("/api/v1/spin", json={"session_id": session_id, "bet_amount": BET})).json()
-    assert body["wild_events"] == []
+    assert body["wild_events"] == [{"reel": 1, "event": "expanded"}]
+    # the grid comes back as it landed (row-major); the client draws the
+    # expansion from wild_events. The expanded reel 2 completes K-K-K on row 1.
     assert body["grid"][0][1] == "wild" and body["grid"][1][1] == "a"
+    assert Decimal(str(body["total_win"])) > 0
 
 
 async def test_jackpot_chance_purchase_lands_three_paws_and_pays_the_wheel(api_client):

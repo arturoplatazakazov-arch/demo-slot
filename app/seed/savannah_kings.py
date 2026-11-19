@@ -7,9 +7,11 @@ Client GDD-03 "Savannah Kings" v0.11 (game #3 of the Illuminator ladder):
   mask and the paw, has no pay of its own;
 - Sun mask (`scatter`, max 1 per reel) pays 2x/5x/20x the bet for 3/4/5
   anywhere and opens 10/15/20 free spins; 3+ inside the round add +5;
-- free spins spin their own weight set — only the lion changes (FS_WILD) —
-  and every lion expands over its whole reel BEFORE lines are counted;
-  masks and paws it covers still count (expanding_wild.triggers_before_expand);
+- every lion expands over its whole reel BEFORE lines are counted — in the
+  base game and in free spins alike (the product asked for base-game
+  expansion on 2026-11-19; the GDD had it free-spins-only); masks and paws it
+  covers still count (expanding_wild.triggers_before_expand);
+- free spins spin their own weight set — only the lion changes (FS_WILD);
 - Golden paw (`paw`) lands on reels 1, 3, 5 only (max 1 per reel): three
   at once open the Jackpot Wheel — base game and free spins alike;
 - the wheel shows 12 sectors (6 Mini, 3 Minor, 2 Major, 1 Grand) but the
@@ -21,8 +23,11 @@ Client GDD-03 "Savannah Kings" v0.11 (game #3 of the Illuminator ladder):
 
 Weights are the GDD's "per position, out of ~75" table x10. The scatter is
 2.1 instead of 1.7: at 1.7 free spins came 1 in ~300 spins, not the GDD's
-1 in 184 (its own simulation numbers need ~2.1). FS_WILD (the GDD's lever,
-§8.2) is 7.5 instead of 8.0 — that lands RTP on the 96 % target.
+1 in 184 (its own simulation numbers need ~2.1). An expanding lion pays far
+more than a single-cell one, so with base-game expansion the base lion is
+BASE_WILD = 10 (the GDD's 3.0 x10 = 30 gave 179 % RTP) and FS_WILD 72 — that
+lands natural RTP at ~96 % (4M paid spins: 95.7 / 97.1 %, the spread is the
+Grand). Free Spins purchase ~90-94 %, Jackpot Chance ~95 %.
 Measured: scripts/savannah_kings_rtp.py (production feature code).
 """
 
@@ -35,7 +40,7 @@ from app.seed._runner import CatalogMeta, get_or_seed
 GAME_CODE = "savannah-kings"
 GAME_NAME = "Savannah Kings"
 CATALOG_BADGE = "Jackpot Wheel"
-CATALOG_DESCRIPTION = "Саванна на закате: лев расширяется во фриспинах, три лапы крутят колесо джекпотов."
+CATALOG_DESCRIPTION = "Саванна на закате: лев расширяется на весь барабан, три лапы крутят колесо джекпотов."
 CATALOG_COVER_PATH = "img/savannah-kings/cover.jpg"
 CATALOG_PLAY_URL = "savannah-kings.html"
 
@@ -71,6 +76,8 @@ _PAYS = {
     "paw": {},
 }
 
+BASE_WILD = 10
+
 # code, name, type, tier, per-reel weights, max_per_reel
 _SYMBOLS: list[tuple[str, str, str, str, list[int], int | None]] = [
     ("elephant", "Слон", SymbolType.REGULAR.value, "high", [40] * 5, None),
@@ -81,12 +88,12 @@ _SYMBOLS: list[tuple[str, str, str, str, list[int], int | None]] = [
     ("k", "K", SymbolType.REGULAR.value, "low", [100] * 5, None),
     ("q", "Q", SymbolType.REGULAR.value, "low", [110] * 5, None),
     ("j", "J", SymbolType.REGULAR.value, "low", [120] * 5, None),
-    ("wild", "Лев", SymbolType.WILD.value, "high", [0, 30, 30, 30, 0], None),
+    ("wild", "Лев", SymbolType.WILD.value, "high", [0, BASE_WILD, BASE_WILD, BASE_WILD, 0], None),
     ("scatter", "Солнце-маска", SymbolType.SCATTER.value, "high", [21] * 5, 1),
     ("paw", "Золотая лапа", SymbolType.BONUS.value, "high", [26, 0, 26, 0, 26], 1),
 ]
 
-FS_WILD = 75
+FS_WILD = 72
 
 FREE_SPINS_PARAMS = {
     "trigger_symbol_code": "scatter",
@@ -103,7 +110,7 @@ FREE_SPINS_PARAMS = {
 EXPANDING_WILD_PARAMS = {
     "trigger_symbol_code": "wild",
     "walk_enabled": False,
-    "free_spins_only": True,
+    "free_spins_only": False,
     "triggers_before_expand": True,
 }
 
@@ -146,7 +153,7 @@ BONUS_BUY_PARAMS = {
             "cost_multiplier": FREE_SPINS_BUY_COST,
             "target_feature_id": "free_spins",
             "buy_exclude_symbols": ["paw", "scatter"],
-            "buy_force": {"symbol": "scatter", "reels": [0, 1, 2, 3, 4], "count": 3},
+            "buy_force_symbol": "scatter", "buy_force_reels": [0, 1, 2, 3, 4], "buy_force_count": 3,
             "buy_pay_spin": False,
         },
         {
@@ -154,7 +161,7 @@ BONUS_BUY_PARAMS = {
             "cost_multiplier": JACKPOT_CHANCE_BUY_COST,
             "target_feature_id": "wheel_of_fortune",
             "buy_exclude_symbols": ["scatter", "paw"],
-            "buy_force": {"symbol": "paw", "reels": [0, 2, 4], "count": 3},
+            "buy_force_symbol": "paw", "buy_force_reels": [0, 2, 4], "buy_force_count": 3,
             "buy_pay_spin": False,
         },
     ],

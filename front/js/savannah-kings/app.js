@@ -298,7 +298,7 @@ function renderPaytable() {
     <section><h3>Low symbols</h3><div class="pt-grid">${['a', 'k', 'q', 'j'].map(row).join('')}</div></section>
     <section class="pt-feature"><img src="${SK.symbolSrc('wild')}" alt=""><div><h3>Lion — Wild</h3>
       <p>Appears on reels 2, 3 and 4 and substitutes for every symbol except the Sun Mask and the Golden Paw.
-      In Free Spins every Lion expands to cover its whole reel before wins are counted.</p></div></section>
+      Every Lion expands to cover its whole reel before wins are counted — in the base game and in Free Spins.</p></div></section>
     <section class="pt-feature"><img src="${SK.symbolSrc('scatter')}" alt=""><div><h3>Sun Mask — Scatter</h3>
       <p>3, 4 or 5 anywhere start 10, 15 or 20 Free Spins and pay:</p><ul class="pt-inline">${scPay}</ul>
       <p>3 or more during Free Spins add +5 spins. Masks and Paws under an expanded Lion still count.</p></div></section>
