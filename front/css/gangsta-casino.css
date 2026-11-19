@@ -612,7 +612,13 @@ body.is-spine-popup #spineCanvas { position: fixed; z-index: 59; }
   white-space: nowrap;
   font-family: 'Shantell Sans', 'Luckiest Guy', 'Baloo 2', system-ui, sans-serif;
   line-height: 1;
-  padding-top: 0.08em;
+  /* The box is the caption art's own box, centred on its bone, so the text has to sit in the
+     MIDDLE of it: as a plain block it rendered at the top edge and the line on the BONUS GAME
+     ribbon came out above the ribbon's centre. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   color: #fff3c8;
   text-shadow: 0 0.06em 0 rgba(0, 0, 0, 0.75), 0 0 0.25em rgba(255, 190, 60, 0.55);
 }

@@ -47,10 +47,15 @@ const CAPS = {
       ['tap_to_continue', 'text_tap_to_continue', 400, 116, 2, 58, 1.001]],
   },
   bonus: {
-    desk: [['bonus_game', 'text_bonus_game', 266, 71, 0, 71, 0.698], ['tap_to_start', 'text_tap_to_start', 211, 58, 0, 58, 0.385]],
-    mob: [['bonus_game', 'text_bonus_game', 266, 71, 0, 71, 0.698], ['tap_to_start', 'text_tap_to_start', 211, 58, 0, 58, 0.385]],
+    desk: [['bonus_game', 'text_bonus_game', 266, 71, 0, 71, 0.698], ['tap_to_start', 'text_tap_to_start', 462, 58, 0, 58, 0.843]],
+    mob: [['bonus_game', 'text_bonus_game', 266, 71, 0, 71, 0.698], ['tap_to_start', 'text_tap_to_start', 538, 58, 0, 58, 0.982]],
   },
 };
+// ?dom=1 — draw the captions the way the GAME draws them (its own .pack-caption CSS, pinned to
+// the bone), to check the live rendering, not just the geometry.
+const EN = { free_spins: 'FREE SPINS', expanding_wild: 'EXPANDING WILD', multiplier: 'MULTIPLIER',
+             multiplier_note: 'ADD UP IN FREE SPINS', tap_to_continue: 'TAP TO CONTINUE',
+             bonus_game: 'BONUS GAME', tap_to_start: 'TAP TO START' };
 
 const wrap = document.getElementById('wrap');
 const stageEl = document.getElementById('stage');
@@ -87,6 +92,38 @@ SpineEngine.SpineResource.load(stage.assetManager, `img/gangsta-casino/spine-pac
     INST = inst;
   })
   .catch((e) => { window.__err = String(e); });
+
+if (P.get('dom')) {
+  for (const href of ['css/fonts.css', 'css/gangsta-casino.css']) {
+    const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = href;
+    document.head.appendChild(l);
+  }
+  const pre = LAY === 'mob' ? 'm_' : '';
+  const els = CAPS[SCREEN][LAY].map(([key, bone, w, h, lines, line, f]) => {
+    const el = document.createElement('div');
+    el.className = lines ? 'pack-caption pack-caption--fit' : 'pack-caption';
+    el.textContent = EN[key];
+    document.body.appendChild(el);
+    return { el, bone: pre + bone, w, h, lines, line, f };
+  });
+  const tick = () => {
+    requestAnimationFrame(tick);
+    if (!INST) return;
+    const r = cv.getBoundingClientRect();
+    for (const c of els) {
+      const b = INST.skeleton.findBone(c.bone);
+      if (!b) continue;
+      const s = b.getWorldScaleX();
+      c.el.style.left = `${r.left + b.worldX + cv.width / 2}px`;
+      c.el.style.top = `${r.top + cv.height / 2 - b.worldY}px`;
+      c.el.style.fontSize = `${(c.line || c.h) * 0.62 * s * c.f}px`;
+      c.el.style.width = `${c.w * s}px`;
+      c.el.style.maxWidth = `${c.w * s}px`;
+      c.el.style.height = `${c.h * s}px`;
+    }
+  };
+  requestAnimationFrame(tick);
+}
 
 window.__ready = () => !!INST &&
   !!INST.skeleton.findBone((LAY === 'mob' ? 'm_' : '') + CAPS[SCREEN][LAY][0][1]);
