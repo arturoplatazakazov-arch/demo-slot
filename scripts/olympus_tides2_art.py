@@ -74,7 +74,10 @@ def symbols():
         for d in ("symbols", "symbols_letters"):
             save(square(im), f"{d}/{name}.webp")
     sp = pieces(raw("Y", "specials"), 3, rows=False)
-    for name, im in zip(["orb", "eagle", "scatter"], sp):
+    sp = dict(zip(["orb", "eagle", "scatter"], sp))
+    if (RAW / "Y" / "specials2.png").exists():   # 2026-11-19: richer eagle + scatter, the orb stays from the first sheet
+        sp.update(zip(["eagle", "scatter"], pieces(raw("Y", "specials2"), 3, thr=110, grow=2, rows=False)[1:]))
+    for name, im in sp.items():
         for d in ("symbols", "symbols_letters"):
             save(square(im, pad=0.02), f"{d}/{name}.webp")
     lows = ["citrine", "emerald", "ruby", "amethyst", "sapphire"]   # yellow, green, pink, white, blue

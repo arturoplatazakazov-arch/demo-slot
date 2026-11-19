@@ -55,7 +55,10 @@ body[data-var="tides2"][data-low="letters"] .cell[data-code="ruby"] .cell__img, 
 body[data-var="tides2"][data-low="letters"] .cell[data-code="sapphire"] .cell__img { scale: .8; }
 body[data-var="tides2"] .cell[data-code="helmet"] .cell__img, body[data-var="tides2"] .cell[data-code="lyre"] .cell__img,
 body[data-var="tides2"] .cell[data-code="amphora"] .cell__img, body[data-var="tides2"] .cell[data-code="wreath"] .cell__img { scale: 1.12; }
-body[data-var="tides2"] .cell[data-code="eagle"] .cell__img { scale: 1.18; }
+/* eagle = jackpot: +5% over its old 1.18; scatter = the most precious symbol, ~12% over the highs (1.12) */
+body[data-var="tides2"] .cell[data-code="eagle"] .cell__img { scale: 1.24; }
+body[data-var="tides2"] .cell[data-code="scatter"] .cell__img { scale: 1.26; }
+body[data-var="tides2"] .cell[data-code="scatter"] { z-index: 1; }
 /* SCATTER label = its own text layer (localisable) */
 body[data-var="tides2"] .cell[data-code="scatter"]::after {
   content: 'SCATTER'; position: absolute; left: 50%; bottom: 4%; transform: translateX(-50%);
