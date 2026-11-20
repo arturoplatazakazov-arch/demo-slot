@@ -122,8 +122,8 @@ body[data-var="tides2"] .jp[data-tier="mini"]  .jp__name { color: #18803a; }
 body[data-var="tides2"] .jp__name {
   height: 1.8em; width: 6.2em; color: transparent !important; overflow: hidden;
   background: var(--jp-title) center / contain no-repeat;
-  /* client: the painted titles read too dark on the light plates -> lift them, keep a thin dark edge for contrast */
-  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .28));   /* titles redrawn flat and bright (2026-11-20): no extra lift */
+  /* client: the LETTERS lighter (bright pastel faces), a thin dark rim keeps them readable on the milky plate */
+  filter: brightness(1.6) saturate(.95) drop-shadow(0 0 1px rgba(60, 30, 0, .85)) drop-shadow(0 2px 2px rgba(0, 0, 0, .3));
 }
 body[data-var="tides2"] .jp[data-tier="grand"] { --jp-title: url("../img/olympus-thunder/tides2/ui/jp_grand.webp?v=2"); }
 body[data-var="tides2"] .jp[data-tier="major"] { --jp-title: url("../img/olympus-thunder/tides2/ui/jp_major.webp?v=2"); }
