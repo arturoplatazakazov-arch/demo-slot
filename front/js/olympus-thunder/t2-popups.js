@@ -138,7 +138,7 @@
         root.removeEventListener('click', close); resolve();
       };
       root.addEventListener('click', close);
-      counting.then(() => { ready = true; root.classList.add('can-close'); setTimeout(close, 1800 + t.lvl * 400); });
+      counting.then(() => { ready = true; root.classList.add('can-close'); if (!window.__holdPop) setTimeout(close, 1800 + t.lvl * 400); });
     });
     // the storm leaves the way it came: clouds back to the corners, bolts stop, title out
     root.classList.add('is-out'); run = null;
@@ -175,5 +175,13 @@
       else UI.popup('jackpot', { amount: amt, sub: `${k.toUpperCase()} JACKPOT` });
     }));
   }
-  window.T2Pop = { scene };
+  // screenshots / Figma export: stop the loop and leave a fixed set of bolts on the canvas
+  function still(n) {
+    run = null; cancelAnimationFrame(raf); bolts = [];
+    const lvl = +(root.dataset.lvl || 1);
+    for (let i = 0; i < (n || lvl + 1); i++) spawn(lvl);
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    bolts.forEach((b) => draw(b, 1, (2.2 + lvl * 0.6) * dpr));
+  }
+  window.T2Pop = { scene, still };
 })();
