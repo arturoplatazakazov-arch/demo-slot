@@ -13,7 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 FRONT = ROOT / "front"
 V = 1          # art cache-bust
-CSS_V = 15
+CSS_V = 16
 T = "img/olympus-thunder/tides2/"
 OLD = "img/olympus-thunder/tides/"
 

@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/preloader.css?v=1">
 <link rel="stylesheet" href="css/olympus-thunder.css?v=22">
-<link rel="stylesheet" href="css/olympus-thunder-tides2.css?v=15">
+<link rel="stylesheet" href="css/olympus-thunder-tides2.css?v=16">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Marcellus+SC&family=Forum&display=swap">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
@@ -23,6 +23,8 @@
     if (q.get('clean')) b.clean = '1';
     if (q.get('shot')) { b.clean = '1'; document.head.insertAdjacentHTML('beforeend', '<style>#access-gate,#preloader,.to-catalog-btn{display:none!important}</style>'); }
     if (q.get('low') === 'letters') { b.low = 'letters'; b.symbols = 'img/olympus-thunder/tides2/symbols_letters/'; }
+    // Tides 3 lows (painted gems) with the Tides 2 highs: folder = tides2/symbols + tides3 lows, copied by hand
+    if (q.get('low') === 'gems3') { b.low = 'gems3'; b.symbols = 'img/olympus-thunder/tides2/symbols_t3low/'; }
     if (q.get('hero') === 'b') b.hero = 'tides2/hero_b.webp?v=1';
   })();
   window.OT_I18N = { 'ВЫИГРЫШ ДО': 'UP TO', 'ВЫИГРЫШ БОНУСА': 'BONUS WIN', 'ВЫИГРЫШ СЕРИИ': 'SERIES WIN',
@@ -43,7 +45,7 @@
   <div class="demo-switch" id="demoSwitch">
     <button class="demo-switch__toggle" id="demoToggle" type="button" title="Hide / show switches">⚙</button>
     <div><b>Underlay</b><button data-k="under" data-v="glass">Glass</button><button data-k="under" data-v="solid">Solid</button></div>
-    <div><b>Low</b><button data-k="low" data-v="gems">Gems</button><button data-k="low" data-v="letters">Letters</button></div>
+    <div><b>Low</b><button data-k="low" data-v="gems">Gems</button><button data-k="low" data-v="letters">Letters</button><button data-k="low" data-v="gems3">Gems T3</button></div>
     <div><b>Title</b><button data-k="title" data-v="1">1</button><button data-k="title" data-v="2">2</button><button data-k="title" data-v="3">3</button></div>
     <div><b>Zeus</b><button data-k="hero" data-v="a">A</button><button data-k="hero" data-v="b">B</button></div>
     <div><b>Mob BG</b><button data-k="bgm" data-v="0">Base</button><button data-k="bgm" data-v="a">A</button><button data-k="bgm" data-v="b">B</button></div>
