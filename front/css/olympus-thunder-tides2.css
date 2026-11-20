@@ -128,6 +128,10 @@ body[data-var="tides2"] .jp[data-tier="major"] { --jp-title: url("../img/olympus
 body[data-var="tides2"] .jp[data-tier="minor"] { --jp-title: url("../img/olympus-thunder/tides2/ui/jp_minor.webp?v=1"); }
 body[data-var="tides2"] .jp[data-tier="mini"]  { --jp-title: url("../img/olympus-thunder/tides2/ui/jp_mini.webp?v=1"); }
 body[data-var="tides2"] .jp[data-tier="grand"] .jp__name { height: 2em; width: 7em; }
+/* client 2026-11-20: lighter plates, no bolt icons next to the painted titles */
+body[data-var="tides2"] .jp img { filter: brightness(1.22) saturate(.92); }
+body[data-var="tides2"] .jp__bolts { display: none; }
+body[data-var="tides2"] .jp__name { grid-column: 1 / 3; justify-self: center; }
 
 /* ---------- win plate (cascade counter / UP TO) + FS total multiplier in the band above the grid ---------- */
 body[data-var="tides2"] .win-plate { height: auto; }
@@ -189,7 +193,7 @@ body[data-clean] .demo-switch { display: none; }
   :root { --design-h: 1360px; --cell: 158px; --cell-x: 166px; }
   body[data-var="tides2"] .zeus { left: -30px; top: 0; width: 450px; height: 490px; z-index: 1; }
   body[data-var="tides2"] .jackpots {
-    left: 450px; top: 214px; width: 600px; height: auto;
+    left: 450px; top: 190px; width: 600px; height: auto;
     display: grid; grid-template-columns: repeat(3, 1fr); grid-template-areas: "grand grand grand" "major minor mini"; gap: 8px;
   }
   body[data-var="tides2"] .jp { width: auto; height: 90px; column-gap: 5px; }
