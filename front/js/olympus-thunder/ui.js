@@ -146,7 +146,7 @@
     await new Promise((r) => setTimeout(r, 1300));
     scene.hidden = true;
     dim(false);
-    await popup('jackpot', { amount, sub: `${TIER_LABEL[tier]} JACKPOT` });
+    await UI.popup('jackpot', { amount, sub: `${TIER_LABEL[tier]} JACKPOT` });   // via UI so a variant can restyle it
     document.querySelector(`.jp[data-tier="${tier}"]`)?.classList.remove('is-hit');
   }
 
