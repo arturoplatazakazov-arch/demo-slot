@@ -464,3 +464,10 @@ body[data-var="tides2"] { --cnt-pt-d: 38px; }
   .t2pop__cl--ml, .t2pop__cl--mr { width: 64vw; top: 62vh; }
 }
 @media (prefers-reduced-motion: reduce) { .t2pop * { animation: none !important; } }
+
+/* the DEV / ♪ buttons (js/dev-tools.js, ?dev=1) sit at the top-left too: the presentation switches go under them */
+body.has-devtools .demo-switch { top: 56px; }
+/* the collapsed switches stay findable: a labelled gold-rimmed button, not a faint gear */
+.demo-switch .demo-switch__toggle { width: auto; padding: 0 10px; border: 1px solid #ffd75a; color: #ffd75a; font-size: 13px; }
+.demo-switch .demo-switch__toggle::after { content: ' Сеты'; font: 600 12px/1 system-ui, sans-serif; }
+.demo-switch.is-collapsed .demo-switch__toggle { opacity: .9; }

@@ -137,6 +137,9 @@
     return G.devSpin(data);
   }
 
+  // symbol sets = the page's presentation switches (?high / ?low are read at start, so reload)
+  function setSet(k, v) { const q = new URLSearchParams(location.search); q.set(k, v); location.search = '?' + q; }
+
   const amount = () => Math.max(1, Number(DevTools.value('amount')) || 1);
   const symbolRows = SYMS.map((k) => ({ key: k, label: NAMES[k], img: `${ART}${k}.webp` }));
 
@@ -190,6 +193,20 @@
         ],
       },
       {
+        title: 'Сеты',
+        sections: [
+          { title: 'Рарки (High)', note: 'Перезагружает страницу с выбранным сетом (то же, что шестерёнка слева).', items: [
+            { label: 'Luxury', run: () => setSet('high', 'lux') },
+            { label: 'Classic', run: () => setSet('high', 'classic') },
+          ] },
+          { title: 'Коммонки (Low)', items: [
+            { label: 'Gems', run: () => setSet('low', 'gems') },
+            { label: 'Letters', run: () => setSet('low', 'letters') },
+            { label: 'Gems T3', run: () => setSet('low', 'gems3') },
+          ] },
+        ],
+      },
+      {
         title: 'Попапы',
         sections: [
           { title: 'Выигрыш (сумма из поля)', items: ['big', 'mega', 'epic'].map((k) => ({ label: k.toUpperCase() + ' WIN', run: () => UI.popup(k, { amount: amount() }) })) },
@@ -204,4 +221,7 @@
       },
     ],
   });
+  // only when the DEV / ♪ buttons are really on screen (localhost or ?dev=1)
+  const mark = () => { if (document.querySelector('.dt-fab')) document.body.classList.add('has-devtools'); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(mark, 0)); else setTimeout(mark, 0);
 })();
