@@ -71,6 +71,8 @@ def save(im, rel, q=90):
 
 def symbols():
     hp = pieces(raw("Y", "hp"), 4)
+    if (RAW / "Y" / "wreath_flat.png").exists():   # Tides 3 (2026-11-20): flatter, outlined leaves that read on the orange
+        im = raw("Y", "wreath_flat"); hp[3] = im.crop(im.getchannel("A").point(lambda v: 255 if v > 24 else 0).getbbox())
     for name, im in zip(["helmet", "lyre", "amphora", "wreath"], hp):
         for d in ("symbols", "symbols_letters"):
             save(square(im), f"{d}/{name}.webp")
