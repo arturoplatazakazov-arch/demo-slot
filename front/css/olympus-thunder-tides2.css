@@ -326,3 +326,9 @@ body[data-var="tides2"] .zc {
    so the live hero fades out while the free spins run (and back in after) ---------- */
 body[data-var="tides2"] .zeus { transition: opacity .6s ease; }
 body[data-var="tides2"] .screen[data-mode="fs"] .zeus { opacity: 0; }
+
+/* client 2026-11-20: desktop composition 1.5% (16 px of 1080) lower — slot, logo, hero, jackpots, win plate, FS counters */
+@media (orientation: landscape) {
+  body[data-var="tides2"] .board, body[data-var="tides2"] .logo, body[data-var="tides2"] .zeus, body[data-var="tides2"] .jackpots,
+  body[data-var="tides2"] .win-plate, body[data-var="tides2"] .fs-counter, body[data-var="tides2"] .medallion { translate: 0 16px; }
+}
