@@ -334,9 +334,9 @@ body[data-var="tides2"] .screen[data-mode="fs"] .zeus { opacity: 0; }
 }
 
 /* ---------- client 2026-11-20: mobile bonus — FREE SPINS / WIN / MULTIPLIER on three equal painted plates
-   (200 px wide like the old FS counter), in a row under the slot: frame outer bottom = 1230, gaps 24 px
+   (300 px wide = 1.5x the old FS counter), in a row under the slot: frame outer bottom = 1230, gaps 24 px
    (between the plates = above them). Art per variant: ui/cnt_fs|cnt_win|cnt_mult.webp ---------- */
-body[data-var="tides2"] { --cnt-ar: 2; --cnt-pt: 30px;
+body[data-var="tides2"] { --cnt-ar: 2; --cnt-pt: 45px;
   --cnt-fs: url("../img/olympus-thunder/tides2/ui/cnt_fs.webp?v=1");
   --cnt-win: url("../img/olympus-thunder/tides2/ui/cnt_win.webp?v=1");
   --cnt-mult: url("../img/olympus-thunder/tides2/ui/cnt_mult.webp?v=1"); }
@@ -344,24 +344,24 @@ body[data-var="tides2"] { --cnt-ar: 2; --cnt-pt: 30px;
   body[data-var="tides2"] .screen[data-mode="fs"] .fs-counter,
   body[data-var="tides2"] .screen[data-mode="fs"] .win-plate,
   body[data-var="tides2"] .screen[data-mode="fs"] .medallion {
-    top: 1254px; width: 200px; height: calc(200px / var(--cnt-ar)); aspect-ratio: auto; min-height: 0;
+    top: 1254px; width: 300px; height: calc(300px / var(--cnt-ar)); aspect-ratio: auto; min-height: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding-top: var(--cnt-pt);
     border: 0; border-radius: 0; box-shadow: none; background: var(--cnt-img) center / 100% 100% no-repeat; box-sizing: border-box;
   }
-  body[data-var="tides2"] .screen[data-mode="fs"] .fs-counter { left: 216px; --cnt-img: var(--cnt-fs); }
-  body[data-var="tides2"] .screen[data-mode="fs"] .win-plate  { left: 440px; --cnt-img: var(--cnt-win); }
-  body[data-var="tides2"] .screen[data-mode="fs"] .medallion  { left: 664px; --cnt-img: var(--cnt-mult); }
+  body[data-var="tides2"] .screen[data-mode="fs"] .fs-counter { left: 66px; --cnt-img: var(--cnt-fs); }
+  body[data-var="tides2"] .screen[data-mode="fs"] .win-plate  { left: 390px; --cnt-img: var(--cnt-win); }
+  body[data-var="tides2"] .screen[data-mode="fs"] .medallion  { left: 714px; --cnt-img: var(--cnt-mult); }
   body[data-var="tides2"] .screen[data-mode="fs"] .win-plate img, body[data-var="tides2"] .screen[data-mode="fs"] .medallion img,
   body[data-var="tides2"] .screen[data-mode="fs"] .win-plate::before, body[data-var="tides2"] .screen[data-mode="fs"] .medallion::before { display: none; }
   body[data-var="tides2"] .screen[data-mode="fs"] .win-plate__win { position: static; display: contents; }
   body[data-var="tides2"] .screen[data-mode="fs"] .fs-counter__label,
   body[data-var="tides2"] .screen[data-mode="fs"] .win-plate__label,
   body[data-var="tides2"] .screen[data-mode="fs"] .medallion__label {
-    position: static; font: 700 13px/1 'Cinzel', serif; letter-spacing: .1em; color: #eafcff; opacity: 1; text-shadow: 0 1px 2px rgba(0, 0, 0, .7);
+    position: static; font: 700 19px/1 'Cinzel', serif; letter-spacing: .1em; color: #eafcff; opacity: 1; text-shadow: 0 1px 2px rgba(0, 0, 0, .7);
   }
   body[data-var="tides2"] .screen[data-mode="fs"] .medallion__label { font-size: 0; }
-  body[data-var="tides2"] .screen[data-mode="fs"] .medallion__label::after { content: 'MULTIPLIER'; font-size: 13px; }
+  body[data-var="tides2"] .screen[data-mode="fs"] .medallion__label::after { content: 'MULTIPLIER'; font-size: 19px; }
   body[data-var="tides2"] .screen[data-mode="fs"] .fs-counter__value,
   body[data-var="tides2"] .screen[data-mode="fs"] .win-plate__value,
-  body[data-var="tides2"] .screen[data-mode="fs"] .medallion__value { position: static; font-size: 34px; line-height: 1; }
+  body[data-var="tides2"] .screen[data-mode="fs"] .medallion__value { position: static; font-size: 50px; line-height: 1; }
 }

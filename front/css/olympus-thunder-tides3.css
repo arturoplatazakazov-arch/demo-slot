@@ -14,7 +14,7 @@ body[data-var="tides2"] .cell[data-code="scatter"]::after { display: none; }
 body[data-var="tides2"] .cell[data-code="scatter"] .cell__img { scale: 1.3; }
 body[data-var="tides2"] .cell[data-code="scatter"] { z-index: 1; }
 /* bonus counter plates (Tides 3 art carries its emblem above a 2:1 body) */
-body[data-var="tides2"] { --cnt-ar: 1.62; --cnt-pt: 26px;
+body[data-var="tides2"] { --cnt-ar: 1.62; --cnt-pt: 39px;
   --cnt-fs: url("../img/olympus-thunder/tides3/ui/cnt_fs.webp?v=1");
   --cnt-win: url("../img/olympus-thunder/tides3/ui/cnt_win.webp?v=1");
   --cnt-mult: url("../img/olympus-thunder/tides3/ui/cnt_mult.webp?v=1"); }
