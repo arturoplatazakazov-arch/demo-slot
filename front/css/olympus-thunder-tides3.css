@@ -18,3 +18,7 @@ body[data-var="tides2"] { --cnt-ar: 1.62; --cnt-pt: 39px;
   --cnt-fs: url("../img/olympus-thunder/tides3/ui/cnt_fs.webp?v=1");
   --cnt-win: url("../img/olympus-thunder/tides3/ui/cnt_win.webp?v=1");
   --cnt-mult: url("../img/olympus-thunder/tides3/ui/cnt_mult.webp?v=1"); }
+@media (orientation: portrait) {
+  body[data-var="tides2"] .jp[data-tier="grand"] img { content: url("../img/olympus-thunder/tides3/ui/plate_mob_grand.webp?v=1"); }
+  body[data-var="tides2"] .jp:not([data-tier="grand"]) img { content: url("../img/olympus-thunder/tides3/ui/plate_mob_small.webp?v=1"); }
+}

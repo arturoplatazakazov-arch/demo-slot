@@ -365,3 +365,13 @@ body[data-var="tides2"] { --cnt-ar: 2; --cnt-pt: 45px;
   body[data-var="tides2"] .screen[data-mode="fs"] .win-plate__value,
   body[data-var="tides2"] .screen[data-mode="fs"] .medallion__value { position: static; font-size: 50px; line-height: 1; }
 }
+
+/* client 2026-11-20: mobile jackpot plates at their real proportions (caps intact, marble fitted) instead of the
+   desktop plate stretched by object-fit: fill. GRAND 600x96, the others 195x90 (scripts/olympus_jp_plates_mob.py) */
+@media (orientation: portrait) {
+  body[data-var="tides2"] .jp[data-tier="grand"] img { content: url("../img/olympus-thunder/tides2/ui/plate_mob_grand.webp?v=1"); }
+  body[data-var="tides2"] .jp:not([data-tier="grand"]) img { content: url("../img/olympus-thunder/tides2/ui/plate_mob_small.webp?v=1"); }
+}
+@media (orientation: portrait) {   /* small plates: the title stays between the meander caps */
+  body[data-var="tides2"] .jp:not([data-tier="grand"]) .jp__name { width: min(6.2em, 118px); }
+}
