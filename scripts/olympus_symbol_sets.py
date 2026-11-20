@@ -56,15 +56,15 @@ def square(im, pad=0.03, size=384):
     return c.resize((size, size), Image.LANCZOS)
 
 
-for t in range(1, 6):
-    arr = np.array(Image.open(RAW / f"t{t}.png").convert("RGBA"))
+for t in [str(i) for i in range(1, 6)] + ["luxA", "luxB"]:
+    arr = np.array(Image.open(RAW / (f"t{t}.png" if t.isdigit() else f"{t}.png")).convert("RGBA"))
     arr[:, :, 3] = np.where(arr[:, :, 3] < 20, 0, arr[:, :, 3])   # drop ChatGPT haze
     rows = (arr[:, :, 3] > 40).sum(1)
     h = len(rows)
     mid = h // 3 + int(np.argmin(rows[h // 3: 2 * h // 3]))     # emptiest line between the rows
     parts = cells(arr[:mid], 4) + cells(arr[mid:], 3)
     for name, im in zip(TOP + BOT, parts):
-        p = OUT / f"t{t}" / f"{name}.webp"
+        p = OUT / (f"t{t}" if t.isdigit() else t) / f"{name}.webp"
         p.parent.mkdir(parents=True, exist_ok=True)
         square(im).save(p, "WEBP", quality=90, method=6)
         print(p.relative_to(ROOT), im.size)

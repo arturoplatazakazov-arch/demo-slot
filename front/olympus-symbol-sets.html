@@ -28,6 +28,7 @@
   main { max-width: 1240px; margin: 0 auto; padding: 8px 16px 48px; }
   .set { margin: 22px 0; padding: 16px 18px 18px; border-radius: 18px; background: #06141acc; border: 1px solid #1f4a52; }
   body[data-bg="light"] .set { background: #ffffffb0; border-color: #b7c9cc; }
+  .set--new { border-color: var(--gold); box-shadow: 0 0 0 1px #f4cf7355, 0 0 28px #f4cf7322; }
   .set__head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
   .set__n { font-family: 'Cinzel', serif; font-weight: 900; font-size: 15px; letter-spacing: .12em; color: var(--gold); }
   .set__name { font-family: 'Cinzel', serif; font-weight: 700; font-size: 22px; }
@@ -72,13 +73,16 @@
   const SYMS = [['helmet', 'Шлем'], ['lyre', 'Лира'], ['amphora', 'Амфора'], ['wreath', 'Венок'],
                 ['orb', 'Сфера ×'], ['eagle', 'Орёл · джекпот'], ['scatter', 'Скаттер']];
   const main = document.getElementById('sets');
-  SETS.forEach(([name, note], i) => {
-    const t = i + 1;
+  const ROWS = SETS.map(([name, note], i) => ({ dir: `t${i + 1}`, n: `СЕТ ${i + 1}`, t: i + 1, name, note }));
+  ROWS.splice(4, 0,
+    { dir: 'luxA', n: 'СЕТ 4A', t: 4, name: 'Люкс · разные металлы', note: 'Подложки сета 4, предметы своего металла: шлем — сталь-серебро, лира — розовое золото, амфора — белая платина, венок — серебро, орёл — белая платина с золотыми кончиками крыльев.', fresh: 1 },
+    { dir: 'luxB', n: 'СЕТ 4B', t: 4, name: 'Люкс · цветные материалы', note: 'Подложки сета 4, предметы из цветных материалов: шлем — тёмная сталь, лира — белый мрамор, амфора — терракота, венок — изумрудная эмаль, орёл — тёмная бронза с голубыми глазами.', fresh: 1 });
+  ROWS.forEach(({ dir, n, t, name, note, fresh }) => {
     const meter = [1, 2, 3, 4, 5].map(k => `<i class="${k <= t ? 'on' : ''}"></i>`).join('');
     const figs = SYMS.map(([k, label], j) =>
-      `<figure class="${j > 3 ? 'sp' : ''}"><img src="img/olympus-thunder/sets/t${t}/${k}.webp" alt="${label}, сет ${t}" loading="lazy"><figcaption>${label}</figcaption></figure>`).join('');
+      `<figure class="${j > 3 ? 'sp' : ''}"><img src="img/olympus-thunder/sets/${dir}/${k}.webp" alt="${label}, ${n}" loading="lazy"><figcaption>${label}</figcaption></figure>`).join('');
     main.insertAdjacentHTML('beforeend',
-      `<section class="set"><div class="set__head"><span class="set__n">СЕТ ${t}</span><span class="set__name">${name}</span>` +
+      `<section class="set${fresh ? ' set--new' : ''}"><div class="set__head"><span class="set__n">${n}</span><span class="set__name">${name}</span>` +
       `<span class="meter" title="премиальность ${t} из 5">${meter}</span><span class="set__note">${note}</span></div>` +
       `<div class="row">${figs}</div></section>`);
   });
