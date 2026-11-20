@@ -75,6 +75,8 @@ def symbols():
         for d in ("symbols", "symbols_letters"):
             save(square(im), f"{d}/{name}.webp")
     sp = pieces(raw("Y", "specials"), 3, rows=False)
+    if (RAW / "Y" / "scatter_hand.png").exists():   # Tides 3 (2026-11-20): Zeus' hand with a gold bolt out of a cloud, SCATTER painted in
+        im = raw("Y", "scatter_hand"); sp[2] = im.crop(im.getchannel("A").point(lambda v: 255 if v > 24 else 0).getbbox())
     for name, im in zip(["orb", "eagle", "scatter"], sp):
         for d in ("symbols", "symbols_letters"):
             save(square(im, pad=0.02), f"{d}/{name}.webp")
