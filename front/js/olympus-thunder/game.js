@@ -341,7 +341,8 @@
   async function runFreeSpins() {
     while (state.fsLeft > 0) {
       await Board.wait(450);
-      const data = await Api.spin(state.sessionId, bet());
+      // dev panel rounds play made-up free spins (js/olympus-thunder/t2-dev.js), the server knows nothing of them
+      const data = state.devFs && window.OTDev ? await OTDev.fsSpin() : await Api.spin(state.sessionId, bet());
       state.fsLeft = data.feature ? data.feature.spins_remaining : 0;
       $('fsLeft').textContent = Math.max(0, state.fsLeft - 0);
       await playSpin(data);
@@ -354,6 +355,7 @@
       $('fsLeft').textContent = state.fsLeft;
       plate.set(state.fsWin, 'ВЫИГРЫШ БОНУСА');
     }
+    state.devFs = false;
     zeus('bigwin');
     await UI.popup('total', { amount: state.fsWin, sub: `ИТОГ БОНУСА · МНОЖИТЕЛЬ ×${state.totalMult}` });
     UI.dim(true, true);
@@ -371,8 +373,8 @@
     document.querySelector('[data-action="spin"]').classList.toggle('is-spinning', on);
   }
 
-  async function run(request, { isBuy = false, buyKind = null } = {}) {
-    if (state.busy || !state.sessionId) return;
+  async function run(request, { isBuy = false, buyKind = null, dev = false } = {}) {
+    if (state.busy || (!state.sessionId && !dev)) return;
     setBusy(true);
     Board.setSpeed(document.getElementById('v3TurboBtn').classList.contains('is-active') ? 0.5 : 1);
     try {
@@ -533,6 +535,8 @@
     zeus('idle');
   }
 
-  window.OTGame = { state, playSpin, zeus };
+  window.OTGame = { state, playSpin, zeus, bet, setMode, setTotalMult, plate,
+    // dev panel: play a made-up spin response through the real pipeline (wins, orbs, scatters -> FS, wheel, popups)
+    devSpin: (data) => run(() => Promise.resolve(data), { dev: true }) };
   boot();
 })();
