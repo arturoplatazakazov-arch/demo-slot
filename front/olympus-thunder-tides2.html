@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/preloader.css?v=1">
 <link rel="stylesheet" href="css/olympus-thunder.css?v=22">
-<link rel="stylesheet" href="css/olympus-thunder-tides2.css?v=16">
+<link rel="stylesheet" href="css/olympus-thunder-tides2.css?v=17">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Marcellus+SC&family=Forum&display=swap">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
@@ -294,9 +294,14 @@
       if (!matchMedia('(orientation: portrait)').matches) return;
       var main = logo.querySelector('.logo__b'), want = logo.clientWidth, have = main.scrollWidth;
       if (want && have) logo.style.fontSize = (parseFloat(getComputedStyle(logo).fontSize) * want / have) + 'px';
+      // client 2026-11-20: the logo hangs from the top of the PAGE (not the stage), so it clears Zeus on tall phones
+      logo.style.top = '';
+      var st = document.getElementById('stage'), k = st.getBoundingClientRect().width / st.offsetWidth;
+      var gap = 18, top = st.getBoundingClientRect().top;
+      if (k && top > gap) logo.style.top = ((gap - top) / k) + 'px';
     }
     (document.fonts ? document.fonts.ready : Promise.resolve()).then(fitLogo);
-    addEventListener('resize', fitLogo);
+    addEventListener('resize', fitLogo); setTimeout(fitLogo, 800); setTimeout(fitLogo, 2500);
     new MutationObserver(function () { setTimeout(fitLogo, 60); setTimeout(fitLogo, 600); }).observe(document.body, { attributes: true, attributeFilter: ['data-title'] });
   })();
 </script>
