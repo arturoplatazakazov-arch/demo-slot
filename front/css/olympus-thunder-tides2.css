@@ -375,3 +375,34 @@ body[data-var="tides2"] { --cnt-ar: 2; --cnt-pt: 45px;
 @media (orientation: portrait) {   /* small plates: the title stays between the meander caps */
   body[data-var="tides2"] .jp:not([data-tier="grand"]) .jp__name { width: min(6.2em, 118px); }
 }
+
+/* client 2026-11-20: desktop bonus — the same painted FREE SPINS / WIN / MULTIPLIER plates as on mobile, stacked in the
+   right column from under the jackpots (MINI bottom 526 + their 14 px gap = 540) down to the frame bottom (968), equal
+   14 px gaps: h = (428 - 28) / 3, width = h * art ratio, centred on the column (x 1704) */
+body[data-var="tides2"] { --cnt-pt-d: 38px; }
+@media (orientation: landscape) {
+  body[data-var="tides2"] .screen[data-mode="fs"] .fs-counter,
+  body[data-var="tides2"] .screen[data-mode="fs"] .win-plate,
+  body[data-var="tides2"] .screen[data-mode="fs"] .medallion {
+    --h: calc((428px - 28px) / 3);
+    width: calc(var(--h) * var(--cnt-ar)); height: var(--h); left: calc(1704px - var(--h) * var(--cnt-ar) / 2); aspect-ratio: auto;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding-top: var(--cnt-pt-d);
+    border: 0; border-radius: 0; box-shadow: none; background: var(--cnt-img) center / 100% 100% no-repeat; box-sizing: border-box;
+  }
+  body[data-var="tides2"] .screen[data-mode="fs"] .fs-counter { top: 540px; --cnt-img: var(--cnt-fs); }
+  body[data-var="tides2"] .screen[data-mode="fs"] .win-plate  { top: calc(540px + (428px - 28px) / 3 + 14px); --cnt-img: var(--cnt-win); }
+  body[data-var="tides2"] .screen[data-mode="fs"] .medallion  { top: calc(540px + (428px - 28px) / 3 * 2 + 28px); --cnt-img: var(--cnt-mult); }
+  body[data-var="tides2"] .screen[data-mode="fs"] .win-plate img, body[data-var="tides2"] .screen[data-mode="fs"] .medallion img,
+  body[data-var="tides2"] .screen[data-mode="fs"] .win-plate::before, body[data-var="tides2"] .screen[data-mode="fs"] .medallion::before { display: none; }
+  body[data-var="tides2"] .screen[data-mode="fs"] .win-plate__win { position: static; display: contents; }
+  body[data-var="tides2"] .screen[data-mode="fs"] .fs-counter__label,
+  body[data-var="tides2"] .screen[data-mode="fs"] .win-plate__label,
+  body[data-var="tides2"] .screen[data-mode="fs"] .medallion__label {
+    position: static; font: 700 16px/1 'Cinzel', serif; letter-spacing: .1em; color: #eafcff; opacity: 1; text-shadow: 0 1px 2px rgba(0, 0, 0, .7);
+  }
+  body[data-var="tides2"] .screen[data-mode="fs"] .medallion__label { font-size: 0; }
+  body[data-var="tides2"] .screen[data-mode="fs"] .medallion__label::after { content: 'MULTIPLIER'; font-size: 16px; }
+  body[data-var="tides2"] .screen[data-mode="fs"] .fs-counter__value,
+  body[data-var="tides2"] .screen[data-mode="fs"] .win-plate__value,
+  body[data-var="tides2"] .screen[data-mode="fs"] .medallion__value { position: static; font-size: 42px; line-height: 1; }
+}
