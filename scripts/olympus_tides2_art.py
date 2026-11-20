@@ -14,7 +14,8 @@ from PIL import Image
 from scipy import ndimage
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "front/img/olympus-thunder/tides2"
+import os
+OUT = ROOT / "front/img/olympus-thunder" / os.environ.get("OT_VAR", "tides2")   # OT_VAR=tides3 for the ref-style variant
 RAW = Path(sys.argv[1])
 JOBS = sys.argv[2:] or ["symbols", "frame", "bg", "clouds", "hero", "plates"]
 

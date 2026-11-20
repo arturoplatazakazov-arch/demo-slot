@@ -1,0 +1,3 @@
+/* Olympus Thunder · Tides 3 — the Tides 2 page re-drawn in the client's reference style (painterly, chunky gold, gem bezels).
+   Same layout and CSS as Tides 2 (data-var="tides2"); only the art differs. */
+body[data-var="tides2"] .board::after { border-image-source: url("../img/olympus-thunder/tides3/frame.webp?v=1"); border-image-slice: 50; }
