@@ -118,6 +118,16 @@ body[data-var="tides2"] .jp[data-tier="grand"] .jp__name { color: #b0102b; }
 body[data-var="tides2"] .jp[data-tier="major"] .jp__name { color: #6b23b8; }
 body[data-var="tides2"] .jp[data-tier="minor"] .jp__name { color: #1554c0; }
 body[data-var="tides2"] .jp[data-tier="mini"]  .jp__name { color: #18803a; }
+/* 2026-11-20: tier names are painted titles (ChatGPT), the text stays in the DOM for a11y; box in em so the old font sizes still drive it */
+body[data-var="tides2"] .jp__name {
+  height: 1.8em; width: 6.2em; color: transparent !important; overflow: hidden;
+  background: var(--jp-title) center / contain no-repeat; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .35));
+}
+body[data-var="tides2"] .jp[data-tier="grand"] { --jp-title: url("../img/olympus-thunder/tides2/ui/jp_grand.webp?v=1"); }
+body[data-var="tides2"] .jp[data-tier="major"] { --jp-title: url("../img/olympus-thunder/tides2/ui/jp_major.webp?v=1"); }
+body[data-var="tides2"] .jp[data-tier="minor"] { --jp-title: url("../img/olympus-thunder/tides2/ui/jp_minor.webp?v=1"); }
+body[data-var="tides2"] .jp[data-tier="mini"]  { --jp-title: url("../img/olympus-thunder/tides2/ui/jp_mini.webp?v=1"); }
+body[data-var="tides2"] .jp[data-tier="grand"] .jp__name { height: 2em; width: 7em; }
 
 /* ---------- win plate (cascade counter / UP TO) + FS total multiplier in the band above the grid ---------- */
 body[data-var="tides2"] .win-plate { height: auto; }
@@ -179,7 +189,7 @@ body[data-clean] .demo-switch { display: none; }
   :root { --design-h: 1360px; --cell: 158px; --cell-x: 166px; }
   body[data-var="tides2"] .zeus { left: -30px; top: 0; width: 450px; height: 490px; z-index: 1; }
   body[data-var="tides2"] .jackpots {
-    left: 450px; top: 24px; width: 600px; height: auto;
+    left: 450px; top: 214px; width: 600px; height: auto;
     display: grid; grid-template-columns: repeat(3, 1fr); grid-template-areas: "grand grand grand" "major minor mini"; gap: 8px;
   }
   body[data-var="tides2"] .jp { width: auto; height: 90px; column-gap: 5px; }
@@ -191,8 +201,8 @@ body[data-clean] .demo-switch { display: none; }
   body[data-var="tides2"] .jp[data-tier="mini"]  { grid-area: mini; }
   body[data-var="tides2"] .jp[data-tier="grand"] .jp__name { font-size: 28px; }
   body[data-var="tides2"] .jp[data-tier="grand"] .jp__val { font-size: 34px; }
-  /* logo under the jackpots, exactly as wide as the GRAND plate (fitted by the page script) */
-  body[data-var="tides2"] .logo { left: 450px; top: 232px; width: 600px; height: auto; font-size: 100px; }
+  /* client 2026-11-20: logo centred at the very top, jackpots lowered onto the slot (fitted by the page script) */
+  body[data-var="tides2"] .logo { left: 270px; top: 14px; width: 540px; height: auto; font-size: 100px; z-index: 4; }
   body[data-var="tides2"] .board { left: 33px; top: 404px; width: 1013px; height: 814px; }
   body[data-var="tides2"] .board::after { inset: -12px; border-width: 26px; }
   body[data-var="tides2"] .win-plate { left: 250px; top: 1236px; width: 580px; z-index: 6; }

@@ -1,3 +1,7 @@
 /* Olympus Thunder · Tides 3 — the Tides 2 page re-drawn in the client's reference style (painterly, chunky gold, gem bezels).
    Same layout and CSS as Tides 2 (data-var="tides2"); only the art differs. */
 body[data-var="tides2"] .board::after { border-image-source: url("../img/olympus-thunder/tides3/frame.webp?v=1"); border-image-slice: 50; }
+body[data-var="tides2"] .jp[data-tier="grand"] { --jp-title: url("../img/olympus-thunder/tides3/ui/jp_grand.webp?v=1"); }
+body[data-var="tides2"] .jp[data-tier="major"] { --jp-title: url("../img/olympus-thunder/tides3/ui/jp_major.webp?v=1"); }
+body[data-var="tides2"] .jp[data-tier="minor"] { --jp-title: url("../img/olympus-thunder/tides3/ui/jp_minor.webp?v=1"); }
+body[data-var="tides2"] .jp[data-tier="mini"]  { --jp-title: url("../img/olympus-thunder/tides3/ui/jp_mini.webp?v=1"); }
