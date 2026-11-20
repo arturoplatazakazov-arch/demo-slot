@@ -291,3 +291,28 @@ body[data-var="tides2"] .zc--b { right: 0; width: 58%; bottom: 0; opacity: .95; 
   body[data-var="tides2"] .zeus__clouds { left: -10%; right: 2%; bottom: 13%; height: 22%; }
   body[data-var="tides2"] .zeus__clouds--back { bottom: 17%; }
 }
+
+/* client 2026-11-20: every value sits on the same line as MINI's (fixed distance from the plate bottom), the title
+   always the same 4px above its value and free to rise over the plate's top edge. --vf = value size per tier. */
+body[data-var="tides2"] .jp { display: block; overflow: visible; }
+body[data-var="tides2"] .jp__val {
+  position: absolute; left: 0; right: 0; bottom: var(--jp-vb); text-align: center; line-height: 1; font-size: var(--vf);
+}
+body[data-var="tides2"] .jp__name {
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--jp-vb) + var(--vf) + 4px);
+  background-position: center bottom;
+}
+@media (orientation: landscape) {
+  body[data-var="tides2"] .jp { --jp-vb: 13px; }
+  body[data-var="tides2"] .jp[data-tier="grand"] { --vf: 40px; }
+  body[data-var="tides2"] .jp[data-tier="major"] { --vf: 32px; }
+  body[data-var="tides2"] .jp[data-tier="minor"] { --vf: 28px; }
+  body[data-var="tides2"] .jp[data-tier="mini"]  { --vf: 24px; }
+}
+@media (orientation: portrait) {
+  body[data-var="tides2"] .jp { --jp-vb: 16px; }
+  body[data-var="tides2"] .jp[data-tier="grand"] { --vf: 36px; }
+  body[data-var="tides2"] .jp[data-tier="major"] { --vf: 29px; }
+  body[data-var="tides2"] .jp[data-tier="minor"] { --vf: 25px; }
+  body[data-var="tides2"] .jp[data-tier="mini"]  { --vf: 22px; }
+}
