@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Olympus · сеты символов</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Forum&display=swap" rel="stylesheet">
+<style>
+  :root { --gold: #f4cf73; --ink: #eaf6f7; --mute: #8fb3b8; --cell: 132px; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--ink); font-family: 'Forum', serif;
+    background: #0b1d24 radial-gradient(120% 80% at 50% 0%, #17414b 0%, #0b1d24 60%) fixed;
+  }
+  body[data-bg="scene"] { background: #0b1d24 url(img/olympus-thunder/tides2/sky.jpg) center / cover fixed; }
+  body[data-bg="light"] { background: #d9e3e5; color: #10262c; --mute: #4b6a70; }
+  header { padding: 28px 16px 8px; text-align: center; }
+  h1 { font-family: 'Cinzel', serif; font-weight: 900; margin: 0; font-size: clamp(26px, 4vw, 40px); letter-spacing: .06em;
+       background: linear-gradient(#fff3c4, #e6b24a 55%, #a8721f); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  header p { margin: 6px 0 0; color: var(--mute); font-size: 18px; }
+  .tools { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 16px 0 4px; }
+  .tools button {
+    font: inherit; font-size: 16px; padding: 6px 14px; border-radius: 999px; cursor: pointer;
+    border: 1px solid #2f6670; background: #0f2c34cc; color: var(--ink);
+  }
+  .tools button[aria-pressed="true"] { background: var(--gold); color: #2a1a00; border-color: var(--gold); }
+  main { max-width: 1240px; margin: 0 auto; padding: 8px 16px 48px; }
+  .set { margin: 22px 0; padding: 16px 18px 18px; border-radius: 18px; background: #06141acc; border: 1px solid #1f4a52; }
+  body[data-bg="light"] .set { background: #ffffffb0; border-color: #b7c9cc; }
+  .set__head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+  .set__n { font-family: 'Cinzel', serif; font-weight: 900; font-size: 15px; letter-spacing: .12em; color: var(--gold); }
+  .set__name { font-family: 'Cinzel', serif; font-weight: 700; font-size: 22px; }
+  .set__note { color: var(--mute); font-size: 17px; flex-basis: 100%; }
+  .meter { display: inline-flex; gap: 3px; margin-left: auto; }
+  .meter i { width: 18px; height: 6px; border-radius: 3px; background: #24474e; }
+  .meter i.on { background: var(--gold); }
+  .row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  figure { margin: 0; text-align: center; }
+  figure img { width: 100%; max-width: var(--cell); aspect-ratio: 1; display: block; margin: 0 auto; }
+  figure.sp img { filter: drop-shadow(0 0 10px #ffffff10); }
+  figcaption { font-size: 14px; color: var(--mute); margin-top: 2px; }
+  body[data-size="s"] { --cell: 74px; }
+  body[data-size="s"] figcaption { display: none; }
+  @media (max-width: 720px) {
+    .row { grid-template-columns: repeat(4, 1fr); }
+    figcaption { font-size: 12px; }
+  }
+</style>
+</head>
+<body data-bg="dark">
+<header>
+  <h1>OLYMPUS · СИМВОЛЫ</h1>
+  <p>5 сетов одних и тех же символов: от скромного к самому дорогому</p>
+  <div class="tools">
+    <button data-k="bg" data-v="dark" aria-pressed="true">Тёмный фон</button>
+    <button data-k="bg" data-v="scene" aria-pressed="false">Фон слота</button>
+    <button data-k="bg" data-v="light" aria-pressed="false">Светлый</button>
+    <button data-k="size" data-v="l" aria-pressed="true">Крупно</button>
+    <button data-k="size" data-v="s" aria-pressed="false">Как в клетке</button>
+  </div>
+</header>
+<main id="sets"></main>
+<script>
+  const SETS = [
+    ['Скромный', 'Простая бронза-золото, матовая эмаль, без камней, гравировки и свечения. Казуальный мобильный стиль.'],
+    ['Стандарт', 'Полированное глянцевое золото, глянцевая эмаль с тонким золотым кантом, мягкое свечение только у сферы и скаттера.'],
+    ['Богатый', 'Тяжёлое золото с греческим меандром, подложки из цветного мрамора со скошенной кромкой, мелкие вставки камней.'],
+    ['Люкс', 'Филигрань и гравировка, подложки — гранёные камни в двойных оправах, бриллианты в металле, специальные искрят молнией.'],
+    ['Божественный', 'Максимум: золото и белая платина в бриллиантах, камни светятся изнутри, ореол и дуги молний вокруг каждого символа.'],
+  ];
+  const SYMS = [['helmet', 'Шлем'], ['lyre', 'Лира'], ['amphora', 'Амфора'], ['wreath', 'Венок'],
+                ['orb', 'Сфера ×'], ['eagle', 'Орёл · джекпот'], ['scatter', 'Скаттер']];
+  const main = document.getElementById('sets');
+  SETS.forEach(([name, note], i) => {
+    const t = i + 1;
+    const meter = [1, 2, 3, 4, 5].map(k => `<i class="${k <= t ? 'on' : ''}"></i>`).join('');
+    const figs = SYMS.map(([k, label], j) =>
+      `<figure class="${j > 3 ? 'sp' : ''}"><img src="img/olympus-thunder/sets/t${t}/${k}.webp" alt="${label}, сет ${t}" loading="lazy"><figcaption>${label}</figcaption></figure>`).join('');
+    main.insertAdjacentHTML('beforeend',
+      `<section class="set"><div class="set__head"><span class="set__n">СЕТ ${t}</span><span class="set__name">${name}</span>` +
+      `<span class="meter" title="премиальность ${t} из 5">${meter}</span><span class="set__note">${note}</span></div>` +
+      `<div class="row">${figs}</div></section>`);
+  });
+  document.querySelectorAll('.tools button').forEach(b => b.addEventListener('click', () => {
+    document.body.dataset[b.dataset.k] = b.dataset.v;
+    document.querySelectorAll(`.tools button[data-k="${b.dataset.k}"]`).forEach(x => x.setAttribute('aria-pressed', x === b));
+  }));
+</script>
+</body>
+</html>
