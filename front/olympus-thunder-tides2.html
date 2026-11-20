@@ -25,6 +25,8 @@
     if (q.get('low') === 'letters') { b.low = 'letters'; b.symbols = 'img/olympus-thunder/tides2/symbols_letters/'; }
     // Tides 3 lows (painted gems) with the Tides 2 highs: folder = tides2/symbols + tides3 lows, copied by hand
     if (q.get('low') === 'gems3') { b.low = 'gems3'; b.symbols = 'img/olympus-thunder/tides2/symbols_t3low/'; }
+    // High = Classic: the first simple gold highs (before luxury 4B); each low set has a *_classic twin folder
+    if (q.get('high') === 'classic') b.symbols = b.symbols.replace(/\/$/, '_classic/');
     if (q.get('hero') === 'b') b.hero = 'tides2/hero_b.webp?v=1';
   })();
   window.OT_I18N = { 'ВЫИГРЫШ ДО': 'UP TO', 'ВЫИГРЫШ БОНУСА': 'BONUS WIN', 'ВЫИГРЫШ СЕРИИ': 'SERIES WIN',
@@ -46,6 +48,7 @@
     <button class="demo-switch__toggle" id="demoToggle" type="button" title="Hide / show switches">⚙</button>
     <div><b>Underlay</b><button data-k="under" data-v="glass">Glass</button><button data-k="under" data-v="solid">Solid</button></div>
     <div><b>Low</b><button data-k="low" data-v="gems">Gems</button><button data-k="low" data-v="letters">Letters</button><button data-k="low" data-v="gems3">Gems T3</button></div>
+    <div><b>High</b><button data-k="high" data-v="lux">Luxury</button><button data-k="high" data-v="classic">Classic</button></div>
     <div><b>Title</b><button data-k="title" data-v="1">1</button><button data-k="title" data-v="2">2</button><button data-k="title" data-v="3">3</button></div>
     <div><b>Zeus</b><button data-k="hero" data-v="a">A</button><button data-k="hero" data-v="b">B</button></div>
     <div><b>Mob BG</b><button data-k="bgm" data-v="0">Base</button><button data-k="bgm" data-v="a">A</button><button data-k="bgm" data-v="b">B</button></div>
@@ -270,14 +273,14 @@
 <script>
   (function () {
     var b = document.body.dataset, q = new URLSearchParams(location.search);
-    var cur = { under: b.under, low: b.low, title: b.title, hero: q.get('hero') === 'b' ? 'b' : 'a', bgm: q.get('bgm') || 'b' };
+    var cur = { high: q.get('high') === 'classic' ? 'classic' : 'lux', under: b.under, low: b.low, title: b.title, hero: q.get('hero') === 'b' ? 'b' : 'a', bgm: q.get('bgm') || 'b' };
     var box = document.getElementById('demoSwitch');
     function paint() { box.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', cur[x.dataset.k] === x.dataset.v); }); }
     box.addEventListener('click', function (e) {
       var x = e.target.closest('button'); if (!x) return;
       cur[x.dataset.k] = x.dataset.v;
       q.set(x.dataset.k, x.dataset.v); history.replaceState(null, '', '?' + q);
-      if (x.dataset.k === 'low' || x.dataset.k === 'hero' || x.dataset.k === 'bgm') { location.reload(); return; }  // symbol set / hero are read at start
+      if (x.dataset.k === 'low' || x.dataset.k === 'high' || x.dataset.k === 'hero' || x.dataset.k === 'bgm') { location.reload(); return; }  // symbol set / hero are read at start
       b[x.dataset.k] = x.dataset.v; paint();
     });
     paint();
