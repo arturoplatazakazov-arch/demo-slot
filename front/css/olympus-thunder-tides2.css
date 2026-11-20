@@ -38,7 +38,8 @@ body[data-var="tides2"][data-under="solid"] .board::before {
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cg fill='%237fe6ff' fill-opacity='.075'%3E%3Cpath d='M30 10 18 32h9l-5 16 15-22h-9l6-16z'/%3E%3Cpath d='M78 58 66 80h9l-5 16 15-22h-9l6-16z'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 96px 96px,
     radial-gradient(ellipse at 50% 0%, #11505f 0%, #0a3442 55%, #072631 100%);
 }
-body[data-var="tides2"] .screen[data-mode="fs"] .board::before { background: linear-gradient(180deg, rgba(46, 18, 92, .62), rgba(28, 22, 84, .55)); }
+/* bonus = inside Zeus' temple (2026-11-20): deep teal glass under the reels instead of the old violet */
+body[data-var="tides2"] .screen[data-mode="fs"] .board::before { background: linear-gradient(180deg, rgba(6, 44, 58, .66), rgba(4, 30, 42, .6)); }
 body[data-var="tides2"] .board::after {
   content: ''; position: absolute; z-index: 2; pointer-events: none;
   inset: -24px; border: 30px solid transparent;
@@ -150,7 +151,7 @@ body[data-var="tides2"] .win-plate__label { font: 700 26px/1 'Cinzel', serif; le
 body[data-var="tides2"] .win-plate.has-value .win-plate__label { font-size: 15px; }
 body[data-var="tides2"] .win-plate__value { font: 900 38px/1 'Cinzel', serif; }
 body[data-var="tides2"] .fs-counter { background: linear-gradient(180deg, rgba(8, 52, 66, .9), rgba(6, 30, 42, .94)); box-shadow: 0 10px 30px rgba(0, 0, 0, .5), inset 0 0 20px rgba(120, 230, 255, .25); }
-body[data-var="tides2"] .medallion { height: auto; }
+body[data-var="tides2"] .medallion { height: auto; aspect-ratio: 236 / 295; }   /* was collapsing to 0 px: the art is absolutely positioned */
 
 /* Buy Bonus removed from the main screen (client) */
 body[data-var="tides2"] .buy-btn { display: none; }
@@ -320,3 +321,8 @@ body[data-var="tides2"] .zc {
   -webkit-mask-image: linear-gradient(180deg, #000 45%, rgba(0, 0, 0, .55) 72%, transparent 100%);
           mask-image: linear-gradient(180deg, #000 45%, rgba(0, 0, 0, .55) 72%, transparent 100%);
 }
+
+/* ---------- bonus inside Zeus' temple (2026-11-20): the statue on the left of the FS background is Zeus here,
+   so the live hero fades out while the free spins run (and back in after) ---------- */
+body[data-var="tides2"] .zeus { transition: opacity .6s ease; }
+body[data-var="tides2"] .screen[data-mode="fs"] .zeus { opacity: 0; }
