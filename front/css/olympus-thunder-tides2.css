@@ -131,7 +131,7 @@ body[data-var="tides2"] .jp[data-tier="minor"] { --jp-title: url("../img/olympus
 body[data-var="tides2"] .jp[data-tier="mini"]  { --jp-title: url("../img/olympus-thunder/tides2/ui/jp_mini.webp?v=2"); }
 body[data-var="tides2"] .jp[data-tier="grand"] .jp__name { height: 2em; width: 7em; }
 /* client 2026-11-20: lighter plates, no bolt icons next to the painted titles */
-body[data-var="tides2"] .jp img { filter: brightness(1.22) saturate(.92); }
+body[data-var="tides2"] .jp img { filter: brightness(1.42) saturate(.88) drop-shadow(0 0 10px rgba(255, 226, 140, .45)); }
 body[data-var="tides2"] .jp__bolts { display: none; }
 body[data-var="tides2"] .jp__name { grid-column: 1 / 3; justify-self: center; }
 
@@ -247,3 +247,47 @@ body[data-var="tides2"] .v3-menu.is-open .v3-menu__flyout > .v3-btn:nth-child(1)
 body[data-var="tides2"] .v3-bar .ui-icon-btn.v3-btn--buy { color: #ffd75a; border-color: #ffd75a; box-shadow: 0 0 12px rgba(255, 200, 60, .45); }
 body[data-var="tides2"] .screen[data-mode="fs"] ~ .v3-bar .v3-btn--buy,
 body[data-var="tides2"].is-busy .v3-bar .v3-btn--buy { opacity: .35 !important; pointer-events: none !important; }
+
+/* client 2026-11-20: the bigger the prize, the bigger its title and value */
+@media (orientation: landscape) {
+  body[data-var="tides2"] .jp[data-tier="grand"] .jp__name { font-size: 30px; }
+  body[data-var="tides2"] .jp[data-tier="grand"] .jp__val  { font-size: 40px; }
+  body[data-var="tides2"] .jp[data-tier="major"] .jp__name { font-size: 24px; }
+  body[data-var="tides2"] .jp[data-tier="major"] .jp__val  { font-size: 32px; }
+  body[data-var="tides2"] .jp[data-tier="minor"] .jp__name { font-size: 21px; }
+  body[data-var="tides2"] .jp[data-tier="minor"] .jp__val  { font-size: 28px; }
+  body[data-var="tides2"] .jp[data-tier="mini"]  .jp__name { font-size: 18px; }
+  body[data-var="tides2"] .jp[data-tier="mini"]  .jp__val  { font-size: 24px; }
+}
+@media (orientation: portrait) {
+  body[data-var="tides2"] .jp[data-tier="grand"] .jp__name { font-size: 30px; }
+  body[data-var="tides2"] .jp[data-tier="grand"] .jp__val  { font-size: 36px; }
+  body[data-var="tides2"] .jp[data-tier="major"] .jp__name { font-size: 24px; }
+  body[data-var="tides2"] .jp[data-tier="major"] .jp__val  { font-size: 29px; }
+  body[data-var="tides2"] .jp[data-tier="minor"] .jp__name { font-size: 21px; }
+  body[data-var="tides2"] .jp[data-tier="minor"] .jp__val  { font-size: 25px; }
+  body[data-var="tides2"] .jp[data-tier="mini"]  .jp__name { font-size: 18px; }
+  body[data-var="tides2"] .jp[data-tier="mini"]  .jp__val  { font-size: 22px; }
+}
+
+/* ---------- client 2026-11-20: clouds floating under Zeus' waist (one bank behind him, two in front, drifting
+   against each other over the cloud base painted into the hero) ---------- */
+body[data-var="tides2"] .zeus__clouds { position: absolute; left: -14%; right: -14%; bottom: -5%; height: 30%; pointer-events: none; }
+body[data-var="tides2"] .zeus__clouds--front { z-index: 2; }
+body[data-var="tides2"] .zc { position: absolute; bottom: 0; height: auto; will-change: transform; }
+body[data-var="tides2"] .zc--back { left: 12%; width: 78%; bottom: 22%; opacity: .85; animation: zc-drift-back 16s ease-in-out infinite alternate; }
+body[data-var="tides2"] .zc--a { left: 2%; width: 62%; bottom: 4%; animation: zc-drift-a 11s ease-in-out infinite alternate; }
+body[data-var="tides2"] .zc--b { right: 0; width: 58%; bottom: 0; opacity: .95; animation: zc-drift-b 13s ease-in-out infinite alternate; }
+@keyframes zc-drift-back { from { transform: translateX(-10%); } to { transform: translateX(10%); } }
+@keyframes zc-drift-a { 0% { transform: translate(-6%, 0); } 50% { transform: translate(4%, -6%); } 100% { transform: translate(12%, 0); } }
+@keyframes zc-drift-b { 0% { transform: translate(8%, -3%); } 50% { transform: translate(-2%, 3%); } 100% { transform: translate(-12%, -2%); } }
+@media (prefers-reduced-motion: reduce) { body[data-var="tides2"] .zc { animation: none; } }
+/* portrait: the board frame (outer top = stage y 392) hides Zeus' painted cloud base, so the hero is cut at the frame
+   line and the floating clouds ride on the frame's top edge, in front of it (Zeus box: top 0, height 490) */
+@media (orientation: portrait) {
+  body[data-var="tides2"] .zeus { z-index: 5; pointer-events: none; }
+  body[data-var="tides2"] .zeus::after { display: none; }
+  body[data-var="tides2"] .zeus__fallback { clip-path: inset(0 0 20% 0); }
+  body[data-var="tides2"] .zeus__clouds { left: -10%; right: 2%; bottom: 13%; height: 22%; }
+  body[data-var="tides2"] .zeus__clouds--back { bottom: 17%; }
+}
