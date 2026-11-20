@@ -282,14 +282,8 @@ body[data-var="tides2"] .zc--b { right: 0; width: 58%; bottom: 0; opacity: .95; 
 @keyframes zc-drift-a { 0% { transform: translate(-6%, 0); } 50% { transform: translate(4%, -6%); } 100% { transform: translate(12%, 0); } }
 @keyframes zc-drift-b { 0% { transform: translate(8%, -3%); } 50% { transform: translate(-2%, 3%); } 100% { transform: translate(-12%, -2%); } }
 @media (prefers-reduced-motion: reduce) { body[data-var="tides2"] .zc { animation: none; } }
-/* portrait: the board frame (outer top = stage y 392) hides Zeus' painted cloud base, so the hero is cut at the frame
-   line and the floating clouds ride on the frame's top edge, in front of it (Zeus box: top 0, height 490) */
-@media (orientation: portrait) {
-  body[data-var="tides2"] .zeus { z-index: 5; pointer-events: none; }
-  body[data-var="tides2"] .zeus::after { display: none; }
-  body[data-var="tides2"] .zeus__fallback { clip-path: inset(0 0 20% 0); }
-  body[data-var="tides2"] .zeus__clouds { left: -10%; right: 2%; bottom: 13%; height: 22%; }
-  body[data-var="tides2"] .zeus__clouds--back { bottom: 17%; }
+@media (orientation: portrait) {   /* client: no floating clouds on mobile, Zeus as before */
+  body[data-var="tides2"] .zeus__clouds { display: none; }
 }
 
 /* client 2026-11-20: every value sits on the same line as MINI's (fixed distance from the plate bottom), the title
@@ -315,4 +309,9 @@ body[data-var="tides2"] .jp__name {
   body[data-var="tides2"] .jp[data-tier="major"] { --vf: 29px; }
   body[data-var="tides2"] .jp[data-tier="minor"] { --vf: 25px; }
   body[data-var="tides2"] .jp[data-tier="mini"]  { --vf: 22px; }
+}
+/* billowy clouds dissolve toward the bottom */
+body[data-var="tides2"] .zc {
+  -webkit-mask-image: linear-gradient(180deg, #000 45%, rgba(0, 0, 0, .55) 72%, transparent 100%);
+          mask-image: linear-gradient(180deg, #000 45%, rgba(0, 0, 0, .55) 72%, transparent 100%);
 }
