@@ -68,3 +68,9 @@ for t in [str(i) for i in range(1, 6)] + ["luxA", "luxB"]:
         p.parent.mkdir(parents=True, exist_ok=True)
         square(im).save(p, "WEBP", quality=90, method=6)
         print(p.relative_to(ROOT), im.size)
+
+# 2026-11-20: the client picked 4B (coloured materials) for the Tides 2 slot
+for name in TOP + BOT:
+    im = Image.open(OUT / "luxB" / f"{name}.webp").resize((320, 320), Image.LANCZOS)
+    for d in ("symbols", "symbols_letters"):
+        im.save(ROOT / f"front/img/olympus-thunder/tides2/{d}/{name}.webp", "WEBP", quality=90, method=6)
