@@ -332,7 +332,8 @@ function playWinAnimationOnce(info) {
   const inst = fx('symbol', info.cell, info.symbol);
   if (inst) {
     info.cell.classList.add('is-animating');
-    return wait(SYMBOL_CLIP_MS).then(() => {
+    // inst.ms: the clip's own length (R1 symbol layer, js/neon-joker-spins/r1-symfx.js)
+    return wait(inst.ms || SYMBOL_CLIP_MS).then(() => {
       fx('dropSymbol', inst);
       info.cell.classList.remove('is-animating');
     });

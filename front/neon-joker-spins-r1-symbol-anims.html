@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neon Joker Spins R1 — выбор анимаций символов</title>
+<!-- 5 вариантов Spine-анимации выигрыша на каждый элемент Neon Joker Spins R1 (символы, WILD,
+     Джокер, монета, Коллектор). Скелеты — scripts/njs_r1_symbol_anims.py
+     (img/neon-joker-spins/skins/c/sets/r1/spine/sym/<code>/, клипы win_1..win_5). Выбор —
+     кнопкой под вариантом, хранится в localStorage (njs-r1-symanim), «Скопировать выбор» отдаёт
+     JSON — по нему подключим выбранные клипы в игру. -->
+<link rel="stylesheet" href="css/fonts.css">
+<style>
+  :root { --bg: #0c0518; --panel: #170a2b; --line: rgba(255, 60, 172, 0.16); --text: #f4ecff; --muted: #a99bc8; --accent: #2ce8ff; --gold: #ffd75a; --tile: 168px; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Baloo 2', system-ui, sans-serif; }
+  header { position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px;
+    padding: 12px 24px; background: rgba(12, 5, 24, 0.95); border-bottom: 1px solid var(--line); backdrop-filter: blur(6px); }
+  h1 { margin: 0; font-size: 21px; font-weight: 800; }
+  a.back { color: var(--text); text-decoration: none; font-size: 14px; padding: 6px 14px; border-radius: 999px; border: 1px solid rgba(255, 60, 172, 0.7); }
+  .tools { margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .count { font-size: 13px; color: var(--muted); }
+  button.tool { font: inherit; font-size: 14px; color: var(--text); cursor: pointer; padding: 6px 14px; border-radius: 999px; border: 1px solid rgba(44, 232, 255, 0.35); background: var(--panel); }
+  button.tool[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+  main { padding: 6px 24px 80px; max-width: 1280px; }
+  .legend { margin: 14px 0 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+  .legend div { font-size: 13px; color: var(--muted); line-height: 1.35; }
+  .legend b { display: block; color: var(--text); font-size: 15px; }
+  .el { padding-top: 22px; border-top: 1px solid var(--line); margin-top: 18px; }
+  .el > h2 { margin: 0 0 10px; font-size: 22px; font-weight: 800; display: flex; gap: 10px; align-items: baseline; }
+  .el > h2 small { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+  .card { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 8px 10px; border-radius: 14px;
+    background: var(--panel); border: 1px solid transparent; transition: border-color 160ms, background 160ms; }
+  .card.is-picked { border-color: var(--gold); background: #22103a; box-shadow: 0 0 0 1px rgba(255, 215, 90, 0.3); }
+  .tile { position: relative; width: var(--tile); height: var(--tile); max-width: 100%; border-radius: 12px; cursor: pointer;
+    background: radial-gradient(120% 70% at 50% 45%, #241046, #12071f 78%); box-shadow: inset 0 0 0 1px rgba(44, 232, 255, 0.16); }
+  .card .name { font-size: 14px; font-weight: 700; }
+  .pick { font: inherit; font-size: 13px; cursor: pointer; padding: 5px 14px; border-radius: 999px; color: var(--text);
+    background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); }
+  .card.is-picked .pick { border-color: var(--gold); color: var(--gold); }
+  canvas#lab { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 5; }
+  .out { position: fixed; right: 20px; bottom: 20px; z-index: 30; width: min(420px, 90vw); padding: 12px; border-radius: 14px;
+    background: var(--panel); border: 1px solid var(--line); display: none; }
+  .out.is-on { display: block; }
+  .out textarea { width: 100%; height: 160px; background: #0b0416; color: var(--text); border: 1px solid var(--line); border-radius: 8px; font: 12px ui-monospace, Menlo, monospace; }
+  @media (max-width: 900px) { :root { --tile: 120px; } .row, .legend { grid-template-columns: repeat(3, minmax(0, 1fr)); } main { padding: 6px 12px 60px; } }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="neon-joker-spins-r1.html">← К игре</a>
+  <h1>Neon Joker Spins R1 — анимации символов</h1>
+  <div class="tools">
+    <span class="count" id="count"></span>
+    <button type="button" class="tool" id="slowBtn" aria-pressed="false">Замедлить ×0.5</button>
+    <button type="button" class="tool" id="replayBtn">Повторить все</button>
+    <button type="button" class="tool" id="copyBtn">Скопировать выбор</button>
+  </div>
+</header>
+<main id="root">
+  <div class="legend" id="legend"></div>
+</main>
+<div class="out" id="out"><p style="margin:0 0 8px;font-size:13px;color:var(--muted)">Скопировано в буфер — пришли это в чат, подключу выбранные анимации в игру.</p><textarea id="outText" readonly></textarea></div>
+<canvas id="lab"></canvas>
+<script src="vendor/spine-webgl.js"></script>
+<script src="js/spine-engine.js?v=10"></script>
+<script>
+(async () => {
+  const ROOT = 'img/neon-joker-spins/skins/c/sets/r1/spine/sym';
+  const VER = '2';
+  const VARIANTS = [
+    ['Сияние', 'Присел — удар до ×1.38 с отскоком, за символом раскручиваются лучи, по символу дважды пробегает блик, вокруг мерцают звёзды.'],
+    ['Неоновый взрыв', 'Неон зажигается с запинкой, удар, разлетаются цветные эхо-копии, две ударные волны, дождь искр с гравитацией.'],
+    ['Прыжок / звон', 'Сжатие — прыжок с растяжкой (круглые делают оборот), шлейф, приземление со сплющиванием и облачком искр. Колокол и фрукты на черенке вместо прыжка звенят: размашистое качание и звуковые волны.'],
+    ['Электро-шторм', 'Зарядка: нарастающая дрожь и свечение — белый разряд, шесть молний веером, ударная волна, огоньки на орбите.'],
+    ['Триумф', 'Подъём, двойной 3D-поворот со шлейфом, удар-приземление, золотые лучи, фонтан монет и конфетти.'],
+  ];
+  const ELEMENTS = [
+    ['seven', '7', 'старший'], ['bell', 'Колокол', 'старший'], ['star', 'Звезда', 'старший'],
+    ['cherry', 'Вишня', 'младший'], ['lemon', 'Лайм', 'младший'], ['plum', 'Слива', 'младший'], ['grape', 'Виноград', 'младший'],
+    ['wild', 'WILD', 'спец'], ['scatter', 'Джокер (скаттер)', 'спец'], ['coin', 'Монета', 'Hold & Win'], ['collector', 'Коллектор', 'Hold & Win'],
+  ];
+  const KEY = 'njs-r1-symanim';
+  let pick = {};
+  try { pick = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { /* noop */ }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(pick)); } catch (e) { /* noop */ } count(); };
+  const count = () => { document.getElementById('count').textContent = `выбрано ${Object.keys(pick).length} из ${ELEMENTS.length}`; };
+
+  document.getElementById('legend').innerHTML = VARIANTS.map(([n, d], i) => `<div><b>${i + 1}. ${n}</b>${d}</div>`).join('');
+  const stage = new SpineEngine.SpineStage(document.getElementById('lab'));
+  let speed = Number(new URLSearchParams(location.search).get('speed')) || 1;   // ?speed=0.25 — slow motion for review
+  const players = [];
+  const root = document.getElementById('root');
+  for (const [code, title, tier] of ELEMENTS) {
+    const sec = document.createElement('section');
+    sec.className = 'el';
+    sec.innerHTML = `<h2>${title} <small>${tier}</small></h2><div class="row"></div>`;
+    root.appendChild(sec);
+    const row = sec.querySelector('.row');
+    const cards = VARIANTS.map(([n], i) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `<div class="tile" title="клик — повторить"></div><div class="name">${i + 1}. ${n}</div><button type="button" class="pick">Выбрать</button>`;
+      row.appendChild(card);
+      card.querySelector('.pick').addEventListener('click', () => {
+        if (pick[code] === i + 1) delete pick[code]; else pick[code] = i + 1;
+        cards.forEach((c, k) => { c.classList.toggle('is-picked', pick[code] === k + 1); c.querySelector('.pick').textContent = pick[code] === k + 1 ? '✓ Выбрано' : 'Выбрать'; });
+        save();
+      });
+      if (pick[code] === i + 1) { card.classList.add('is-picked'); card.querySelector('.pick').textContent = '✓ Выбрано'; }
+      return card;
+    });
+    let res;
+    try { res = await SpineEngine.SpineResource.load(stage.assetManager, `${ROOT}/${code}`, { premultipliedAlpha: true, version: VER }); }
+    catch (e) { row.insertAdjacentHTML('beforeend', `<p>не загрузилось: ${e.message}</p>`); continue; }
+    cards.forEach((card, i) => {
+      const tile = card.querySelector('.tile');
+      const inst = res.createInstance();
+      inst.anchorEl = tile;
+      inst.fit = 1;
+      inst.boundsOverride = { x: -230, y: -230, width: 460, height: 460 };   // one scale for all: 7 / bell / star read bigger than the fruits, as in the game
+      stage.addBase(inst);
+      const clip = `win_${i + 1}`;
+      const dur = res.skeletonData.findAnimation(clip).duration;
+      let timer = null;
+      const run = () => {
+        clearTimeout(timer);
+        inst.animationState.timeScale = speed;
+        inst.play(clip, false);
+        timer = setTimeout(run, ((dur + 0.9) * 1000) / speed);
+      };
+      tile.addEventListener('click', run);
+      players.push(run);
+      setTimeout(run, i * 120);
+    });
+  }
+  count();
+  document.getElementById('slowBtn').addEventListener('click', (e) => {
+    speed = speed === 1 ? 0.5 : 1;
+    e.currentTarget.setAttribute('aria-pressed', String(speed !== 1));
+    players.forEach((p) => p());
+  });
+  document.getElementById('replayBtn').addEventListener('click', () => players.forEach((p) => p()));
+  document.getElementById('copyBtn').addEventListener('click', async () => {
+    const out = { game: 'neon-joker-spins-r1', winAnimation: Object.fromEntries(ELEMENTS.filter(([c]) => pick[c]).map(([c]) => [c, { variant: pick[c], name: VARIANTS[pick[c] - 1][0] }])) };
+    const text = JSON.stringify(out, null, 2);
+    document.getElementById('outText').value = text;
+    document.getElementById('out').classList.add('is-on');
+    try { await navigator.clipboard.writeText(text); } catch (e) { /* the textarea still has it */ }
+  });
+})();
+</script>
+</body>
+</html>

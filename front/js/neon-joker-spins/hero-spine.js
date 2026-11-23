@@ -5,7 +5,7 @@
 // stay the still picture. No WebGL / a failed load -> the picture stays.
 (function () {
   const ROOT = 'img/neon-joker-spins/skins/c/sets/r1/spine';
-  const SPINE = { lean: { v: '2', w: 846, h: 1500 } };
+  const SPINE = { lean: { v: '4', w: 846, h: 1500 } };
   const img = document.getElementById('mascot');
   const screen = document.getElementById('screen');
   const stageEl = document.getElementById('stage');
