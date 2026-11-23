@@ -337,7 +337,6 @@
             { label: 'Feature screen', run: () => showFeatureScreen() },
             { label: 'Bonus screen (N спинов)', run: () => showBonusScreen(spinsN()) },
           ] },
-          { title: 'Раскладка (десктоп)', items: ['1', '2', '3'].map((v) => ({ label: `Вариант ${v}`, run: () => setLayoutVariant(v) })) },
         ],
       },
       {

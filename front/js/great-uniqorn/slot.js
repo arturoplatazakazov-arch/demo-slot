@@ -1352,37 +1352,12 @@ function setupDevPanel() {}
 const DESK_W = 1932;
 const DESK_H = 940;
 const DESK_SAFE_W = 1612;
-// Desktop layout variants (the «Варианты» switch): the horizontal span of the
-// frame that must stay on screen. Variant 2's bigger frame reaches x≈1800
-// and its logo starts at x≈118, past the mockup's 160px croppable strips.
-const LAYOUT_SAFE_W = { 1: DESK_SAFE_W, 2: 1712, 3: DESK_SAFE_W };
-const LAYOUT_KEY = 'great-uniqorn.layout';
-
-function currentLayout() {
-  return document.getElementById('screen').dataset.layout || '1';
-}
-
-function setLayoutVariant(v) {
-  const next = ['1', '2', '3'].includes(String(v)) ? String(v) : '1';
-  document.getElementById('screen').dataset.layout = next;
-  document.querySelectorAll('#layoutSwitch [data-layout]').forEach((b) => {
-    b.setAttribute('aria-pressed', String(b.dataset.layout === next));
-  });
-  try { localStorage.setItem(LAYOUT_KEY, next); } catch (e) { /* private mode — fine */ }
-  layoutStage();
-}
-
-function setupLayoutSwitch() {
-  let saved = '1';
-  try { saved = localStorage.getItem(LAYOUT_KEY) || '1'; } catch (e) { /* ignore */ }
-  setLayoutVariant(saved);
-  document.querySelectorAll('#layoutSwitch [data-layout]').forEach((b) => {
-    b.addEventListener('click', () => {
-      Sound.playSfx('click');
-      setLayoutVariant(b.dataset.layout);
-    });
-  });
-}
+// Desktop arrangement: the bigger frame on the right, the logo over the hero
+// (the former variant 2 — the only one kept, 2026-11-23; #screen carries
+// data-layout="2", which css/great-uniqorn.css keys it on). The bigger frame
+// reaches x≈1800 and the logo starts at x≈118, past the mockup's 160px
+// croppable strips, so more of the frame stays on screen.
+const LAYOUT_SAFE_W = 1712;
 const MOB_W = 780;
 const MOB_H = 1416;
 
@@ -1402,7 +1377,7 @@ function layoutStage() {
     x = (vw - MOB_W * s) / 2;
     y = 0;
   } else {
-    s = Math.min(vw / (LAYOUT_SAFE_W[currentLayout()] || DESK_SAFE_W), vh / DESK_H);
+    s = Math.min(vw / LAYOUT_SAFE_W, vh / DESK_H);
     x = (vw - DESK_W * s) / 2;
     y = (vh - DESK_H * s) / 2;
   }
@@ -1837,7 +1812,6 @@ async function init() {
   await SlotCalibration.load(); // must resolve before buildReelGrid's applyStaticContentOffset
   Sound.playMusic('base');
   ensureSpineStage();
-  setupLayoutSwitch();
   layoutStage();
   updateBgForLayout();
   window.addEventListener('resize', () => {

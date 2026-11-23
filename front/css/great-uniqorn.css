@@ -405,8 +405,7 @@ img.is-missing {
 body.is-feature-screen .screen { z-index: 57; }
 body.is-feature-screen #spineCanvas { position: fixed; z-index: 59; }
 body.is-feature-screen .dev-panel,
-body.is-feature-screen .to-catalog-btn,
-body.is-feature-screen .layout-switch { visibility: hidden; }
+body.is-feature-screen .to-catalog-btn { visibility: hidden; }
 
 /* Live free-spins count inside the bonus screen's round badge. */
 .fscreen-count {
@@ -665,14 +664,13 @@ body.is-feature-screen .layout-switch { visibility: hidden; }
 }
 
 /* ================================================================
-   Desktop layout variants (кнопка «Варианты», slot.js setLayoutVariant)
+   Desktop arrangement (бывший вариант 2 — единственный, 2026-11-23;
+   #screen всегда data-layout="2")
    ================================================================
-   1 — макет final_design (выше): рамка справа, логотип над ней.
-   2 — рамка крупнее (x1.44 к мобильной группе 806x550) справа, логотип над
-       героем слева. Координаты сняты с присланных скринов (поиском рамки,
-       логотипа и кнопки по цвету, 1280px скрин -> кадр 1932).
-   3 — рамка как в 1, но по центру кадра, логотип над ней.
-   Только ландшафт: в портрете раскладка одна. */
+   Рамка крупнее (x1.44 к мобильной группе 806x550) справа, логотип над
+   героем слева — поверх базовых координат макета выше. Координаты сняты с
+   присланных скринов (поиском рамки, логотипа и кнопки по цвету, 1280px
+   скрин -> кадр 1932). Только ландшафт: в портрете раскладка своя. */
 @media (orientation: landscape) {
   .screen[data-layout="2"] .reel { left: 635.4px; top: 30.2px; transform: scale(1.4401); }
   .screen[data-layout="2"] .logo { left: 117.7px; top: 64.9px; width: 516.2px; }
@@ -710,47 +708,6 @@ body.is-feature-screen .layout-switch { visibility: hidden; }
   }
   .screen[data-layout="2"][data-mode="base"] .stage__bg { transform: translateX(-72px); }
 
-  .screen[data-layout="3"] .stage__bg { transform-origin: 100% 50%; transform: scale(1.05); }
-
-  .screen[data-layout="3"] .reel { left: 445.3px; top: 58px; }
-  .screen[data-layout="3"] .logo { left: 782.5px; top: 0; }
-  .screen[data-layout="3"] .plate-btn { left: 825px; top: 723px; }
-}
-
-/* Переключатель вариантов — только на десктопе. Внизу слева над балансом:
-   сверху он наезжал бы на логотип варианта 2, а справа — на рамку. */
-.layout-switch {
-  position: fixed;
-  bottom: 64px;
-  left: 12px;
-  z-index: 110;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 4px 4px 12px;
-  border-radius: 999px;
-  background: rgba(6, 13, 41, 0.78);
-  border: 1px solid rgba(255, 213, 106, 0.55);
-  color: var(--gold);
-  font: 700 13px/1 'Baloo 2', system-ui, sans-serif;
-  backdrop-filter: blur(4px);
-}
-.layout-switch__label { margin-right: 4px; }
-.layout-switch button {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 213, 106, 0.35);
-  background: transparent;
-  color: var(--gold);
-  font: inherit;
-  cursor: pointer;
-}
-.layout-switch button:hover { background: rgba(255, 213, 106, 0.14); }
-.layout-switch button:focus-visible { outline: 2px solid var(--cream); outline-offset: 2px; }
-.layout-switch button[aria-pressed="true"] { background: var(--gold); color: var(--navy-deep); border-color: var(--gold); }
-@media (orientation: portrait) {
-  .layout-switch { display: none; }
 }
 
 /* ================================================================
