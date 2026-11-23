@@ -246,3 +246,18 @@
 body.hero-lean .mascot { left: var(--r1-edge, 0px) !important; top: 70px !important; height: 820px !important; max-width: 520px !important; object-position: 0 100% !important; }
 @media (orientation: portrait) { body.hero-lean .mascot { left: var(--r1-edge, 0px) !important; top: 262px !important; height: 560px !important; max-width: none !important; } }
 .is-land body.hero-lean .mascot, .is-land .hero-lean .mascot { left: var(--r1-edge, 0px) !important; top: 160px !important; height: 580px !important; }
+
+/* buy window, client 2026-11-23: no panel behind the cards — the screen dims, BUY BONUS above
+   the cards, ОТМЕНА under them */
+.buy-dialog { background: rgba(6, 2, 14, 0.82) !important; backdrop-filter: blur(2px); }
+.buy-dialog__card.r1-buy { background: none !important; box-shadow: none !important; padding: 0 !important; width: min(620px, 100%); }
+.r1-buy .buy-dialog__title { font-size: 46px; color: var(--gold-hi); text-shadow: 0 0 14px var(--pink), 0 0 30px rgba(255, 60, 172, 0.6), 0 3px 0 #4a1440; }
+.r1-buy .buy-dialog__text, .r1-buy__note { display: none !important; }
+.r1-buy__cards { margin: 18px 0 20px; }
+.r1-buy .buy-dialog__actions { justify-content: center; margin-top: 0; }
+.r1-buy .buy-dialog__btn--no { flex: 0 0 auto; min-width: 220px; background: rgba(30, 14, 52, 0.9); color: #f0e4ff;
+  box-shadow: inset 0 0 0 2px rgba(255, 215, 90, 0.6), 0 0 16px rgba(255, 60, 172, 0.35); }
+
+/* no hero on phone portrait (client, 2026-11-23) */
+@media (orientation: portrait) { .mascot, body.hero-lean .mascot { display: none !important; } }
+@media (orientation: portrait) { .r1-heroes { display: none !important; } }

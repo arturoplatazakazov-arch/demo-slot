@@ -56,6 +56,10 @@ const NJS_VARIANTS = {
   reels: { page: 'neon-joker-spins-reels.html', name: 'Neon Joker Spins · Neon Reels', badge: 'Neon Reels',
     cover: 'img/neon-joker-spins/banners/neon-reels.jpg',
     desc: 'Пакет дизайнера: панк-джокер с ирокезом, рама с сеткой, джекпоты лесенкой справа.' },
+  // client round-1 feedback version (2026-11-23)
+  r1: { page: 'neon-joker-spins-r1.html', name: 'Neon Joker Spins · Neon Tubes R1', badge: 'R1',
+    cover: 'img/neon-joker-spins/banners/neon-tubes-r1.jpg',
+    desc: 'Версия по фидбеку заказчика: панк-Джокер, рама в одну трубку, концертная сцена в бонусах, выбор героя.' },
   tubes: { page: 'neon-joker-spins-c-sets.html?sets=s6.s6.s6.s6.s6.s6.s6.0.s6.s6', name: 'Neon Joker Spins · Neon Tubes', badge: 'Neon Tubes',
     cover: 'img/neon-joker-spins/banners/neon-tubes.jpg',
     desc: 'Неоновые трубки: светящаяся рама, символы-вывески, ночной переулок.' },
@@ -169,14 +173,14 @@ const CRE8_TOP_CARDS = [
 // badge: null keeps the game's own badge.
 const ILLUMINATOR_CARDS = [
   'volt-coins',
-  njs('stage'),
-  njs('reels'),
-  njs('tubes'),
   ot('tides2'),
   savannah('lodge'),
   'gold-of-baku',
   'gold-of-baku-2',
 ];
+// Illuminator · category «Neon Joker Spins» (user, 2026-11-23): the R1 version first, then the
+// three earlier picks.
+const ILLUMINATOR_NJS_CARDS = [njs('r1'), njs('tubes'), njs('stage'), njs('reels')];
 // Spin Factory: its own games newest first, then the variants moved out of
 // Illuminator, in this order.
 const SPIN_FACTORY_CODES = new Set(['big-catch', 'caesars-fortune', 'ice-spin-deluxe', 'tesla-spins']);
@@ -286,6 +290,7 @@ function toggleSection(sectionId, gridEl) {
 async function renderCatalog() {
   const readyGrid = document.getElementById('readyGrid');
   const illuminatorGrid = document.getElementById('illuminatorGrid');
+  const illuminatorNjsGrid = document.getElementById('illuminatorNjsGrid');
   const spinFactoryGrid = document.getElementById('spinFactoryGrid');
   const uniqornMascotGrid = document.getElementById('uniqornMascotGrid');
   const uniqornWipGrid = document.getElementById('uniqornWipGrid');
@@ -300,6 +305,7 @@ async function renderCatalog() {
 
     if (readyGrid) appendCards(readyGrid, resolveCards(READY_CARDS, byCode));
     if (illuminatorGrid) appendCards(illuminatorGrid, resolveCards(ILLUMINATOR_CARDS, byCode));
+    if (illuminatorNjsGrid) appendCards(illuminatorNjsGrid, resolveCards(ILLUMINATOR_NJS_CARDS, byCode));
     if (spinFactoryGrid) {
       appendCards(spinFactoryGrid, entries.filter((e) => SPIN_FACTORY_CODES.has(e.code)));
       appendCards(spinFactoryGrid, resolveCards(SPIN_FACTORY_EXTRA_CARDS, byCode));
@@ -319,7 +325,10 @@ async function renderCatalog() {
   }
 
   if (readyGrid) toggleSection('readySection', readyGrid);
-  if (illuminatorGrid) toggleSection('illuminatorSection', illuminatorGrid);
+  if (illuminatorGrid) {
+    if (illuminatorNjsGrid) toggleSection('illuminatorNjsSection', illuminatorNjsGrid);
+    document.getElementById('illuminatorSection').hidden = ![illuminatorGrid, illuminatorNjsGrid].some((g) => g && g.children.length);
+  }
   if (spinFactoryGrid) toggleSection('spinFactorySection', spinFactoryGrid);
   if (uniqornGrid) {
     toggleSection('uniqornMascotSection', uniqornMascotGrid);
