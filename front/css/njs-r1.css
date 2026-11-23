@@ -214,7 +214,7 @@
 /* symbol sizes (client, 2026-11-23): 7 / bell / star +10 %, scatter +15 %, lows -5 %.
    The R1 assets have matching even canvases (396 / 414 / 342 px against 360). */
 .reel__cell[data-symbol="seven"] > img.sym, .reel__cell[data-symbol="bell"] > img.sym,
-.reel__cell[data-symbol="star"] > img.sym { scale: 1.1; }
+.reel__cell[data-symbol="star"] > img.sym, .reel__cell[data-symbol="wild"] > img.sym { scale: 1.1; }  /* wild +10 % too (2026-11-23) */
 .reel__cell[data-symbol="scatter"] > img.sym { scale: 1.15; }
 .reel__cell[data-symbol="cherry"] > img.sym, .reel__cell[data-symbol="lemon"] > img.sym,
 .reel__cell[data-symbol="plum"] > img.sym, .reel__cell[data-symbol="grape"] > img.sym { scale: 0.8556; }  /* 308 / 360 */
