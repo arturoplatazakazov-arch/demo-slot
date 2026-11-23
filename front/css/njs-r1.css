@@ -75,10 +75,11 @@
   .jp--minor { left: 267px !important; top: 158px !important; width: 186px !important; height: 112px !important; }
   .jp--mini { left: 468px !important; top: 158px !important; width: 186px !important; height: 108px !important; }
   :root {
-    /* single-tube frame (scripts/njs_r1_tube_frame.py, aspect 1.0646) */
-    --frame-w: 706px !important; --frame-h: calc(706px / 1.0646) !important;  /* 98 % of the 720 width (client, 2026-11-23) */
-    --frame-x: calc(360px - 706px * (var(--fw-l) + var(--fw-w) / 2)) !important;
-    --frame-y: 410px !important;
+    /* single-tube frame (scripts/njs_r1_tube_frame.py, aspect 1.057) */
+    /* the TUBE spans 98 % of the 720 width (client, 2026-11-23); the picture is wider: glow margin */
+    --frame-w: 852px !important; --frame-h: calc(852px / 1.057) !important;
+    --frame-x: calc(360px - 852px * (var(--fw-l) + var(--fw-w) / 2)) !important;
+    --frame-y: 361px !important;
   }
   /* the logo sits on the frame's crown crest, right of centre to give the Joker room */
   .logo { left: 215px !important; top: 282px !important; width: 290px !important; z-index: 6 !important; }  /* centred over the reels (client, 2026-11-23) */
@@ -101,8 +102,8 @@
 @media (orientation: landscape) {
   :root.is-land {
     --frame-h: calc(456px / var(--fw-h)) !important;
-    --frame-w: calc(456px / var(--fw-h) * 1.0646) !important;
-    --frame-x: calc(740px - 456px / var(--fw-h) * 1.0646 * (var(--fw-l) + var(--fw-w) / 2)) !important;
+    --frame-w: calc(456px / var(--fw-h) * 1.057) !important;
+    --frame-x: calc(740px - 456px / var(--fw-h) * 1.057 * (var(--fw-l) + var(--fw-w) / 2)) !important;
     --frame-y: calc(58px - 456px / var(--fw-h) * var(--fw-t)) !important;
   }
   .is-land .logo { left: 40px !important; top: 6px !important; width: 330px !important; }
@@ -261,3 +262,8 @@ body.hero-lean .mascot { left: var(--r1-edge, 0px) !important; top: 70px !import
 /* no hero on phone portrait (client, 2026-11-23) */
 @media (orientation: portrait) { .mascot, body.hero-lean .mascot { display: none !important; } }
 @media (orientation: portrait) { .r1-heroes { display: none !important; } }
+
+/* desktop: the frame picture got a wider glow margin (2026-11-23) — keep the jackpot column where it was */
+@media (orientation: landscape) { :root:not(.is-land) .jp { margin-left: -40px; } }
+/* the hero switcher steps aside while the buy window is open */
+.buy-dialog:not([hidden]) ~ .r1-heroes { display: none !important; }

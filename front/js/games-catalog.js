@@ -175,6 +175,7 @@ const CRE8_TOP_CARDS = [
 // badge: null keeps the game's own badge.
 const ILLUMINATOR_CARDS = [
   'volt-coins',
+  njs('r1'),   // Neon Joker Spins R1 (client round 1) — in the main grid where NJS always stood
   ot('tides2'),
   savannah('lodge'),
   'gold-of-baku',
@@ -182,7 +183,7 @@ const ILLUMINATOR_CARDS = [
 ];
 // Illuminator · category «Neon Joker Spins» (user, 2026-11-23): the R1 version; the three
 // earlier picks moved to Secret Room the same day.
-const ILLUMINATOR_NJS_CARDS = [njs('r1')];
+const ILLUMINATOR_NJS_CARDS = [];   // the one-card category was easy to miss under the grid: R1 is in ILLUMINATOR_CARDS
 // Spin Factory: its own games newest first, then the variants moved out of
 // Illuminator, in this order.
 const SPIN_FACTORY_CODES = new Set(['big-catch', 'caesars-fortune', 'ice-spin-deluxe', 'tesla-spins']);
