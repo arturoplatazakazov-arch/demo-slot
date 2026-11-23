@@ -56,11 +56,15 @@ if (sfxCtx) {
 }
 
 function playSfx(name) {
-  if (muted || !sfxCtx || !sfxBuffers[name]) return;
+  const silent = labOff(name);
+  labEmit(name, 'sfx', silent);
+  if (muted || silent || !sfxCtx || !sfxBuffers[name]) return;
   if (sfxCtx.state === 'suspended') sfxCtx.resume();
   const source = sfxCtx.createBufferSource();
   source.buffer = sfxBuffers[name];
-  source.connect(sfxGain);
+  const g = sfxCtx.createGain();
+  g.gain.value = labVol(name);
+  source.connect(g).connect(sfxGain);
   source.start();
 }
 
@@ -75,7 +79,9 @@ function playOr(name, fallback) {
 
 const loops = {};          // name -> { src, gain }
 function startLoop(name, volume = LOOP_VOLUME, fade = 0.05) {
-  if (!sfxCtx || !sfxBuffers[name] || loops[name]) return;
+  if (!loops[name]) labEmit(name, name.startsWith('music_') ? 'music' : 'sfx', labOff(name), true);
+  if (!sfxCtx || !sfxBuffers[name] || loops[name] || labOff(name)) return;
+  volume *= labVol(name) * (name.startsWith('music_') ? labMaster('music') / MUSIC_VOLUME : 1);
   if (sfxCtx.state === 'suspended') sfxCtx.resume();
   const src = sfxCtx.createBufferSource();
   src.buffer = sfxBuffers[name];
@@ -137,7 +143,8 @@ function tone(freq, t0, dur, { type = 'triangle', gain = 0.22, glideTo = null } 
 
 // Искра, летящая в Коллектор: n-я искра звучит выше — сбор «нарастает».
 function spark(n = 0) {
-  if (muted || !sfxCtx) return;
+  labEmit('spark', 'sfx', labOff('spark'));
+  if (muted || labOff('spark') || !sfxCtx) return;
   if (sfxCtx.state === 'suspended') sfxCtx.resume();
   const t0 = sfxCtx.currentTime + 0.005;
   const base = 520 * Math.pow(1.122, Math.min(n, 14));
@@ -147,7 +154,8 @@ function spark(n = 0) {
 
 // Финальный «дзынь»: мажорное трезвучие колокольчиком.
 function ding(power = 1) {
-  if (muted || !sfxCtx) return;
+  labEmit('ding', 'sfx', labOff('ding'));
+  if (muted || labOff('ding') || !sfxCtx) return;
   if (sfxCtx.state === 'suspended') sfxCtx.resume();
   const t0 = sfxCtx.currentTime + 0.01;
   const g = 0.16 * Math.min(1.5, power);
@@ -156,7 +164,8 @@ function ding(power = 1) {
 
 // «+5» и захват монеты — короткий блип.
 function blip(freq = 880) {
-  if (muted || !sfxCtx) return;
+  labEmit('blip', 'sfx', labOff('blip'));
+  if (muted || labOff('blip') || !sfxCtx) return;
   if (sfxCtx.state === 'suspended') sfxCtx.resume();
   tone(freq, sfxCtx.currentTime + 0.005, 0.18, { type: 'triangle', gain: 0.16, glideTo: freq * 1.5 });
 }
@@ -183,6 +192,114 @@ function setMuted(next) {
   }
 }
 
+
+// --- sound lab (♪ panel of js/dev-tools.js; same lab API as js/sound-kit.js) --------
+// Per event: switch the file (own file or any from sound/library.json), volume,
+// mute; master volumes; live log. Kept per page in localStorage — without the
+// panel the game sounds exactly as before.
+const LAB_GAME = `neon-joker-spins${window.NJS_SKIN ? '-' + window.NJS_SKIN : ''}${window.NJS_LAB_SUFFIX || ''}`;
+const LAB_KEY = `soundlab.${LAB_GAME}`;
+let labState = (() => { try { return JSON.parse(localStorage.getItem(LAB_KEY)) || {}; } catch (e) { return {}; } })();
+labState.ev = labState.ev || {}; labState.master = labState.master || {}; labState.extra = labState.extra || {};
+const labSave = () => { try { localStorage.setItem(LAB_KEY, JSON.stringify(labState)); } catch (e) { /* noop */ } };
+const LAB_META = {
+  music_base: ['Музыка', 'База', 'music'], music_bonus: ['Музыка', 'Бонус', 'music'],
+  spinStart: ['Барабаны', 'Старт спина'], reelLoop: ['Барабаны', 'Петля вращения', 'loop'],
+  reelStop1: ['Барабаны', 'Стоп барабана 1'], reelStop2: ['Барабаны', 'Стоп барабана 2'], reelStop3: ['Барабаны', 'Стоп барабана 3'],
+  reelStop: ['Барабаны', 'Стоп (общий)'], finalReelStop: ['Барабаны', 'Последний стоп'], anticipation: ['Барабаны', 'Ожидание'],
+  coinLand: ['Барабаны', 'Монета встала'],
+  smallWin: ['Выигрыш', 'Малый выигрыш'], bigWin: ['Выигрыш', 'Big Win'], megaWin: ['Выигрыш', 'Mega Win'], epicWin: ['Выигрыш', 'Epic Win'],
+  bonusEnter: ['Бонусы', 'Вход в бонус'], bonusExit: ['Бонусы', 'Выход из бонуса'],
+  spark: ['Бонусы', 'Искра Коллектора (синтез)', 'synth'], ding: ['Бонусы', 'Сбор «дзынь» (синтез)', 'synth'], blip: ['Бонусы', 'Монета / +5 (синтез)', 'synth'],
+  popupOpen: ['Интерфейс', 'Попап открылся'], popupClose: ['Интерфейс', 'Попап закрылся'], click: ['Интерфейс', 'Клик'],
+  autospin: ['Интерфейс', 'Автоигра'], betPlus: ['Интерфейс', 'Ставка +'], betMinus: ['Интерфейс', 'Ставка −'], menu: ['Интерфейс', 'Меню'], turbo: ['Интерфейс', 'Турбо'],
+};
+const LAB_ORIG = { ...SOUND_FILES };
+const labKeys = () => [...new Set([...Object.keys(LAB_META), ...Object.keys(SOUND_FILES)])];
+const labEv = (k) => (labState.ev[k] = labState.ev[k] || {});
+function labVol(k) { const v = labState.ev[k] && labState.ev[k].vol; return v == null ? 1 : v; }
+function labOff(k) { const e = labState.ev[k]; return !!(e && (e.mute || e.off)); }
+function labMaster(kind) { const v = labState.master[kind]; return v == null ? (kind === 'music' ? MUSIC_VOLUME : SFX_VOLUME) : v; }
+const labListeners = new Set();
+const labFired = {};
+function labEmit(key, kind, silent, loop = false) {
+  labFired[key] = (labFired[key] || 0) + 1;
+  const path = SOUND_FILES[key] || null;
+  const info = { key, kind, path, known: !!LAB_META[key], missing: !path && !(LAB_META[key] || [])[2], muted: muted || silent,
+    mutedBy: muted ? 'game' : silent ? 'event' : null, loop, count: labFired[key], t: performance.now() };
+  for (const fn of labListeners) { try { fn(info); } catch (e) { /* noop */ } }
+}
+function labLoad(key, path) {
+  if (!sfxCtx || !path) return Promise.resolve();
+  return fetch(path).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject())).then((ab) => sfxCtx.decodeAudioData(ab))
+    .then((buf) => { if (SOUND_FILES[key] === path) sfxBuffers[key] = buf; }).catch(() => {});
+}
+// saved choices of this page
+for (const [k, e] of Object.entries(labState.ev)) if (e.v && e.v !== SOUND_FILES[k]) { SOUND_FILES[k] = e.v; sfxLoadPromises.push(labLoad(k, e.v)); }
+if (sfxGain && labState.master.sfx != null) sfxGain.gain.value = labState.master.sfx;
+function labRestartMusic(key) {
+  if (key === `music_${musicKind}`) { const k = musicKind; stopLoop(key, 0.2); musicKind = null; music(k); }
+}
+const soundLab = {
+  game: LAB_GAME,
+  variantName: () => null,
+  libraryPrefix: null,
+  groups() {
+    const out = []; const by = {};
+    for (const k of labKeys()) { const g = (LAB_META[k] || ['Прочее'])[0]; if (!by[g]) { by[g] = { name: g, keys: [] }; out.push(by[g]); } by[g].keys.push(k); }
+    return out;
+  },
+  event(key) {
+    const m = LAB_META[key] || ['Прочее', key];
+    const synth = m[2] === 'synth';
+    const orig = LAB_ORIG[key] ? [LAB_ORIG[key]] : [];
+    const extra = labState.extra[key] || [];
+    const e = labState.ev[key] || {};
+    return { key, kind: m[2] === 'music' ? 'music' : 'sfx', group: m[0], label: m[1], note: synth ? 'звук синтезируется в коде' : '',
+      src: orig, loop: m[2] === 'loop' || m[2] === 'music', volume: labVol(key), variants: [...orig, ...extra],
+      active: synth ? (e.off ? null : 'synth') : (e.off ? null : SOUND_FILES[key] || null), off: !!e.off || (!synth && !SOUND_FILES[key]),
+      muted: !!e.mute, fired: labFired[key] || 0, extra };
+  },
+  keys: labKeys,
+  sets: () => [],
+  applySet() {},
+  setVariantIndex: () => -1,
+  master: labMaster,
+  setMaster(kind, v) {
+    labState.master[kind] = v; labSave();
+    if (kind === 'sfx' && sfxGain) sfxGain.gain.value = v;
+    if (kind === 'music' && musicKind) labRestartMusic(`music_${musicKind}`);
+  },
+  setVariant(key, path) {
+    const e = labEv(key);
+    if (path === null) { e.off = true; delete e.v; } else { e.off = false; e.v = path; if (path !== 'synth') { SOUND_FILES[key] = path; labLoad(key, path).then(() => labRestartMusic(key)); } }
+    labSave();
+  },
+  setVolume(key, v) { labEv(key).vol = v; labSave(); if (loops[key]) loops[key].gain.gain.value = loops[key].volume * v; labRestartMusic(key); },
+  setMute(key, b) { labEv(key).mute = !!b; labSave(); if (b) stopLoop(key); labRestartMusic(key); },
+  addVariant(key, path) { const l = (labState.extra[key] = labState.extra[key] || []); if (!l.includes(path) && path !== LAB_ORIG[key]) l.push(path); soundLab.setVariant(key, path); },
+  removeVariant(key, path) { labState.extra[key] = (labState.extra[key] || []).filter((p) => p !== path); if (labState.ev[key] && labState.ev[key].v === path) { delete labState.ev[key].v; SOUND_FILES[key] = LAB_ORIG[key]; labLoad(key, LAB_ORIG[key]); } labSave(); },
+  preview(key) {
+    unlockAudio();
+    if (key.startsWith('music_')) { const k = key.slice(6); if (musicKind === k) music(null); else music(k); return null; }
+    const was = muted; muted = false;
+    if ((LAB_META[key] || [])[2] === 'synth') ({ spark, ding, blip })[key]();
+    else if ((LAB_META[key] || [])[2] === 'loop') { startLoop(key); setTimeout(() => stopLoop(key), 2500); }
+    else playSfx(key);
+    muted = was;
+    return null;
+  },
+  stopAll() { for (const k of Object.keys(loops)) stopLoop(k); musicKind = null; },
+  currentMusic: () => (musicKind ? `music_${musicKind}` : null),
+  onEvent(fn) { labListeners.add(fn); return () => labListeners.delete(fn); },
+  exportState() {
+    const out = { game: LAB_GAME, master: { sfx: labMaster('sfx'), music: labMaster('music') }, events: {} };
+    for (const k of labKeys()) { const e = labState.ev[k]; if (e && (e.v || e.off || e.vol != null || e.mute)) out.events[k] = { variant: e.off ? null : SOUND_FILES[k], volume: labVol(k), ...(e.mute ? { muted: true } : {}) }; }
+    return out;
+  },
+  reset() { labState = { ev: {}, master: {}, extra: {} }; labSave(); Object.assign(SOUND_FILES, LAB_ORIG); for (const [k, p] of Object.entries(LAB_ORIG)) labLoad(k, p); if (sfxGain) sfxGain.gain.value = SFX_VOLUME; },
+};
+
 window.addEventListener('pointerdown', unlockAudio, { once: true });
 window.addEventListener('keydown', unlockAudio, { once: true });
 
@@ -199,7 +316,9 @@ window.Sound = {
   blip,
   setMuted,
   toggleMuted: () => setMuted(!muted),
+  isMuted: () => muted,
   preloadPromises: sfxLoadPromises,
+  lab: soundLab,
   get muted() {
     return muted;
   },

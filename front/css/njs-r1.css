@@ -1,0 +1,248 @@
+/* Neon Joker Spins · Neon Tubes R1 — the client's round-1 feedback (2026-11-23) on top of
+ * Neon Tubes (set s6). Art lives in img/neon-joker-spins/skins/c/sets/r1 (cutter:
+ * scripts/neon_joker_spins_c_sets.py), behaviour in js/neon-joker-spins/r1.js.
+ * dev-sets.js injects its own <style> after this file, hence the !important.
+ *
+ *   focus      the frame and the background are dimmed, the symbols / wins / jackpots stay bright
+ *   columns    three reel columns with dark gutters + neon seams, 9 clear slots in Hold & Win
+ *   hints      Free Spins / Hold & Win teasers next to the jackpots (desktop) or in the win strip
+ *   portrait   jackpots (GRAND on top) -> logo with the Joker leaning on the frame -> reels -> win strip
+ *   landscape  phones held sideways: own 1600x640 canvas (slot.js NJS_LAND, html.is-land)
+ */
+
+/* ---------- focus: dim what is not the game ---------- */
+.bg__img--base { filter: brightness(0.58) saturate(0.82) !important; }
+.bg__img--fs { filter: brightness(0.8) saturate(0.95) !important; }
+.cabinet { filter: brightness(0.95) saturate(1); }  /* single tube: thicker + brighter (client, 2026-11-23) */
+/* the JOKER sign doubled the logo, ROCK / PUNK made him read as a rocker (feedback 3, "one small thing") */
+.graffiti .gf:has(text) { display: none; }
+.graffiti { opacity: 0.55; }
+
+/* ---------- reel columns ---------- */
+.reel { background: #06020c !important; }
+.reel__col {
+  border-left: 5px solid #06020c; border-right: 5px solid #06020c;
+  background: radial-gradient(120% 70% at 50% 45%, #241046, #12071f 78%);
+}
+.reel::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 4;
+  background:
+    linear-gradient(90deg, transparent calc(100% / 3 - 1.5px), rgba(44, 232, 255, 0.55) calc(100% / 3 - 1.5px),
+      rgba(44, 232, 255, 0.55) calc(100% / 3 + 1.5px), transparent calc(100% / 3 + 1.5px)),
+    linear-gradient(90deg, transparent calc(200% / 3 - 1.5px), rgba(255, 60, 172, 0.55) calc(200% / 3 - 1.5px),
+      rgba(255, 60, 172, 0.55) calc(200% / 3 + 1.5px), transparent calc(200% / 3 + 1.5px));
+  filter: drop-shadow(0 0 6px rgba(255, 60, 172, 0.6));
+}
+/* anticipation on the 3rd reel now has its own lane */
+.reel__col.is-anticipating { background: radial-gradient(120% 70% at 50% 45%, #3a1260, #170828 78%); }
+/* Hold & Win: the 9 slots read as 9 cells (cell art: coins/cell_empty, cell_locked) */
+.screen.is-hw .reel__col { background: #0a0414; }
+.reel__cell .cell-back { inset: 3%; width: 94%; height: 94%; }
+
+/* coin values (feedback 5): bigger glyphs with a dark halo, short (5x) and long (1250) alike */
+.reel__cell .coin-val { filter: drop-shadow(0 2px 0 #12001f) drop-shadow(0 0 5px rgba(10, 0, 20, 0.95)); }
+.reel__cell .coin-val img { max-height: 100%; max-width: 30%; }
+.reel__cell[data-symbol="collector"] .coin-val img { max-width: 24%; }
+
+/* ---------- buy window: two bonuses (Free Spins card is a static mock, the game buys Hold & Win) ---------- */
+.buy-dialog__card.r1-buy {
+  width: min(640px, 100%); padding: 22px 22px 18px; background: linear-gradient(180deg, #23103f, #0e0619);
+  box-shadow: 0 0 0 3px var(--gold), 0 0 0 6px var(--cyan), 0 0 40px rgba(44, 232, 255, 0.45);
+}
+.r1-buy__cards { display: flex; gap: 18px; justify-content: center; margin: 14px 0 6px; }
+.r1-buy__card {
+  position: relative; flex: 0 1 260px; aspect-ratio: 0.643; border: 0; padding: 0; cursor: pointer;
+  background: center / contain no-repeat; transition: transform 160ms ease, filter 160ms ease;
+}
+.r1-buy__card:hover { transform: translateY(-4px) scale(1.02); filter: brightness(1.12); }
+.r1-buy__card--fs { background-image: url('../img/neon-joker-spins/skins/c/sets/r1/img/buy_fs.webp?v=1'); }
+.r1-buy__card--hw { background-image: url('../img/neon-joker-spins/skins/c/sets/r1/img/buy_hw.webp?v=1'); }
+.r1-buy__price {
+  position: absolute; left: 12%; right: 12%; top: 76.5%; height: 11%;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-family: 'Luckiest Guy', system-ui, sans-serif; font-size: 26px; color: #fff; text-shadow: 0 0 10px var(--c, #2ce8ff);
+}
+.r1-buy__card--fs .r1-buy__price { --c: #ff3cac; }
+.r1-buy__price small { font-size: 15px; color: var(--c, #2ce8ff); }
+.r1-buy__note { font-size: 13px; opacity: 0.7; margin: 4px 0 0; min-height: 1.2em; }
+.r1-buy .buy-dialog__coin, .r1-buy .buy-dialog__price, .r1-buy .buy-dialog__btn--yes { display: none; }
+.r1-buy .buy-dialog__text { margin: 4px 0 0; }
+
+/* ---------- portrait 720x1280: jackpots -> logo + Joker -> reels -> win strip ---------- */
+@media (orientation: portrait) {
+  .jp--grand { left: 250px !important; top: 6px !important; width: 220px !important; height: 146px !important; }
+  .jp--major { left: 66px !important; top: 158px !important; width: 186px !important; height: 118px !important; }
+  .jp--minor { left: 267px !important; top: 158px !important; width: 186px !important; height: 112px !important; }
+  .jp--mini { left: 468px !important; top: 158px !important; width: 186px !important; height: 108px !important; }
+  :root {
+    /* single-tube frame (scripts/njs_r1_tube_frame.py, aspect 1.0646) */
+    --frame-w: 706px !important; --frame-h: calc(706px / 1.0646) !important;  /* 98 % of the 720 width (client, 2026-11-23) */
+    --frame-x: calc(360px - 706px * (var(--fw-l) + var(--fw-w) / 2)) !important;
+    --frame-y: 410px !important;
+  }
+  /* the logo sits on the frame's crown crest, right of centre to give the Joker room */
+  .logo { left: 215px !important; top: 282px !important; width: 290px !important; z-index: 6 !important; }  /* centred over the reels (client, 2026-11-23) */
+  /* the Joker leans on the frame's top-left corner, cut at the waist (in front of the frame) */
+  .mascot {
+    display: block !important; left: 26px !important; top: 268px !important;
+    height: 560px !important; width: auto !important; max-width: none !important;
+    z-index: 5 !important; animation: none !important;
+    -webkit-mask-image: linear-gradient(180deg, #000 29%, transparent 35%); mask-image: linear-gradient(180deg, #000 29%, transparent 35%);
+  }
+  /* win field between the reels and Spin: the win amount; the info plaque lives there while idle */
+  .reel-win { left: 110px !important; width: 500px !important; top: 1080px !important; height: 76px !important; z-index: 7 !important; }
+  /* FS / H&W counters take the win strip (horizontal: counter | win) */
+  .side-panel { left: 110px !important; top: 1078px !important; width: 500px !important; padding: 6px 18px 8px !important; }
+  .bg__img--base { filter: brightness(0.62) saturate(0.85) !important; }
+}
+
+/* ---------- phone landscape 1600x640: logo + Joker | reels | jackpots | controls column ---------- */
+:root.is-land { --design-h: 640px; }
+@media (orientation: landscape) {
+  :root.is-land {
+    --frame-h: calc(456px / var(--fw-h)) !important;
+    --frame-w: calc(456px / var(--fw-h) * 1.0646) !important;
+    --frame-x: calc(740px - 456px / var(--fw-h) * 1.0646 * (var(--fw-l) + var(--fw-w) / 2)) !important;
+    --frame-y: calc(58px - 456px / var(--fw-h) * var(--fw-t)) !important;
+  }
+  .is-land .logo { left: 40px !important; top: 6px !important; width: 330px !important; }
+  .is-land .mascot { left: 66px !important; top: 168px !important; height: 560px !important; max-width: none !important; }
+  .is-land .jp--grand { left: 1062px !important; top: 34px !important; width: 226px !important; height: 150px !important; }
+  .is-land .jp--major { left: 1075px !important; top: 192px !important; width: 200px !important; height: 127px !important; }
+  .is-land .jp--minor { left: 1075px !important; top: 326px !important; width: 200px !important; height: 120px !important; }
+  .is-land .jp--mini { left: 1075px !important; top: 453px !important; width: 200px !important; height: 116px !important; }
+  .is-land .side-panel { left: 530px !important; top: 524px !important; width: 420px !important; padding: 4px 16px 6px !important; }
+  .is-land .graffiti { display: none; }
+  /* controls: a column on the right edge, balance / bet stay along the bottom */
+  .is-land .v3-bar { height: 64px; background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.85)); }
+  .is-land .v3-row {
+    position: fixed; left: auto; right: 12px; top: calc(50% - 28px); bottom: auto; height: auto; padding: 0;
+    transform: translateY(-50%); flex-direction: column; justify-content: center; gap: 8px;
+  }
+  .is-land .v3-group { flex-direction: column; gap: 8px; }
+  .is-land .v3-bar .ui-spin-btn.v3-spin { width: 84px; height: 84px; }
+  .is-land .v3-bar .ui-icon-btn.v3-btn { width: 40px; height: 40px; }
+}
+
+/* the FS / H&W panel laid out flat for the phone strips: counter on the left, win / total on the right */
+@media (orientation: portrait) {
+  .side-panel { display: grid; grid-template-rows: auto auto; grid-auto-flow: column; grid-auto-columns: 1fr; column-gap: 18px; align-items: center; justify-items: center; }
+  .side-panel__label--sub { margin-top: 0; }
+  .side-panel__value { height: 44px; margin-top: 2px; }
+  .side-panel__value--sm { height: 36px; }
+  .side-panel .hw-lamps { margin: 6px 0; }
+}
+.is-land .side-panel { display: grid; grid-template-rows: auto auto; grid-auto-flow: column; grid-auto-columns: 1fr; column-gap: 16px; align-items: center; justify-items: center; }
+.is-land .side-panel__label { font-size: 20px; }
+.is-land .side-panel__label--sub { margin-top: 0; font-size: 17px; }
+.is-land .side-panel__value { height: 40px; margin-top: 2px; }
+.is-land .side-panel__value--sm { height: 32px; }
+@media (orientation: portrait) { .side-panel { z-index: 8 !important; } }
+/* buy window on a phone held sideways: smaller cards, no text */
+@media (orientation: landscape) and (max-height: 540px) {
+  .buy-dialog { padding: 8px; }
+  .buy-dialog__card.r1-buy { width: min(520px, 100%); padding: 10px 16px 10px; }
+  .r1-buy .buy-dialog__title { font-size: 22px; }
+  .r1-buy .buy-dialog__text, .r1-buy__note { display: none; }
+  .r1-buy__cards { margin: 6px 0; gap: 14px; }
+  .r1-buy__card { flex: 0 0 auto; height: min(250px, calc(100dvh - 130px)); width: auto; }
+  .r1-buy__price { font-size: 18px; }
+  .r1-buy .buy-dialog__actions { margin-top: 6px; }
+  .r1-buy .buy-dialog__btn { height: 40px; font-size: 18px; }
+}
+
+/* ---------- info plaque: one neon sign, FREE SPINS and HOLD & WIN take turns (js/neon-joker-spins/r1.js) ---------- */
+.r1-plaque {
+  left: 1140px; top: 618px; width: 300px; aspect-ratio: 2.8037; z-index: 5; pointer-events: none;
+  --u: calc(300px / 100); /* 1% of the plaque width */
+  background: url('../img/neon-joker-spins/skins/c/sets/r1/img/plaque.webp?v=1') center / 100% 100% no-repeat;
+  opacity: 0;
+}
+.r1-plaque.is-on { animation: r1-neon-on 3.6s linear forwards; }
+.r1-plaque.is-off { animation: r1-neon-off 520ms steps(1, end) forwards; }
+.r1-plaque__face {
+  position: absolute; left: 9%; right: 8%; top: 35%; bottom: 15%;
+  display: flex; align-items: center; justify-content: center; gap: calc(var(--u) * 3);
+}
+.r1-plaque__icon { height: 150%; aspect-ratio: 1; object-fit: contain; flex: none; filter: drop-shadow(0 0 calc(var(--u) * 2) var(--c)); }
+.r1-plaque__text { display: flex; flex-direction: column; align-items: flex-start; line-height: 1; font-family: 'Luckiest Guy', system-ui, sans-serif; }
+.r1-plaque__text b {
+  font-weight: normal; font-size: calc(var(--u) * 9.6); letter-spacing: 0.03em; color: #fff;
+  text-shadow: 0 0 calc(var(--u) * 0.8) var(--c), 0 0 calc(var(--u) * 2.4) var(--c), 0 0 calc(var(--u) * 5) var(--c);
+}
+.r1-plaque__text small {
+  margin-top: calc(var(--u) * 1.2); font-size: calc(var(--u) * 4.4); letter-spacing: 0.06em; color: var(--c2);
+  text-shadow: 0 0 calc(var(--u) * 1.6) var(--c2);
+}
+.r1-plaque[data-k="fs"] { --c: #ff3cac; --c2: #9ff4ff; }
+.r1-plaque[data-k="hw"] { --c: #ffb52e; --c2: #ffe9a8; }
+/* the tube strikes, stutters, holds with a faint buzz */
+@keyframes r1-neon-on {
+  0% { opacity: 0; filter: brightness(0.4); }
+  3% { opacity: 0.85; filter: brightness(1.3); }
+  5% { opacity: 0.1; }
+  8% { opacity: 0.9; }
+  10% { opacity: 0.25; }
+  14% { opacity: 1; filter: brightness(1.15); }
+  20%, 61% { opacity: 1; filter: none; }
+  62% { opacity: 0.7; }
+  63%, 100% { opacity: 1; filter: none; }
+}
+@keyframes r1-neon-off {
+  0% { opacity: 1; }
+  25% { opacity: 0.35; }
+  45% { opacity: 0.8; }
+  65% { opacity: 0.12; }
+  100% { opacity: 0; }
+}
+.screen.is-fs .r1-plaque, .screen.is-hw .r1-plaque { visibility: hidden; }
+@media (orientation: portrait) {
+  .r1-plaque { left: 215px; top: 1078px; width: 290px; --u: calc(290px / 100); z-index: 6; }
+  .r1-plaque.is-win { visibility: hidden; }
+}
+.is-land .r1-plaque { left: 575px; top: 520px; width: 330px; --u: calc(330px / 100); }
+/* the bar's dark fade starts lower so it does not dim the plaque in the win field */
+@media (orientation: portrait) {
+  .v3-bar { background: linear-gradient(to bottom, transparent 0%, transparent 52%, rgba(0, 0, 0, 0.6) 72%, rgba(0, 0, 0, 0.92) 100%) !important; }
+}
+.is-land .v3-bar { background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.75) 100%) !important; }
+.is-land .r1-plaque { left: 560px; top: 516px; width: 360px; --u: calc(360px / 100); }
+
+/* Hold & Win plays on the concert stage too (client, 2026-11-23: concert background on the bonus screens) */
+.screen.is-hw .bg__img--fs { opacity: 1; }
+
+/* symbol sizes (client, 2026-11-23): 7 / bell / star +10 %, scatter +15 %, lows -5 %.
+   The R1 assets have matching even canvases (396 / 414 / 342 px against 360). */
+.reel__cell[data-symbol="seven"] > img.sym, .reel__cell[data-symbol="bell"] > img.sym,
+.reel__cell[data-symbol="star"] > img.sym { scale: 1.1; }
+.reel__cell[data-symbol="scatter"] > img.sym { scale: 1.15; }
+.reel__cell[data-symbol="cherry"] > img.sym, .reel__cell[data-symbol="lemon"] > img.sym,
+.reel__cell[data-symbol="plum"] > img.sym, .reel__cell[data-symbol="grape"] > img.sym { scale: 0.8556; }  /* 308 / 360 */
+
+/* hero switcher (js/neon-joker-spins/r1.js) */
+.r1-heroes {
+  position: fixed; top: 58px; right: 10px; z-index: 110; display: flex; align-items: center; gap: 6px;
+  padding: 5px 8px 5px 12px; border-radius: 999px; background: rgba(18, 8, 31, 0.82);
+  border: 1px solid rgba(255, 60, 172, 0.55); backdrop-filter: blur(4px);
+  font: 700 12px/1 'Baloo 2', system-ui, sans-serif; color: #ffd2ef;
+}
+.r1-heroes__lbl { margin-right: 2px; }
+.r1-heroes button {
+  width: 34px; height: 34px; padding: 0; border-radius: 50%; overflow: hidden; cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.18); background: #1d0d33;
+}
+.r1-heroes button img { width: 100%; height: 300%; object-fit: cover; object-position: 50% 0; }
+.r1-heroes button[aria-pressed="true"] { border-color: #ffd75a; box-shadow: 0 0 10px rgba(255, 215, 90, 0.7); }
+@media (orientation: portrait) {
+  .r1-heroes { top: 52px; right: 8px; padding: 4px; gap: 4px; }
+  .r1-heroes__lbl { display: none; }
+  .r1-heroes:not(.is-open) button:not([aria-pressed="true"]) { display: none; }
+}
+.is-land .r1-heroes { top: 10px; right: 120px; }
+/* the old DEV strip of the C page — replaced by the shared DEV / ♪ panel */
+.dev-panel { display: none !important; }
+
+/* hero poses: "lean" rests on the left edge of the screen */
+body.hero-lean .mascot { left: var(--r1-edge, 0px) !important; top: 70px !important; height: 820px !important; max-width: 520px !important; object-position: 0 100% !important; }
+@media (orientation: portrait) { body.hero-lean .mascot { left: var(--r1-edge, 0px) !important; top: 262px !important; height: 560px !important; max-width: none !important; } }
+.is-land body.hero-lean .mascot, .is-land .hero-lean .mascot { left: var(--r1-edge, 0px) !important; top: 160px !important; height: 580px !important; }

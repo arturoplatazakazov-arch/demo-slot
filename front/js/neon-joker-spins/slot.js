@@ -1292,6 +1292,8 @@ function showFeatureScreen() {
 // kind: 'fs' (вход во фриспины) | 'hw' (вход в Hold & Win). false — экрана нет,
 // вызывающий показывает старый попап.
 function showBonusScreen(kind) {
+  // R1 page: the Spine entry screens still carry the old Rock Chrome art — plain popups instead
+  if (window.NJS_NO_BONUS_SCREENS) return Promise.resolve(false);
   return showSpineScreen(`bonus_${kind}`, { dark: true, autoCloseMs: BONUS_SCREEN_AUTOCLOSE_MS });
 }
 window.showBonusScreen = showBonusScreen;
@@ -1299,12 +1301,16 @@ window.showBonusScreen = showBonusScreen;
 // --- Вьюпорт ---------------------------------------------------------------------
 
 const DESIGN = { desktop: { w: 1600, h: 900 }, mobile: { w: 720, h: 1280 } };
+const NJS_LAND_MQ = '(orientation: landscape) and (max-height: 540px)';
 
 function updateStageScale() {
   const screenEl = document.getElementById('screen');
   const vw = screenEl.clientWidth || document.documentElement.clientWidth;
   const vh = screenEl.clientHeight || document.documentElement.clientHeight;
-  const d = isMobileLayout() ? DESIGN.mobile : DESIGN.desktop;
+  // R1 page: phones held sideways get their own wide canvas (window.NJS_LAND, css .is-land)
+  const land = !!window.NJS_LAND && !isMobileLayout() && window.matchMedia(NJS_LAND_MQ).matches;
+  document.documentElement.classList.toggle('is-land', land);
+  const d = isMobileLayout() ? DESIGN.mobile : (land ? window.NJS_LAND : DESIGN.desktop);
   const scale = Math.min(vw / d.w, vh / d.h);
   document.documentElement.style.setProperty('--stage-scale', String(scale));
   readCellDims();

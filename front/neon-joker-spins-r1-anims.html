@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neon Joker Spins R1 — все анимации игры</title>
+<!-- Все анимации слота neon-joker-spins-r1.html одним столбцом по категориям, как
+     volt-coins-v3-anim-lab.html: подпись слева (что, клип, длительность, когда в игре),
+     справа — сама анимация на арте R1 (img/neon-joker-spins/skins/c/sets/r1). Игра без
+     Spine: CSS-кадры повторены по правилам из css/neon-joker-spins.css и css/njs-r1.css,
+     спрайты FX (fx/*.webp) летают на WAAPI как в slot.js; молния линий и граффити —
+     настоящие js/neon-joker-spins/winlines.js и graffiti.js. Клик по сцене — повтор. -->
+<link rel="stylesheet" href="css/fonts.css">
+<style>
+  :root {
+    --bg: #0c0518; --panel: #170a2b; --line: rgba(255, 60, 172, 0.16);
+    --text: #f4ecff; --muted: #a99bc8; --accent: #2ce8ff; --pink: #ff3cac; --gold: #f5b400; --gold-hi: #ffd75a; --cyan: #2ce8ff;
+    --cell: 132px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Baloo 2', system-ui, sans-serif; }
+  header {
+    position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px;
+    padding: 12px 24px; background: rgba(12, 5, 24, 0.94); border-bottom: 1px solid var(--line); backdrop-filter: blur(6px);
+  }
+  h1 { margin: 0; font-size: 22px; font-weight: 700; }
+  a.back { color: var(--text); text-decoration: none; font-size: 14px; padding: 6px 14px; border-radius: 999px; border: 1px solid rgba(255, 60, 172, 0.7); }
+  nav { display: flex; flex-wrap: wrap; gap: 6px; }
+  nav a { color: var(--muted); text-decoration: none; font-size: 14px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); }
+  nav a:hover { color: var(--accent); border-color: var(--accent); }
+  .tools { margin-left: auto; display: flex; gap: 8px; }
+  button.tool { font: inherit; font-size: 14px; color: var(--text); cursor: pointer; padding: 6px 14px; border-radius: 999px; border: 1px solid rgba(44, 232, 255, 0.35); background: var(--panel); }
+  button.tool[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+  main { padding: 0 24px 80px; max-width: 1400px; }
+  .cat { padding-top: 26px; scroll-margin-top: 70px; }
+  .cat > h2 { margin: 0 0 4px; font-size: 26px; font-weight: 800; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .cat > h2 span { font-size: 14px; font-weight: 500; color: var(--muted); }
+  .cat > p { margin: 0 0 14px; color: var(--muted); font-size: 14px; max-width: 820px; line-height: 1.4; }
+  .sub { margin: 22px 0 6px; font-size: 14px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .row { display: grid; grid-template-columns: 290px 1fr; gap: 20px; padding: 16px 0; border-top: 1px solid var(--line); align-items: center; }
+  .cap h3 { margin: 0; font-size: 19px; font-weight: 700; line-height: 1.2; }
+  .cap .clip { margin-top: 4px; font-size: 13px; color: var(--accent); font-family: ui-monospace, Menlo, monospace; }
+  .cap p { margin: 6px 0 0; font-size: 13.5px; line-height: 1.4; color: var(--muted); }
+  .cap .kind { display: inline-block; margin-top: 8px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--line); color: var(--muted); }
+  .stages { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+  .st { display: flex; flex-direction: column; gap: 4px; max-width: 100%; }
+  .st > .lbl { font-size: 12px; color: var(--muted); }
+  .click { cursor: pointer; }
+  /* symbol sizes as in the game (njs-r1.css) */
+  img.sym[src*="/seven."], img.sym[src*="/bell."], img.sym[src*="/star."] { scale: 1.1; }
+  img.sym[src*="/scatter."] { scale: 1.15; }
+  img.sym[src*="/cherry."], img.sym[src*="/lemon."], img.sym[src*="/plum."], img.sym[src*="/grape."] { scale: 0.8556; }
+
+  /* ячейка барабана R1: тёмная колонка с неоновыми швами */
+  .tile { position: relative; width: var(--cell); height: var(--cell); border-radius: 10px; overflow: visible;
+    background: radial-gradient(120% 70% at 50% 45%, #241046, #12071f 78%); box-shadow: inset 0 0 0 1px rgba(44, 232, 255, 0.16); }
+  .tile > img.sym { position: absolute; left: 5%; top: 5%; width: 90%; height: 90%; object-fit: contain; }
+  .fxl { position: absolute; inset: 0; pointer-events: none; overflow: visible; z-index: 6; }
+  .fx-sprite { position: absolute; left: 0; top: 0; pointer-events: none; mix-blend-mode: screen; will-change: transform, opacity; }
+
+  /* окно 3x3 */
+  .win3 { position: relative; display: grid; grid-template-columns: repeat(3, var(--cell)); grid-template-rows: repeat(3, var(--cell));
+    background: #06020c; border-radius: 12px; padding: 0; overflow: visible; }
+  .win3 .col { position: relative; overflow: hidden; grid-row: 1 / 4; border-left: 5px solid #06020c; border-right: 5px solid #06020c;
+    background: radial-gradient(120% 70% at 50% 45%, #241046, #12071f 78%); }
+  .win3 .col .strip { position: absolute; left: 0; top: 0; width: 100%; }
+  .win3 .col .c { position: relative; height: var(--cell); width: 100%; }
+  .win3 .col .c > img.sym { position: absolute; left: 6%; top: 6%; width: 88%; height: 88%; object-fit: contain; }
+  .win3 .col.is-anticipating { background: radial-gradient(120% 70% at 50% 45%, #3a1260, #170828 78%); }
+  .win3 .col.is-anticipating::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+    box-shadow: inset 0 0 26px 6px rgba(255, 60, 172, 0.85), inset 0 0 60px rgba(44, 232, 255, 0.45); animation: anticipate 520ms ease-in-out infinite alternate; }
+  .win3::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 4;
+    background: linear-gradient(90deg, transparent calc(100% / 3 - 1.5px), rgba(44, 232, 255, 0.55) calc(100% / 3 - 1.5px), rgba(44, 232, 255, 0.55) calc(100% / 3 + 1.5px), transparent calc(100% / 3 + 1.5px)),
+      linear-gradient(90deg, transparent calc(200% / 3 - 1.5px), rgba(255, 60, 172, 0.55) calc(200% / 3 - 1.5px), rgba(255, 60, 172, 0.55) calc(200% / 3 + 1.5px), transparent calc(200% / 3 + 1.5px));
+    filter: drop-shadow(0 0 6px rgba(255, 60, 172, 0.6)); }
+  .win3 svg.win-line { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; z-index: 5; pointer-events: none; }
+  .win3.hw .col { background: #0a0414; }
+
+  /* сцены с артом */
+  .scene { position: relative; overflow: hidden; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--line); background: #000; }
+  .scene > img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .dark { border-radius: 12px; box-shadow: inset 0 0 0 1px var(--line); background: radial-gradient(ellipse at 50% 55%, #1e0c3a 0%, #0c0518 75%);
+    padding: 22px; display: flex; align-items: center; justify-content: center; gap: 22px; flex-wrap: wrap; position: relative; }
+  .stage1600 { position: absolute; left: 0; top: 0; width: 1600px; height: 900px; transform-origin: 0 0; }
+  .stage1600 > .bgimg { position: absolute; inset: 0; background: center / cover no-repeat; filter: brightness(0.58) saturate(0.82); }
+  .graffiti { opacity: 0.55; }
+  .graffiti .gf:has(text) { display: none; }
+
+  /* glyph font */
+  .glyphs { display: inline-flex; align-items: flex-end; justify-content: center; line-height: 1; white-space: nowrap; }
+  .glyphs img { display: block; height: auto; margin: 0 -0.02em; }
+  .glyphs img.g-comma { transform: translateY(30%); }
+
+  /* монеты */
+  .coin-val { position: absolute; font-size: 0; pointer-events: none; z-index: 2; display: flex; align-items: center; justify-content: center;
+    filter: drop-shadow(0 2px 0 #12001f) drop-shadow(0 0 5px rgba(10, 0, 20, 0.95)); }
+  .coin-val img { max-height: 100%; max-width: 30%; }
+  .coll .coin-val img { max-width: 24%; }
+  .tile > img.back, .win3 .c > img.back { position: absolute; left: 3%; top: 3%; width: 94%; height: 94%; }
+  .tile.hwspin::after { content: ''; position: absolute; inset: 14%; border-radius: 18%;
+    background: repeating-linear-gradient(180deg, rgba(255, 215, 90, 0.0) 0 10px, rgba(255, 215, 90, 0.35) 10px 14px); animation: hw-spin 140ms linear infinite; filter: blur(1px); }
+
+  /* game keyframes (css/neon-joker-spins.css, css/njs-r1.css) */
+  .is-landing > img.sym { animation: cell-land 260ms ease-out; }
+  .is-winning > img.sym { animation: cell-win 620ms ease-in-out; }
+  .is-scatter > img.sym { animation: joker-idle 3.6s ease-in-out infinite; }
+  .is-scatter.is-winning > img.sym { animation: joker-laugh 620ms ease-in-out; }
+  .is-slam > img.sym { animation: coin-slam 420ms cubic-bezier(0.3, 1.5, 0.5, 1); }
+  .is-collect > img.sym, .is-collect .coin-val { animation: coin-collect 420ms ease-out; }
+  .is-charging > img.sym { animation: coin-charge 900ms ease-in-out; }
+  @keyframes anticipate { from { opacity: 0.45; } to { opacity: 1; } }
+  @keyframes cell-land { 0% { transform: scaleY(0.94) translateY(3%); } 100% { transform: none; } }
+  @keyframes cell-win { 0%, 100% { transform: scale(1); filter: none; } 45% { transform: scale(1.12); filter: brightness(1.35) drop-shadow(0 0 14px rgba(255, 215, 90, 0.9)); } }
+  @keyframes joker-idle { 0%, 86%, 100% { filter: none; } 90% { filter: brightness(1.4) drop-shadow(0 0 12px rgba(255, 60, 172, 0.9)); } }
+  @keyframes joker-laugh { 0%, 100% { transform: rotate(0) scale(1); } 25% { transform: rotate(-8deg) scale(1.14); filter: brightness(1.4) drop-shadow(0 0 18px #ff3cac); } 60% { transform: rotate(7deg) scale(1.1); } }
+  @keyframes hw-spin { from { background-position: 0 0; } to { background-position: 0 28px; } }
+  @keyframes coin-slam { 0% { transform: scale(1.6); opacity: 0; } 55% { transform: scale(0.92); opacity: 1; filter: brightness(1.7); } 100% { transform: scale(1); } }
+  @keyframes coin-collect { 40% { transform: scale(1.18); filter: brightness(1.6) drop-shadow(0 0 16px #ffd75a); } }
+  @keyframes coin-charge { 0%, 100% { transform: scale(1); } 30%, 70% { transform: scale(1.1); filter: brightness(1.5) drop-shadow(0 0 20px #2ce8ff); } }
+  @keyframes logo-flicker { 0%, 93%, 96%, 100% { filter: none; } 94%, 95% { filter: brightness(0.75); } }
+  @keyframes logo-flicker-now { 0%, 100% { filter: none; } 30%, 60% { filter: brightness(0.75); } }
+  @keyframes mascot-idle { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-8px) rotate(-0.6deg); } }
+  @keyframes mascot-cheer { 0% { transform: scale(1); filter: drop-shadow(0 0 18px rgba(255, 60, 172, 0.25)); } 35% { transform: scale(1.05) rotate(-2deg); filter: drop-shadow(0 0 40px rgba(255, 215, 90, 0.8)) brightness(1.15); } 100% { transform: scale(1); } }
+  @keyframes jp-hit { 0% { transform: scale(1); } 20% { transform: scale(1.18); filter: brightness(1.8) drop-shadow(0 0 30px #ffd75a); } 100% { transform: scale(1); } }
+  @keyframes plus-pop { 0% { opacity: 0; transform: scale(0.3); } 20% { opacity: 1; transform: scale(1.3); } 70% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: translateY(-20px); } }
+  @keyframes panel-pulse { 40% { filter: brightness(1.5); } }
+  @keyframes dialog-in { from { transform: scale(0.7); opacity: 0; } }
+  @keyframes r1-neon-on { 0% { opacity: 0; filter: brightness(0.4); } 3% { opacity: 0.85; filter: brightness(1.3); } 5% { opacity: 0.1; } 8% { opacity: 0.9; } 10% { opacity: 0.25; } 14% { opacity: 1; filter: brightness(1.15); } 20%, 61% { opacity: 1; filter: none; } 62% { opacity: 0.7; } 63%, 100% { opacity: 1; filter: none; } }
+  @keyframes r1-neon-off { 0% { opacity: 1; } 25% { opacity: 0.35; } 45% { opacity: 0.8; } 65% { opacity: 0.12; } 100% { opacity: 0; } }
+
+  .logo-box img { width: 420px; display: block; animation: logo-flicker 7s linear infinite; }
+  .logo-box img.now { animation: logo-flicker-now 300ms steps(1, end); }
+  .mascot { height: 420px; display: block; transform-origin: 50% 100%; filter: drop-shadow(0 0 18px rgba(255, 60, 172, 0.25)); }
+  .mascot.idle { animation: mascot-idle 4.2s ease-in-out infinite; }
+  .mascot.is-cheer { animation: mascot-cheer 900ms cubic-bezier(0.3, 1.6, 0.5, 1); }
+
+  /* инфо-плашка */
+  .r1-plaque { position: relative; width: 420px; aspect-ratio: 2.8037; --u: calc(420px / 100); opacity: 0;
+    background: url('img/neon-joker-spins/skins/c/sets/r1/img/plaque.webp?v=1') center / 100% 100% no-repeat; }
+  .r1-plaque.is-on { animation: r1-neon-on 3.6s linear forwards; }
+  .r1-plaque.is-off { animation: r1-neon-off 520ms steps(1, end) forwards; }
+  .r1-plaque__face { position: absolute; left: 9%; right: 8%; top: 35%; bottom: 15%; display: flex; align-items: center; justify-content: center; gap: calc(var(--u) * 3); }
+  .r1-plaque__icon { height: 150%; aspect-ratio: 1; object-fit: contain; flex: none; filter: drop-shadow(0 0 calc(var(--u) * 2) var(--c)); }
+  .r1-plaque__text { display: flex; flex-direction: column; align-items: flex-start; line-height: 1; font-family: 'Luckiest Guy', system-ui, sans-serif; }
+  .r1-plaque__text b { font-weight: normal; font-size: calc(var(--u) * 9.6); letter-spacing: 0.03em; color: #fff; text-shadow: 0 0 calc(var(--u) * 0.8) var(--c), 0 0 calc(var(--u) * 2.4) var(--c), 0 0 calc(var(--u) * 5) var(--c); }
+  .r1-plaque__text small { margin-top: calc(var(--u) * 1.2); font-size: calc(var(--u) * 4.4); letter-spacing: 0.06em; color: var(--c2); text-shadow: 0 0 calc(var(--u) * 1.6) var(--c2); }
+  .r1-plaque[data-k="fs"] { --c: #ff3cac; --c2: #9ff4ff; }
+  .r1-plaque[data-k="hw"] { --c: #ffb52e; --c2: #ffe9a8; }
+
+  /* джекпоты */
+  .jp { position: relative; background: center / 100% 100% no-repeat; }
+  .jp .jp__value { position: absolute; left: calc(var(--win-l) * 100%); top: calc(var(--win-t) * 100%); width: calc(var(--win-ww) * 100%); height: calc(var(--win-hh) * 100%); display: flex; align-items: center; justify-content: center; }
+  .jp .jp__value img { max-height: 72%; }
+  .jp.is-hit { animation: jp-hit 1.2s ease-out; }
+
+  /* панели FS / H&W */
+  .side-panel { position: relative; width: 250px; padding: 18px 16px 20px; border-radius: 22px; text-align: center;
+    background: linear-gradient(180deg, rgba(30, 12, 58, 0.92), rgba(12, 4, 24, 0.94));
+    box-shadow: 0 0 0 3px #b98a1f, 0 0 0 6px rgba(255, 60, 172, 0.85), 0 0 26px rgba(255, 60, 172, 0.6), inset 0 0 26px rgba(44, 232, 255, 0.18); }
+  .side-panel.is-pulse { animation: panel-pulse 520ms ease-out; }
+  .side-panel__label { font-family: 'Luckiest Guy', system-ui, sans-serif; font-size: 24px; letter-spacing: 0.06em; color: var(--cyan); text-shadow: 0 0 10px rgba(44, 232, 255, 0.9), 0 0 22px rgba(44, 232, 255, 0.5); }
+  .side-panel__label--sub { margin-top: 12px; font-size: 18px; color: #ff9bd6; text-shadow: 0 0 10px rgba(255, 60, 172, 0.9); }
+  .side-panel__value { display: flex; justify-content: center; height: 70px; margin-top: 6px; }
+  .side-panel__value img { height: 100%; width: auto; }
+  .side-panel__value--sm { height: 40px; }
+  .fs-plus { position: absolute; right: -24px; top: -18px; font-family: 'Luckiest Guy', system-ui, sans-serif; font-size: 48px; color: var(--gold-hi); text-shadow: 0 0 14px #ff3cac, 0 3px 0 #5a2a00; opacity: 0; }
+  .fs-plus.is-on { animation: plus-pop 1.5s ease-out; }
+  .hw-lamps { display: flex; gap: 14px; justify-content: center; margin: 10px 0 4px; }
+  .hw-lamps.is-reset { animation: panel-pulse 600ms ease-out; }
+  .hw-lamp { width: 30px; height: 30px; border-radius: 50%; background: #2a1838; box-shadow: inset 0 0 0 3px #6b4b18; transition: background 200ms ease, box-shadow 200ms ease; }
+  .hw-lamp.is-lit { background: radial-gradient(circle at 40% 35%, #fff6c8, var(--gold) 55%, #a86a00); box-shadow: 0 0 14px var(--gold-hi), inset 0 0 0 3px #ffe9a0; }
+
+  /* поле выигрыша */
+  .reel-win { position: absolute; left: 0; right: 0; bottom: 18px; height: 64px; display: flex; justify-content: center; z-index: 6;
+    opacity: 0; transform: translateY(10px); transition: opacity 250ms ease, transform 250ms ease; }
+  .reel-win.is-on { opacity: 1; transform: none; }
+  .reel-win .glyphs { height: 100%; padding: 4px 18px; border-radius: 16px; background: rgba(12, 4, 24, 0.72); box-shadow: 0 0 0 2px rgba(255, 215, 90, 0.6), 0 0 22px rgba(255, 60, 172, 0.55); }
+  .reel-win .glyphs img { height: 86%; }
+
+  /* попапы */
+  .popscene { position: relative; width: 100%; max-width: 980px; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 12px; cursor: pointer; box-shadow: inset 0 0 0 1px var(--line); }
+  .popscene > img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.58) saturate(0.82); }
+  .popscene .dim { position: absolute; inset: 0; background: rgba(8, 2, 16, 0.72); opacity: 0; transition: opacity 320ms ease; }
+  .popscene.is-dim .dim { opacity: 1; }
+  .popscene .fxl { z-index: 4; }
+  .game-popup { position: absolute; left: 50%; top: 50%; width: min(620px, 70%); transform: translate(-50%, -50%) scale(0.6); opacity: 0; z-index: 3;
+    display: flex; flex-direction: column; align-items: center; gap: 2%; transition: transform 420ms cubic-bezier(0.3, 1.5, 0.5, 1), opacity 300ms ease; }
+  .game-popup.is-in { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  .game-popup.is-out { transform: translate(-50%, -50%) scale(1.15); opacity: 0; transition-duration: 260ms; }
+  .game-popup__title-img { width: 100%; height: auto; filter: drop-shadow(0 0 24px rgba(255, 60, 172, 0.5)); }
+  .game-popup__panel { position: relative; width: 78%; aspect-ratio: 900 / 264; background: center / 100% 100% no-repeat; display: flex; align-items: center; justify-content: center; }
+  .game-popup__panel .glyphs { height: 58%; }
+  .game-popup__panel .glyphs img { height: 100%; width: auto; }
+
+  /* окно покупки */
+  .buy-card { width: min(640px, 100%); padding: 22px 22px 18px; border-radius: 24px; text-align: center; background: linear-gradient(180deg, #23103f, #0e0619);
+    box-shadow: 0 0 0 3px var(--gold), 0 0 0 6px var(--cyan), 0 0 40px rgba(44, 232, 255, 0.45); }
+  .buy-card.is-in { animation: dialog-in 360ms cubic-bezier(0.3, 1.5, 0.5, 1); }
+  .buy-card h4 { margin: 0; font-family: 'Luckiest Guy', system-ui, sans-serif; font-weight: normal; font-size: 30px; color: var(--gold-hi); text-shadow: 0 0 12px var(--pink); }
+  .buy-cards { display: flex; gap: 18px; justify-content: center; margin: 14px 0 6px; }
+  .buy-cards .bc { position: relative; flex: 0 1 240px; aspect-ratio: 0.643; background: center / contain no-repeat; }
+  .buy-cards .bc span { position: absolute; left: 12%; right: 12%; top: 76.5%; height: 11%; display: flex; align-items: center; justify-content: center; font-family: 'Luckiest Guy', system-ui, sans-serif; font-size: 24px; color: #fff; text-shadow: 0 0 10px var(--c, #2ce8ff); }
+
+  @media (max-width: 900px) { :root { --cell: 100px; } .row { grid-template-columns: 1fr; gap: 10px; } main { padding: 0 16px 60px; } }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="neon-joker-spins-r1.html">← К игре</a>
+  <h1>Neon Joker Spins R1 — все анимации игры</h1>
+  <nav id="nav"></nav>
+  <div class="tools">
+    <button type="button" class="tool" id="slowBtn" aria-pressed="false">Замедлить ×0.5</button>
+    <button type="button" class="tool" id="replayBtn">Повторить все</button>
+  </div>
+</header>
+<main id="root"></main>
+<script>window.NJS_SKIN = 'c';</script>
+<script src="js/neon-joker-spins/winlines.js?v=6"></script>
+<script>
+(async () => {
+  const R = 'img/neon-joker-spins/skins/c/sets/r1';
+  const C = 'img/neon-joker-spins/skins/c';
+  const V = 'v=4';
+  const sym = (c) => `${R}/symbols/${c}.webp?${V}`;
+  const coin = (c) => `${R}/coins/${c}.webp?${V}`;
+  const img = (c) => `${R}/img/${c}?${V}`;
+  const root = document.getElementById('root');
+  const nav = document.getElementById('nav');
+  let speed = 1;
+  const players = [];
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms / speed));
+  // CSS и WAAPI-анимации страницы идут со скоростью speed
+  setInterval(() => { for (const a of document.getAnimations()) if (a.playbackRate !== speed) a.playbackRate = speed; }, 120);
+  document.getElementById('slowBtn').addEventListener('click', (e) => {
+    speed = speed === 1 ? 0.5 : 1;
+    e.currentTarget.setAttribute('aria-pressed', String(speed !== 1));
+  });
+  document.getElementById('replayBtn').addEventListener('click', () => players.forEach((p) => p.run()));
+
+  // ---------- разметка ----------
+  let cat = null;
+  const category = (id, title, note, text) => {
+    cat = document.createElement('section');
+    cat.className = 'cat';
+    cat.id = id;
+    cat.innerHTML = `<h2>${title}<span>${note}</span></h2>${text ? `<p>${text}</p>` : ''}`;
+    root.appendChild(cat);
+    nav.insertAdjacentHTML('beforeend', `<a href="#${id}">${title}</a>`);
+  };
+  const sub = (t) => cat.insertAdjacentHTML('beforeend', `<div class="sub">${t}</div>`);
+  const row = ({ title, clip, text, kind }) => {
+    const r = document.createElement('div');
+    r.className = 'row';
+    r.innerHTML = `<div class="cap"><h3>${title}</h3>${clip ? `<div class="clip">${clip}</div>` : ''}${text ? `<p>${text}</p>` : ''}<span class="kind">${kind}</span></div><div class="stages"></div>`;
+    cat.appendChild(r);
+    return r.querySelector('.stages');
+  };
+  const st = (stages, html, lbl) => {
+    const d = document.createElement('div');
+    d.className = 'st';
+    d.innerHTML = html + (lbl ? `<div class="lbl">${lbl}</div>` : '');
+    stages.appendChild(d);
+    return d.firstElementChild;
+  };
+  // проигрыватель: run() сразу, по клику и каждые every мс
+  const player = (el, fn, every = 0) => {
+    let t = null;
+    const run = () => { clearTimeout(t); fn(); if (every) t = setTimeout(run, every / speed); };
+    el.classList.add('click');
+    el.addEventListener('click', run);
+    players.push({ run });
+    run();
+    return run;
+  };
+  const restart = (el, cls, ms) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); if (ms) setTimeout(() => el.classList.remove(cls), ms / speed); };
+
+  // ---------- шрифт сумм (glyphs/, как slot.js setGlyphs) ----------
+  const GS = await fetch(`${C}/glyphs/glyphs.json?${V}`).then((r) => r.json()).catch(() => ({}));
+  const GF = { '.': 'dot', ',': 'comma' };
+  const glyphs = (el, text) => {
+    el.innerHTML = '';
+    for (const ch of String(text).toLowerCase()) {
+      const s = GS[ch];
+      const i = document.createElement('img');
+      i.src = `${C}/glyphs/${GF[ch] || ch}.webp?${V}`;
+      i.style.height = `${((s ? s[1] : 116) / 116) * 100}%`;
+      if (ch === ',') i.className = 'g-comma';
+      el.appendChild(i);
+    }
+  };
+  const fmt = (n) => Math.round(n).toLocaleString('en-US');
+
+  // ---------- FX-спрайты (как slot.js burstAt / ringAt / flySpark) ----------
+  const sprite = (layer, name, x, y, size) => {
+    const i = document.createElement('img');
+    i.className = 'fx-sprite';
+    i.src = `${C}/fx/${name}.webp?${V}`;
+    i.style.width = `${size}px`;
+    i.style.transform = `translate(${x - size / 2}px, ${y - size / 2}px)`;
+    layer.appendChild(i);
+    return i;
+  };
+  const burstAt = (layer, x, y, name = 'spark', count = 8, spread = 90, size = 46) => {
+    for (let k = 0; k < count; k++) {
+      const s = size * (0.6 + Math.random() * 0.7);
+      const el = sprite(layer, name, x, y, s);
+      const a = Math.random() * Math.PI * 2;
+      const r = spread * (0.5 + Math.random() * 0.6);
+      el.animate([
+        { transform: `translate(${x - s / 2}px, ${y - s / 2}px) scale(0.2) rotate(0deg)`, opacity: 1 },
+        { transform: `translate(${x - s / 2 + Math.cos(a) * r}px, ${y - s / 2 + Math.sin(a) * r}px) scale(1) rotate(${(Math.random() - 0.5) * 240}deg)`, opacity: 0 },
+      ], { duration: 650 + Math.random() * 350, easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)', fill: 'forwards' });
+      setTimeout(() => el.remove(), 1100 / speed);
+    }
+  };
+  const ringAt = (layer, x, y, name = 'ring_pink', size = 160, ms = 600) => {
+    const el = sprite(layer, name, x, y, size);
+    const b = `translate(${x - size / 2}px, ${y - size / 2}px)`;
+    el.animate([{ transform: `${b} scale(0.3)`, opacity: 1 }, { transform: `${b} scale(1.5)`, opacity: 0 }], { duration: ms, easing: 'ease-out', fill: 'forwards' });
+    setTimeout(() => el.remove(), (ms + 60) / speed);
+  };
+  const flySpark = (layer, from, to, ms, name = 'orb_pink', size = 56) => {
+    const el = sprite(layer, name, from.x, from.y, size);
+    const mid = { x: (from.x + to.x) / 2 + (Math.random() - 0.5) * 80, y: Math.min(from.y, to.y) - 60 };
+    const t = (p) => `translate(${p.x - size / 2}px, ${p.y - size / 2}px)`;
+    el.animate([{ transform: `${t(from)} scale(0.6)`, opacity: 0.2 }, { transform: `${t(mid)} scale(1.1)`, opacity: 1, offset: 0.5 }, { transform: `${t(to)} scale(0.7)`, opacity: 1 }],
+      { duration: ms, easing: 'cubic-bezier(0.4, 0, 0.6, 1)', fill: 'forwards' });
+    setTimeout(() => el.remove(), (ms + 40) / speed);
+  };
+  const confetti = (layer, ms = 2200) => {
+    const W = layer.clientWidth, H = layer.clientHeight, end = Date.now() + ms / speed;
+    const tick = () => {
+      if (Date.now() > end) return;
+      for (let k = 0; k < 3; k++) {
+        const name = ['confetti', 'ribbon', 'spark', 'coin_edge'][Math.floor(Math.random() * 4)];
+        const x = Math.random() * W, s = 18 + Math.random() * 22;
+        const el = sprite(layer, name, x, -30, s);
+        const dur = 1600 + Math.random() * 1200;
+        el.animate([{ transform: `translate(${x}px, -30px) rotate(0deg)`, opacity: 1 }, { transform: `translate(${x + (Math.random() - 0.5) * 120}px, ${H + 30}px) rotate(${Math.random() * 720}deg)`, opacity: 0.9 }],
+          { duration: dur, easing: 'ease-in', fill: 'forwards' });
+        setTimeout(() => el.remove(), (dur + 50) / speed);
+      }
+      setTimeout(tick, 90 / speed);
+    };
+    tick();
+  };
+  const centre = (el, layer) => { const a = el.getBoundingClientRect(), b = layer.getBoundingClientRect(); return { x: a.left - b.left + a.width / 2, y: a.top - b.top + a.height / 2 }; };
+
+  // окно 3x3: codes — по строкам; ячейки возвращаются по строкам [row*3+col]
+  const window3 = (stages, codes, { hw = false, lbl } = {}) => {
+    const box = st(stages, `<div class="win3${hw ? ' hw' : ''}"></div>`, lbl);
+    const cells = [];
+    for (let c = 0; c < 3; c++) {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.style.gridColumn = String(c + 1);
+      const strip = document.createElement('div');
+      strip.className = 'strip';
+      col.appendChild(strip);
+      for (let r = 0; r < 3; r++) {
+        const cell = document.createElement('div');
+        cell.className = 'c';
+        cell.innerHTML = `<img class="sym" src="${sym(codes[r * 3 + c])}" alt="">`;
+        if (codes[r * 3 + c] === 'scatter') cell.classList.add('is-scatter');
+        strip.appendChild(cell);
+        cells[r * 3 + c] = cell;
+      }
+      box.appendChild(col);
+    }
+    const fx = document.createElement('div');
+    fx.className = 'fxl';
+    box.appendChild(fx);
+    return { box, cells, fx, cols: [...box.querySelectorAll('.col')] };
+  };
+  // монета Hold & Win в ячейке (slot.js setCoinFace / setCellEmpty)
+  const coinFace = (cell, spec) => {
+    cell.querySelectorAll('.back, .coin-val').forEach((e) => e.remove());
+    cell.classList.remove('coll');
+    const im = cell.querySelector('img.sym');
+    const back = document.createElement('img');
+    back.className = 'back';
+    back.src = coin(spec.e ? 'cell_empty' : 'cell_locked');
+    cell.prepend(back);
+    if (spec.e) { im.style.visibility = 'hidden'; return; }
+    im.style.visibility = '';
+    if (spec.jp) { im.src = coin(spec.jp); return; }
+    im.src = coin(spec.coll ? 'collector' : 'blank');
+    const v = document.createElement('div');
+    v.className = 'coin-val glyphs';
+    const box = spec.coll ? [18, 18, 55, 14] : [27.6, 27.6, 34.3, 31.4];
+    Object.assign(v.style, { left: `${box[0]}%`, right: `${box[1]}%`, top: `${box[2]}%`, height: `${box[3]}%` });
+    if (spec.coll) cell.classList.add('coll');
+    cell.appendChild(v);
+    glyphs(v, spec.coll ? `${spec.v || 0}x` : `${spec.v}x`);
+    cell._val = v;
+  };
+
+  // =====================================================================
+  category('scene', 'Сцена', 'всегда на экране',
+    'Фон клуба, неон на стене, логотип, рама и инфо-плашка. В R1 рама и фон приглушены, чтобы ярче всего были символы, выигрыш и джекпоты.');
+  {
+    const s = row({ title: 'Фон + неоновые граффити', clip: 'graffiti.js: штрих рисуется → gf-on 0,52 с → гудит 2,6 с → gf-off 0,6 с', text: 'Корона, звёзды, молнии и пики на стене по очереди зажигаются вдоль линии. Надписи ROCK / PUNK / JOKER в R1 убраны, всё на 55 %. Только десктоп.', kind: 'SVG + CSS' });
+    const box = st(s, '<div class="scene" style="width:760px;aspect-ratio:16/9"></div>', 'десктоп · фон brightness 0,58');
+    const stg = document.createElement('div');
+    stg.className = 'stage1600';
+    stg.id = 'stage';
+    stg.innerHTML = `<div class="bgimg" style="background-image:url('${img('bg_base.jpg')}')"></div>`;
+    box.appendChild(stg);
+    const fit = () => { stg.style.transform = `scale(${box.clientWidth / 1600})`; };
+    fit(); addEventListener('resize', fit);
+    const gs = document.createElement('script');
+    gs.src = 'js/neon-joker-spins/graffiti.js?v=2';
+    document.body.appendChild(gs);
+    const s2 = row({ title: 'Фон — база и Free Spins', clip: 'база brightness 0,58 · FS brightness 0,8 · мобила база 0,62', text: 'Во Free Spins фон меняется на концертную сцену с прожекторами (настроение из Stage Gear). Переход — смена фона вместе с режимом.', kind: 'CSS' });
+    st(s2, `<div class="scene" style="width:330px;aspect-ratio:16/9"><img class="bg" style="filter:brightness(.58) saturate(.82)" src="${img('bg_base.jpg')}"></div>`, 'десктоп · база');
+    st(s2, `<div class="scene" style="width:330px;aspect-ratio:16/9"><img class="bg" style="filter:brightness(.8) saturate(.95)" src="${img('bg_fs.jpg')}"></div>`, 'десктоп · Free Spins');
+    st(s2, `<div class="scene" style="width:120px;aspect-ratio:9/16"><img class="bg" style="filter:brightness(.62) saturate(.85)" src="${img('bg_base_mob.jpg')}"></div>`, 'мобила · база');
+    st(s2, `<div class="scene" style="width:120px;aspect-ratio:9/16"><img class="bg" style="filter:brightness(.8) saturate(.95)" src="${img('bg_fs_mob.jpg')}"></div>`, 'мобила · FS');
+  }
+  {
+    const s = row({ title: 'Логотип — мерцание', clip: 'logo-flicker · 7 с · петля (моргание 94–95 %)', text: 'Неоновая вывеска изредка «проседает», как настоящая трубка. Клик — моргнуть сейчас.', kind: 'CSS' });
+    const a = st(s, `<div class="dark logo-box"><img src="${img('logo.webp')}" alt=""></div>`);
+    const im = a.querySelector('img');
+    a.classList.add('click');
+    a.addEventListener('click', () => { restart(im, 'now', 320); });
+  }
+  {
+    const s = row({ title: 'Инфо-плашка FREE SPINS ↔ HOLD & WIN', clip: 'r1-neon-on 3,6 с → r1-neon-off 0,52 с → пауза 0,9 с · по кругу', text: 'Одна неоновая вывеска: FREE SPINS зажигается с запинкой, держится, гаснет; затем так же HOLD & WIN. Десктоп — под джекпотами, телефон — в поле выигрыша (прячется на выигрыше и в бонусах).', kind: 'CSS' });
+    const a = st(s, '<div class="dark" style="padding:34px 40px"><div class="r1-plaque"><div class="r1-plaque__face"><img class="r1-plaque__icon" alt=""><span class="r1-plaque__text"><b></b><small></small></span></div></div></div>');
+    const p = a.querySelector('.r1-plaque');
+    const H = [{ k: 'fs', i: sym('scatter'), t: 'FREE SPINS', s: '3+ JOKERS ANYWHERE' }, { k: 'hw', i: sym('coin'), t: 'HOLD & WIN', s: '5+ COINS ANYWHERE' }];
+    let k = 0, t1 = null, t2 = null;
+    const show = () => {
+      clearTimeout(t1); clearTimeout(t2);
+      const h = H[k];
+      p.dataset.k = h.k;
+      p.querySelector('img').src = h.i;
+      p.querySelector('b').textContent = h.t;
+      p.querySelector('small').textContent = h.s;
+      p.classList.remove('is-off'); void p.offsetWidth; p.classList.add('is-on');
+      t1 = setTimeout(() => { p.classList.remove('is-on'); p.classList.add('is-off'); t2 = setTimeout(() => { k = (k + 1) % 2; show(); }, 1420 / speed); }, 3600 / speed);
+    };
+    player(a, () => { k = 0; show(); });
+  }
+  {
+    const s = row({ title: 'Рама и колонки — ожидание на 3-м барабане', clip: 'anticipate · 0,52 с · туда-обратно, пока крутится 3-й', text: 'Рама приглушена (brightness 0,7). Колонки разделены тёмными желобами с неоновыми швами — у подсветки ожидания своя дорожка.', kind: 'CSS' });
+    const w = window3(s, ['seven', 'scatter', 'cherry', 'bell', 'wild', 'coin', 'lemon', 'scatter', 'grape'], { lbl: 'ожидание: 2 Джокера на 1–2 барабанах' });
+    player(w.box, async () => { w.cols[2].classList.add('is-anticipating'); await wait(2400); w.cols[2].classList.remove('is-anticipating'); }, 3600);
+  }
+  {
+    const s = row({ title: 'Маскот — покой и радость', clip: 'mascot-idle 4,2 с · петля · mascot-cheer 0,9 с', text: 'Джокер слева от барабанов чуть покачивается; на крупном выигрыше, попапах, Коллекторе и джекпоте — подпрыгивает со вспышкой. На мобиле стоит у лого статично.', kind: 'CSS' });
+    st(s, `<div class="dark"><img class="mascot idle" src="${img('mascot.webp')}" alt=""></div>`, 'покой');
+    const a = st(s, `<div class="dark"><img class="mascot" src="${img('mascot.webp')}" alt=""></div>`, 'радость');
+    player(a, () => restart(a.querySelector('img'), 'is-cheer', 950), 2400);
+  }
+
+  // =====================================================================
+  category('reels', 'Барабаны и выигрыш', 'символы, линии, сумма',
+    'Спин, приземление, выигрыш каждого символа и линия-молния. Символы — арт R1: старшие на золотых плашках, младшие — неоновые трубки.');
+  {
+    const s = row({ title: 'Спин и приземление', clip: 'лента из _blur-кадров · колонки встают по очереди · cell-land 0,26 с', text: 'Каждый спин: колонки останавливаются слева направо, символ при посадке чуть приседает.', kind: 'CSS + WAAPI' });
+    const finals = ['seven', 'bell', 'cherry', 'lemon', 'wild', 'star', 'plum', 'coin', 'grape'];
+    const w = window3(s, finals);
+    const POOL = ['seven', 'bell', 'star', 'cherry', 'lemon', 'plum', 'grape', 'wild', 'coin', 'scatter'];
+    player(w.box, async () => {
+      const cellH = w.cells[0].offsetHeight;
+      const anims = w.cols.map((col) => {
+        const strip = col.querySelector('.strip');
+        strip.querySelectorAll('.blur').forEach((e) => e.remove());
+        for (let k = 0; k < 9; k++) {
+          const c = document.createElement('div');
+          c.className = 'c blur';
+          c.innerHTML = `<img class="sym" src="${R}/symbols/${POOL[(k * 3 + col.style.gridColumn) % POOL.length]}_blur.webp?${V}" alt="">`;
+          strip.prepend(c);
+        }
+        return strip.animate([{ transform: `translateY(${-9 * cellH}px)` }, { transform: 'translateY(0)' }], { duration: 360, iterations: Infinity });
+      });
+      for (let c = 0; c < 3; c++) {
+        await wait(c ? 260 : 700);
+        anims[c].cancel();
+        w.cols[c].querySelectorAll('.blur').forEach((e) => e.remove());
+        for (let r = 0; r < 3; r++) restart(w.cells[r * 3 + c], 'is-landing', 280);
+      }
+    }, 3200);
+  }
+  sub('Символы · статика / приземление / выигрыш');
+  const SYMS = [
+    ['seven', 'Семёрка с короной', 'старший', 'Самый дорогой обычный символ.'],
+    ['bell', 'Колокол', 'старший', 'На золотой плашке-щите — читается «дороже» младших.'],
+    ['star', 'Звезда', 'старший', 'Бирюзовая на золотой плашке — больше не путается со сливой.'],
+    ['cherry', 'Вишня', 'младший', 'Неоновая трубка, один цвет.'],
+    ['lemon', 'Лайм', 'младший', 'Неоновая трубка, один цвет.'],
+    ['plum', 'Слива', 'младший', 'Неоновая трубка, один цвет.'],
+    ['grape', 'Виноград', 'младший', 'Ярче, с белой сердцевиной — не тонет на фиолетовом.'],
+    ['wild', 'WILD', 'спец', 'Шапка шута с надписью WILD, заменяет всё, кроме монет и Джокера.'],
+    ['coin', 'Монета', 'спец', 'Колпак шута вместо черепа. 5+ монет запускают Hold & Win.'],
+  ];
+  for (const [code, title, tier, text] of SYMS) {
+    const s = row({ title, clip: 'приземление cell-land 0,26 с · выигрыш cell-win 0,62 с + искры', text: `${tier[0].toUpperCase()}${tier.slice(1)}. ${text}`, kind: 'CSS + WAAPI' });
+    st(s, `<div class="tile"><img class="sym" src="${sym(code)}" alt=""></div>`, 'статика');
+    const l = st(s, `<div class="tile"><img class="sym" src="${sym(code)}" alt=""></div>`, 'приземление');
+    player(l, () => restart(l, 'is-landing', 280), 1500);
+    const w = st(s, `<div class="tile"><img class="sym" src="${sym(code)}" alt=""><div class="fxl"></div></div>`, 'выигрыш');
+    player(w, () => { restart(w, 'is-winning', 640); burstAt(w.querySelector('.fxl'), w.clientWidth / 2, w.clientHeight / 2, 'spark', 6, w.clientWidth * 0.55, w.clientWidth * 0.32); }, 1500);
+  }
+  {
+    const s = row({ title: 'Джокер-скаттер', clip: 'joker-idle 3,6 с · петля · joker-laugh 0,62 с', text: 'Спец. Простой неоновый портрет с зелёными волосами — читается на маленьком экране. На барабанах моргает неоном; на выигрыше смеётся и качается.', kind: 'CSS' });
+    st(s, `<div class="tile is-scatter"><img class="sym" src="${sym('scatter')}" alt=""></div>`, 'на барабане');
+    const w = st(s, `<div class="tile is-scatter"><img class="sym" src="${sym('scatter')}" alt=""><div class="fxl"></div></div>`, 'выигрыш');
+    player(w, () => { restart(w, 'is-winning', 640); const f = w.querySelector('.fxl'); burstAt(f, w.clientWidth / 2, w.clientHeight / 2, 'heart', 5, w.clientWidth * 0.6, w.clientWidth * 0.3); ringAt(f, w.clientWidth / 2, w.clientHeight / 2, 'ring_pink', w.clientWidth * 1.4, 700); }, 1700);
+  }
+  sub('Линии и сумма');
+  {
+    const s = row({ title: 'Линия-молния', clip: 'winlines.js (скин C): молния по линии · cell-win 0,62 с · 5 линий по очереди', text: 'На каждую выигрышную линию по ней бьёт неоновая молния, символы на линии вспыхивают и увеличиваются.', kind: 'SVG + CSS' });
+    const w = window3(s, ['bell', 'cherry', 'bell', 'seven', 'bell', 'seven', 'bell', 'lemon', 'bell']);
+    const LINES = [[1, 1, 1], [0, 0, 0], [2, 2, 2], [0, 1, 2], [2, 1, 0]];
+    let n = 0;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'win-line');
+    w.box.appendChild(svg);
+    player(w.box, () => {
+      const line = LINES[n % 5]; n++;
+      const W = w.box.clientWidth, H = w.box.clientHeight;
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+      svg.innerHTML = '';
+      const pts = line.map((r, c) => centre(w.cells[r * 3 + c], w.box));
+      const s0 = (pts[1].y - pts[0].y) / (pts[1].x - pts[0].x), s1 = (pts[2].y - pts[1].y) / (pts[2].x - pts[1].x);
+      const all = [{ x: 0, y: pts[0].y - s0 * pts[0].x }, ...pts, { x: W, y: pts[2].y + s1 * (W - pts[2].x) }];
+      if (window.NJS_WINLINE) window.NJS_WINLINE(svg, all, pts);
+      line.forEach((r, c) => { const cell = w.cells[r * 3 + c]; restart(cell, 'is-winning', 640); const p = centre(cell, w.fx); burstAt(w.fx, p.x, p.y, 'spark', 5, 60, 36); });
+    }, 1800);
+  }
+  {
+    const s = row({ title: 'Сумма в поле выигрыша', clip: 'reel-win: появление 0,25 с · счёт суммы · держится 1,9 с', text: 'Десктоп — под окном барабанов; телефон — в полосе между барабанами и Spin, на месте инфо-плашки.', kind: 'CSS' });
+    const a = st(s, `<div class="scene" style="width:520px;aspect-ratio:16/9"><img class="bg" style="filter:brightness(.5)" src="${img('bg_base.jpg')}"><div class="reel-win"><span class="glyphs"></span></div></div>`);
+    const rw = a.querySelector('.reel-win'), g = rw.querySelector('.glyphs');
+    player(a, async () => {
+      rw.classList.add('is-on');
+      for (let k = 1; k <= 20; k++) setTimeout(() => glyphs(g, fmt((12500 * k) / 20)), (60 * k) / speed);
+      await wait(1900 + 1200);
+      rw.classList.remove('is-on');
+    }, 4200);
+  }
+  {
+    const s = row({ title: 'Джокеры смеются — вход в Free Spins', clip: 'joker-laugh 0,62 с + сердечки + ring_pink 0,7 с · маскот смеётся', text: '3+ Джокера в любом месте — перед заставкой FREE SPINS.', kind: 'CSS + WAAPI' });
+    const w = window3(s, ['scatter', 'cherry', 'bell', 'lemon', 'scatter', 'plum', 'grape', 'seven', 'scatter']);
+    player(w.box, () => {
+      [0, 4, 8].forEach((i) => { const cell = w.cells[i]; restart(cell, 'is-winning', 640); const p = centre(cell, w.fx); burstAt(w.fx, p.x, p.y, 'heart', 5, cell.offsetWidth * 0.6, cell.offsetWidth * 0.3); ringAt(w.fx, p.x, p.y, 'ring_pink', cell.offsetWidth * 1.4, 700); });
+    }, 2200);
+  }
+
+  // =====================================================================
+  category('hw', 'Hold & Win', 'бонус: монеты, Коллектор, респины',
+    '9 чётких ячеек, монеты держатся, 3 респина. Коллектор — монета своего цвета (заливной фиолетовый плазменный диск): с первого взгляда отличается от обычной.');
+  {
+    const s = row({ title: 'Монеты и номиналы', clip: 'blank + шрифт glyphs · Коллектор: сумма в нижней полосе', text: 'Номиналы набираются шрифтом с тёмным ореолом — читаются и короткие (5x), и длинные (1250x). Джекпот-монеты — свой арт с короной; GRAND с лаврами.', kind: 'статика' });
+    const mk = (spec, lbl) => { const t = st(s, `<div class="tile"><img class="sym" alt=""></div>`, lbl); coinFace(t, spec); };
+    mk({ v: 5 }, 'монета 5x'); mk({ v: 25 }, 'монета 25x'); mk({ v: 1250 }, 'длинная сумма'); mk({ coll: 1, v: 58 }, 'Коллектор');
+    mk({ jp: 'mini' }, 'MINI'); mk({ jp: 'minor' }, 'MINOR'); mk({ jp: 'major' }, 'MAJOR'); mk({ jp: 'grand' }, 'GRAND');
+    st(s, `<div class="tile"><img class="back" src="${coin('cell_empty')}"></div>`, 'пустая ячейка');
+  }
+  const HWB = [{ v: 5 }, { coll: 1 }, { e: 1 }, { e: 1 }, { v: 10 }, { v: 3 }, { v: 25 }, { jp: 'minor' }, { v: 15 }];
+  const hwWindow = (s, lbl) => { const w = window3(s, Array(9).fill('coin'), { hw: true, lbl }); w.cells.forEach((c, i) => coinFace(c, HWB[i])); return w; };
+  {
+    const s = row({ title: 'Монета падает в ячейку', clip: 'coin-slam 0,42 с + искры', text: 'Новая монета на респине: влетает с увеличения со вспышкой, счётчик респинов снова 3.', kind: 'CSS + WAAPI' });
+    const w = hwWindow(s);
+    player(w.box, () => [0, 4, 8].forEach((i, n) => setTimeout(() => { restart(w.cells[i], 'is-slam', 440); const p = centre(w.cells[i], w.fx); burstAt(w.fx, p.x, p.y, 'spark', 8, 70, 38); }, (n * 260) / speed)), 2000);
+  }
+  {
+    const s = row({ title: 'Зарядка монет', clip: 'coin-charge 0,9 с', text: 'Перед раскрытием номиналов все монеты на поле вспыхивают голубым.', kind: 'CSS' });
+    const w = hwWindow(s);
+    player(w.box, () => w.cells.forEach((c, i) => !HWB[i].e && restart(c, 'is-charging', 920)), 1800);
+  }
+  {
+    const s = row({ title: 'Респин — пустые ячейки крутятся', clip: 'hw-spin 0,14 с · петля, пока идёт респин', text: 'Золотые полосы бегут в каждой пустой ячейке.', kind: 'CSS' });
+    const w = hwWindow(s);
+    player(w.box, async () => { [2, 3].forEach((i) => w.cells[i].classList.add('hwspin')); await wait(1500); [2, 3].forEach((i) => w.cells[i].classList.remove('hwspin')); }, 2300);
+  }
+  {
+    const s = row({ title: 'Коллектор собирает', clip: 'ring_pink 0,7 с → искры от каждой монеты (flySpark) → счёт на Коллекторе → coin-slam + взрыв', text: 'Коллектор забирает сумму всех обычных монет на поле (джекпоты и другие Коллекторы — нет).', kind: 'CSS + WAAPI' });
+    const w = hwWindow(s);
+    player(w.box, async () => {
+      const coll = w.cells[1];
+      glyphs(coll._val, '0x');
+      const to = centre(coll, w.fx);
+      ringAt(w.fx, to.x, to.y, 'ring_pink', coll.offsetWidth * 1.6, 700);
+      burstAt(w.fx, to.x, to.y, 'spark', 10, coll.offsetWidth * 0.7, coll.offsetWidth * 0.3);
+      await wait(450);
+      let acc = 0;
+      for (const i of [0, 4, 5, 6, 8]) {
+        restart(w.cells[i], 'is-collect', 420);
+        flySpark(w.fx, centre(w.cells[i], w.fx), to, 420);
+        await wait(300);
+        acc += HWB[i].v;
+        glyphs(coll._val, `${acc}x`);
+      }
+      await wait(200);
+      restart(coll, 'is-slam', 440);
+      burstAt(w.fx, to.x, to.y, 'burst', 1, 0, coll.offsetWidth * 1.2);
+      burstAt(w.fx, to.x, to.y, 'spark', 12, coll.offsetWidth * 0.8, coll.offsetWidth * 0.3);
+    }, 4600);
+  }
+  {
+    const s = row({ title: 'Панель RESPINS', clip: 'лампы гаснут по одной · сброс на 3: panel-pulse 0,6 с', text: 'Пустой респин гасит лампу; новая монета возвращает все три со вспышкой. Сумма TOTAL растёт после Коллектора.', kind: 'CSS' });
+    const a = st(s, '<div class="dark"><div class="side-panel"><div class="side-panel__label">RESPINS</div><div class="hw-lamps"><span class="hw-lamp"></span><span class="hw-lamp"></span><span class="hw-lamp"></span></div><div class="side-panel__label side-panel__label--sub">TOTAL</div><div class="side-panel__value side-panel__value--sm glyphs"></div></div></div>');
+    const lamps = [...a.querySelectorAll('.hw-lamp')], L = a.querySelector('.hw-lamps'), tot = a.querySelector('.side-panel__value');
+    const lit = (n) => lamps.forEach((l, i) => l.classList.toggle('is-lit', i < n));
+    player(a, async () => { glyphs(tot, '58x'); lit(3); await wait(700); lit(2); await wait(700); lit(1); await wait(700); lit(3); restart(L, 'is-reset', 620); glyphs(tot, '83x'); }, 3200);
+  }
+
+  // =====================================================================
+  category('jp', 'Джекпоты', 'плашки справа от барабанов',
+    'Цвет тира одинаковый на плашке и на монете. Выигрыш тира: плашка вспыхивает и увеличивается, искры, кольцо, маскот кланяется.');
+  {
+    const WIN = { grand: [0.09, 0.579, 0.82, 0.282, 1.511], major: [0.088, 0.545, 0.822, 0.318, 1.579], minor: [0.092, 0.512, 0.817, 0.324, 1.662], mini: [0.1, 0.496, 0.807, 0.335, 1.719] };
+    const VAL = { grand: '500k', major: '125k', minor: '25k', mini: '10k' };
+    const s = row({ title: 'Выигрыш джекпота', clip: 'jp-hit 1,2 с + 14 искр + ring_cyan 0,7 с', text: 'MINI / MINOR / MAJOR — монета этого тира в Hold & Win; GRAND — все 9 ячеек заполнены.', kind: 'CSS + WAAPI' });
+    const a = st(s, '<div class="dark" style="gap:30px;padding:34px 30px"></div>');
+    const fx = document.createElement('div'); fx.className = 'fxl'; a.appendChild(fx);
+    const plates = ['mini', 'minor', 'major', 'grand'].map((t) => {
+      const [l, tp, ww, hh, ar] = WIN[t];
+      const p = document.createElement('div');
+      p.className = 'jp';
+      const w = t === 'grand' ? 230 : 200;
+      Object.assign(p.style, { width: `${w}px`, height: `${w / ar}px`, backgroundImage: `url('${img(`jp_${t}.webp`)}')` });
+      [['--win-l', l], ['--win-t', tp], ['--win-ww', ww], ['--win-hh', hh]].forEach(([k, v]) => p.style.setProperty(k, v));
+      p.innerHTML = '<span class="jp__value glyphs"></span>';
+      a.appendChild(p);
+      glyphs(p.querySelector('.jp__value'), VAL[t]);
+      return p;
+    });
+    player(a, () => plates.forEach((p, n) => setTimeout(() => { restart(p, 'is-hit', 1250); const c = centre(p, fx); burstAt(fx, c.x, c.y, 'spark', 14, 140, 50); ringAt(fx, c.x, c.y, 'ring_cyan', 260, 700); }, (n * 600) / speed)), 4200);
+  }
+
+  // =====================================================================
+  category('fs', 'Free Spins', 'бонус: 10 спинов на сцене',
+    '3+ Джокера дают 10 Free Spins; во фриспинах 3+ Джокера добавляют +5. Фон — концертная сцена с прожекторами.');
+  {
+    const s = row({ title: 'Счётчик и +5 спинов', clip: 'спин: счётчик −1 · ретриггер: plus-pop 1,5 с + panel-pulse 0,52 с', text: 'Панель FREE SPINS справа от барабанов (на телефоне — горизонтально в поле выигрыша).', kind: 'CSS' });
+    const a = st(s, `<div class="scene" style="width:520px;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center"><img class="bg" style="filter:brightness(.8)" src="${img('bg_fs.jpg')}"><div class="side-panel"><div class="side-panel__label">FREE SPINS</div><div class="side-panel__value glyphs"></div><div class="side-panel__label side-panel__label--sub">WIN</div><div class="side-panel__value side-panel__value--sm glyphs"></div><div class="fs-plus"></div></div></div>`);
+    const p = a.querySelector('.side-panel'), [left, win] = p.querySelectorAll('.side-panel__value'), plus = p.querySelector('.fs-plus');
+    player(a, async () => {
+      glyphs(left, '10'); glyphs(win, '0');
+      await wait(700); glyphs(left, '9'); glyphs(win, '1,500');
+      await wait(700); glyphs(left, '8');
+      await wait(500); plus.textContent = '+5'; restart(plus, 'is-on', 1550); restart(p, 'is-pulse', 560); glyphs(left, '13'); glyphs(win, '4,000');
+    }, 4200);
+  }
+
+  // =====================================================================
+  category('popups', 'Попапы', 'вывески поверх затемнения',
+    'Экран затемняется (0,32 с), вывеска-заголовок влетает с отскоком (0,42 с), сумма набегает счётчиком (до 1,4 с), держится, улетает (0,26 с). Тап пропускает. На MEGA / EPIC / TOTAL — конфетти.');
+  const POPS = [
+    ['bigWin', 'BIG WIN', 9000, false, 'Выигрыш от ×15 ставки.'],
+    ['megaWin', 'MEGA WIN', 18500, true, 'От ×30 ставки.'],
+    ['epicWin', 'EPIC WIN', 42000, true, 'От ×60 ставки.'],
+    ['freeSpins', 'FREE SPINS', '10', false, 'Заставка входа во фриспины (в R1 вместо Spine-экрана старого Rock Chrome).'],
+    ['holdAndWin', 'HOLD & WIN', null, false, 'Заставка входа в Hold & Win, без суммы.'],
+    ['totalWin', 'TOTAL WIN', 26750, true, 'Итог Free Spins или Hold & Win.'],
+  ];
+  for (const [key, title, amount, conf, text] of POPS) {
+    const s = row({ title, clip: `dim 0,32 с → вход 0,42 с → ${amount === null ? '' : 'счёт → '}держится 2,5 с → выход 0,26 с${conf ? ' · конфетти' : ''}`, text, kind: 'CSS + WAAPI' });
+    const bg = key === 'freeSpins' || key === 'totalWin' ? 'bg_fs.jpg' : 'bg_base.jpg';
+    const a = st(s, `<div class="popscene"><img class="bg" src="${img(bg)}"><div class="dim"></div><div class="fxl"></div></div>`);
+    a.style.width = '760px';
+    const fx = a.querySelector('.fxl');
+    player(a, async () => {
+      a.querySelectorAll('.game-popup').forEach((e) => e.remove());
+      a.classList.add('is-dim');
+      await wait(320);
+      const n = document.createElement('div');
+      n.className = 'game-popup';
+      n.innerHTML = `<img class="game-popup__title-img" src="${C}/popups/${key}.webp?${V}" alt="">${amount === null ? '' : `<div class="game-popup__panel" style="background-image:url('${C}/popups/panel.webp?${V}')"><span class="glyphs"></span></div>`}`;
+      a.appendChild(n);
+      void n.offsetWidth;
+      n.classList.add('is-in');
+      const g = n.querySelector('.glyphs');
+      if (g) {
+        if (typeof amount === 'string') glyphs(g, amount);
+        else for (let k = 0; k <= 28; k++) setTimeout(() => glyphs(g, fmt((amount * k) / 28)), (50 * k) / speed);
+      }
+      if (conf) confetti(fx, 2400);
+      await wait(420 + 2500);
+      n.classList.remove('is-in'); n.classList.add('is-out');
+      await wait(260);
+      n.remove();
+      a.classList.remove('is-dim');
+    }, 4900);
+  }
+
+  // =====================================================================
+  category('buy', 'Покупка', 'окно Buy Bonus',
+    'Кнопка Buy — в меню нижней панели (на поле её нет). Окно с двумя бонусами: Hold & Win покупается (34,5× ставки), Free Spins — макет будущей покупки (100× ставки).');
+  {
+    const s = row({ title: 'Окно покупки', clip: 'dialog-in 0,36 с · cubic-bezier(.3, 1.5, .5, 1)', text: 'Затемнение экрана и окно с отскоком. Карточки — неоновые вывески с ценой в окне.', kind: 'CSS' });
+    const a = st(s, `<div class="dark" style="padding:30px;width:760px;max-width:100%"><div class="buy-card"><h4>BUY BONUS</h4><div class="buy-cards"><div class="bc" style="--c:#ff3cac;background-image:url('${img('buy_fs.webp')}')"><span>50,000</span></div><div class="bc" style="background-image:url('${img('buy_hw.webp')}')"><span>17,250</span></div></div></div></div>`);
+    player(a, () => restart(a.querySelector('.buy-card'), 'is-in', 400), 2600);
+  }
+})();
+</script>
+</body>
+</html>
