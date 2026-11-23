@@ -158,6 +158,8 @@ const koi = (key, extra) => ({ code: 'koi-fortune', ...KOI_VARIANTS[key], ...ext
 // Koi Fortune, Sugar Blast, then every Olympus Thunder version (moved here
 // from Illuminator / Spin Factory, 2026-11-11).
 const CRE8_TOP_CARDS = [
+  // the three earlier Neon Joker Spins picks, out of Illuminator (2026-11-23)
+  njs('tubes'), njs('stage'), njs('reels'),
   // the earlier Illuminator Neon Joker Spins (Rock Chrome), moved here (2026-11-18)
   njs('c', { name: 'Neon Joker Spins', badge: null, desc: null }),
   // the five earlier Savannah variants, moved out of Illuminator (2026-11-17)
@@ -178,9 +180,9 @@ const ILLUMINATOR_CARDS = [
   'gold-of-baku',
   'gold-of-baku-2',
 ];
-// Illuminator · category «Neon Joker Spins» (user, 2026-11-23): the R1 version first, then the
-// three earlier picks.
-const ILLUMINATOR_NJS_CARDS = [njs('r1'), njs('tubes'), njs('stage'), njs('reels')];
+// Illuminator · category «Neon Joker Spins» (user, 2026-11-23): the R1 version; the three
+// earlier picks moved to Secret Room the same day.
+const ILLUMINATOR_NJS_CARDS = [njs('r1')];
 // Spin Factory: its own games newest first, then the variants moved out of
 // Illuminator, in this order.
 const SPIN_FACTORY_CODES = new Set(['big-catch', 'caesars-fortune', 'ice-spin-deluxe', 'tesla-spins']);
