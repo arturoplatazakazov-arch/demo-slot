@@ -20,21 +20,25 @@
 (function () {
   const GAME = 'sound/great-uniqorn/';
   const OLD = `${GAME}synth_v1/`;
+  // 2026-11-23: the composer's quieter re-export of the wins + music (v01);
+  // the first, louder export stays as a variant to compare in ♪.
+  const LOUD = `${GAME}pack_loud/`;
+  const QUIET = '?p=2';
   const v = (...files) => files.filter(Boolean);
 
   const EVENTS = {
-    base: { kind: 'music', group: 'Музыка', label: 'Музыка — база', src: v(`${GAME}MUSIC_Base.mp3`, `${OLD}BG_Base.mp3`) },
-    bonus: { kind: 'music', group: 'Музыка', label: 'Музыка — фриспины', src: v(`${GAME}MUSIC_Bonus.mp3`, `${OLD}BG_Bonus.mp3`) },
+    base: { kind: 'music', group: 'Музыка', label: 'Музыка — база', src: v(`${GAME}MUSIC_Base.mp3${QUIET}`, `${LOUD}MUSIC_Base.mp3`, `${OLD}BG_Base.mp3`) },
+    bonus: { kind: 'music', group: 'Музыка', label: 'Музыка — фриспины', src: v(`${GAME}MUSIC_Bonus.mp3${QUIET}`, `${LOUD}MUSIC_Bonus.mp3`, `${OLD}BG_Bonus.mp3`) },
     ambientBase: { group: 'Музыка', label: 'Эмбиент — база (под музыкой)', src: v(`${GAME}AMBIENT_Base.mp3`), loop: true, volume: 0.25 },
     ambientBonus: { group: 'Музыка', label: 'Эмбиент — фриспины (под музыкой)', src: v(`${GAME}AMBIENT_Bonus.mp3`), loop: true, volume: 0.25 },
 
-    smallWin: { group: 'Выигрыши', label: 'Выигрыш по линии', src: v(`${GAME}WIN_Line.mp3`, `${OLD}WIN_Line.mp3`) },
-    bigWin: { group: 'Выигрыши', label: 'BIG WIN', src: v(`${GAME}WIN_Bigwin.mp3`, `${OLD}WIN_Big.mp3`) },
-    megaWin: { group: 'Выигрыши', label: 'MEGA WIN', src: v(`${GAME}WIN_Megawin.mp3`, `${OLD}WIN_Mega.mp3`) },
-    epicWin: { group: 'Выигрыши', label: 'EPIC WIN', src: v(`${GAME}WIN_Epicwin.mp3`, `${OLD}WIN_Epic.mp3`) },
-    bonusTotalWin: { group: 'Выигрыши', label: 'BONUS SPINS TOTAL WIN', src: v(`${GAME}WIN_Bigwin.mp3`, `${OLD}WIN_Big.mp3`), note: 'своей дорожки нет — как BIG WIN' },
-    winLine: { group: 'Выигрыши', label: 'Линия в показе выигрыша (каждая по очереди)', src: v(`${GAME}WIN_Line.mp3`, `${OLD}WIN_Line.mp3`) },
-    countLoop: { group: 'Выигрыши', label: 'Счётчик суммы (петля)', src: v(`${GAME}WIN_Cashloop.mp3`, `${OLD}WIN_CashLoop.mp3`), loop: true },
+    smallWin: { group: 'Выигрыши', label: 'Выигрыш по линии', src: v(`${GAME}WIN_Line.mp3${QUIET}`, `${LOUD}WIN_Line.mp3`, `${OLD}WIN_Line.mp3`) },
+    bigWin: { group: 'Выигрыши', label: 'BIG WIN', src: v(`${GAME}WIN_Bigwin.mp3${QUIET}`, `${LOUD}WIN_Bigwin.mp3`, `${OLD}WIN_Big.mp3`) },
+    megaWin: { group: 'Выигрыши', label: 'MEGA WIN', src: v(`${GAME}WIN_Megawin.mp3${QUIET}`, `${LOUD}WIN_Megawin.mp3`, `${OLD}WIN_Mega.mp3`) },
+    epicWin: { group: 'Выигрыши', label: 'EPIC WIN', src: v(`${GAME}WIN_Epicwin.mp3${QUIET}`, `${LOUD}WIN_Epicwin.mp3`, `${OLD}WIN_Epic.mp3`) },
+    bonusTotalWin: { group: 'Выигрыши', label: 'BONUS SPINS TOTAL WIN', src: v(`${GAME}WIN_Bigwin.mp3${QUIET}`, `${LOUD}WIN_Bigwin.mp3`, `${OLD}WIN_Big.mp3`), note: 'своей дорожки нет — как BIG WIN' },
+    winLine: { group: 'Выигрыши', label: 'Линия в показе выигрыша (каждая по очереди)', src: v(`${GAME}WIN_Line.mp3${QUIET}`, `${LOUD}WIN_Line.mp3`, `${OLD}WIN_Line.mp3`) },
+    countLoop: { group: 'Выигрыши', label: 'Счётчик суммы (петля)', src: v(`${GAME}WIN_Cashloop.mp3${QUIET}`, `${LOUD}WIN_Cashloop.mp3`, `${OLD}WIN_CashLoop.mp3`), loop: true },
     countEnd: { group: 'Выигрыши', label: 'Счётчик суммы — конец' },
 
     scatterLand1: { group: 'Символы', label: 'Скаттер — 1-й бургер упал', src: v(`${GAME}SCATTER_1.mp3`, `${OLD}SCATTER_1.mp3`) },
@@ -84,7 +88,7 @@
     sfxVolume: 0.7,
     musicVolume: 0.35,
     libraryPrefix: GAME,
-    variantName: (path) => (path && path.includes('/synth_v1/') ? 'синтез (старый)' : path && path.startsWith(GAME) ? 'пак композитора' : null),
+    variantName: (path) => (path && path.includes('/synth_v1/') ? 'синтез (старый)' : path && path.includes('/pack_loud/') ? 'пак композитора — громкий (первый)' : path && path.startsWith(GAME) ? 'пак композитора' : null),
     events: EVENTS,
   });
 
