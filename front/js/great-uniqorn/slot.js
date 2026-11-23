@@ -21,7 +21,7 @@ const WILD_MULTIPLIERS = [2, 3, 5, 7, 9];
 
 // Bumped when a symbol PNG is re-cut, so browsers/Telegram drop the cached one
 // (v2: the WILD's «D» had a see-through hole from the alpha recovery).
-const SYMBOL_VERSION = '3';
+const SYMBOL_VERSION = '4';
 
 function symbolSrc(code, mult = 1) {
   if (code === 'wild' && WILD_MULTIPLIERS.includes(mult)) return `${ASSET_ROOT}/symbols/x${mult}.png?v=${SYMBOL_VERSION}`;
