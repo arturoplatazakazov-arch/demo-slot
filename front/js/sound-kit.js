@@ -224,13 +224,32 @@
     let pendingMusic = null;
     let currentMusicKey = null;
     let currentMusicEl = null;
+    // A music variant may be LAYERED: "track.mp3 + bed.mp3@0.7" plays both
+    // looped together (music + environment) as one group; @k scales a layer.
+    const LAYER_SEP = ' + ';
     function musicEl(path) {
       if (!musicEls[path]) {
-        const a = new Audio();
-        a.preload = 'none';
-        a.src = path;
-        a.loop = true;
-        musicEls[path] = a;
+        const gains = [];
+        const els = path.split(LAYER_SEP).map((p) => {
+          const [src, k] = p.trim().split('@');
+          gains.push(k ? Number(k) : 1);
+          const a = new Audio();
+          a.preload = 'none';
+          a.src = src;
+          a.loop = true;
+          return a;
+        });
+        musicEls[path] = {
+          els,
+          get paused() { return els.every((a) => a.paused); },
+          get readyState() { return Math.min(...els.map((a) => a.readyState)); },
+          set volume(v) { els.forEach((a, i) => { a.volume = Math.max(0, Math.min(1, v * gains[i])); }); },
+          set currentTime(t) { for (const a of els) a.currentTime = t; },
+          set preload(v) { for (const a of els) a.preload = v; },
+          load() { for (const a of els) a.load(); },
+          pause() { for (const a of els) a.pause(); },
+          play() { return Promise.all(els.map((a) => a.play())); },
+        };
       }
       return musicEls[path];
     }

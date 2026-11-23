@@ -19,11 +19,6 @@ const gameState = {
   boughtBonus: false,
 };
 
-// How long the scatter win plays over the grid before the bonus intro starts.
-const SCATTER_WIN_LEAD_MS = 2300;
-
-const WIN_TIER_SOUNDS = { bigWin: 'bigWin', epicWin: 'epicWin', megaWin: 'megaWin', bonusSpinsTotalWin: 'bonusTotalWin' };
-
 function formatNumber(n) {
   return Number(n).toLocaleString('en-US');
 }
@@ -57,54 +52,30 @@ function updateFreeSpinsCounter(remaining) {
   if (el) el.textContent = remaining;
 }
 
-// Shared tail end of both a normal spin and a bonus-buy response: update
-// balance/mode/counter, play whatever won, show a popup if the server sent one.
+// Shared tail end of both a normal spin and a bonus-buy response. The ORDER
+// (wins -> bonus entry / exit -> popup) is js/slot-flow.js's; this only feeds
+// it the game's steps. The wild -> multiplier reveal already ran as each reel
+// stopped (landReels), i.e. between landing and the win presentation.
 async function applySpinResult(data) {
   gameState.balance = data.balance;
   gameState.lastGrid = data.grid;
   renderBalance();
-
   const remaining = data.feature && data.feature.type === 'free_spins' ? data.feature.spins_remaining : 0;
   gameState.freeSpinsRemaining = remaining;
-  // Whether this spin enters the bonus from the base game — captured before
-  // setFreeSpinsMode flips the mode. Win cells (the scatters landing) play
-  // first, then the intro (blackout + bonusSpinsWin popup + reveal) runs.
-  const enteringBonus = document.getElementById('screen').dataset.mode !== 'freespins' && remaining > 0;
-
-  playWinCells(data.winning_cells, data.line_wins, data.count_wins);
-
-  // Free spins won from burgers (not bought): the scatter win plays over the
-  // pulsing scatters before the bonus intro blacks the screen out.
-  const scatterTrigger = data.popup && data.popup.type === 'bonusSpinsWin' && !(enteringBonus && gameState.boughtBonus);
-  if (scatterTrigger) {
-    Sound.playSfx('scatterWin');
-    if (enteringBonus) await new Promise((r) => setTimeout(r, SCATTER_WIN_LEAD_MS));
-  }
-
-  await setFreeSpinsMode(remaining > 0, remaining);
-  if (remaining > 0) updateFreeSpinsCounter(remaining);
-  const roundOver = remaining === 0;
-
-  if (data.popup) {
-    // The entry's bonusSpinsWin is shown by the intro transition itself; a
-    // re-trigger inside the bonus still shows its popup normally here.
-    const shownByIntro = enteringBonus && data.popup.type === 'bonusSpinsWin';
-    if (!shownByIntro) {
-      const tierSound = WIN_TIER_SOUNDS[data.popup.type];
-      if (tierSound) Sound.playSfx(tierSound);
-      playPopup(data.popup.type, data.popup.amount, 2500, { bought: gameState.boughtBonus });
-    }
-  } else if (data.total_win > 0) {
-    // Base wins (below the big/mega/epic threshold) never get a Spine popup —
-    // show the amount inline over the grid instead.
-    Sound.playSfx('smallWin');
-    showInlineWinAmount(data.total_win);
-  }
-  if (roundOver) gameState.boughtBonus = false;
+  await SlotFlow.applyResult(data, {
+    isBonus: () => document.getElementById('screen').dataset.mode === 'freespins',
+    playWins: (d) => playWinCells(d.winning_cells, d.line_wins, d.count_wins),
+    setCounter: (n) => updateFreeSpinsCounter(n),
+    enterBonus: (o) => setFreeSpinsMode(true, o.spins, o),
+    exitBonus: () => setFreeSpinsMode(false),
+    popup: (type, amount) => playPopup(type, amount, 2500, { bought: gameState.boughtBonus }),
+    smallWin: (amount) => showInlineWinAmount(amount),
+  });
+  if (remaining === 0) gameState.boughtBonus = false;
 }
 
-async function runSpin(request) {
-  if (gameState.isSpinning || !gameState.sessionId) return;
+async function runSpin(request, { dev = false } = {}) {
+  if (gameState.isSpinning || (!gameState.sessionId && !dev)) return;
   gameState.isSpinning = true;
 
   const spinBtn = document.querySelector('[data-action="spin"]');
@@ -131,6 +102,10 @@ async function runSpin(request) {
     gameState.isSpinning = false;
   }
 }
+
+// DEV combinations / events (js/great-uniqorn/dev.js): a made-up response
+// shaped like the backend's, played through the real spin path.
+window.__devSpin = (data) => runSpin(() => Promise.resolve({ balance: gameState.balance, ...data }), { dev: true });
 
 function setupSpinButton() {
   document.querySelector('[data-action="spin"]').addEventListener('click', () => {

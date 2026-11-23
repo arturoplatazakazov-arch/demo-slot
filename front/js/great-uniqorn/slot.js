@@ -21,7 +21,7 @@ const WILD_MULTIPLIERS = [2, 3, 5, 7, 9];
 
 // Bumped when a symbol PNG is re-cut, so browsers/Telegram drop the cached one
 // (v2: the WILD's «D» had a see-through hole from the alpha recovery).
-const SYMBOL_VERSION = '4';
+const SYMBOL_VERSION = '5';
 
 function symbolSrc(code, mult = 1) {
   if (code === 'wild' && WILD_MULTIPLIERS.includes(mult)) return `${ASSET_ROOT}/symbols/x${mult}.png?v=${SYMBOL_VERSION}`;
@@ -138,9 +138,68 @@ function cellCentre(row, col) {
   };
 }
 
+// --- Spine win lines (scripts/great_uniqorn_winlines.py) ---------------------
+//
+// One skeleton holds all 11 paylines in .reel__grid space (1040 x 620, origin
+// at its centre), clipped at the reel window. A shown line plays
+// line{n}_in (draws itself with a star on the front, rings + stars pop on the
+// cells) then line{n}_loop (glow breath, comet, twinkling stars). Several
+// lines at once = one track each, slightly staggered. It is drawn UNDER the
+// symbol skeletons (behind-all base), over the static symbol pictures; the SVG
+// line below stays as the fallback when the skeleton can't run.
+const WINLINES_DIR = `${ASSET_ROOT}/spine/winlines`;
+const WINLINES_VERSION = '1';
+const WINLINES_STAGGER_S = 0.09;
+let winLinesInst = null;
+let winLinesShown = false;
+
+function loadWinLines() {
+  const stage = ensureSpineStage();
+  const grid = document.querySelector('.reel__grid');
+  if (!stage || !grid) return Promise.resolve();
+  return SpineEngine.SpineResource.load(stage.assetManager, WINLINES_DIR, { version: WINLINES_VERSION })
+    .then((res) => {
+      const inst = res.createInstance();
+      inst.anchorEl = grid;
+      inst.fit = 1;
+      inst.boundsOverride = { x: -520, y: -310, width: 1040, height: 620 };
+      winLinesInst = inst;
+    })
+    .catch((err) => console.warn('win-line skeleton unavailable, SVG lines stay:', err));
+}
+
+function showSpineWinLines(paylines) {
+  if (!winLinesInst || !spineStage) return false;
+  const st = winLinesInst.animationState;
+  const data = winLinesInst.resource.skeletonData;
+  st.clearTracks();
+  winLinesInst.skeleton.setToSetupPose();
+  const lines = paylines.filter((n) => data.findAnimation(`line${n}_in`));
+  if (!lines.length) { hideSpineWinLines(); return true; }
+  lines.forEach((n, i) => {
+    st.setEmptyAnimation(i, 0);
+    st.addAnimation(i, `line${n}_in`, false, i * WINLINES_STAGGER_S);
+    st.addAnimation(i, `line${n}_loop`, true, 0);
+  });
+  if (!winLinesShown) { spineStage.addBaseBehindAll(winLinesInst); winLinesShown = true; }
+  return true;
+}
+
+function hideSpineWinLines() {
+  if (!winLinesInst) return;
+  winLinesInst.animationState.clearTracks();
+  winLinesInst.skeleton.setToSetupPose();
+  if (winLinesShown && spineStage) spineStage.removeBase(winLinesInst);
+  winLinesShown = false;
+}
+
 // One flash of the line: draw it, run the dash-in, resolve when it has played
 // once. The caller owns the repeat cadence, exactly as with the Spine version.
 function showWinLine(win) {
+  if (win && win.payline && showSpineWinLines([win.payline])) {
+    if (winLineSvg) { winLineSvg.remove(); winLineSvg = null; }
+    return wait(WIN_PULSE_MS);
+  }
   const positions = (win && win.positions) || [];
   const svg = positions.length >= 2 ? ensureWinLineSvg() : null;
   if (!svg) {
@@ -198,6 +257,7 @@ function previewWinLine(win) {
 }
 
 function hideWinLine() {
+  hideSpineWinLines();
   winLineToken += 1;
   if (winLineLoopTimeout) {
     clearTimeout(winLineLoopTimeout);
@@ -286,10 +346,13 @@ function clearCellAnimation(info) {
     info.winLoopTimeout = null;
   }
   info.cell.classList.remove('is-winning', 'is-win-active', 'is-wild-squeeze', 'is-wild-pop');
-  const spineInst = scatterSpines.get(info);
+  const spineInst = symbolSpines.get(info);
   if (spineInst) {
-    const cur = spineInst.animationState.getCurrent(0);
-    if (cur && cur.animation && cur.animation.name === 'win') spineInst.play('idle', true);
+    if (!isPersistentSpine(info)) unmountSymbolSpine(info);
+    else {
+      const cur = spineInst.animationState.getCurrent(0);
+      if (cur && cur.animation && cur.animation.name !== 'idle') spineInst.play('idle', true);
+    }
   }
 }
 
@@ -305,13 +368,13 @@ function teardownCellInstances() {
     info.cell.classList.remove('is-dimmed');
     info.cell.style.opacity = '';
     clearCellAnimation(info);
-    applyScatterDim(info);
+    applySpineDim(info);
   }
 }
 
 function setCellSymbol(info, code, mult = 1) {
   clearCellAnimation(info);
-  unmountScatterSpine(info);
+  unmountSymbolSpine(info);
   info.symbol = code;
   info.mult = mult;
   info.cell.dataset.symbol = code;
@@ -326,11 +389,8 @@ function setCellSymbol(info, code, mult = 1) {
 }
 
 function playWinAnimationOnce(info) {
-  const spineInst = scatterSpines.get(info);
-  if (spineInst) {
-    spineInst.play('win', false).queue('idle', true);
-    return wait(SCATTER_SPINE_WIN_MS);
-  }
+  const spineMs = playSymbolSpineWin(info);
+  if (spineMs) return wait(spineMs);
   info.cell.classList.remove('is-winning');
   void info.cell.offsetWidth;
   info.cell.classList.add('is-winning');
@@ -375,47 +435,11 @@ function setCellActive(info, active) {
 
 function setCellDimmed(info, dimmed) {
   info.cell.classList.toggle('is-dimmed', dimmed);
-  applyScatterDim(info);
+  applySpineDim(info);
 }
 
 let multiLineSequenceTimeout = null;
 let multiLineToken = 0;
-
-function playMultiLineWinSequence(groups, allWinInfos, lineWins) {
-  const token = ++multiLineToken;
-  const playPhaseOnce = (activeInfos) => {
-    const activeSet = new Set(activeInfos);
-    for (const info of cellInfos) {
-      if (info) setCellDimmed(info, !activeSet.has(info));
-    }
-    for (const info of allWinInfos) {
-      setCellActive(info, activeSet.has(info));
-    }
-    return Promise.all(activeInfos.map((info) => playWinAnimationOnce(info)));
-  };
-
-  let groupIndex = -1;
-  const step = () => {
-    const activeInfos = groupIndex === -1 ? allWinInfos : groups[groupIndex];
-    // groups[i] < lineWins.length corresponds 1:1 to lineWins[i] (see
-    // buildWinGroups/ReelMath.collectWinGroups — line wins are spread before
-    // count wins, positions-only, so index is the only way back to a
-    // payline). The "all together" phase (groupIndex -1) mixes lines, so no
-    // single line's art applies there.
-    const win = groupIndex >= 0 ? lineWins[groupIndex] : null;
-    if (win) showWinLine(win);
-    else hideWinLine();
-    playPhaseOnce(activeInfos).then(() => {
-      if (token !== multiLineToken) return;
-      multiLineSequenceTimeout = setTimeout(() => {
-        multiLineSequenceTimeout = null;
-        groupIndex = (groupIndex + 1) % groups.length;
-        step();
-      }, WIN_LOOP_PAUSE_MS);
-    });
-  };
-  step();
-}
 
 async function applyGrid(grid) {
   teardownCellInstances();
@@ -427,7 +451,7 @@ async function applyGrid(grid) {
     }
   }
   await Promise.all(tasks);
-  for (const info of cellInfos) if (info && info.symbol === 'scatter') mountScatterSpine(info, 'idle');
+  syncPersistentSpines();
 }
 
 function buildWinGroups(lineWins, countWins) {
@@ -436,39 +460,51 @@ function buildWinGroups(lineWins, countWins) {
   );
 }
 
+// The paying symbol of one win group (a line's own symbol; wilds count only
+// when the line is all wilds) — for its melody, symWin_<code>.
+function groupSymbol(infos) {
+  const plain = infos.map((i) => i.symbol).find((c) => c !== 'wild');
+  return plain || (infos[0] && infos[0].symbol) || null;
+}
+
+// Win presentation order lives in js/slot-flow.js (SlotFlow.presentWins): all
+// winning cells together, then each line on its own; the first pass plays the
+// line sound + the symbol's melody and resolves (big/mega/epic wait for it),
+// later passes loop silently until the next spin.
 function playWinCells(winningCells, lineWins, countWins) {
   multiLineToken += 1;
   if (multiLineSequenceTimeout) {
     clearTimeout(multiLineSequenceTimeout);
     multiLineSequenceTimeout = null;
   }
-
   const allWinInfos = (winningCells || [])
     .map(({ row, col }) => cellInfos[row * GRID_COLS + col])
     .filter(Boolean);
-  // Any win at all (even just one line/count-pay group) dims every cell not
-  // part of it, so the win reads clearly against the rest of the grid —
-  // previously only the 2+-groups cycling sequence did this; a lone win just
-  // cleared dimming and left the whole grid at full brightness.
+  if (allWinInfos.length) { playHeroWin(); playLogoWin(); }
   const winSet = new Set(allWinInfos);
   for (const info of cellInfos) {
     if (info) setCellDimmed(info, allWinInfos.length > 0 && !winSet.has(info));
   }
-
   const groups = buildWinGroups(lineWins, countWins);
-
-  if (groups.length > 1) {
-    playMultiLineWinSequence(groups, allWinInfos, lineWins);
-  } else {
-    // Single group: it's a line win iff lineWins has exactly the one entry
-    // (a lone count-pay/scatter win has no line shape to draw).
-    if (lineWins && lineWins.length === 1 && countWins && countWins.length === 0) {
-      previewWinLine(lineWins[0]);
-    } else {
-      hideWinLine();
-    }
-    for (const info of allWinInfos) previewSymbolWin(info);
-  }
+  const lines = lineWins || [];
+  const token = multiLineToken;
+  return SlotFlow.presentWins({
+    groups,
+    allInfos: allWinInfos,
+    pauseMs: WIN_LOOP_PAUSE_MS,
+    symbolOf: groupSymbol,
+    isCurrent: () => token === multiLineToken,
+    playPhase: (infos, index) => {
+      // groups[i] < lineWins.length is lineWins[i] (count wins come after)
+      const win = index >= 0 ? lines[index] : (groups.length === 1 && lines.length === 1 && !(countWins || []).length ? lines[0] : null);
+      if (index === -1 && lines.length > 1 && showSpineWinLines(lines.map((l) => l.payline))) { /* every line at once */ }
+      else if (win) showWinLine(win); else hideWinLine();
+      const active = new Set(infos);
+      for (const info of cellInfos) if (info) setCellDimmed(info, !active.has(info));
+      for (const info of allWinInfos) setCellActive(info, active.has(info));
+      return Promise.all(infos.map((info) => playWinAnimationOnce(info)));
+    },
+  });
 }
 
 const INLINE_WIN_AMOUNT_HOLD_MS = 1800;
@@ -507,8 +543,8 @@ let reelClearDone = Promise.resolve();
 
 function startReelLoop() {
   Sound.playSfx('spinStart');
-  scatterLandCount = 0;
-  unmountAllScatterSpines();
+  landSounds.reset();
+  unmountAllSymbolSpines();
   teardownCellInstances();
   const gen = ++reelLoopGeneration;
   for (const { stripEl } of reelCols) {
@@ -648,18 +684,13 @@ function landReel(colIndex, finalCodes, delayMs, isAnticipating = false, fillerC
   });
 }
 
-// Scatters landed so far this spin: the 1st/2nd/3rd each get their own,
-// rising sound (scatter1..3). Reset by startReelLoop.
-let scatterLandCount = 0;
+// Landing sounds (js/slot-flow.js): the 1st / 2nd / 3rd+ burger rise, the
+// wild has its own; reset on spin start.
+const landSounds = SlotFlow.landing({ scatter: 'scatter', specials: { wild: 'wildLand' } });
 
 function settleColumnCells(cellEls, col, finalCodes) {
   const tasks = [];
-  const scatters = finalCodes.filter((c) => c === 'scatter').length;
-  for (let i = 0; i < scatters && scatterLandCount < 3; i++) {
-    scatterLandCount += 1;
-    Sound.playSfx(`scatter${scatterLandCount}`);
-  }
-  if (finalCodes.includes('wild')) Sound.playSfx('wildLand');
+  landSounds.land(finalCodes);
   for (let row = 0; row < GRID_ROWS; row++) {
     const code = finalCodes[row];
     const cell = cellEls[row];
@@ -670,87 +701,206 @@ function settleColumnCells(cellEls, col, finalCodes) {
     cellInfos[row * GRID_COLS + col] = info;
     // No landing squash: the product wants symbols to just settle (2026-11-04).
     tasks.push(setCellSymbol(info, code).then(() => {
-      if (code === 'scatter') mountScatterSpine(info, 'land');
+      if (code === 'scatter') mountSymbolSpine(info, 'landing');
+      else if (code === 'wild' && isFreeSpinsScreen()) mountSymbolSpine(info, 'idle');
     }));
   }
   return Promise.all(tasks);
 }
 
-// --- Spine scatter ---------------------------------------------------------
+// --- Spine symbols (the animator's export) ---------------------------------
 //
-// The burger SCATTER is a Spine skeleton (scripts/great_uniqorn_scatter_spine.py)
-// drawn on the shared #spineCanvas over its cell: `land` when its reel stops,
-// `idle` while it sits on the grid, `win` (burger bursts into its layers and
-// slams back) when scatters pay or trigger the bonus. The static PNG stays in
-// the cell, hidden while the skeleton covers it, and comes back whenever the
-// skeleton can't run (no WebGL, failed load) or the reels spin off.
-const SCATTER_SPINE_DIR = `${ASSET_ROOT}/spine/scatter`;
-const SCATTER_SPINE_VERSION = '1';
-const SCATTER_SPINE_WIN_MS = 2600;
-let scatterResource = null;
-const scatterSpines = new Map(); // info -> SpineInstance
+// Every symbol has the animator's skeleton (uniqorn_presedent.zip ->
+// scripts/great_uniqorn_designer_spine.py -> spine/d/<code>/), drawn on the
+// shared #spineCanvas over its cell. Per the spec:
+//   pay symbols  `win` 1.3 s — mounted only while they win, static PNG otherwise
+//   WILD         `win` 1.3 s (its money shower lives in the `wild` skin only,
+//                so on the x2..x9 skins the same clip plays without it —
+//                scripts/great_uniqorn_fix_exports.py), `idle` looping
+//                for the whole free-spins session
+//   SCATTER      `landing` as its reel stops, `idle` looping on the grid,
+//                `win` 1.7 s
+// The skeleton's setup pose is the static art, so swapping PNG <-> skeleton
+// is seamless. spine/d/fit.json gives each skeleton's box in cell units (our
+// PNGs are the animator's statics at 3x). The static PNG stays in the cell,
+// hidden while the skeleton covers it, and comes back whenever the skeleton
+// can't run (no WebGL, failed load) or the reels spin off.
+const SYMBOL_SPINE_DIR = `${ASSET_ROOT}/spine/d`;
+const SYMBOL_SPINE_VERSION = '12';
+const SYMBOL_SPINE_CODES = ['a', 'j', 'k', 'q', 'hair', 'docs', 'jet', 'wild', 'scatter'];
+const SYMBOL_SPINE_WIN_MS = { scatter: 1700, default: 1300 };
+let symbolFit = null;
+const symbolResources = {};
+const symbolSpines = new Map(); // info -> SpineInstance
 
-function loadScatterResource() {
+function loadSymbolResources() {
   const stage = ensureSpineStage();
   if (!stage) return Promise.resolve(null);
-  return SpineEngine.SpineResource.load(stage.assetManager, SCATTER_SPINE_DIR, { version: SCATTER_SPINE_VERSION })
-    .then((res) => (scatterResource = res))
-    .catch((err) => { console.warn('scatter skeleton unavailable, static PNG stays:', err); return null; });
+  return fetch(`${SYMBOL_SPINE_DIR}/fit.json?v=${SYMBOL_SPINE_VERSION}`)
+    .then((r) => r.json())
+    .then((fit) => {
+      symbolFit = fit;
+      return Promise.all(SYMBOL_SPINE_CODES.map((code) =>
+        SpineEngine.SpineResource.load(stage.assetManager, `${SYMBOL_SPINE_DIR}/${code}`, { version: SYMBOL_SPINE_VERSION })
+          .then((res) => { symbolResources[code] = res; })
+          .catch((err) => console.warn(`${code} skeleton unavailable, static PNG stays:`, err))));
+    })
+    .catch((err) => { console.warn('symbol skeletons unavailable, static PNGs stay:', err); return null; });
 }
 
-// Box of the skeleton's 190x198 tile inside the cell (cell units): the
-// scatter PNG puts that tile at x 30..450, y 3..441 of its 477 canvas, and
-// the <img> is 230px at (-11, -15).
-function scatterSpineAnchor(info) {
+function isFreeSpinsScreen() {
+  return document.getElementById('screen').dataset.mode === 'freespins';
+}
+
+// Scatters always carry their skeleton; wilds only during free spins (idle).
+function isPersistentSpine(info) {
+  return info.symbol === 'scatter' || (info.symbol === 'wild' && isFreeSpinsScreen());
+}
+
+function symbolSpineAnchor(info, fit) {
   let el = info.cell.querySelector('.reel__cell-spine');
   if (!el) {
     el = document.createElement('div');
     el.className = 'reel__cell-spine';
     info.cell.appendChild(el);
   }
+  Object.assign(el.style, { left: `${fit.left}px`, top: `${fit.top}px`, width: `${fit.width}px`, height: `${fit.height}px` });
   return el;
 }
 
-function mountScatterSpine(info, anim = 'idle') {
-  unmountScatterSpine(info);
-  if (!scatterResource || !spineStage || info.symbol !== 'scatter') return;
-  const inst = scatterResource.createInstance();
-  inst.anchorEl = scatterSpineAnchor(info);
-  inst.fit = 2; // skeleton bounds are 2x the tile (room for the win burst)
+const wildSkin = (info) => (info.mult > 1 ? `x${info.mult}` : 'wild');
+
+// anim: clip to start; it loops if it's `idle`, otherwise plays once and hands
+// over to `idle` (scatter, free-spins wild) or ends on the setup pose.
+function mountSymbolSpine(info, anim) {
+  unmountSymbolSpine(info);
+  const res = symbolResources[info.symbol];
+  const fit = symbolFit && symbolFit[info.symbol];
+  if (!res || !fit || !spineStage || !res.skeletonData.findAnimation(anim)) return null;
+  const inst = res.createInstance();
+  if (info.symbol === 'wild') {
+    inst.skeleton.setSkinByName(wildSkin(info));
+    inst.skeleton.setSlotsToSetupPose();
+  }
+  inst.anchorEl = symbolSpineAnchor(info, fit);
+  inst.fit = 1;
   if (anim === 'idle') inst.play('idle', true);
-  else inst.play(anim, false).queue('idle', true);
+  else {
+    inst.play(anim, false);
+    if (isPersistentSpine(info) && res.skeletonData.findAnimation('idle')) inst.queue('idle', true);
+  }
   spineStage.addBase(inst);
   info.img.style.visibility = 'hidden';
-  scatterSpines.set(info, inst);
-  applyScatterDim(info);
+  symbolSpines.set(info, inst);
+  applySpineDim(info);
+  return inst;
 }
 
-function unmountScatterSpine(info) {
-  const inst = scatterSpines.get(info);
+function unmountSymbolSpine(info) {
+  if (info.spineOffTimer) { clearTimeout(info.spineOffTimer); info.spineOffTimer = null; }
+  const inst = symbolSpines.get(info);
   if (!inst) return;
-  scatterSpines.delete(info);
+  symbolSpines.delete(info);
   if (spineStage) spineStage.removeBase(inst);
   if (info.img) info.img.style.visibility = '';
 }
 
-function unmountAllScatterSpines() {
-  for (const info of [...scatterSpines.keys()]) unmountScatterSpine(info);
+function unmountAllSymbolSpines() {
+  for (const info of [...symbolSpines.keys()]) unmountSymbolSpine(info);
 }
 
-function applyScatterDim(info) {
-  const inst = scatterSpines.get(info);
+// Plays the symbol's win clip; resolves its length in ms, or 0 when the symbol
+// has no skeleton (the caller then runs the CSS pulse).
+function playSymbolSpineWin(info) {
+  const res = symbolResources[info.symbol];
+  if (!res) return 0;
+  const clip = 'win';
+  const ms = SYMBOL_SPINE_WIN_MS[info.symbol] || SYMBOL_SPINE_WIN_MS.default;
+  const inst = symbolSpines.get(info);
+  if (inst && isPersistentSpine(info)) {
+    inst.play(clip, false).queue('idle', true);
+    return ms;
+  }
+  if (!mountSymbolSpine(info, clip)) return 0;
+  // a pay symbol goes back to its static PNG once the clip ends (= setup pose)
+  info.spineOffTimer = setTimeout(() => {
+    info.spineOffTimer = null;
+    if (!isPersistentSpine(info)) unmountSymbolSpine(info);
+  }, ms);
+  return ms;
+}
+
+// Scatter idle / free-spins wild idle on every cell that should carry one.
+function syncPersistentSpines() {
+  for (const info of cellInfos) {
+    if (!info) continue;
+    const has = symbolSpines.has(info);
+    if (isPersistentSpine(info)) { if (!has) mountSymbolSpine(info, 'idle'); }
+    else if (has && !info.spineOffTimer) unmountSymbolSpine(info);
+  }
+}
+
+function applySpineDim(info) {
+  const inst = symbolSpines.get(info);
   if (inst) inst.skeleton.color.a = info.cell.classList.contains('is-dimmed') ? 0.32 : 1;
 }
 
-// Base skeletons (the scatters) live on the same canvas as the popups and the
+// Base skeletons (the symbols) live on the same canvas as the popups and the
 // full-screen intro screens, above the DOM dim — so they follow the dim by
 // hand: tinted under a popup's dim, gone under the opaque blackout and the
 // Spine screens.
 function refreshSpineBase() {
   if (!spineStage) return;
-  spineStage.baseHidden = opaqueDimActiveCount > 0 || spineScreenOpen;
+  spineStage.baseHidden = opaqueDimActiveCount > 0 || spineScreenOpen || winLayerHidden;
   spineStage.setBaseDim(dimActiveCount > 0);
-  for (const info of scatterSpines.keys()) applyScatterDim(info);
+  for (const info of symbolSpines.keys()) applySpineDim(info);
+  refreshLogoSpine();
+}
+
+// --- Spine logo (scripts/great_uniqorn_logo_fx.py) ---------------------------
+//
+// `idle` loops all the time; `win` plays on every winning spin, then idle
+// again. It is anchored to the .logo picture (hidden while the skeleton runs,
+// back if it can't), so every layout's logo placement still applies. It is an
+// OVERLAY of the shared stage — the win-layer guard hides the base skeletons
+// under a popup and the logo must stay — dimmed by hand with the screen dim,
+// gone under the blackout and the full-screen Spine screens, and drawn under
+// the popups (they are added after it).
+const LOGO_SPINE_DIR = `${ASSET_ROOT}/spine/logo`;
+const LOGO_SPINE_VERSION = '1';
+let logoInst = null;
+
+function initLogoSpine() {
+  const stage = ensureSpineStage();
+  const img = document.querySelector('.logo');
+  if (!stage || !img) return Promise.resolve();
+  return SpineEngine.SpineResource.load(stage.assetManager, LOGO_SPINE_DIR, { version: LOGO_SPINE_VERSION })
+    .then((res) => {
+      logoInst = res.createInstance();
+      logoInst.anchorEl = img;
+      logoInst.fit = 1;
+      logoInst.play('idle', true);
+      stage.addOverlay(logoInst);
+      img.style.visibility = 'hidden';
+      refreshLogoSpine();
+    })
+    .catch((err) => console.warn('logo skeleton unavailable, the picture stays:', err));
+}
+
+function playLogoWin() {
+  if (!logoInst) return;
+  const cur = logoInst.animationState.getCurrent(0);
+  if (cur && cur.animation && cur.animation.name === 'win' && !cur.isComplete()) return;
+  logoInst.play('win', false).queue('idle', true);
+}
+
+function refreshLogoSpine() {
+  if (!logoInst) return;
+  const c = logoInst.skeleton.color;
+  const hidden = opaqueDimActiveCount > 0 || spineScreenOpen;
+  const k = dimActiveCount > 0 ? 0.35 : 1; // the screen dim's darkness
+  c.r = k; c.g = k; c.b = k;
+  c.a = hidden ? 0 : 1;
 }
 
 // --- Wild -> multiplier ----------------------------------------------------
@@ -767,6 +917,7 @@ const WILD_POP_MS = 460;
 async function revealWildMultiplier(info, mult) {
   if (!info || !WILD_MULTIPLIERS.includes(mult)) return;
   const { cell } = info;
+  unmountSymbolSpine(info); // the squeeze/pop runs on the PNG
   cell.classList.remove('is-wild-pop');
   void cell.offsetWidth;
   cell.classList.add('is-wild-squeeze');
@@ -780,6 +931,7 @@ async function revealWildMultiplier(info, mult) {
   cell.classList.add('is-wild-pop');
   await wait(WILD_POP_MS);
   cell.classList.remove('is-wild-pop');
+  if (info.symbol === 'wild' && isFreeSpinsScreen() && !symbolSpines.has(info)) mountSymbolSpine(info, 'idle');
 }
 
 // Multipliers rolled on one column, keyed by row.
@@ -827,7 +979,9 @@ async function landReels(grid, anticipationColumns = [], multiplierWilds = []) {
 
   if (firstAnticipationCol === GRID_COLS) return;
 
-  Sound.playSfx('anticipation');
+  const anticipation = SlotFlow.anticipation();
+  let anticipationResolved = false;
+  const lastAnticipated = Math.max(...anticipationColumns);
 
   // Freeze every remaining reel right away — landing one at a time (above)
   // isn't enough on its own if the ones still waiting their turn keep
@@ -848,9 +1002,16 @@ async function landReels(grid, anticipationColumns = [], multiplierWilds = []) {
     const isAnticipating = anticipationSet.has(col);
     if (isAnticipating) reelCols[col].colEl.classList.add('is-anticipating');
     const cellEls = await landReel(col, finalCodes, 0, isAnticipating);
+    if (isAnticipating && !anticipationResolved) {
+      // hit = the trigger burger landed on an anticipated reel; miss = the
+      // last anticipated reel stopped without one
+      const hit = finalCodes.includes('scatter');
+      if (hit || col === lastAnticipated) { anticipation.resolve(hit); anticipationResolved = true; }
+    }
     await settleColumnCells(cellEls, col, finalCodes);
     await revealColumnMultipliers(col, multiplierWilds);
   }
+  if (!anticipationResolved) anticipation.resolve(false);
 }
 
 // --- Screen dim -------------------------------------------------------------
@@ -905,6 +1066,7 @@ async function withScreenDim(mutateFn, { opaque = false } = {}) {
 // leave-bonus dim and the enter-bonus intro so the two never drift apart.
 function applyModeScreen(next) {
   document.getElementById('screen').dataset.mode = next;
+  syncPersistentSpines(); // free-spins wilds idle, base-game wilds go static
   updateBgForLayout();
   document.getElementById('slotBg').src = `${ASSET_ROOT}/img/${next === 'freespins' ? 'slotbg_bonus' : 'slotbg_base'}.png`;
 }
@@ -913,43 +1075,24 @@ function applyModeScreen(next) {
 // bonus screen is revealed behind it (product: ~3s of popup, then reveal).
 const BONUS_INTRO_HOLD_MS = 3000;
 
-// The base -> free-spins moment: black the screen out, play the bonusSpinsWin
-// popup over the black for BONUS_INTRO_HOLD_MS, swap the bonus screen in behind
-// the still-opaque black, then lift the blackout to reveal it. Shared by both
-// the real scatter trigger (app.js) and the dev mode toggle, since both enter
-// the bonus through setFreeSpinsMode below.
-async function enterBonusTransition(amount = 0) {
-  Sound.playSfx('bonusEnter');
-  pushScreenDim(true); // opaque blackout in
-  await wait(DIM_TRANSITION_MS);
-  // The Spine bonus screen replaces the FREE SPINS WIN popup on entry; the
-  // popup stays as the fallback when the screen can't run (no WebGL).
-  const ran = await showBonusScreen(amount);
-  if (!ran) await playPopupSequence('bonusSpinsWin', amount, BONUS_INTRO_HOLD_MS, { ownDim: false });
-  applyModeScreen('freespins');
-  await wait(DIM_TRANSITION_MS);
-  popScreenDim(true); // reveal the bonus screen
-}
+// Bonus entry / exit order lives in js/slot-flow.js (rule 6): scatter pass ->
+// YOU WON over the base game -> blackout (the light doesn't come back in
+// between) -> bonus mode + bonus music -> the Spine bonus screen (tap) ->
+// reveal. These are the game's primitives.
+const bonusSteps = {
+  dimMs: DIM_TRANSITION_MS,
+  dimIn: (opaque) => pushScreenDim(opaque),
+  dimOut: (opaque) => popScreenDim(opaque),
+  popup: (amount) => playPopupSequence('bonusSpinsWin', amount, 2500, { ownDim: false, bought: gameState.boughtBonus }),
+  switchMode: (mode) => applyModeScreen(mode),
+  preview: (spins) => showBonusScreen(spins),
+};
 
-function setFreeSpinsMode(active, amount = 0) {
-  const screen = document.getElementById('screen');
+function setFreeSpinsMode(active, amount = 0, entry = {}) {
   const next = active ? 'freespins' : 'base';
-  if (screen.dataset.mode === next) return Promise.resolve();
-
-  Sound.playMusic(next === 'freespins' ? 'bonus' : 'base');
-
-  // Entering the bonus gets the full intro moment (blackout + popup + reveal);
-  // leaving it keeps the plain opaque dim swap.
-  if (next === 'freespins') return enterBonusTransition(amount);
-  Sound.playSfx('bonusExit');
-
-  return withScreenDim(
-    async () => {
-      applyModeScreen(next);
-      await wait(DIM_TRANSITION_MS);
-    },
-    { opaque: true },
-  );
+  if (document.getElementById('screen').dataset.mode === next) return Promise.resolve();
+  if (next === 'freespins') return SlotFlow.enterBonus(bonusSteps, { spins: amount, popupAmount: entry.popupAmount, withPopup: !!entry.withPopup });
+  return SlotFlow.exitBonus(bonusSteps);
 }
 
 // --- Popups -----------------------------------------------------------------
@@ -1073,19 +1216,20 @@ function countUpPopupAmount(node, amount, delayMs = 0) {
   const value = node.querySelector('.game-popup__value');
   if (!value) return;
   const start = performance.now() + delayMs;
-  // The cash counter loops for exactly as long as the number runs.
-  let stopCash = null;
+  // The count-up loop runs for exactly as long as the number does, then its
+  // end sound (js/slot-flow.js countSound: countLoop / countEnd).
+  let counter = null;
   const tick = (now) => {
     if (!node.isConnected) {
-      if (stopCash) stopCash();
+      if (counter) counter.end();
       return;
     }
     const t = Math.max(0, Math.min(1, (now - start) / POPUP_COUNT_UP_MS));
-    if (t > 0 && !stopCash) stopCash = Sound.startLoop('cashLoop');
+    if (t > 0 && !counter) counter = SlotFlow.countSound();
     const eased = 1 - Math.pow(1 - t, 3);
     value.textContent = formatPopupAmount(amount * eased);
     if (t < 1) requestAnimationFrame(tick);
-    else if (stopCash) stopCash();
+    else if (counter) counter.end();
   };
   requestAnimationFrame(tick);
 }
@@ -1111,6 +1255,19 @@ function fitPopupText(node, amount) {
 // once the popup has FULLY played out, so a caller can sequence work after it.
 // `ownDim` lets a caller that already owns the screen dim (the bonus intro
 // below) borrow the popup without it pushing/popping its own dim.
+// Each popup's fanfare (played by the popup itself, as js/slot-flow.js expects).
+const POPUP_SOUNDS = { bigWin: 'bigWin', megaWin: 'megaWin', epicWin: 'epicWin', bonusSpinsTotalWin: 'bonusTotalWin' };
+
+// Layer guard (js/slot-flow.js rule 8): the win layer — symbol skeletons and
+// the win line — is not drawn under a popup.
+let winLayerHidden = false;
+const winLayer = SlotFlow.layerGuard((visible) => {
+  winLayerHidden = !visible;
+  const line = document.querySelector('.win-line');
+  if (line) line.style.visibility = visible ? '' : 'hidden';
+  refreshSpineBase();
+});
+
 function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaque = false, bought = false } = {}) {
   if (!POPUP_CONFIG[key]) return Promise.resolve();
 
@@ -1130,15 +1287,18 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
       if (node) node.remove();
       if (inst && spineStage) spineStage.removeOverlay(inst);
       if (dimmed) popScreenDim(opaque);
+      winLayer.show();
       resolve();
     };
     const safetyTimer = setTimeout(finish, holdMs + 8000);
+    winLayer.hide(); // nothing of the win shows through a popup (rule 8)
 
     (async () => {
       const cfg = POPUP_CONFIG[key];
       // Start fetching the skeleton while the dim fades in.
       const resourcePromise = popupResourceOrNull(popupSpineFolder(cfg, bought));
       Sound.playSfx('popupOpen');
+      if (POPUP_SOUNDS[key]) Sound.playSfx(POPUP_SOUNDS[key]); // the popup plays its own fanfare
       if (ownDim) {
         pushScreenDim(opaque);
         dimmed = true;
@@ -1176,23 +1336,8 @@ function playPopup(key, amount = 0, holdMs = 2500, { bought = false } = {}) {
 
 // --- Dev panel --------------------------------------------------------------
 
-function setupDevPanel() {
-  const toggleBtn = document.getElementById('devToggle');
-
-  toggleBtn.addEventListener('click', () => {
-    const next = document.getElementById('screen').dataset.mode === 'base' ? 'freespins' : 'base';
-    setFreeSpinsMode(next === 'freespins', 10); // demo spins count for the intro popup
-    toggleBtn.textContent = `mode: ${next}`;
-  });
-
-  document.getElementById('devFeatureScreen')?.addEventListener('click', () => showFeatureScreen());
-  document.getElementById('devBonusScreen')?.addEventListener('click', () => showBonusScreen(10));
-  document.querySelectorAll('[data-popup]').forEach((btn) => {
-    const key = btn.dataset.popup;
-    const amount = key === 'bonusSpinsWin' ? 10 : 1234500;
-    btn.addEventListener('click', () => playPopup(key, amount, 2500, { bought: btn.dataset.bought === '1' }));
-  });
-}
+// DEV / ♪ — the shared dev panel lives in js/great-uniqorn/dev.js.
+function setupDevPanel() {}
 
 // --- Stage layout -----------------------------------------------------------
 //
@@ -1266,11 +1411,17 @@ function layoutStage() {
   root.setProperty('--stage-y', `${y}px`);
   // Viewport height in stage units — the portrait popup is placed against it.
   root.setProperty('--view-h', `${vh / s}px`);
+  coverSceneBg();
+  setTimeout(coverSceneBg, 340); // layouts move the bg layer with a 300ms transition
 }
 
 function bgSrcFor(mode) {
   const bonus = mode === 'freespins';
-  if (isMobileLayout()) return `${ASSET_ROOT}/img/${bonus ? 'bg_mob_bonus' : 'bg_mob_base'}.jpg`;
+  if (isMobileLayout()) {
+    // with the animated hero on top, the room without him (product, 2026-11-23)
+    if (!bonus && mobileHeroReady('base')) return `${ASSET_ROOT}/img/bg_mob_base_room.jpg`;
+    return `${ASSET_ROOT}/img/${bonus ? 'bg_mob_bonus' : 'bg_mob_base'}.jpg`;
+  }
   return `${ASSET_ROOT}/img/${bonus ? 'bg_desk_bonus' : 'bg_desk_base'}.jpg`;
 }
 
@@ -1280,6 +1431,161 @@ function updateBgForLayout() {
     const el = document.getElementById(id);
     if (!el.src.endsWith(src)) el.src = src;
   }
+  updateSceneSpine();
+}
+
+// --- Spine scene: the animator's background + hero (desktop) ---------------
+//
+// bg_base/bg_bonus (1932x940, the scene's own frame — origin at its centre)
+// and hero/hero_bonus loop `idle` on their own SpineStage (#bgCanvas, under
+// #stage). Their anchors live in #bgSpineWrap, a .stage__bg twin, so layouts
+// 1/2/3 move them exactly like the background picture. The hero's (0,0) is the
+// centre of its static.png, which sits in the animator's Horizontal View at
+// (0,314) / (163,233) (found by template search). Portrait keeps the picture
+// backgrounds: the animator's scene is landscape only.
+const SCENE_SPINE_DIR = `${ASSET_ROOT}/spine/d`;
+const SCENE_SPINE = {
+  base: { bg: 'bg_base', hero: 'hero', heroCenter: [452.5, 627] },
+  freespins: { bg: 'bg_bonus', hero: 'hero_bonus', heroCenter: [369.5, 565] },
+};
+let sceneStage = null;
+const sceneInsts = {}; // mode -> { bg, hero, heroBox }
+let sceneShown = null;
+let sceneMode = null; // the mode whose hero is on screen (desktop or portrait)
+
+function initSceneSpine() {
+  const canvas = document.getElementById('bgCanvas');
+  if (!canvas || !window.SpineEngine || !window.spine) return Promise.resolve();
+  try { sceneStage = new SpineEngine.SpineStage(canvas); } catch (err) { console.warn('scene Spine unavailable:', err); return Promise.resolve(); }
+  const load = (name) => SpineEngine.SpineResource.load(sceneStage.assetManager, `${SCENE_SPINE_DIR}/${name}`, { version: SYMBOL_SPINE_VERSION });
+  return Promise.all(Object.entries(SCENE_SPINE).map(async ([mode, cfg]) => {
+    try {
+      const [bgRes, heroRes] = await Promise.all([load(cfg.bg), load(cfg.hero)]);
+      const bg = bgRes.createInstance();
+      bg.anchorEl = document.getElementById('bgAnchor');
+      bg.fit = 1;
+      bg.play('idle', true);
+      const hero = heroRes.createInstance();
+      const b = heroRes.bounds;
+      const [cx, cy] = cfg.heroCenter;
+      hero.fit = 1;
+      hero.play('idle', true);
+      sceneInsts[mode] = { bg, hero, heroBox: { left: cx + b.x, top: cy - (b.y + b.height), width: b.width, height: b.height } };
+    } catch (err) {
+      console.warn(`scene skeletons for ${mode} unavailable, picture background stays:`, err);
+    }
+  })).then(() => updateBgForLayout()); // picks the hero-less mobile room once the hero is in
+}
+
+// The hero's `win` plays on track 1 over his idle whenever a spin wins,
+// mixed in and out so idle carries on beneath:
+//   base       scripts/great_uniqorn_hero_win.py — pops his bubble gum, grins
+//              at the slot, shows his fist, taps his hoof
+//   freespins  scripts/great_uniqorn_hero_bonus_win.py — a victory drag on the
+//              cigar, a big cloud of smoke, tail swishes, a pleased bounce
+const HERO_WIN_MIX = 0.25;
+function playHeroWin() {
+  const set = sceneMode && sceneInsts[sceneMode];
+  if (!set) return;
+  const st = set.hero.animationState;
+  const data = set.hero.resource.skeletonData;
+  if (!data.findAnimation('win')) return;
+  const cur = st.getCurrent(1);
+  if (cur && cur.animation && cur.animation.name === 'win' && !cur.isComplete()) return;
+  st.setEmptyAnimation(1, 0);
+  st.addAnimation(1, 'win', false, 0).mixDuration = HERO_WIN_MIX;
+  st.addEmptyAnimation(1, 0.35, 0);
+}
+
+// The animated background covers the whole window, not just the 1932x940
+// stage: on a window taller (or wider) than the stage the picture background
+// left letterbox bands with only the blurred .bg-fill in them. The bg
+// skeleton's anchor is scaled up (cover) around the viewport centre, in the
+// coordinates of #bgSpineWrap (so a layout's transform of the bg layer still
+// applies); the hero keeps the stage's own placement. The art is exactly the
+// stage frame (a mask clips it there), so cover — not extra art — fills it.
+function coverSceneBg() {
+  if (sceneMode && isMobileLayout()) placeMobileHero(sceneMode);
+  const wrap = document.getElementById('bgSpineWrap');
+  const el = document.getElementById('bgAnchor');
+  if (!wrap || !el) return;
+  const r = wrap.getBoundingClientRect();
+  if (!r.width) return;
+  const s = r.width / DESK_W;
+  const vw = window.innerWidth / s;
+  const vh = window.innerHeight / s;
+  const k = Math.max(vw / DESK_W, vh / DESK_H, 1);
+  const w = DESK_W * k;
+  const h = DESK_H * k;
+  Object.assign(el.style, {
+    left: `${-r.left / s + vw / 2 - w / 2}px`,
+    top: `${-r.top / s + vh / 2 - h / 2}px`,
+    width: `${w}px`,
+    height: `${h}px`,
+  });
+}
+
+// Portrait: the picture background stays (bg-fill: cover, bottom-aligned) and
+// only the hero is animated, on the hero-less room bg_mob_base_room.jpg. His
+// place on the 780x1416 mobile frame: static.png at x1.09 with its top-left at
+// (-150, 720) — matched by eye to the old bg_mob_base.jpg, which had him drawn
+// in. The bonus has no hero-less mobile art yet, so it keeps its picture.
+const MOB_HERO = { base: { scale: 1.09, center: [-150 + 905 * 1.09 / 2, 720 + 626 * 1.09 / 2] } };
+const MOB_W_FRAME = 780;
+const MOB_H_FRAME = 1416;
+const mobileHeroReady = (mode) => !!(MOB_HERO[mode] && sceneInsts[mode]);
+
+function placeMobileHero(mode) {
+  const set = sceneInsts[mode];
+  const cfg = MOB_HERO[mode];
+  const el = document.getElementById('heroAnchorMob');
+  if (!set || !cfg || !el) return;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const S = Math.max(vw / MOB_W_FRAME, vh / MOB_H_FRAME); // the bg-fill's cover scale
+  const left0 = (vw - MOB_W_FRAME * S) / 2;
+  const top0 = vh - MOB_H_FRAME * S;                       // bottom-aligned
+  const b = set.hero.resource.bounds;
+  const k = cfg.scale * S;
+  const [cx, cy] = cfg.center;
+  Object.assign(el.style, {
+    left: `${left0 + cx * S + b.x * k}px`,
+    top: `${top0 + cy * S - (b.y + b.height) * k}px`,
+    width: `${b.width * k}px`,
+    height: `${b.height * k}px`,
+  });
+}
+
+function updateSceneSpine() {
+  if (!sceneStage) return;
+  const mode = document.getElementById('screen').dataset.mode === 'freespins' ? 'freespins' : 'base';
+  const mobile = isMobileLayout();
+  const set = !mobile && sceneInsts[mode];
+  const mob = mobile && mobileHeroReady(mode) ? sceneInsts[mode] : null;
+  const key = set ? mode : mob ? `mob:${mode}` : null;
+  document.getElementById('screen').classList.toggle('has-scene-spine', !!set);
+  document.getElementById('screen').classList.toggle('has-scene-hero-mob', !!mob);
+  coverSceneBg();
+  setTimeout(coverSceneBg, 340); // after the layouts' 300ms bg transition
+  if (mob) placeMobileHero(mode);
+  if (sceneShown === key) return;
+  for (const s of Object.values(sceneInsts)) { sceneStage.removeBase(s.bg); sceneStage.removeBase(s.hero); }
+  sceneShown = key;
+  sceneMode = set || mob ? mode : null;
+  if (mob) {
+    mob.hero.anchorEl = document.getElementById('heroAnchorMob');
+    mob.hero.play('idle', true);
+    sceneStage.addBase(mob.hero);
+    return;
+  }
+  if (!set) return;
+  const heroEl = document.getElementById('heroAnchor');
+  Object.assign(heroEl.style, { left: `${set.heroBox.left}px`, top: `${set.heroBox.top}px`, width: `${set.heroBox.width}px`, height: `${set.heroBox.height}px` });
+  set.hero.anchorEl = heroEl;
+  set.bg.play('idle', true);
+  set.hero.play('idle', true);
+  sceneStage.addBase(set.bg);
+  sceneStage.addBase(set.hero);
 }
 
 // --- Feature preview / bonus screens -------------------------------------------
@@ -1506,7 +1812,10 @@ function preloadAssets() {
   for (const name of ['frame.png?v=2', 'slotbg_base', 'slotbg_bonus', 'logo.png?v=2', 'btn_buy.png?v=2', 'btn_fs']) {
     tasks.push(track(preloadImage(`${ASSET_ROOT}/img/${name.includes('.png') ? name : `${name}.png`}`)));
   }
-  tasks.push(track(loadScatterResource()));
+  tasks.push(track(loadSymbolResources()));
+  tasks.push(track(initSceneSpine()));
+  tasks.push(track(initLogoSpine()));
+  tasks.push(track(loadWinLines()));
   tasks.push(track(preloadImage(bgSrcFor('base'))));
   tasks.push(track(preloadImage(bgSrcFor('freespins'))));
   // Popup skeletons are only needed later — warm this layout's six in the
@@ -1541,11 +1850,11 @@ async function init() {
 
   await preloadAssets();
   await Promise.all(cellInfos.map((info) => setCellSymbol(info, info.symbol, info.mult)));
-  for (const info of cellInfos) if (info.symbol === 'scatter') mountScatterSpine(info, 'idle');
+  syncPersistentSpines();
 
   if (window.Preloader) window.Preloader.done();
 
-  window.__slot = { cellInfos, showFeatureScreen, showBonusScreen };
+  window.__slot = { cellInfos, showFeatureScreen, showBonusScreen, symbolSpines, mountSymbolSpine, unmountSymbolSpine, get logo() { return logoInst; }, playLogoWin };
   // ?nofs — dev/screenshot convenience: straight into the game.
   if (!new URLSearchParams(location.search).has('nofs')) showFeatureScreen();
 }

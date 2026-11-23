@@ -6,7 +6,8 @@
 <title>Great Uniqorn — demo</title>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/preloader.css?v=1">
-<link rel="stylesheet" href="css/great-uniqorn.css?v=15">
+<link rel="stylesheet" href="css/dev-tools.css?v=5">
+<link rel="stylesheet" href="css/great-uniqorn.css?v=18">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 </head>
 <body>
@@ -33,18 +34,6 @@
     <button type="button" data-layout="3" aria-pressed="false">3</button>
   </div>
 
-  <!-- DEV-ONLY панель: переключение режима и ручной запуск анимаций без бэкенда. -->
-  <div class="dev-panel">
-    <button class="dev-btn" id="devToggle" type="button">mode: base</button>
-    <button class="dev-btn" id="devFeatureScreen" type="button">Feature screen</button>
-    <button class="dev-btn" id="devBonusScreen" type="button">Bonus screen</button>
-    <button class="dev-btn" data-popup="bigWin" type="button">Big Win</button>
-    <button class="dev-btn" data-popup="epicWin" type="button">Epic Win</button>
-    <button class="dev-btn" data-popup="megaWin" type="button">Mega Win</button>
-    <button class="dev-btn" data-popup="bonusSpinsWin" type="button">Free Spins Win</button>
-    <button class="dev-btn" data-popup="bonusSpinsTotalWin" type="button">Bonus Total Win</button>
-    <span class="dev-hint">клик по WILD в сетке — превью превращения в множитель; по остальным — win-анимация</span>
-  </div>
 
   <!-- Вся сцена свёрстана в координатах макета Figma (uniqorn-presedent):
        десктоп — кадр 1932x940, портрет — 780x1416. .stage — ровно такой кадр,
@@ -58,9 +47,16 @@
          больше кадра макета. -->
     <img class="bg-fill" id="bgFill" src="img/great-uniqorn/img/bg_desk_base.jpg" alt="">
 
+    <!-- Анимированный фон и герой аниматора (Spine, только десктоп): рисуются
+         здесь, под сценой; опоры — в слое фона #bgSpineWrap, так что раскладки
+         1/2/3 двигают их вместе с фоном (slot.js, «Spine scene»). -->
+    <canvas class="bg-spine-canvas" id="bgCanvas"></canvas>
+    <div class="scene-anchor-mob" id="heroAnchorMob" aria-hidden="true"></div>
+
     <div class="stage" id="stage">
 
       <img class="stage__bg" id="bgLayer" src="img/great-uniqorn/img/bg_desk_base.jpg" alt="">
+      <div class="stage__bg stage__bg--spine" id="bgSpineWrap" aria-hidden="true"><div class="scene-anchor" id="bgAnchor"></div><div class="scene-anchor" id="heroAnchor"></div></div>
 
       <img class="logo" src="img/great-uniqorn/img/logo.png?v=2" alt="Great Uniqorn">
 
@@ -246,13 +242,18 @@
   <script src="js/preloader.js?v=1"></script>
   <script src="js/config.js?v=2"></script>
   <script src="js/api.js?v=2"></script>
-  <script src="js/great-uniqorn/sound.js?v=4"></script>
+  <script src="js/sound-kit.js?v=7"></script>
+  <script src="js/great-uniqorn/sound.js?v=6"></script>
   <script src="js/reel-math.js?v=6"></script>
   <script src="vendor/spine-webgl.js"></script>
   <script src="js/spine-engine.js?v=5"></script>
-  <script src="js/great-uniqorn/slot.js?v=14"></script>
-  <script src="js/great-uniqorn/app.js?v=6"></script>
+  <script src="js/dev-tools.js?v=4"></script>
+  <script src="js/slot-flow.js?v=1"></script>
+  <script src="js/great-uniqorn/slot.js?v=33"></script>
+  <script src="js/great-uniqorn/app.js?v=8"></script>
   <!-- Поведение нижнего бара V3: флайаут, тултипы, заглушки авто/турбо. -->
   <script src="js/ui-bar-v3.js?v=4"></script>
+  <script src="js/dev-scenarios.js?v=1"></script>
+  <script src="js/great-uniqorn/dev.js?v=3"></script>
 </body>
 </html>

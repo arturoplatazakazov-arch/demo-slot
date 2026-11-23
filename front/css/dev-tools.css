@@ -264,3 +264,11 @@
 .dt-sheet[data-panel='sound'] > .dt-body { flex: none; overflow: visible; }
 .dt-sheet[data-panel='sound'] .dt-sets { max-height: none; }
 .dt-sheet[data-panel='sound'] > .dt-head { position: sticky; top: 0; z-index: 1; background: var(--dt-bg); }
+
+/* "Проверка" tab (js/dev-scenarios.js) */
+.dt-check-out { display: grid; gap: 6px; margin-top: 8px; }
+.dt-check { padding: 6px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.04); color: var(--dt-dim); }
+.dt-check.is-pass { background: rgba(74, 222, 128, 0.1); color: var(--dt-fg); }
+.dt-check.is-fail { background: rgba(248, 113, 113, 0.12); color: var(--dt-fg); }
+.dt-check__rule { font-size: 11px; color: var(--dt-dim); padding-left: 14px; }
+.dt-check__rule.is-fail { color: var(--dt-err); }

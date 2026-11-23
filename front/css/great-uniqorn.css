@@ -812,15 +812,8 @@ body.is-feature-screen .layout-switch { visibility: hidden; }
    вместе.
    ============================================================================ */
 
-/* wild и scatter «дышат» всё время, остальные стоят, пока не выиграют. */
-@keyframes symbol-breathe {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.045); }
-}
-.reel__cell.is-special img {
-  animation: symbol-breathe 2.6s ease-in-out infinite;
-  filter: drop-shadow(0 0 10px rgba(255, 213, 106, 0.45));
-}
+/* WILD и скаттер больше не «дышат» CSS-ом и без золотой тени: их idle —
+   Spine аниматора (вайлд — только во фриспинах, по ТЗ), в базе — статика. */
 
 
 @keyframes symbol-win {
@@ -866,10 +859,6 @@ body.is-feature-screen .layout-switch { visibility: hidden; }
   animation: wild-burst 520ms ease-out forwards;
   pointer-events: none;
   z-index: 4;
-}
-/* Множитель на сетке горит ярче простого WILD. */
-.reel__cell.is-multiplier img {
-  filter: drop-shadow(0 0 14px rgba(255, 213, 106, 0.8));
 }
 
 /* ---------- Win line ---------- */
@@ -1038,3 +1027,28 @@ body .v3-bar {
     rgba(0, 0, 0, 0.6) 100%
   );
 }
+
+/* ---------- Spine-сцена: фон и герой аниматора (только десктоп) ----------
+   Канвас под #stage на весь экран; опоры — в .stage__bg--spine (повторяет
+   трансформации слоя фона в раскладках 1/2/3). Пока скелеты не готовы или в
+   портрете — работает прежний фон-картинка. */
+.bg-spine-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: none;
+}
+.screen.has-scene-spine .bg-spine-canvas { display: block; }
+.screen.has-scene-spine #bgLayer { visibility: hidden; }
+/* копия фона на #stage (раскладка 2) закрыла бы канвас под сценой */
+.screen.has-scene-spine #stage { background: none !important; }
+.stage__bg--spine { pointer-events: none; }
+.scene-anchor { position: absolute; }
+#bgAnchor { left: 0; top: 0; width: 1932px; height: 940px; }
+
+/* Portrait: only the hero is animated (on the hero-less room picture) —
+   the same canvas under the stage, the hero's anchor in viewport pixels. */
+.screen.has-scene-hero-mob .bg-spine-canvas { display: block; }
+.scene-anchor-mob { position: fixed; pointer-events: none; }

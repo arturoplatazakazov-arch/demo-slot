@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Great Uniqorn — приёмка Spine</title>
+<!-- Приёмка анимаций аниматора (uniqorn_presedent.zip): все объекты одним
+     столбцом, как в Anim Lab. Клик по объекту — его анимация; кнопки под ним —
+     каждый клип, статика, кадр 0 (дефолт-сцена), первый и последний кадр
+     выбранного клипа. «Статика поверх» кладёт static.png полупрозрачно на
+     скелет центром в его (0,0), перекрестие — сама точка (0,0): так видно
+     любое смещение. Под каждым объектом — чек-лист по ТЗ: пиксельные проверки
+     считаются здесь на offscreen WebGL, остальное (имена файлов, размеры
+     текстур, лишние картинки, меши, ключи клипов) — из spine/d/report.json
+     (scripts/great_uniqorn_designer_spine.py).
+     Звук клипов — события игры (SoundKit, js/great-uniqorn/sound.js); правятся
+     в пульте ♪ на самом слоте. -->
+<link rel="stylesheet" href="css/fonts.css">
+<style>
+  :root {
+    --bg: #0a1236; --panel: #101c4f; --line: rgba(255, 213, 106, 0.16);
+    --text: #f4ecd6; --muted: #a3a9c9; --accent: #ffd56a;
+    --ok: #4bd17c; --fail: #ff5d5d; --warn: #ffb648;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Baloo 2', system-ui, sans-serif; }
+  header {
+    position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px;
+    padding: 10px 24px; background: rgba(10, 18, 54, 0.95); border-bottom: 1px solid var(--line); backdrop-filter: blur(6px);
+  }
+  h1 { margin: 0; font-size: 20px; }
+  a.back { color: var(--text); text-decoration: none; font-size: 14px; padding: 5px 12px; border-radius: 999px; border: 1px solid rgba(226, 51, 59, 0.8); }
+  nav { display: flex; flex-wrap: wrap; gap: 5px; }
+  nav a { color: var(--muted); text-decoration: none; font-size: 13px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); display: inline-flex; gap: 5px; align-items: center; }
+  nav a:hover { color: var(--accent); border-color: var(--accent); }
+  nav a i, .cap h2 i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: 0 0 auto; }
+  i.ok { background: var(--ok) !important; } i.fail { background: var(--fail) !important; } i.warn { background: var(--warn) !important; }
+  .tools { display: flex; gap: 6px; flex-wrap: wrap; width: 100%; }
+  button, select {
+    font: inherit; font-size: 13px; color: var(--text); cursor: pointer; padding: 4px 11px; border-radius: 999px;
+    border: 1px solid rgba(255, 213, 106, 0.35); background: var(--panel);
+  }
+  button[aria-pressed="true"] { border-color: var(--accent); color: #2a1a00; background: var(--accent); }
+  main { padding: 6px 24px 120px; max-width: 1200px; }
+  .summary { color: var(--muted); font-size: 14px; margin: 12px 0 4px; line-height: 1.5; }
+  .summary b { color: var(--text); }
+
+  .obj { display: grid; grid-template-columns: 250px 1fr; gap: 22px; padding: 24px 0; border-top: 1px solid var(--line); scroll-margin-top: 110px; }
+  .cap h2 { margin: 0 0 2px; font-size: 22px; display: flex; align-items: center; gap: 8px; }
+  .cap .sub { color: var(--muted); font-size: 13px; line-height: 1.45; }
+  .cap .sub code { color: var(--accent); }
+  .cap .hint { color: var(--muted); font-size: 12px; margin-top: 8px; opacity: 0.8; }
+
+  .stagecol { min-width: 0; }
+  .frame { position: relative; cursor: pointer; border-radius: 10px; border: 1px solid rgba(255, 213, 106, 0.22); background: #0d1850; max-width: 100%; }
+  body.bg-checker .frame { background: repeating-conic-gradient(#1a2558 0 25%, #141e4a 0 50%) 0 0 / 16px 16px; }
+  body.bg-black .frame { background: #000; }
+  .frame .anchor { position: absolute; inset: 0; }
+  .frame .static { position: absolute; pointer-events: none; opacity: 0; z-index: 6; }
+  body.overlay .frame .static { opacity: 0.5; }
+  .frame.is-static .static { opacity: 1 !important; }
+  .frame .xh { position: absolute; pointer-events: none; opacity: 0; z-index: 7; }
+  body.cross .frame .xh { opacity: 1; }
+  .xh.h { left: 0; right: 0; height: 1px; background: rgba(255, 80, 80, 0.85); }
+  .xh.v { top: 0; bottom: 0; width: 1px; background: rgba(255, 80, 80, 0.85); }
+  .xh.box { border: 1px dashed rgba(120, 200, 255, 0.6); }
+  .frame .tag { position: absolute; left: 6px; top: 6px; font-size: 11px; font-family: ui-monospace, Menlo, monospace; color: var(--accent); background: rgba(0, 0, 0, 0.55); padding: 1px 6px; border-radius: 6px; pointer-events: none; z-index: 8; }
+
+  .ctl { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
+  .ctl .lbl { font-size: 12px; color: var(--muted); margin-right: 2px; }
+  .ctl .sep { width: 1px; height: 20px; background: var(--line); margin: 0 4px; }
+
+  .check { margin: 12px 0 0; padding: 0; list-style: none; display: grid; gap: 3px; }
+  .check li { display: grid; grid-template-columns: 22px 230px 1fr; gap: 8px; font-size: 13px; padding: 3px 8px; border-radius: 6px; }
+  .check li.fail { background: rgba(255, 93, 93, 0.08); }
+  .check li.warn { background: rgba(255, 182, 72, 0.06); }
+  .check li .what { font-weight: 600; }
+  .check li .why { color: var(--muted); line-height: 1.4; word-break: break-word; }
+  .check code { font-size: 12px; color: var(--text); background: rgba(255, 255, 255, 0.06); padding: 0 4px; border-radius: 4px; }
+
+  /* скелеты рисуются над кадрами, статика поверх (50 %) и перекрестие — над скелетом */
+  #spineCanvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+  #gl { position: fixed; left: -9999px; top: 0; }
+
+  @media (max-width: 900px) {
+    header { position: static; padding: 10px 16px; }
+    main { padding: 6px 16px 120px; }
+    .obj { grid-template-columns: 1fr; gap: 10px; }
+    .check li { grid-template-columns: 20px 1fr; }
+    .check li .why { grid-column: 2; }
+  }
+</style>
+</head>
+<body class="cross">
+  <header>
+    <a class="back" href="great-uniqorn-anims.html">← Все анимации</a>
+    <h1>Приёмка Spine по ТЗ</h1>
+    <nav id="nav"></nav>
+    <div class="tools">
+      <button type="button" id="overlayBtn" aria-pressed="false">Статика поверх (50 %)</button>
+      <button type="button" id="crossBtn" aria-pressed="true">Перекрестие (0,0)</button>
+      <button type="button" id="slowBtn" aria-pressed="false">Скорость ×0,5</button>
+      <button type="button" id="bgBtn">Фон: синий</button>
+      <button type="button" id="soundBtn" aria-pressed="true">Звук клипов</button>
+      <button type="button" id="allWinBtn">Все: win</button>
+      <button type="button" id="allSetupBtn">Все: кадр 0</button>
+    </div>
+  </header>
+  <main>
+    <p class="summary" id="summary">Загрузка…</p>
+    <div id="root"></div>
+  </main>
+  <canvas id="spineCanvas"></canvas>
+
+  <script src="vendor/spine-webgl.js"></script>
+  <script src="js/spine-engine.js"></script>
+  <script src="js/audio-mute.js?v=1"></script>
+  <script src="js/sound-kit.js?v=7"></script>
+  <script src="js/great-uniqorn/sound.js?v=6"></script>
+  <script src="js/great-uniqorn/spine-checks.js?v=1"></script>
+  <script>
+  (async () => {
+    const BASE = 'img/great-uniqorn/spine/d';
+    const V = Date.now();
+    const report = await (await fetch(`${BASE}/report.json?v=${V}`)).json();
+
+    const TITLE = { a: 'A', j: 'J', k: 'K', q: 'Q', hair: 'Причёска', docs: 'Документы', jet: 'Самолёт', wild: 'Wild', scatter: 'Скаттер',
+      hero: 'Герой (база)', hero_bonus: 'Герой (бонус)', bg_base: 'Фон (база)', bg_bonus: 'Фон (бонус)' };
+    const KIND_TITLE = { symbol: 'дешёвая / дорогая фигура', wild: 'Wild', scatter: 'скаттер', scene: 'сцена — в ТЗ клипов нет' };
+    const SPEC = GUChecks.SPEC;
+    // звук игры к клипу (события js/great-uniqorn/sound.js)
+    const CLIP_SOUND = { symbol: { win: 'smallWin' }, wild: { win: 'smallWin', win_x: 'wildGrow' }, scatter: { landing: 'scatterLand1', win: 'symWin_scatter' } };
+    const SYMBOL_SCALE = 1.5; // px на единицу скелета — один на все фигуры, чтобы размеры сравнивались
+
+    const stage = new SpineEngine.SpineStage(document.getElementById('spineCanvas'));
+    let speed = 1;
+    let soundOn = true;
+
+    // ТЗ checks: js/great-uniqorn/spine-checks.js (shared with the all-animations page)
+    const C = GUChecks.create({ base: BASE, report, version: V });
+    const { pixelChecks, checklist } = C;
+    const ICON = C.ICON;
+    const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+
+    const root = document.getElementById('root');
+    const nav = document.getElementById('nav');
+    const rows = {};
+    const totals = { ok: 0, fail: 0, warn: 0 };
+
+    // ---------- шапка ----------
+    const toggle = (id, fn) => document.getElementById(id).addEventListener('click', (e) => {
+      const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
+      e.currentTarget.setAttribute('aria-pressed', String(on));
+      fn(on);
+    });
+    const setOverlay = (on) => { document.body.classList.toggle('overlay', on); document.getElementById('overlayBtn').setAttribute('aria-pressed', String(on)); };
+    const setSpeed = (s) => {
+      speed = s;
+      document.getElementById('slowBtn').setAttribute('aria-pressed', String(s !== 1));
+      for (const r of Object.values(rows)) if (r.inst.animationState.timeScale) r.inst.animationState.timeScale = speed;
+    };
+    toggle('overlayBtn', setOverlay);
+    toggle('crossBtn', (on) => document.body.classList.toggle('cross', on));
+    toggle('slowBtn', (on) => setSpeed(on ? 0.5 : 1));
+    toggle('soundBtn', (on) => { soundOn = on; });
+    const BGS = [['', 'синий'], ['bg-checker', 'шахматка'], ['bg-black', 'чёрный']];
+    let bgI = 0;
+    document.getElementById('bgBtn').addEventListener('click', (e) => {
+      if (BGS[bgI][0]) document.body.classList.remove(BGS[bgI][0]);
+      bgI = (bgI + 1) % BGS.length;
+      if (BGS[bgI][0]) document.body.classList.add(BGS[bgI][0]);
+      e.currentTarget.textContent = `Фон: ${BGS[bgI][1]}`;
+    });
+    const each = (kinds, fn) => Object.values(rows).filter((r) => kinds.includes(r.o.kind)).forEach(fn);
+    const allWin = () => {
+      const was = soundOn;
+      soundOn = false;
+      each(['symbol', 'wild', 'scatter'], (r) => r.play('win'));
+      soundOn = was;
+      if (soundOn) Sound.playSfx('smallWin');
+    };
+    const allSetup = () => each(['symbol', 'wild', 'scatter', 'scene'], (r) => r.toSetup());
+    document.getElementById('allWinBtn').addEventListener('click', allWin);
+    document.getElementById('allSetupBtn').addEventListener('click', allSetup);
+
+    // ---------- объекты столбиком ----------
+
+    for (const [name, o] of Object.entries(report.objects)) {
+      let res;
+      try { res = await SpineEngine.SpineResource.load(stage.assetManager, `${BASE}/${name}`, { version: V }); }
+      catch (err) { console.error(name, err); root.insertAdjacentHTML('beforeend', `<p class="summary">${name}: не загрузился — ${err.message}</p>`); continue; }
+      const data = res.skeletonData;
+      const b = res.bounds;
+      const skins = o.skins.filter((s) => s !== 'default');
+      const isScene = o.kind === 'scene';
+      const sec = document.createElement('section');
+      sec.className = 'obj';
+      sec.id = `o-${name}`;
+      const clickWhat = o.kind === 'scatter' ? 'landing → idle → win' : data.findAnimation('win') ? 'win' : 'idle';
+      sec.innerHTML = `<div class="cap"><h2><i></i>${TITLE[name] || name}</h2>
+          <div class="sub">${KIND_TITLE[o.kind]} · Export/${o.folder}/<br>${data.animations.map((a) => `<code>${a.name}</code> ${String(+a.duration.toFixed(3)).replace('.', ',')} с`).join(' · ')}<br>габарит ${Math.round(b.width)}×${Math.round(b.height)} · красное перекрестие = (0,0), пунктир = статика</div>
+          <div class="hint">Клик по объекту — ${clickWhat}</div></div>
+        <div class="stagecol"><div class="frame"><div class="anchor"></div><img class="static" alt=""><div class="xh box"></div><div class="xh h"></div><div class="xh v"></div><div class="tag"></div></div>
+        <div class="ctl"></div><ul class="check"><li><span></span><span></span><span class="why">считаю проверки…</span></li></ul></div>`;
+      root.appendChild(sec);
+      const navA = document.createElement('a');
+      navA.href = `#o-${name}`;
+      navA.innerHTML = `<i></i>${TITLE[name] || name}`;
+      nav.appendChild(navA);
+
+      const col = sec.querySelector('.stagecol');
+      const frame = sec.querySelector('.frame');
+      const anchor = sec.querySelector('.anchor');
+      const staticImg = sec.querySelector('.static');
+      const tag = sec.querySelector('.tag');
+      const ctl = sec.querySelector('.ctl');
+
+      // кадр: фигуры в общем масштабе, сцены — во всю ширину колонки
+      const scaleFor = () => (isScene ? Math.min(1, (col.clientWidth || 900) / b.width) : Math.min(SYMBOL_SCALE, (col.clientWidth || 900) / b.width));
+      const layout = () => {
+        const s = scaleFor();
+        frame.style.width = `${b.width * s}px`;
+        frame.style.height = `${b.height * s}px`;
+        const ox = -b.x * s, oy = (b.y + b.height) * s; // (0,0) скелета в кадре, y вниз
+        sec.querySelector('.xh.h').style.top = `${oy}px`;
+        sec.querySelector('.xh.v').style.left = `${ox}px`;
+        const box = sec.querySelector('.xh.box');
+        if (staticImg.naturalWidth && staticImg.getAttribute('src')) {
+          const w = staticImg.naturalWidth * s, h = staticImg.naturalHeight * s;
+          const pos = { width: `${w}px`, height: `${h}px`, left: `${ox - w / 2}px`, top: `${oy - h / 2}px` };
+          Object.assign(staticImg.style, pos);
+          Object.assign(box.style, pos, { display: '' });
+        } else box.style.display = 'none';
+      };
+      new ResizeObserver(layout).observe(col);
+      staticImg.addEventListener('load', layout);
+
+      const inst = res.createInstance();
+      inst.anchorEl = anchor;
+      inst.fit = 1;
+      stage.addBase(inst);
+      let skin = skins[0] || null;
+      const setStatic = () => {
+        const st = skin && o.statics.includes(`static_${skin}.png`) ? `static_${skin}.png` : o.statics.includes('static.png') ? 'static.png' : null;
+        if (st) staticImg.src = `${BASE}/${name}/${st}?v=${V}`;
+        else { staticImg.removeAttribute('src'); layout(); }
+      };
+      const applySkin = () => {
+        if (skin) { inst.skeleton.setSkinByName(skin); inst.skeleton.setSlotsToSetupPose(); }
+        setStatic();
+      };
+      const sound = (clip) => {
+        if (!soundOn) return;
+        const ev = (CLIP_SOUND[o.kind] || {})[clip];
+        if (ev) Sound.playSfx(ev);
+      };
+      const setTag = (t) => { tag.textContent = t; };
+      const reset = () => {
+        frame.classList.remove('is-static');
+        inst.animationState.clearTracks();
+        inst.skeleton.setToSetupPose();
+      };
+      const toSetup = () => {
+        reset();
+        inst.animationState.timeScale = 0;
+        setTag('кадр 0 · дефолт-сцена');
+      };
+      const play = (clip, loop = clip === 'idle') => {
+        reset();
+        inst.animationState.timeScale = speed;
+        inst.play(clip, loop);
+        if (!loop) inst.animationState.addEmptyAnimation(0, 0, 0); // ends back on the setup pose
+        sound(clip);
+        setTag(`${clip}${loop ? ' · петля' : ''}`);
+      };
+      const freeze = (clip, which) => {
+        const a = data.findAnimation(clip);
+        if (!a) return;
+        reset();
+        const e = inst.animationState.setAnimation(0, clip, false);
+        e.trackTime = which === 'last' ? a.duration : 0;
+        inst.animationState.timeScale = 0;
+        setTag(`${clip} · ${which === 'last' ? 'последний' : 'первый'} кадр`);
+      };
+      // как в игре: скаттер landing -> idle -> win подряд на одном треке
+      const sequence = () => {
+        reset();
+        inst.animationState.timeScale = speed;
+        const land = data.findAnimation('landing').duration;
+        inst.play('landing', false).queue('idle', true).queue('win', false, 1.2);
+        inst.animationState.addEmptyAnimation(0, 0, 0);
+        sound('landing');
+        setTimeout(() => sound('win'), (land + 1.2) * 1000 / speed);
+        setTag('landing → idle → win');
+      };
+      // ТЗ: клипы на разных треках параллельно
+      const tracks = () => {
+        reset();
+        const st = inst.animationState;
+        st.timeScale = speed;
+        if (o.kind === 'scatter') {
+          const land = data.findAnimation('landing').duration;
+          st.setAnimation(0, 'landing', false);
+          st.addAnimation(1, 'idle', true, land);
+          st.addAnimation(2, 'win', false, land + 1.2);
+          st.addEmptyAnimation(2, 0, 0);
+          sound('landing');
+          setTimeout(() => sound('win'), (land + 1.2) * 1000 / speed);
+          setTag('landing (трек 0) → idle (трек 1) → win (трек 2)');
+        } else {
+          st.setAnimation(0, 'idle', true);
+          st.addAnimation(1, 'win', false, 0.6);
+          st.addEmptyAnimation(1, 0, 0);
+          setTimeout(() => sound('win'), 600 / speed);
+          setTag('idle (трек 0) + win (трек 1)');
+        }
+      };
+      const primary = () => (o.kind === 'scatter' ? sequence() : play(data.findAnimation('win') ? 'win' : 'idle'));
+      frame.addEventListener('click', primary);
+
+      const btn = (label, fn) => {
+        const el = document.createElement('button');
+        el.type = 'button';
+        el.textContent = label;
+        el.addEventListener('click', fn);
+        ctl.appendChild(el);
+        return el;
+      };
+      const lbl = (t) => ctl.insertAdjacentHTML('beforeend', `<span class="lbl">${t}</span>`);
+      const sep = () => ctl.insertAdjacentHTML('beforeend', '<span class="sep"></span>');
+      lbl('клип:');
+      for (const a of data.animations) btn(`▶ ${a.name}`, () => play(a.name));
+      if (o.kind === 'scatter') btn('▶ landing → idle → win', sequence);
+      if ((o.kind === 'scatter' || o.kind === 'wild') && data.findAnimation('idle') && data.findAnimation('win')) btn('▶ на треках', tracks);
+      sep();
+      lbl('кадр:');
+      btn('статика', () => { if (!staticImg.getAttribute('src')) return; toSetup(); frame.classList.add('is-static'); setTag('статика (static.png)'); });
+      btn('кадр 0', toSetup);
+      const clipSel = document.createElement('select');
+      clipSel.innerHTML = data.animations.map((a) => `<option>${a.name}</option>`).join('');
+      ctl.appendChild(clipSel);
+      btn('первый', () => freeze(clipSel.value, 'first'));
+      btn('последний', () => freeze(clipSel.value, 'last'));
+
+      const checkEl = sec.querySelector('.check');
+      const runChecks = async () => {
+        const { res: r, data: od } = await pixelChecks(name, o, skin);
+        const items = checklist(o, od, r);
+        checkEl.innerHTML = items.map((i) => `<li class="${i.st}"><span>${ICON[i.st]}</span><span class="what">${i.what}</span><span class="why">${i.why}</span></li>`).join('');
+        const worst = items.some((i) => i.st === 'fail') ? 'fail' : items.some((i) => i.st === 'warn') ? 'warn' : 'ok';
+        navA.querySelector('i').className = worst;
+        sec.querySelector('.cap h2 i').className = worst;
+        return items;
+      };
+      const setSkin = (s) => {
+        if (!skins.includes(s)) return;
+        skin = s;
+        ctl.querySelectorAll('button[data-skin]').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.skin === s)));
+        applySkin();
+        toSetup();
+        runChecks();
+      };
+      if (skins.length) {
+        sep();
+        lbl('скин:');
+        for (const s of skins) btn(s, () => setSkin(s)).dataset.skin = s;
+        ctl.querySelector(`button[data-skin="${skin}"]`).setAttribute('aria-pressed', 'true');
+      }
+
+      applySkin();
+      if (data.findAnimation('idle') && (isScene || o.kind === 'scatter' || o.kind === 'wild')) play('idle');
+      else toSetup();
+      layout();
+
+      const items = await runChecks();
+      for (const i of items) totals[i.st]++;
+      rows[name] = { o, inst, play, toSetup, freeze, tracks, sequence, setSkin, primary };
+    }
+
+    document.getElementById('summary').innerHTML =
+      `Экспорт <b>${esc(report.source)}</b>, ${Object.keys(report.objects).length} объектов: <b style="color:var(--ok)">${totals.ok} ✅</b> · <b style="color:var(--fail)">${totals.fail} ❌</b> · <b style="color:var(--warn)">${totals.warn} ⚠️</b>. ` +
+      `Фигуры, Wild и скаттер — в одном масштабе (×${String(SYMBOL_SCALE).replace('.', ',')}). Клик по объекту — его анимация; «Статика поверх» и перекрестие (0,0) показывают смещения.`;
+
+    window.gu = { rows, stage };
+  })();
+  </script>
+</body>
+</html>

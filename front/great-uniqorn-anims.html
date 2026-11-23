@@ -133,6 +133,25 @@
     text-shadow: 0 3px 0 rgba(0, 0, 0, 0.4), 0 0 18px rgba(0, 0, 0, 0.45);
   }
 
+  .dz { display: flex; }
+  .dz__box { position: relative; cursor: pointer; border-radius: 10px; border: 1px solid rgba(255, 213, 106, 0.22); background: #0d1850; }
+  .dz__ctl { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .dz__ctl button { font-size: 13px; padding: 3px 10px; }
+  .wl { position: relative; width: min(100%, 620px); aspect-ratio: 1040 / 620; background: #0b1546; border: 3px solid #c9973a; border-radius: 14px; cursor: pointer; }
+  .wl__grid, .wl__anchor { position: absolute; inset: 0; }
+  .wl__cell { position: absolute; width: 20%; height: 32.26%; }
+  .wl__cell img { position: absolute; left: -5.3%; top: -7.5%; width: 110.6%; height: 115%; object-fit: contain; transition: filter 200ms, opacity 200ms; }
+  .wl__cell.is-dim img { filter: brightness(0.45) saturate(0.6); }
+  .st:has(.wl) { align-items: flex-start; flex: 1 1 100%; }
+  .tz { margin-top: 10px; }
+  .tz__badge { display: inline-block; font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .tz__badge.is-ok { color: #4bd17c; border-color: rgba(75, 209, 124, 0.5); background: rgba(75, 209, 124, 0.08); }
+  .tz__badge.is-fail { color: #ff6b6b; border-color: rgba(255, 107, 107, 0.5); background: rgba(255, 107, 107, 0.08); }
+  .tz__badge.is-warn { color: #ffb648; border-color: rgba(255, 182, 72, 0.5); background: rgba(255, 182, 72, 0.08); }
+  .tz__why { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+  .tz__why b { color: var(--text); font-weight: 600; }
+  .tz__why code { font-size: 11.5px; }
+  .st:has(.dz) { align-items: flex-start; flex: 1 1 100%; }
   #lab { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
 
   @media (max-width: 900px) {
@@ -164,6 +183,10 @@
 
   <script src="vendor/spine-webgl.js"></script>
   <script src="js/spine-engine.js"></script>
+  <script src="js/audio-mute.js?v=1"></script>
+  <script src="js/sound-kit.js?v=7"></script>
+  <script src="js/great-uniqorn/sound.js?v=6"></script>
+  <script src="js/great-uniqorn/spine-checks.js?v=1"></script>
   <script>
   (async () => {
     const IMG = 'img/great-uniqorn';
@@ -238,31 +261,122 @@
     const fmt = (s) => `${String(+s.toFixed(2)).replace('.', ',')} с`;
 
     // =====================================================================
-    category('scatter', 'Скаттер', 'бургер · Spine',
-      'Скелет spine/scatter (scripts/great_uniqorn_scatter_spine.py): бургер по слоям. На сетке поверх ячейки, границы скелета ×2 от тайла — место под взрыв выигрыша.');
-    for (const [title, seq, every, text] of [
-      ['Idle', [['idle', true]], 0, 'Стоит на сетке: булка покачивается, сыр и котлета дышат. Петля.'],
-      ['Land → Idle', [['land', false], ['idle', true]], 2200, 'Бургер приземлился на останавливающийся барабан (1-й / 2-й / 3-й — свой звук).'],
-      ['Win → Idle', [['win', false], ['idle', true]], 3600, 'Выигрыш скаттеров: слои разлетаются вверх и собираются обратно, вспышка. Игра ждёт клип целиком перед попапом.'],
-    ]) {
-      const clipText = seq.map(([c]) => c).join(' → ');
-      const s = row({ title, clip: `${clipText} · ${{ 'idle': '2 с', 'land': '0,6 с', 'win': '2,6 с' }[seq[0][0]]}`, text, kind: 'SPINE' });
-      const cell = st(s, '<div class="cell"><div class="spine"></div></div>');
-      spine(cell.querySelector('.spine'), `${IMG}/spine/scatter`, seq, { fit: 2, every, clickEl: cell });
-    }
-
-    // =====================================================================
-    category('symbols', 'Символы', 'CSS',
-      'Обычные символы — PNG без спайна: WILD и скаттер (если без Spine) всё время «дышат», остальные стоят, пока не выиграют.');
-    {
-      const s = row({ title: 'Дыхание', clip: 'symbol-breathe · 2,6 с · петля', text: 'WILD и множители на сетке, скаттер-фолбэк без WebGL.', kind: 'CSS' });
-      for (const c of ['wild', 'x5', 'scatter']) st(s, `<div class="cell is-special"><img src="${sym(c)}" alt=""></div>`, c);
-    }
-    {
-      const s = row({ title: 'Выигрыш символа', clip: 'symbol-win · 620 мс', text: 'Каждый символ выигравшей линии подпрыгивает с золотым свечением; не выигравшие притушены.', kind: 'CSS' });
-      for (const c of ['k', 'docs', 'jet', 'hair']) {
-        const cell = st(s, `<div class="cell"><img src="${sym(c)}" alt=""></div>`, c);
-        loop(cell, () => { cell.classList.remove('is-winning'); void cell.offsetWidth; cell.classList.add('is-winning'); }, 1400);
+    // ---------- Spine аниматора: в статике, клик — анимация ----------
+    const D = `${IMG}/spine/d`;
+    const DESIGNER = [
+      ['a', 'A', 'symbol'], ['j', 'J', 'symbol'], ['k', 'K', 'symbol'], ['q', 'Q', 'symbol'],
+      ['hair', 'Причёска', 'symbol'], ['docs', 'Документы', 'symbol'], ['jet', 'Самолёт', 'symbol'],
+      ['wild', 'Wild', 'wild'], ['scatter', 'Скаттер', 'scatter'],
+      ['hero', 'Герой — база', 'hero'], ['hero_bonus', 'Герой — фриспины', 'hero_bonus'],
+      ['bg_base', 'Фон — база', 'scene'], ['bg_bonus', 'Фон — фриспины', 'scene'],
+      ['logo', 'Логотип', 'logo', `${IMG}/spine/logo`],
+    ];
+    const WHEN = {
+      symbol: 'В игре: на выигрыше — `win` 1,3 с, всё остальное время статичная картинка (= кадр 0 скелета).',
+      wild: 'В игре: `idle` по кругу всю фриспин-сессию, на выигрыше `win` (у x2–x9 — `win_x`). В базе — статика, на выигрыше `win`.',
+      scatter: 'В игре: `landing` при остановке барабана, потом `idle` по кругу, на выигрыше `win` 1,7 с.',
+      hero: 'В игре (десктоп): `idle` по кругу под сценой; на каждом выигрыше в базе — `win` поверх idle (смотрит в экран, улыбается, машет рукой у подбородка). На телефоне — прежний фон-картинка.',
+      hero_bonus: 'В игре (десктоп, фриспины): `idle` по кругу под сценой; на каждом выигрыше — `win` поверх idle: победная затяжка (огонёк сигары разгорается), большое облако дыма, взмахи хвостом, довольное покачивание.',
+      logo: 'В игре: `idle` по кругу на месте логотипа (блик по золоту, ореол, звёздочки), на каждом выигрыше — `win` (упругий удар, вспышка, лучи). Своя анимация (scripts/great_uniqorn_logo_fx.py), не из пака аниматора.',
+      scene: 'В игре (десктоп): `idle` по кругу под сценой, вместо картинки фона. На телефоне — прежний фон-картинка.',
+    };
+    const SYMBOL_PX = 1.5; // px на единицу скелета — один на все фигуры
+    const designerSound = { symbol: { win: 'smallWin' }, wild: { win: 'smallWin', win_x: 'wildGrow' }, scatter: { landing: 'scatterLand1', win: 'symWin_scatter' } };
+    category('designer', 'Spine аниматора', 'uniqorn_presedent.zip · spine/d',
+      'Все скелеты, которые стоят на слоте, друг под другом в статике (кадр 0). Клик по объекту — его анимация, потом он возвращается в статику; кнопки — каждый клип отдельно. Возле каждого — ✅ если проходит по ТЗ аниматора, ❌ если нет, и почему (те же проверки, что на странице <a href="great-uniqorn-spine-check.html" style="color:var(--accent)">приёмки Spine</a>, где они расписаны подробно).');
+    const report = await (await fetch(`${D}/report.json?v=${V}`)).json();
+    const checks = GUChecks.create({ base: D, report, version: V });
+    for (const [code, title, kind, dir] of DESIGNER) {
+      const res = await loadRes(dir || `${D}/${code}`);
+      const data = res.skeletonData;
+      const b = res.bounds;
+      const clips = data.animations.map((x) => `${x.name} ${fmt(x.duration)}`).join(' · ');
+      const s = row({ title, clip: clips, text: WHEN[kind].replace(/`([^`]+)`/g, '<code>$1</code>'), kind: 'SPINE' });
+      const wrap = st(s, '<div class="dz"><div class="dz__box"></div></div><div class="dz__ctl"></div>');
+      const box = wrap.querySelector('.dz__box');
+      const ctl = wrap.parentElement.querySelector('.dz__ctl');
+      const isScene = kind === 'scene' || kind === 'hero' || kind === 'hero_bonus' || kind === 'logo';
+      const size = () => {
+        const avail = Math.max(200, s.clientWidth - 10);
+        const k = isScene ? Math.min(0.5, avail / b.width) : Math.min(SYMBOL_PX, avail / b.width);
+        box.style.width = `${b.width * k}px`;
+        box.style.height = `${b.height * k}px`;
+      };
+      new ResizeObserver(size).observe(s);
+      size();
+      const inst = res.createInstance();
+      inst.anchorEl = box;
+      inst.fit = 1;
+      stage.addBase(inst);
+      const skins = data.skins.map((x) => x.name).filter((n) => n !== 'default');
+      if (skins.length) { inst.skeleton.setSkinByName(skins[0]); inst.skeleton.setSlotsToSetupPose(); }
+      const still = () => {
+        inst.animationState.clearTracks();
+        inst.skeleton.setToSetupPose();
+        if (skins.length) inst.skeleton.setSlotsToSetupPose();
+      };
+      const playClip = (clip) => {
+        still();
+        inst.animationState.timeScale = speed;
+        const loopIt = clip === 'idle' && isScene;
+        inst.play(clip, loopIt);
+        if (!loopIt) inst.animationState.addEmptyAnimation(0, 0, 0); // back to the static pose
+        const ev = (designerSound[kind] || {})[clip];
+        if (ev && window.Sound) Sound.playSfx(ev);
+      };
+      const primary = () => {
+        if (kind === 'scatter') {
+          still();
+          inst.animationState.timeScale = speed;
+          inst.play('landing', false).queue('idle', false).queue('win', false);
+          inst.animationState.addEmptyAnimation(0, 0, 0);
+          if (window.Sound) { Sound.playSfx('scatterLand1'); setTimeout(() => Sound.playSfx('symWin_scatter'), 2000 / speed); }
+        } else playClip(data.findAnimation('win') ? 'win' : 'idle');
+      };
+      box.addEventListener('click', primary);
+      players.push({ run: still });
+      still();
+      const mk = (label, fn) => { const bt = document.createElement('button'); bt.type = 'button'; bt.textContent = label; bt.addEventListener('click', fn); ctl.appendChild(bt); return bt; };
+      for (const x of data.animations) mk(`▶ ${x.name}`, () => playClip(x.name));
+      if (kind === 'scatter') mk('▶ landing → idle → win', primary);
+      mk('■ статика', still);
+      if (skins.length) {
+        const bts = skins.map((sk) => mk(sk, () => {
+          inst.skeleton.setSkinByName(sk);
+          still();
+          bts.forEach((x) => x.setAttribute('aria-pressed', String(x === bts[skins.indexOf(sk)])));
+        }));
+        bts[0].setAttribute('aria-pressed', 'true');
+      }
+      // ТЗ: a verdict next to the object, the reasons under it, a mark on every clip
+      const o = report.objects[code];
+      const cap = s.parentElement.querySelector('.cap');
+      const tz = document.createElement('div');
+      tz.className = 'tz';
+      tz.innerHTML = '<span class="tz__badge">… проверяю по ТЗ</span>';
+      cap.appendChild(tz);
+      if (o) {
+        const clipButtons = [...ctl.querySelectorAll('button')].filter((x) => x.textContent.startsWith('▶ ') && data.findAnimation(x.textContent.slice(2)));
+        checks.pixelChecks(code, o, skins[0] || null).then(({ res: r, data: od }) => {
+          const items = checks.checklist(o, od, r);
+          const worst = checks.worst(items);
+          const bad = items.filter((i) => i.st !== 'ok');
+          const fails = items.filter((i) => i.st === 'fail').length;
+          tz.innerHTML = `<span class="tz__badge is-${worst}">${checks.ICON[worst]} ${worst === 'ok' ? 'проходит по ТЗ' : worst === 'fail' ? `не по ТЗ: ${fails} из ${items.length}` : 'по ТЗ, но проверить глазами'}</span>` +
+            (bad.length ? `<ul class="tz__why">${bad.map((i) => `<li class="is-${i.st}">${checks.ICON[i.st]} <b>${i.what}</b> — ${i.why}</li>`).join('')}</ul>` : '');
+          const clipSt = checks.clipStatus(o, od, r);
+          for (const bt of clipButtons) {
+            const name = bt.textContent.slice(2);
+            const c = clipSt[name];
+            if (!c) continue;
+            bt.textContent = `${c.st === 'ok' ? '✅' : '❌'} ▶ ${name}`;
+            bt.title = c.st === 'ok' ? 'клип по ТЗ' : c.why.join('; ');
+          }
+        }).catch((err) => { tz.innerHTML = `<span class="tz__badge is-warn">⚠️ проверка не запустилась: ${err.message}</span>`; });
+      } else if (kind === 'logo') {
+        tz.innerHTML = '<span class="tz__badge">своя анимация — ТЗ аниматора её не касается</span>';
+      } else {
+        tz.innerHTML = '<span class="tz__badge is-warn">⚠️ нет в отчёте экспорта</span>';
       }
     }
 
@@ -289,35 +403,58 @@
     }
 
     // =====================================================================
-    category('lines', 'Линия выигрыша', 'CSS · SVG',
-      'Линия рисуется от первого барабана к последнему (620 мс) поверх сетки, символы линии подпрыгивают, остальные притушены.');
+    category('lines', 'Линии выигрыша', 'Spine · 11 линий · spine/winlines',
+      'Один скелет (scripts/great_uniqorn_winlines.py) в координатах сетки барабанов, обрезан по окну. Каждая линия: <code>line{n}_in</code> — рисуется слева направо, по фронту бежит звезда, на ячейках вспыхивают кольца и раскрываются звёзды; потом <code>line{n}_loop</code> — свечение дышит, по линии бежит комета, звёзды мерцают. В игре несколько линий сразу — каждая на своём треке, с небольшим сдвигом. Клик по сетке — следующая линия.');
     {
-      const s = row({ title: 'Линия + выигрыш символов', clip: 'win-line-draw · 620 мс', text: 'Пример: три линии подряд, как в цикле показа выигрышей.', kind: 'CSS' });
-      const layout = [['k', 'jet', 'q', 'docs', 'a'], ['hair', 'hair', 'hair', 'j', 'k'], ['a', 'docs', 'k', 'jet', 'q']];
-      const lines = [[1, 1, 1, 1, 1], [0, 1, 2, 1, 0], [2, 1, 0, 1, 2]];
-      const wins = [3, 3, 2];
-      const grid = st(s, `<div class="grid">${layout.flat().map((c) => `<div class="cell"><img src="${sym(c)}" alt=""></div>`).join('')}
-        <svg class="win-line" viewBox="0 0 500 300" preserveAspectRatio="none"><path class="win-line__glow" pathLength="1"/><path class="win-line__core" pathLength="1"/></svg></div>`);
-      const cells = [...grid.querySelectorAll('.cell')];
-      const svg = grid.querySelector('svg');
-      layout[1][3] = 'x3';
-      cells[8].querySelector('img').src = sym('x3');
-      cells[8].classList.add('is-multiplier');
-      let k = 0;
-      loop(grid, () => {
-        const li = k++ % lines.length;
-        const rows = lines[li];
-        const d = rows.map((r, c) => `${c ? 'L' : 'M'}${c * 100 + 50} ${r * 100 + 50}`).join(' ');
-        svg.querySelectorAll('path').forEach((p) => p.setAttribute('d', d));
-        svg.classList.remove('is-playing'); void svg.getBoundingClientRect(); svg.classList.add('is-playing');
-        cells.forEach((cell, i) => {
-          const r = Math.floor(i / 5), c = i % 5;
-          const on = rows[c] === r && c < wins[li] + (li === 0 ? 1 : 0);
-          cell.classList.toggle('is-dim', !on);
-          cell.classList.remove('is-winning');
-          if (on) { void cell.offsetWidth; cell.classList.add('is-winning'); }
+      const WL = await loadRes(`${IMG}/spine/winlines`);
+      const PAY = [[1, 1, 1, 1, 1], [0, 0, 0, 0, 0], [2, 2, 2, 2, 2], [0, 1, 2, 1, 0], [2, 1, 0, 1, 2], [1, 0, 1, 0, 1],
+        [1, 2, 1, 2, 1], [0, 1, 0, 1, 0], [2, 1, 2, 1, 2], [0, 2, 0, 2, 0], [2, 0, 2, 0, 2]];
+      const layout = [['k', 'jet', 'q', 'docs', 'a'], ['hair', 'wild', 'hair', 'j', 'k'], ['a', 'docs', 'k', 'jet', 'q']];
+      const s = row({ title: 'Все 11 линий', clip: 'line{1..11}_in ≈ 0,8 с → line{n}_loop 1,2 с (петля)', text: 'Кнопки — каждая линия отдельно и все сразу. Символы линии подсвечены, остальные притушены, как в игре.', kind: 'SPINE' });
+      const wrap = st(s, '<div class="wl"><div class="wl__grid"></div><div class="wl__anchor"></div></div><div class="dz__ctl wl__ctl"></div>');
+      const box = wrap;
+      const gridEl = box.querySelector('.wl__grid');
+      const ctl = wrap.parentElement.querySelector('.wl__ctl');
+      const cells = [];
+      for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) {
+        const el = document.createElement('div');
+        el.className = 'wl__cell';
+        el.style.left = `${(c * 208) / 10.4}%`;
+        el.style.top = `${(r * 210) / 6.2}%`;
+        el.innerHTML = `<img src="${sym(layout[r][c])}" alt="">`;
+        gridEl.appendChild(el);
+        cells.push({ el, r, c });
+      }
+      const inst = WL.createInstance();
+      inst.anchorEl = box.querySelector('.wl__anchor');
+      inst.fit = 1;
+      inst.boundsOverride = { x: -520, y: -310, width: 1040, height: 620 };
+      stage.addBase(inst);
+      const showLines = (ns) => {
+        const st2 = inst.animationState;
+        st2.clearTracks();
+        inst.skeleton.setToSetupPose();
+        st2.timeScale = speed;
+        ns.forEach((n, i) => {
+          st2.setEmptyAnimation(i, 0);
+          st2.addAnimation(i, `line${n}_in`, false, i * 0.09);
+          st2.addAnimation(i, `line${n}_loop`, true, 0);
         });
-      }, 1500);
+        const on = new Set();
+        for (const n of ns) PAY[n - 1].forEach((r, c) => on.add(`${r}:${c}`));
+        for (const x of cells) x.el.classList.toggle('is-dim', ns.length > 0 && !on.has(`${x.r}:${x.c}`));
+      };
+      let cur = 0;
+      const next = () => { cur = cur % 11 + 1; showLines([cur]); };
+      box.addEventListener('click', next);
+      const mk = (label, fn) => { const bt = document.createElement('button'); bt.type = 'button'; bt.textContent = label; bt.addEventListener('click', fn); ctl.appendChild(bt); return bt; };
+      for (let n = 1; n <= 11; n++) mk(`▶ линия ${n}`, () => { cur = n; showLines([n]); });
+      mk('▶ все 11', () => showLines(Array.from({ length: 11 }, (_, i) => i + 1)));
+      mk('▶ 3 сразу (1, 4, 5)', () => showLines([1, 4, 5]));
+      mk('■ стоп', () => showLines([]));
+      players.push({ run: () => showLines([cur || 1]) });
+      showLines([1]);
+      cur = 1;
     }
 
     // =====================================================================

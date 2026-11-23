@@ -1,0 +1,4482 @@
+{
+ "source": "uniqorn_presedent.zip",
+ "objects": {
+  "a": {
+   "folder": "A",
+   "kind": "symbol",
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "static.png"
+   ],
+   "pages": [
+    {
+     "page": "animation.png",
+     "file": "animation.png",
+     "size": "721,182",
+     "pma": true
+    }
+   ],
+   "naming": [],
+   "spine": "4.1-from-4.2.43",
+   "bounds": [
+    -93.5,
+    -93.5,
+    187,
+    187
+   ],
+   "animations": {
+    "win": 1.3
+   },
+   "skins": [
+    "default"
+   ],
+   "statics": [
+    "static.png"
+   ],
+   "regions": [
+    {
+     "name": "A_glow",
+     "w": 187,
+     "h": 187,
+     "src": [
+      187,
+      187
+     ]
+    },
+    {
+     "name": "A_item",
+     "w": 127,
+     "h": 127,
+     "src": [
+      127,
+      127
+     ]
+    },
+    {
+     "name": "A_rays2_c",
+     "w": 144,
+     "h": 144,
+     "src": [
+      144,
+      144
+     ]
+    },
+    {
+     "name": "blik",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    }
+   ],
+   "sizeIssues": [],
+   "noSource": [],
+   "unusedRegions": [],
+   "neverShown": [],
+   "meshes": [],
+   "overlaps": {}
+  },
+  "j": {
+   "folder": "J",
+   "kind": "symbol",
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "static.png"
+   ],
+   "pages": [
+    {
+     "page": "animation.png",
+     "file": "animation.png",
+     "size": "382,146",
+     "pma": true
+    }
+   ],
+   "naming": [],
+   "spine": "4.1-from-4.2.43",
+   "bounds": [
+    -72,
+    -72,
+    144,
+    144
+   ],
+   "animations": {
+    "win": 1.3
+   },
+   "skins": [
+    "default"
+   ],
+   "statics": [
+    "static.png"
+   ],
+   "regions": [
+    {
+     "name": "J_rays2_c",
+     "w": 144,
+     "h": 144,
+     "src": [
+      144,
+      144
+     ]
+    },
+    {
+     "name": "blik",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "j_item",
+     "w": 127,
+     "h": 127,
+     "src": [
+      127,
+      127
+     ]
+    }
+   ],
+   "sizeIssues": [],
+   "noSource": [],
+   "unusedRegions": [],
+   "neverShown": [],
+   "meshes": [],
+   "overlaps": {}
+  },
+  "k": {
+   "folder": "K",
+   "kind": "symbol",
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "static.png"
+   ],
+   "pages": [
+    {
+     "page": "animation.png",
+     "file": "animation.png",
+     "size": "383,146",
+     "pma": true
+    }
+   ],
+   "naming": [],
+   "spine": "4.1-from-4.2.43",
+   "bounds": [
+    -72,
+    -72,
+    144,
+    144
+   ],
+   "animations": {
+    "win": 1.3
+   },
+   "skins": [
+    "default"
+   ],
+   "statics": [
+    "static.png"
+   ],
+   "regions": [
+    {
+     "name": "K",
+     "w": 127,
+     "h": 127,
+     "src": [
+      127,
+      127
+     ]
+    },
+    {
+     "name": "K_rays2_c",
+     "w": 144,
+     "h": 144,
+     "src": [
+      144,
+      144
+     ]
+    },
+    {
+     "name": "blik",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    }
+   ],
+   "sizeIssues": [],
+   "noSource": [],
+   "unusedRegions": [],
+   "neverShown": [],
+   "meshes": [],
+   "overlaps": {}
+  },
+  "q": {
+   "folder": "Q",
+   "kind": "symbol",
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "static.png"
+   ],
+   "pages": [
+    {
+     "page": "animation.png",
+     "file": "animation.png",
+     "size": "400,146",
+     "pma": true
+    }
+   ],
+   "naming": [],
+   "spine": "4.1-from-4.2.43",
+   "bounds": [
+    -72,
+    -72,
+    144,
+    144
+   ],
+   "animations": {
+    "win": 1.3
+   },
+   "skins": [
+    "default"
+   ],
+   "statics": [
+    "static.png"
+   ],
+   "regions": [
+    {
+     "name": "Q",
+     "w": 127,
+     "h": 127,
+     "src": [
+      127,
+      127
+     ]
+    },
+    {
+     "name": "Q_rays2_c",
+     "w": 144,
+     "h": 144,
+     "src": [
+      144,
+      144
+     ]
+    },
+    {
+     "name": "blik",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    }
+   ],
+   "sizeIssues": [],
+   "noSource": [],
+   "unusedRegions": [],
+   "neverShown": [],
+   "meshes": [],
+   "overlaps": {}
+  },
+  "hair": {
+   "folder": "hair",
+   "kind": "symbol",
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "static.png"
+   ],
+   "pages": [
+    {
+     "page": "animation.png",
+     "file": "animation.png",
+     "size": "462,504",
+     "pma": true
+    }
+   ],
+   "naming": [],
+   "spine": "4.1-from-4.2.43",
+   "bounds": [
+    -120.31,
+    -100,
+    240.62,
+    280
+   ],
+   "animations": {
+    "win": 1.3
+   },
+   "skins": [
+    "default"
+   ],
+   "statics": [
+    "static.png"
+   ],
+   "regions": [
+    {
+     "name": "blik",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "glow_beam",
+     "w": 70,
+     "h": 180,
+     "src": [
+      70,
+      180
+     ]
+    },
+    {
+     "name": "glow_disc",
+     "w": 180,
+     "h": 180,
+     "src": [
+      180,
+      180
+     ]
+    },
+    {
+     "name": "glow_dot",
+     "w": 36,
+     "h": 36,
+     "src": [
+      36,
+      36
+     ]
+    },
+    {
+     "name": "glow_flare",
+     "w": 200,
+     "h": 200,
+     "src": [
+      200,
+      200
+     ]
+    },
+    {
+     "name": "glow_ring",
+     "w": 160,
+     "h": 160,
+     "src": [
+      160,
+      160
+     ]
+    },
+    {
+     "name": "glow_star",
+     "w": 32,
+     "h": 32,
+     "src": [
+      32,
+      32
+     ]
+    },
+    {
+     "name": "hair_halo",
+     "w": 187,
+     "h": 187,
+     "src": [
+      187,
+      187
+     ]
+    },
+    {
+     "name": "hair_rays",
+     "w": 172,
+     "h": 172,
+     "src": [
+      172,
+      172
+     ]
+    },
+    {
+     "name": "hair_rays2",
+     "w": 148,
+     "h": 148,
+     "src": [
+      148,
+      148
+     ]
+    },
+    {
+     "name": "hight2_items",
+     "w": 127,
+     "h": 127,
+     "src": [
+      127,
+      127
+     ]
+    },
+    {
+     "name": "spark",
+     "w": 40,
+     "h": 40,
+     "src": [
+      40,
+      40
+     ]
+    }
+   ],
+   "sizeIssues": [],
+   "noSource": [],
+   "unusedRegions": [],
+   "neverShown": [],
+   "meshes": [
+    {
+     "skin": "default",
+     "slot": "hair",
+     "attachment": "hight2_items",
+     "type": "mesh",
+     "vertices": 289
+    },
+    {
+     "skin": "default",
+     "slot": "hair2",
+     "attachment": "hight2_items",
+     "type": "mesh",
+     "vertices": 289
+    }
+   ],
+   "overlaps": {}
+  },
+  "docs": {
+   "folder": "notebooks",
+   "kind": "symbol",
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "static.png"
+   ],
+   "pages": [
+    {
+     "page": "animation.png",
+     "file": "animation.png",
+     "size": "480,522",
+     "pma": true
+    }
+   ],
+   "naming": [],
+   "spine": "4.1-from-4.2.43",
+   "bounds": [
+    -120.31,
+    -100,
+    240.62,
+    280
+   ],
+   "animations": {
+    "win": 1.3
+   },
+   "skins": [
+    "default"
+   ],
+   "statics": [
+    "static.png"
+   ],
+   "regions": [
+    {
+     "name": "blik",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "cover",
+     "w": 127,
+     "h": 127,
+     "src": [
+      127,
+      127
+     ]
+    },
+    {
+     "name": "cover_in",
+     "w": 127,
+     "h": 127,
+     "src": [
+      127,
+      127
+     ]
+    },
+    {
+     "name": "doc",
+     "w": 127,
+     "h": 127,
+     "src": [
+      127,
+      127
+     ]
+    },
+    {
+     "name": "glow_beam",
+     "w": 70,
+     "h": 180,
+     "src": [
+      70,
+      180
+     ]
+    },
+    {
+     "name": "glow_disc",
+     "w": 180,
+     "h": 180,
+     "src": [
+      180,
+      180
+     ]
+    },
+    {
+     "name": "glow_dot",
+     "w": 36,
+     "h": 36,
+     "src": [
+      36,
+      36
+     ]
+    },
+    {
+     "name": "glow_flare",
+     "w": 200,
+     "h": 200,
+     "src": [
+      200,
+      200
+     ]
+    },
+    {
+     "name": "glow_ring",
+     "w": 160,
+     "h": 160,
+     "src": [
+      160,
+      160
+     ]
+    },
+    {
+     "name": "glow_star",
+     "w": 32,
+     "h": 32,
+     "src": [
+      32,
+      32
+     ]
+    },
+    {
+     "name": "hight1_items",
+     "w": 127,
+     "h": 127,
+     "src": [
+      127,
+      127
+     ]
+    },
+    {
+     "name": "nb_base",
+     "w": 127,
+     "h": 127,
+     "src": [
+      127,
+      127
+     ]
+    },
+    {
+     "name": "notebooks_halo",
+     "w": 187,
+     "h": 187,
+     "src": [
+      187,
+      187
+     ]
+    },
+    {
+     "name": "notebooks_rays",
+     "w": 172,
+     "h": 172,
+     "src": [
+      172,
+      172
+     ]
+    },
+    {
+     "name": "notebooks_rays2",
+     "w": 148,
+     "h": 148,
+     "src": [
+      148,
+      148
+     ]
+    },
+    {
+     "name": "pen",
+     "w": 127,
+     "h": 127,
+     "src": [
+      127,
+      127
+     ]
+    },
+    {
+     "name": "sign_01",
+     "w": 127,
+     "h": 127,
+     "src": [
+      127,
+      127
+     ]
+    },
+    {
+     "name": "sign_02",
+     "w": 127,
+     "h": 127,
+     "src": [
+      127,
+      127
+     ]
+    },
+    {
+     "name": "sign_03",
+     "w": 127,
+     "h": 127,
+     "src": [
+      127,
+      127
+     ]
+    },
+    {
+     "name": "sign_04",
+     "w": 127,
+     "h": 127,
+     "src": [
+      127,
+      127
+     ]
+    },
+    {
+     "name": "sign_05",
+     "w": 127,
+     "h": 127,
+     "src": [
+      127,
+      127
+     ]
+    },
+    {
+     "name": "sign_06",
+     "w": 127,
+     "h": 127,
+     "src": [
+      127,
+      127
+     ]
+    },
+    {
+     "name": "sign_07",
+     "w": 127,
+     "h": 127,
+     "src": [
+      127,
+      127
+     ]
+    },
+    {
+     "name": "sign_08",
+     "w": 127,
+     "h": 127,
+     "src": [
+      127,
+      127
+     ]
+    },
+    {
+     "name": "sign_09",
+     "w": 127,
+     "h": 127,
+     "src": [
+      127,
+      127
+     ]
+    },
+    {
+     "name": "sign_10",
+     "w": 127,
+     "h": 127,
+     "src": [
+      127,
+      127
+     ]
+    },
+    {
+     "name": "spark",
+     "w": 40,
+     "h": 40,
+     "src": [
+      40,
+      40
+     ]
+    }
+   ],
+   "sizeIssues": [],
+   "noSource": [],
+   "unusedRegions": [],
+   "neverShown": [],
+   "meshes": [],
+   "overlaps": {}
+  },
+  "jet": {
+   "folder": "plane",
+   "kind": "symbol",
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "delivered_static.png",
+    "static.png"
+   ],
+   "pages": [
+    {
+     "page": "animation.png",
+     "file": "animation.png",
+     "size": "1169,202",
+     "pma": true
+    }
+   ],
+   "naming": [],
+   "spine": "4.1-from-4.2.43",
+   "bounds": [
+    -114.81,
+    -162.35,
+    240.62,
+    255.85
+   ],
+   "animations": {
+    "win": 1.3
+   },
+   "skins": [
+    "default"
+   ],
+   "statics": [
+    "static.png"
+   ],
+   "regions": [
+    {
+     "name": "blik",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "exhaust",
+     "w": 26,
+     "h": 11,
+     "src": [
+      26,
+      11
+     ]
+    },
+    {
+     "name": "fan",
+     "w": 18,
+     "h": 18,
+     "src": [
+      18,
+      18
+     ]
+    },
+    {
+     "name": "glow_beam",
+     "w": 70,
+     "h": 180,
+     "src": [
+      70,
+      180
+     ]
+    },
+    {
+     "name": "glow_disc",
+     "w": 180,
+     "h": 180,
+     "src": [
+      180,
+      180
+     ]
+    },
+    {
+     "name": "glow_dot",
+     "w": 36,
+     "h": 36,
+     "src": [
+      36,
+      36
+     ]
+    },
+    {
+     "name": "glow_flare",
+     "w": 200,
+     "h": 200,
+     "src": [
+      200,
+      200
+     ]
+    },
+    {
+     "name": "glow_ring",
+     "w": 160,
+     "h": 160,
+     "src": [
+      160,
+      160
+     ]
+    },
+    {
+     "name": "glow_star",
+     "w": 32,
+     "h": 32,
+     "src": [
+      32,
+      32
+     ]
+    },
+    {
+     "name": "hight2_items",
+     "w": 150,
+     "h": 143,
+     "src": [
+      150,
+      143
+     ]
+    },
+    {
+     "name": "plane_halo",
+     "w": 210,
+     "h": 203,
+     "src": [
+      210,
+      203
+     ]
+    },
+    {
+     "name": "plane_rays",
+     "w": 200,
+     "h": 200,
+     "src": [
+      200,
+      200
+     ]
+    },
+    {
+     "name": "plane_rays2",
+     "w": 172,
+     "h": 172,
+     "src": [
+      172,
+      172
+     ]
+    },
+    {
+     "name": "spark",
+     "w": 40,
+     "h": 40,
+     "src": [
+      40,
+      40
+     ]
+    },
+    {
+     "name": "wind",
+     "w": 46,
+     "h": 5,
+     "src": [
+      46,
+      5
+     ]
+    }
+   ],
+   "sizeIssues": [],
+   "noSource": [],
+   "unusedRegions": [],
+   "neverShown": [],
+   "meshes": [],
+   "overlaps": {}
+  },
+  "wild": {
+   "folder": "wild",
+   "kind": "wild",
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "static_wild.png",
+    "static_x2.png",
+    "static_x3.png",
+    "static_x5.png",
+    "static_x7.png",
+    "static_x9.png"
+   ],
+   "pages": [
+    {
+     "page": "animation.png",
+     "file": "animation.png",
+     "size": "634,523",
+     "pma": true
+    }
+   ],
+   "naming": [],
+   "spine": "4.1-from-4.2.43",
+   "bounds": [
+    -100.37,
+    -78,
+    200.74,
+    200
+   ],
+   "animations": {
+    "idle": 1.0,
+    "win": 1.3
+   },
+   "skins": [
+    "default",
+    "wild",
+    "x2",
+    "x3",
+    "x5",
+    "x7",
+    "x9"
+   ],
+   "statics": [
+    "static_wild.png",
+    "static_x2.png",
+    "static_x3.png",
+    "static_x5.png",
+    "static_x7.png",
+    "static_x9.png"
+   ],
+   "regions": [
+    {
+     "name": "2",
+     "w": 52,
+     "h": 75,
+     "src": [
+      52,
+      75
+     ]
+    },
+    {
+     "name": "3",
+     "w": 53,
+     "h": 77,
+     "src": [
+      53,
+      77
+     ]
+    },
+    {
+     "name": "5",
+     "w": 51,
+     "h": 75,
+     "src": [
+      51,
+      75
+     ]
+    },
+    {
+     "name": "7",
+     "w": 52,
+     "h": 77,
+     "src": [
+      52,
+      77
+     ]
+    },
+    {
+     "name": "9",
+     "w": 55,
+     "h": 77,
+     "src": [
+      55,
+      77
+     ]
+    },
+    {
+     "name": "D",
+     "w": 43,
+     "h": 46,
+     "src": [
+      43,
+      46
+     ]
+    },
+    {
+     "name": "I",
+     "w": 19,
+     "h": 45,
+     "src": [
+      19,
+      45
+     ]
+    },
+    {
+     "name": "L",
+     "w": 28,
+     "h": 46,
+     "src": [
+      28,
+      46
+     ]
+    },
+    {
+     "name": "W",
+     "w": 60,
+     "h": 45,
+     "src": [
+      60,
+      45
+     ]
+    },
+    {
+     "name": "blik",
+     "w": 48,
+     "h": 38,
+     "src": [
+      48,
+      38
+     ]
+    },
+    {
+     "name": "blik_text",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "blue_ring",
+     "w": 178,
+     "h": 131,
+     "src": [
+      178,
+      131
+     ]
+    },
+    {
+     "name": "body",
+     "w": 125,
+     "h": 80,
+     "src": [
+      125,
+      80
+     ]
+    },
+    {
+     "name": "brov_l",
+     "w": 11,
+     "h": 7,
+     "src": [
+      11,
+      7
+     ]
+    },
+    {
+     "name": "brov_r",
+     "w": 19,
+     "h": 11,
+     "src": [
+      19,
+      11
+     ]
+    },
+    {
+     "name": "corona",
+     "w": 13,
+     "h": 11,
+     "src": [
+      13,
+      11
+     ]
+    },
+    {
+     "name": "forelock",
+     "w": 27,
+     "h": 13,
+     "src": [
+      27,
+      13
+     ]
+    },
+    {
+     "name": "glow_disc",
+     "w": 180,
+     "h": 180,
+     "src": [
+      180,
+      180
+     ]
+    },
+    {
+     "name": "green_ring",
+     "w": 153,
+     "h": 154,
+     "src": [
+      153,
+      154
+     ]
+    },
+    {
+     "name": "hair",
+     "w": 68,
+     "h": 38,
+     "src": [
+      68,
+      38
+     ]
+    },
+    {
+     "name": "hair_volos",
+     "w": 30,
+     "h": 31,
+     "src": [
+      30,
+      31
+     ]
+    },
+    {
+     "name": "head",
+     "w": 56,
+     "h": 54,
+     "src": [
+      56,
+      54
+     ]
+    },
+    {
+     "name": "horn",
+     "w": 31,
+     "h": 29,
+     "src": [
+      31,
+      29
+     ]
+    },
+    {
+     "name": "jaw",
+     "w": 29,
+     "h": 22,
+     "src": [
+      29,
+      22
+     ]
+    },
+    {
+     "name": "left_hand",
+     "w": 29,
+     "h": 33,
+     "src": [
+      29,
+      33
+     ]
+    },
+    {
+     "name": "left_hand_palm",
+     "w": 20,
+     "h": 35,
+     "src": [
+      20,
+      35
+     ]
+    },
+    {
+     "name": "left_hand_palm_active/palms_l_1",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "left_hand_palm_active/palms_l_10",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "left_hand_palm_active/palms_l_11",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "left_hand_palm_active/palms_l_12",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "left_hand_palm_active/palms_l_13",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "left_hand_palm_active/palms_l_14",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "left_hand_palm_active/palms_l_15",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "left_hand_palm_active/palms_l_2",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "left_hand_palm_active/palms_l_3",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "left_hand_palm_active/palms_l_4",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "left_hand_palm_active/palms_l_5",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "left_hand_palm_active/palms_l_6",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "left_hand_palm_active/palms_l_7",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "left_hand_palm_active/palms_l_8",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "left_hand_palm_active/palms_l_9",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "ligt_blure_l",
+     "w": 40,
+     "h": 35,
+     "src": [
+      40,
+      35
+     ]
+    },
+    {
+     "name": "ligt_blure_r",
+     "w": 41,
+     "h": 36,
+     "src": [
+      41,
+      36
+     ]
+    },
+    {
+     "name": "money_1",
+     "w": 100,
+     "h": 44,
+     "src": [
+      100,
+      44
+     ]
+    },
+    {
+     "name": "money_2",
+     "w": 100,
+     "h": 53,
+     "src": [
+      100,
+      53
+     ]
+    },
+    {
+     "name": "money_3",
+     "w": 100,
+     "h": 63,
+     "src": [
+      100,
+      63
+     ]
+    },
+    {
+     "name": "money_coin",
+     "w": 64,
+     "h": 64,
+     "src": [
+      64,
+      64
+     ]
+    },
+    {
+     "name": "money_rays",
+     "w": 200,
+     "h": 200,
+     "src": [
+      200,
+      200
+     ]
+    },
+    {
+     "name": "money_rays2",
+     "w": 170,
+     "h": 170,
+     "src": [
+      170,
+      170
+     ]
+    },
+    {
+     "name": "money_sign",
+     "w": 48,
+     "h": 48,
+     "src": [
+      48,
+      48
+     ]
+    },
+    {
+     "name": "neck",
+     "w": 41,
+     "h": 47,
+     "src": [
+      41,
+      47
+     ]
+    },
+    {
+     "name": "right_hand",
+     "w": 32,
+     "h": 38,
+     "src": [
+      32,
+      38
+     ]
+    },
+    {
+     "name": "right_hand_palm",
+     "w": 22,
+     "h": 38,
+     "src": [
+      22,
+      38
+     ]
+    },
+    {
+     "name": "right_hand_palm_active/palms_r_1",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "right_hand_palm_active/palms_r_2",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "right_hand_palm_active/palms_r_10",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "right_hand_palm_active/palms_r_11",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "right_hand_palm_active/palms_r_12",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "right_hand_palm_active/palms_r_13",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "right_hand_palm_active/palms_r_3",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "right_hand_palm_active/palms_r_4",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "right_hand_palm_active/palms_r_5",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "right_hand_palm_active/palms_r_6",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "right_hand_palm_active/palms_r_7",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "right_hand_palm_active/palms_r_8",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "right_hand_palm_active/palms_r_9",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "x",
+     "w": 45,
+     "h": 42,
+     "src": [
+      45,
+      42
+     ]
+    },
+    {
+     "name": "yellow_ring",
+     "w": 181,
+     "h": 184,
+     "src": [
+      181,
+      184
+     ]
+    }
+   ],
+   "sizeIssues": [],
+   "noSource": [],
+   "unusedRegions": [],
+   "neverShown": [],
+   "meshes": [
+    {
+     "skin": "default",
+     "slot": "body",
+     "attachment": "body",
+     "type": "mesh",
+     "vertices": 132
+    },
+    {
+     "skin": "default",
+     "slot": "brov_l",
+     "attachment": "brov_l",
+     "type": "mesh",
+     "vertices": 15
+    },
+    {
+     "skin": "default",
+     "slot": "brov_r",
+     "attachment": "brov_r",
+     "type": "mesh",
+     "vertices": 18
+    },
+    {
+     "skin": "default",
+     "slot": "forelock",
+     "attachment": "forelock",
+     "type": "mesh",
+     "vertices": 73
+    },
+    {
+     "skin": "default",
+     "slot": "hair",
+     "attachment": "hair",
+     "type": "mesh",
+     "vertices": 166
+    },
+    {
+     "skin": "default",
+     "slot": "hair_volos",
+     "attachment": "hair_volos",
+     "type": "mesh",
+     "vertices": 120
+    },
+    {
+     "skin": "default",
+     "slot": "head",
+     "attachment": "head",
+     "type": "mesh",
+     "vertices": 143
+    },
+    {
+     "skin": "default",
+     "slot": "jaw",
+     "attachment": "jaw",
+     "type": "mesh",
+     "vertices": 25
+    },
+    {
+     "skin": "default",
+     "slot": "left_hand",
+     "attachment": "left_hand",
+     "type": "mesh",
+     "vertices": 42
+    },
+    {
+     "skin": "default",
+     "slot": "left_hand_palm",
+     "attachment": "left_hand_palm",
+     "type": "mesh",
+     "vertices": 47
+    },
+    {
+     "skin": "default",
+     "slot": "mask_money_2",
+     "attachment": "mask_money_2",
+     "type": "clipping",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "neck",
+     "attachment": "neck",
+     "type": "mesh",
+     "vertices": 47
+    },
+    {
+     "skin": "default",
+     "slot": "palms_l_1",
+     "attachment": "left_hand_palm_active/palms_l_1",
+     "type": "mesh",
+     "vertices": 4
+    },
+    {
+     "skin": "default",
+     "slot": "palms_l_1",
+     "attachment": "left_hand_palm_active/palms_l_2",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_l_1",
+     "attachment": "left_hand_palm_active/palms_l_3",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_l_1",
+     "attachment": "left_hand_palm_active/palms_l_4",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_l_1",
+     "attachment": "left_hand_palm_active/palms_l_5",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_l_1",
+     "attachment": "left_hand_palm_active/palms_l_6",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_l_1",
+     "attachment": "left_hand_palm_active/palms_l_7",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_l_1",
+     "attachment": "left_hand_palm_active/palms_l_8",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_l_1",
+     "attachment": "left_hand_palm_active/palms_l_9",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_l_1",
+     "attachment": "left_hand_palm_active/palms_l_10",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_l_1",
+     "attachment": "left_hand_palm_active/palms_l_11",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_l_1",
+     "attachment": "left_hand_palm_active/palms_l_12",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_l_1",
+     "attachment": "left_hand_palm_active/palms_l_13",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_l_1",
+     "attachment": "left_hand_palm_active/palms_l_14",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_l_1",
+     "attachment": "left_hand_palm_active/palms_l_15",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_r_1",
+     "attachment": "right_hand_palm_active/palms_r_1",
+     "type": "mesh",
+     "vertices": 4
+    },
+    {
+     "skin": "default",
+     "slot": "palms_r_1",
+     "attachment": "right_hand_palm_active/palms_r_2",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_r_1",
+     "attachment": "right_hand_palm_active/palms_r_3",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_r_1",
+     "attachment": "right_hand_palm_active/palms_r_4",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_r_1",
+     "attachment": "right_hand_palm_active/palms_r_5",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_r_1",
+     "attachment": "right_hand_palm_active/palms_r_6",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_r_1",
+     "attachment": "right_hand_palm_active/palms_r_7",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_r_1",
+     "attachment": "right_hand_palm_active/palms_r_8",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_r_1",
+     "attachment": "right_hand_palm_active/palms_r_9",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_r_1",
+     "attachment": "right_hand_palm_active/palms_r_10",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_r_1",
+     "attachment": "right_hand_palm_active/palms_r_11",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_r_1",
+     "attachment": "right_hand_palm_active/palms_r_12",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "palms_r_1",
+     "attachment": "right_hand_palm_active/palms_r_13",
+     "type": "linkedmesh",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "right_hand",
+     "attachment": "right_hand",
+     "type": "mesh",
+     "vertices": 52
+    },
+    {
+     "skin": "default",
+     "slot": "right_hand_palm",
+     "attachment": "right_hand_palm",
+     "type": "mesh",
+     "vertices": 49
+    }
+   ],
+   "overlaps": {
+    "idle+win": [
+     "bone:body10:rotate",
+     "bone:body11:rotate",
+     "bone:body7:rotate",
+     "bone:body8:rotate",
+     "bone:body_head10:translate",
+     "bone:body_head2:scale",
+     "bone:body_head2:translate",
+     "bone:body_head5:scale",
+     "bone:body_head5:translate",
+     "bone:body_head9:translate",
+     "bone:body_head:rotate",
+     "bone:body_head_hair10:rotate",
+     "bone:body_head_hair12:rotate",
+     "bone:body_head_hair13:rotate",
+     "bone:body_head_hair14:rotate",
+     "bone:body_head_hair15:rotate",
+     "bone:body_head_hair16:rotate",
+     "bone:body_head_hair17:rotate",
+     "bone:body_head_hair3:rotate",
+     "bone:body_head_hair4:rotate",
+     "bone:body_head_hair5:rotate",
+     "bone:body_head_hair6:rotate",
+     "bone:body_head_hair8:rotate",
+     "bone:body_head_hair9:rotate",
+     "slot:D2:rgba",
+     "slot:I2:rgba",
+     "slot:L2:rgba",
+     "slot:W2:rgba",
+     "slot:number_glow:rgba",
+     "slot:x_glow:rgba"
+    ]
+   }
+  },
+  "scatter": {
+   "folder": "scatter",
+   "kind": "scatter",
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "static.png"
+   ],
+   "pages": [
+    {
+     "page": "animation.png",
+     "file": "animation.png",
+     "size": "221,1030",
+     "pma": true
+    }
+   ],
+   "naming": [],
+   "spine": "4.1-from-4.2.43",
+   "bounds": [
+    -94.5,
+    -91,
+    190,
+    190
+   ],
+   "animations": {
+    "idle": 1.0,
+    "landing": 1.0,
+    "win": 1.7
+   },
+   "skins": [
+    "default"
+   ],
+   "statics": [
+    "static.png"
+   ],
+   "regions": [
+    {
+     "name": "b_bacon",
+     "w": 124,
+     "h": 27,
+     "src": [
+      124,
+      27
+     ]
+    },
+    {
+     "name": "b_bunlow",
+     "w": 107,
+     "h": 33,
+     "src": [
+      107,
+      33
+     ]
+    },
+    {
+     "name": "b_buntop",
+     "w": 104,
+     "h": 47,
+     "src": [
+      104,
+      47
+     ]
+    },
+    {
+     "name": "b_cheese",
+     "w": 108,
+     "h": 32,
+     "src": [
+      108,
+      32
+     ]
+    },
+    {
+     "name": "b_lettuce",
+     "w": 122,
+     "h": 26,
+     "src": [
+      122,
+      26
+     ]
+    },
+    {
+     "name": "b_lettuce2",
+     "w": 111,
+     "h": 25,
+     "src": [
+      111,
+      25
+     ]
+    },
+    {
+     "name": "b_onion",
+     "w": 96,
+     "h": 20,
+     "src": [
+      96,
+      20
+     ]
+    },
+    {
+     "name": "b_patty",
+     "w": 104,
+     "h": 34,
+     "src": [
+      104,
+      34
+     ]
+    },
+    {
+     "name": "b_tomato",
+     "w": 104,
+     "h": 23,
+     "src": [
+      104,
+      23
+     ]
+    },
+    {
+     "name": "blik",
+     "w": 50,
+     "h": 50,
+     "src": [
+      50,
+      50
+     ]
+    },
+    {
+     "name": "drop",
+     "w": 10,
+     "h": 15,
+     "src": [
+      10,
+      15
+     ]
+    },
+    {
+     "name": "glow",
+     "w": 190,
+     "h": 190,
+     "src": [
+      190,
+      190
+     ]
+    },
+    {
+     "name": "image 2008552081",
+     "w": 140,
+     "h": 124,
+     "src": [
+      140,
+      124
+     ]
+    },
+    {
+     "name": "rays",
+     "w": 190,
+     "h": 190,
+     "src": [
+      190,
+      190
+     ]
+    },
+    {
+     "name": "ring",
+     "w": 200,
+     "h": 200,
+     "src": [
+      200,
+      200
+     ]
+    },
+    {
+     "name": "s_bacon",
+     "w": 140,
+     "h": 146,
+     "src": [
+      140,
+      146
+     ]
+    },
+    {
+     "name": "s_bunlow",
+     "w": 140,
+     "h": 146,
+     "src": [
+      140,
+      146
+     ]
+    },
+    {
+     "name": "s_buntop",
+     "w": 140,
+     "h": 146,
+     "src": [
+      140,
+      146
+     ]
+    },
+    {
+     "name": "s_cheese",
+     "w": 140,
+     "h": 146,
+     "src": [
+      140,
+      146
+     ]
+    },
+    {
+     "name": "s_lettuce",
+     "w": 140,
+     "h": 146,
+     "src": [
+      140,
+      146
+     ]
+    },
+    {
+     "name": "s_lettuce2",
+     "w": 140,
+     "h": 146,
+     "src": [
+      140,
+      146
+     ]
+    },
+    {
+     "name": "s_onion",
+     "w": 140,
+     "h": 146,
+     "src": [
+      140,
+      146
+     ]
+    },
+    {
+     "name": "s_patty",
+     "w": 140,
+     "h": 146,
+     "src": [
+      140,
+      146
+     ]
+    },
+    {
+     "name": "s_tomato",
+     "w": 140,
+     "h": 146,
+     "src": [
+      140,
+      146
+     ]
+    },
+    {
+     "name": "s_word",
+     "w": 140,
+     "h": 70,
+     "src": [
+      140,
+      70
+     ]
+    },
+    {
+     "name": "scatter",
+     "w": 140,
+     "h": 146,
+     "src": [
+      140,
+      146
+     ]
+    }
+   ],
+   "sizeIssues": [],
+   "noSource": [],
+   "unusedRegions": [],
+   "neverShown": [],
+   "meshes": [
+    {
+     "skin": "default",
+     "slot": "c_cheese",
+     "attachment": "b_cheese",
+     "type": "mesh",
+     "vertices": 153
+    },
+    {
+     "skin": "default",
+     "slot": "word",
+     "attachment": "s_word",
+     "type": "mesh",
+     "vertices": 135
+    },
+    {
+     "skin": "default",
+     "slot": "word2",
+     "attachment": "s_word",
+     "type": "mesh",
+     "vertices": 135
+    }
+   ],
+   "overlaps": {
+    "idle+landing": [
+     "bone:bone_glow:translate",
+     "bone:bone_rays:rotate",
+     "bone:bone_ring:scale",
+     "bone:bone_s_bacon:rotate",
+     "bone:bone_s_bacon:translate",
+     "bone:bone_s_bunlow:rotate",
+     "bone:bone_s_bunlow:translate",
+     "bone:bone_s_buntop:rotate",
+     "bone:bone_s_buntop:translate",
+     "bone:bone_s_cheese:rotate",
+     "bone:bone_s_cheese:translate",
+     "bone:bone_s_lettuce2:rotate",
+     "bone:bone_s_lettuce2:translate",
+     "bone:bone_s_lettuce:rotate",
+     "bone:bone_s_lettuce:translate",
+     "bone:bone_s_onion:rotate",
+     "bone:bone_s_onion:translate",
+     "bone:bone_s_patty:rotate",
+     "bone:bone_s_patty:translate",
+     "bone:bone_s_tomato:rotate",
+     "bone:bone_s_tomato:translate",
+     "bone:bone_word:rotate",
+     "bone:bone_word:translate",
+     "bone:main:rotate",
+     "bone:main:translate",
+     "bone:word1:rotate",
+     "bone:word1:translate",
+     "bone:word2:rotate",
+     "bone:word2:translate",
+     "bone:word3:rotate",
+     "bone:word3:translate",
+     "bone:word4:rotate",
+     "bone:word4:translate",
+     "bone:word5:rotate",
+     "bone:word5:translate",
+     "bone:word6:rotate",
+     "bone:word6:translate",
+     "bone:word7:rotate",
+     "bone:word7:translate",
+     "bone:word8:rotate",
+     "bone:word8:translate",
+     "bone:word9:rotate",
+     "bone:word9:translate",
+     "slot:c_bacon:rgba",
+     "slot:c_bunlow:rgba",
+     "slot:c_buntop:rgba",
+     "slot:c_cheese:rgba",
+     "slot:c_lettuce2:rgba",
+     "slot:c_lettuce:rgba",
+     "slot:c_onion:rgba",
+     "slot:c_patty:rgba",
+     "slot:c_tomato:rgba",
+     "slot:drop1:rgba",
+     "slot:drop2:rgba",
+     "slot:drop3:rgba",
+     "slot:flash:rgba",
+     "slot:glow:rgba",
+     "slot:rays:rgba",
+     "slot:ref:rgba",
+     "slot:ring:rgba",
+     "slot:s_bacon:rgba",
+     "slot:s_bunlow:rgba",
+     "slot:s_buntop:rgba",
+     "slot:s_cheese:rgba",
+     "slot:s_lettuce2:rgba",
+     "slot:s_lettuce:rgba",
+     "slot:s_onion:rgba",
+     "slot:s_patty:rgba",
+     "slot:s_tomato:rgba",
+     "slot:spark10:rgba",
+     "slot:spark11:rgba",
+     "slot:spark12:rgba",
+     "slot:spark13:rgba",
+     "slot:spark14:rgba",
+     "slot:spark15:rgba",
+     "slot:spark16:rgba",
+     "slot:spark1:rgba",
+     "slot:spark2:rgba",
+     "slot:spark3:rgba",
+     "slot:spark4:rgba",
+     "slot:spark5:rgba",
+     "slot:spark6:rgba",
+     "slot:spark7:rgba",
+     "slot:spark8:rgba",
+     "slot:spark9:rgba",
+     "slot:word2:rgba",
+     "slot:word:rgba"
+    ],
+    "idle+win": [
+     "bone:bone_glow:translate",
+     "bone:bone_rays:rotate",
+     "bone:bone_ring:scale",
+     "bone:bone_s_bacon:rotate",
+     "bone:bone_s_bacon:translate",
+     "bone:bone_s_bunlow:rotate",
+     "bone:bone_s_bunlow:translate",
+     "bone:bone_s_buntop:rotate",
+     "bone:bone_s_buntop:translate",
+     "bone:bone_s_cheese:rotate",
+     "bone:bone_s_cheese:translate",
+     "bone:bone_s_lettuce2:rotate",
+     "bone:bone_s_lettuce2:translate",
+     "bone:bone_s_lettuce:rotate",
+     "bone:bone_s_lettuce:translate",
+     "bone:bone_s_onion:rotate",
+     "bone:bone_s_onion:translate",
+     "bone:bone_s_patty:rotate",
+     "bone:bone_s_patty:translate",
+     "bone:bone_s_tomato:rotate",
+     "bone:bone_s_tomato:translate",
+     "bone:bone_word:rotate",
+     "bone:bone_word:translate",
+     "bone:main:rotate",
+     "bone:main:translate",
+     "bone:word1:rotate",
+     "bone:word1:translate",
+     "bone:word2:rotate",
+     "bone:word2:translate",
+     "bone:word3:rotate",
+     "bone:word3:translate",
+     "bone:word4:rotate",
+     "bone:word4:translate",
+     "bone:word5:rotate",
+     "bone:word5:translate",
+     "bone:word6:rotate",
+     "bone:word6:translate",
+     "bone:word7:rotate",
+     "bone:word7:translate",
+     "bone:word8:rotate",
+     "bone:word8:translate",
+     "bone:word9:rotate",
+     "bone:word9:translate",
+     "slot:c_bacon:rgba",
+     "slot:c_bunlow:rgba",
+     "slot:c_buntop:rgba",
+     "slot:c_cheese:rgba",
+     "slot:c_lettuce2:rgba",
+     "slot:c_lettuce:rgba",
+     "slot:c_onion:rgba",
+     "slot:c_patty:rgba",
+     "slot:c_tomato:rgba",
+     "slot:drop1:rgba",
+     "slot:drop2:rgba",
+     "slot:drop3:rgba",
+     "slot:flash:rgba",
+     "slot:glow:rgba",
+     "slot:rays:rgba",
+     "slot:ref:rgba",
+     "slot:ring:rgba",
+     "slot:s_bacon:rgba",
+     "slot:s_bunlow:rgba",
+     "slot:s_buntop:rgba",
+     "slot:s_cheese:rgba",
+     "slot:s_lettuce2:rgba",
+     "slot:s_lettuce:rgba",
+     "slot:s_onion:rgba",
+     "slot:s_patty:rgba",
+     "slot:s_tomato:rgba",
+     "slot:spark10:rgba",
+     "slot:spark11:rgba",
+     "slot:spark12:rgba",
+     "slot:spark13:rgba",
+     "slot:spark14:rgba",
+     "slot:spark15:rgba",
+     "slot:spark16:rgba",
+     "slot:spark1:rgba",
+     "slot:spark2:rgba",
+     "slot:spark3:rgba",
+     "slot:spark4:rgba",
+     "slot:spark5:rgba",
+     "slot:spark6:rgba",
+     "slot:spark7:rgba",
+     "slot:spark8:rgba",
+     "slot:spark9:rgba",
+     "slot:word2:rgba",
+     "slot:word:rgba"
+    ],
+    "landing+win": [
+     "bone:bone_glow:translate",
+     "bone:bone_rays:rotate",
+     "bone:bone_ring:scale",
+     "bone:bone_s_bacon:rotate",
+     "bone:bone_s_bacon:translate",
+     "bone:bone_s_bunlow:rotate",
+     "bone:bone_s_bunlow:translate",
+     "bone:bone_s_buntop:rotate",
+     "bone:bone_s_buntop:translate",
+     "bone:bone_s_cheese:rotate",
+     "bone:bone_s_cheese:translate",
+     "bone:bone_s_lettuce2:rotate",
+     "bone:bone_s_lettuce2:translate",
+     "bone:bone_s_lettuce:rotate",
+     "bone:bone_s_lettuce:translate",
+     "bone:bone_s_onion:rotate",
+     "bone:bone_s_onion:translate",
+     "bone:bone_s_patty:rotate",
+     "bone:bone_s_patty:translate",
+     "bone:bone_s_tomato:rotate",
+     "bone:bone_s_tomato:translate",
+     "bone:bone_word:rotate",
+     "bone:bone_word:translate",
+     "bone:main:rotate",
+     "bone:main:translate",
+     "bone:word1:rotate",
+     "bone:word1:translate",
+     "bone:word2:rotate",
+     "bone:word2:translate",
+     "bone:word3:rotate",
+     "bone:word3:translate",
+     "bone:word4:rotate",
+     "bone:word4:translate",
+     "bone:word5:rotate",
+     "bone:word5:translate",
+     "bone:word6:rotate",
+     "bone:word6:translate",
+     "bone:word7:rotate",
+     "bone:word7:translate",
+     "bone:word8:rotate",
+     "bone:word8:translate",
+     "bone:word9:rotate",
+     "bone:word9:translate",
+     "slot:c_bacon:rgba",
+     "slot:c_bunlow:rgba",
+     "slot:c_buntop:rgba",
+     "slot:c_cheese:rgba",
+     "slot:c_lettuce2:rgba",
+     "slot:c_lettuce:rgba",
+     "slot:c_onion:rgba",
+     "slot:c_patty:rgba",
+     "slot:c_tomato:rgba",
+     "slot:drop1:rgba",
+     "slot:drop2:rgba",
+     "slot:drop3:rgba",
+     "slot:flash:rgba",
+     "slot:glow:rgba",
+     "slot:rays:rgba",
+     "slot:ref:rgba",
+     "slot:ring:rgba",
+     "slot:s_bacon:rgba",
+     "slot:s_bunlow:rgba",
+     "slot:s_buntop:rgba",
+     "slot:s_cheese:rgba",
+     "slot:s_lettuce2:rgba",
+     "slot:s_lettuce:rgba",
+     "slot:s_onion:rgba",
+     "slot:s_patty:rgba",
+     "slot:s_tomato:rgba",
+     "slot:spark10:rgba",
+     "slot:spark11:rgba",
+     "slot:spark12:rgba",
+     "slot:spark13:rgba",
+     "slot:spark14:rgba",
+     "slot:spark15:rgba",
+     "slot:spark16:rgba",
+     "slot:spark1:rgba",
+     "slot:spark2:rgba",
+     "slot:spark3:rgba",
+     "slot:spark4:rgba",
+     "slot:spark5:rgba",
+     "slot:spark6:rgba",
+     "slot:spark7:rgba",
+     "slot:spark8:rgba",
+     "slot:spark9:rgba",
+     "slot:word2:rgba",
+     "slot:word:rgba"
+    ]
+   }
+  },
+  "hero": {
+   "folder": "hero",
+   "kind": "scene",
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "static.png"
+   ],
+   "pages": [
+    {
+     "page": "animation.png",
+     "file": "animation.png",
+     "size": "1825,650",
+     "pma": true
+    }
+   ],
+   "naming": [],
+   "spine": "4.1-from-4.2.43",
+   "bounds": [
+    -432,
+    -298.5,
+    885,
+    625.44
+   ],
+   "animations": {
+    "idle": 14.0667,
+    "win": 3.4
+   },
+   "skins": [
+    "default"
+   ],
+   "statics": [
+    "static.png"
+   ],
+   "regions": [
+    {
+     "name": "body",
+     "w": 463,
+     "h": 250,
+     "src": [
+      463,
+      250
+     ]
+    },
+    {
+     "name": "boom_big/boom_00000",
+     "w": 300,
+     "h": 300,
+     "src": [
+      300,
+      300
+     ]
+    },
+    {
+     "name": "boom_big/boom_00001",
+     "w": 300,
+     "h": 300,
+     "src": [
+      300,
+      300
+     ]
+    },
+    {
+     "name": "boom_big/boom_00002",
+     "w": 300,
+     "h": 300,
+     "src": [
+      300,
+      300
+     ]
+    },
+    {
+     "name": "boom_big/boom_00003",
+     "w": 300,
+     "h": 300,
+     "src": [
+      300,
+      300
+     ]
+    },
+    {
+     "name": "boom_big/boom_00004",
+     "w": 300,
+     "h": 300,
+     "src": [
+      300,
+      300
+     ]
+    },
+    {
+     "name": "boom_big/boom_00005",
+     "w": 300,
+     "h": 300,
+     "src": [
+      300,
+      300
+     ]
+    },
+    {
+     "name": "boom_big/boom_00006",
+     "w": 300,
+     "h": 300,
+     "src": [
+      300,
+      300
+     ]
+    },
+    {
+     "name": "boom_big/boom_00007",
+     "w": 300,
+     "h": 300,
+     "src": [
+      300,
+      300
+     ]
+    },
+    {
+     "name": "boom_big/boom_00008",
+     "w": 300,
+     "h": 300,
+     "src": [
+      300,
+      300
+     ]
+    },
+    {
+     "name": "boom_big/boom_00009",
+     "w": 300,
+     "h": 300,
+     "src": [
+      300,
+      300
+     ]
+    },
+    {
+     "name": "boom_big/boom_00010",
+     "w": 300,
+     "h": 300,
+     "src": [
+      300,
+      300
+     ]
+    },
+    {
+     "name": "boom_big/boom_00011",
+     "w": 300,
+     "h": 300,
+     "src": [
+      300,
+      300
+     ]
+    },
+    {
+     "name": "boom_big/boom_00012",
+     "w": 300,
+     "h": 300,
+     "src": [
+      300,
+      300
+     ]
+    },
+    {
+     "name": "boom_big/boom_00013",
+     "w": 300,
+     "h": 300,
+     "src": [
+      300,
+      300
+     ]
+    },
+    {
+     "name": "boom_big/boom_00014",
+     "w": 300,
+     "h": 300,
+     "src": [
+      300,
+      300
+     ]
+    },
+    {
+     "name": "boom_big/boom_00015",
+     "w": 300,
+     "h": 300,
+     "src": [
+      300,
+      300
+     ]
+    },
+    {
+     "name": "bubble",
+     "w": 93,
+     "h": 94,
+     "src": [
+      93,
+      94
+     ]
+    },
+    {
+     "name": "chair",
+     "w": 761,
+     "h": 281,
+     "src": [
+      761,
+      281
+     ]
+    },
+    {
+     "name": "cheekbone",
+     "w": 36,
+     "h": 17,
+     "src": [
+      36,
+      17
+     ]
+    },
+    {
+     "name": "ear",
+     "w": 31,
+     "h": 53,
+     "src": [
+      31,
+      53
+     ]
+    },
+    {
+     "name": "eyebrow_l",
+     "w": 39,
+     "h": 22,
+     "src": [
+      39,
+      22
+     ]
+    },
+    {
+     "name": "eyebrow_r",
+     "w": 25,
+     "h": 18,
+     "src": [
+      25,
+      18
+     ]
+    },
+    {
+     "name": "hair",
+     "w": 192,
+     "h": 122,
+     "src": [
+      192,
+      122
+     ]
+    },
+    {
+     "name": "hair_1",
+     "w": 39,
+     "h": 44,
+     "src": [
+      39,
+      44
+     ]
+    },
+    {
+     "name": "hair_2",
+     "w": 92,
+     "h": 72,
+     "src": [
+      92,
+      72
+     ]
+    },
+    {
+     "name": "hand_l",
+     "w": 140,
+     "h": 104,
+     "src": [
+      140,
+      104
+     ]
+    },
+    {
+     "name": "hand_l_palm",
+     "w": 61,
+     "h": 79,
+     "src": [
+      61,
+      79
+     ]
+    },
+    {
+     "name": "hand_l_palm_2",
+     "w": 94,
+     "h": 56,
+     "src": [
+      94,
+      56
+     ]
+    },
+    {
+     "name": "hand_r",
+     "w": 74,
+     "h": 62,
+     "src": [
+      74,
+      62
+     ]
+    },
+    {
+     "name": "head",
+     "w": 186,
+     "h": 203,
+     "src": [
+      186,
+      203
+     ]
+    },
+    {
+     "name": "hoof",
+     "w": 117,
+     "h": 97,
+     "src": [
+      117,
+      97
+     ]
+    },
+    {
+     "name": "hoof_sh",
+     "w": 15,
+     "h": 62,
+     "src": [
+      15,
+      62
+     ]
+    },
+    {
+     "name": "horn",
+     "w": 58,
+     "h": 59,
+     "src": [
+      58,
+      59
+     ]
+    },
+    {
+     "name": "horn_spark",
+     "w": 48,
+     "h": 48,
+     "src": [
+      48,
+      48
+     ]
+    },
+    {
+     "name": "horn_streak",
+     "w": 24,
+     "h": 96,
+     "src": [
+      24,
+      96
+     ]
+    },
+    {
+     "name": "jaw",
+     "w": 70,
+     "h": 61,
+     "src": [
+      70,
+      61
+     ]
+    },
+    {
+     "name": "jaw_full",
+     "w": 70,
+     "h": 58,
+     "src": [
+      70,
+      58
+     ]
+    },
+    {
+     "name": "jaw_teeth",
+     "w": 54,
+     "h": 47,
+     "src": [
+      54,
+      47
+     ]
+    },
+    {
+     "name": "left_eye",
+     "w": 15,
+     "h": 16,
+     "src": [
+      15,
+      16
+     ]
+    },
+    {
+     "name": "right_eye",
+     "w": 15,
+     "h": 16,
+     "src": [
+      15,
+      16
+     ]
+    },
+    {
+     "name": "left_eye_background",
+     "w": 60,
+     "h": 52,
+     "src": [
+      60,
+      52
+     ]
+    },
+    {
+     "name": "neck",
+     "w": 102,
+     "h": 97,
+     "src": [
+      102,
+      97
+     ]
+    },
+    {
+     "name": "painting",
+     "w": 237,
+     "h": 190,
+     "src": [
+      237,
+      190
+     ]
+    },
+    {
+     "name": "right_eye_background",
+     "w": 48,
+     "h": 52,
+     "src": [
+      48,
+      52
+     ]
+    },
+    {
+     "name": "sleeve",
+     "w": 89,
+     "h": 95,
+     "src": [
+      89,
+      95
+     ]
+    },
+    {
+     "name": "sleeve_sh",
+     "w": 34,
+     "h": 39,
+     "src": [
+      34,
+      39
+     ]
+    },
+    {
+     "name": "table",
+     "w": 885,
+     "h": 263,
+     "src": [
+      885,
+      263
+     ]
+    }
+   ],
+   "sizeIssues": [],
+   "noSource": [],
+   "unusedRegions": [],
+   "neverShown": [],
+   "meshes": [
+    {
+     "skin": "default",
+     "slot": "body",
+     "attachment": "body",
+     "type": "mesh",
+     "vertices": 102
+    },
+    {
+     "skin": "default",
+     "slot": "cheekbone",
+     "attachment": "cheekbone",
+     "type": "mesh",
+     "vertices": 15
+    },
+    {
+     "skin": "default",
+     "slot": "ear",
+     "attachment": "ear",
+     "type": "mesh",
+     "vertices": 38
+    },
+    {
+     "skin": "default",
+     "slot": "hair",
+     "attachment": "hair",
+     "type": "mesh",
+     "vertices": 116
+    },
+    {
+     "skin": "default",
+     "slot": "hair_1",
+     "attachment": "hair_1",
+     "type": "mesh",
+     "vertices": 34
+    },
+    {
+     "skin": "default",
+     "slot": "hair_2",
+     "attachment": "hair_2",
+     "type": "mesh",
+     "vertices": 48
+    },
+    {
+     "skin": "default",
+     "slot": "hand_l",
+     "attachment": "hand_l",
+     "type": "mesh",
+     "vertices": 29
+    },
+    {
+     "skin": "default",
+     "slot": "hand_l_palm",
+     "attachment": "hand_l_palm",
+     "type": "mesh",
+     "vertices": 34
+    },
+    {
+     "skin": "default",
+     "slot": "hand_l_palm_2",
+     "attachment": "hand_l_palm_2",
+     "type": "mesh",
+     "vertices": 57
+    },
+    {
+     "skin": "default",
+     "slot": "hand_r",
+     "attachment": "hand_r",
+     "type": "mesh",
+     "vertices": 38
+    },
+    {
+     "skin": "default",
+     "slot": "head",
+     "attachment": "head",
+     "type": "mesh",
+     "vertices": 208
+    },
+    {
+     "skin": "default",
+     "slot": "hoof",
+     "attachment": "hoof",
+     "type": "mesh",
+     "vertices": 13
+    },
+    {
+     "skin": "default",
+     "slot": "hoof_sh",
+     "attachment": "hoof_sh",
+     "type": "mesh",
+     "vertices": 15
+    },
+    {
+     "skin": "default",
+     "slot": "horn_clip",
+     "attachment": "horn_clip",
+     "type": "clipping",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "jaw",
+     "attachment": "jaw",
+     "type": "mesh",
+     "vertices": 33
+    },
+    {
+     "skin": "default",
+     "slot": "jaw_full",
+     "attachment": "jaw_full",
+     "type": "mesh",
+     "vertices": 34
+    },
+    {
+     "skin": "default",
+     "slot": "jaw_teeth",
+     "attachment": "jaw_teeth",
+     "type": "mesh",
+     "vertices": 35
+    },
+    {
+     "skin": "default",
+     "slot": "neck",
+     "attachment": "neck",
+     "type": "mesh",
+     "vertices": 85
+    },
+    {
+     "skin": "default",
+     "slot": "sleeve",
+     "attachment": "sleeve",
+     "type": "mesh",
+     "vertices": 10
+    },
+    {
+     "skin": "default",
+     "slot": "sleeve_sh",
+     "attachment": "sleeve_sh",
+     "type": "mesh",
+     "vertices": 10
+    }
+   ],
+   "overlaps": {
+    "idle+win": [
+     "bone:body11:rotate",
+     "bone:body12:rotate",
+     "bone:body4:rotate",
+     "bone:bubble:scale",
+     "bone:bubble:translate",
+     "bone:cheekbone_control:translate",
+     "bone:eye_l2:scale",
+     "bone:eye_l2:translate",
+     "bone:eye_r2:scale",
+     "bone:eye_r2:translate",
+     "bone:eyebrow_l:translate",
+     "bone:eyebrow_r:translate",
+     "bone:head6:scale",
+     "bone:head6:translate",
+     "bone:head:rotate",
+     "bone:jaw_bot2:translate",
+     "bone:jaw_top2:translate",
+     "bone:leg4:rotate",
+     "deform:boom_00000/boom_big/boom_:sequence",
+     "deform:boom_00001/boom_big/boom_:sequence",
+     "slot:boom_00000:rgba",
+     "slot:boom_00001:rgba",
+     "slot:bubble:rgba"
+    ]
+   }
+  },
+  "hero_bonus": {
+   "folder": "hero_bonus",
+   "kind": "scene",
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "static.png"
+   ],
+   "pages": [
+    {
+     "page": "animation.png",
+     "file": "animation.png",
+     "size": "1178,300",
+     "pma": true
+    }
+   ],
+   "naming": [],
+   "spine": "4.1-from-4.2.43",
+   "bounds": [
+    -197.02,
+    -343,
+    412.02,
+    663.03
+   ],
+   "animations": {
+    "idle": 6.6667,
+    "win": 2.8
+   },
+   "skins": [
+    "default"
+   ],
+   "statics": [
+    "static.png"
+   ],
+   "regions": [
+    {
+     "name": "body",
+     "w": 375,
+     "h": 508,
+     "src": [
+      375,
+      508
+     ]
+    },
+    {
+     "name": "cigar",
+     "w": 74,
+     "h": 34,
+     "src": [
+      74,
+      34
+     ]
+    },
+    {
+     "name": "cigar_1",
+     "w": 11,
+     "h": 18,
+     "src": [
+      11,
+      18
+     ]
+    },
+    {
+     "name": "eyebrow",
+     "w": 18,
+     "h": 17,
+     "src": [
+      18,
+      17
+     ]
+    },
+    {
+     "name": "glasses",
+     "w": 68,
+     "h": 46,
+     "src": [
+      68,
+      46
+     ]
+    },
+    {
+     "name": "hair",
+     "w": 199,
+     "h": 161,
+     "src": [
+      199,
+      161
+     ]
+    },
+    {
+     "name": "hand_l",
+     "w": 148,
+     "h": 140,
+     "src": [
+      148,
+      140
+     ]
+    },
+    {
+     "name": "head",
+     "w": 152,
+     "h": 180,
+     "src": [
+      152,
+      180
+     ]
+    },
+    {
+     "name": "hoof_l",
+     "w": 90,
+     "h": 107,
+     "src": [
+      90,
+      107
+     ]
+    },
+    {
+     "name": "hoof_r",
+     "w": 140,
+     "h": 112,
+     "src": [
+      140,
+      112
+     ]
+    },
+    {
+     "name": "horn",
+     "w": 50,
+     "h": 49,
+     "src": [
+      50,
+      49
+     ]
+    },
+    {
+     "name": "palm_l",
+     "w": 64,
+     "h": 83,
+     "src": [
+      64,
+      83
+     ]
+    },
+    {
+     "name": "shadow_light",
+     "w": 358,
+     "h": 115,
+     "src": [
+      358,
+      115
+     ]
+    },
+    {
+     "name": "smoke",
+     "w": 64,
+     "h": 64,
+     "src": [
+      64,
+      64
+     ]
+    },
+    {
+     "name": "tail",
+     "w": 193,
+     "h": 269,
+     "src": [
+      193,
+      269
+     ]
+    }
+   ],
+   "sizeIssues": [],
+   "noSource": [],
+   "unusedRegions": [],
+   "neverShown": [],
+   "meshes": [
+    {
+     "skin": "default",
+     "slot": "body",
+     "attachment": "body",
+     "type": "mesh",
+     "vertices": 129
+    },
+    {
+     "skin": "default",
+     "slot": "hair",
+     "attachment": "hair",
+     "type": "mesh",
+     "vertices": 298
+    },
+    {
+     "skin": "default",
+     "slot": "hand_l",
+     "attachment": "hand_l",
+     "type": "mesh",
+     "vertices": 120
+    },
+    {
+     "skin": "default",
+     "slot": "head",
+     "attachment": "head",
+     "type": "mesh",
+     "vertices": 129
+    },
+    {
+     "skin": "default",
+     "slot": "hoof_l",
+     "attachment": "hoof_l",
+     "type": "mesh",
+     "vertices": 13
+    },
+    {
+     "skin": "default",
+     "slot": "hoof_r",
+     "attachment": "hoof_r",
+     "type": "mesh",
+     "vertices": 13
+    },
+    {
+     "skin": "default",
+     "slot": "palm_l",
+     "attachment": "palm_l",
+     "type": "mesh",
+     "vertices": 40
+    },
+    {
+     "skin": "default",
+     "slot": "tail",
+     "attachment": "tail",
+     "type": "mesh",
+     "vertices": 437
+    }
+   ],
+   "overlaps": {
+    "idle+win": [
+     "bone:body12:rotate",
+     "bone:body14:rotate",
+     "bone:body15:rotate",
+     "bone:body3:rotate",
+     "bone:body7:rotate",
+     "bone:body8:rotate",
+     "bone:body:translate",
+     "bone:eyebrow:translate",
+     "bone:hair10:rotate",
+     "bone:hair11:rotate",
+     "bone:hair12:rotate",
+     "bone:hair3:rotate",
+     "bone:hair4:rotate",
+     "bone:hair5:rotate",
+     "bone:head:rotate",
+     "bone:tail10:rotate",
+     "bone:tail11:rotate",
+     "bone:tail12:rotate",
+     "bone:tail2:rotate",
+     "bone:tail3:rotate",
+     "bone:tail4:rotate",
+     "bone:tail5:rotate",
+     "bone:tail6:rotate",
+     "bone:tail7:rotate",
+     "bone:tail8:rotate",
+     "bone:tail9:rotate",
+     "slot:cigar_1:rgba"
+    ]
+   }
+  },
+  "bg_base": {
+   "folder": "bg_fone",
+   "kind": "scene",
+   "files": [
+    "animation-p2.png",
+    "animation.atlas",
+    "animation.json",
+    "animation.png"
+   ],
+   "pages": [
+    {
+     "page": "animation.png",
+     "file": "animation.png",
+     "size": "2030,1687",
+     "pma": true
+    },
+    {
+     "page": "animation-p2.png",
+     "file": "animation-p2.png",
+     "size": "1936,1354",
+     "pma": true
+    }
+   ],
+   "naming": [],
+   "spine": "4.1-from-4.2.43",
+   "bounds": [
+    -966.07,
+    -470,
+    1932.07,
+    940
+   ],
+   "animations": {
+    "idle": 10.0
+   },
+   "skins": [
+    "default"
+   ],
+   "statics": [],
+   "regions": [
+    {
+     "name": "floor_base",
+     "w": 1932,
+     "h": 180,
+     "src": [
+      1932,
+      180
+     ]
+    },
+    {
+     "name": "floor_light/fls_0_1",
+     "w": 96,
+     "h": 119,
+     "src": [
+      96,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_0_2",
+     "w": 96,
+     "h": 119,
+     "src": [
+      96,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_0_3",
+     "w": 96,
+     "h": 59,
+     "src": [
+      96,
+      59
+     ]
+    },
+    {
+     "name": "floor_light/fls_10_0",
+     "w": 191,
+     "h": 60,
+     "src": [
+      191,
+      60
+     ]
+    },
+    {
+     "name": "floor_light/fls_10_1",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_10_2",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_10_3",
+     "w": 191,
+     "h": 59,
+     "src": [
+      191,
+      59
+     ]
+    },
+    {
+     "name": "floor_light/fls_11_0",
+     "w": 191,
+     "h": 60,
+     "src": [
+      191,
+      60
+     ]
+    },
+    {
+     "name": "floor_light/fls_12_0",
+     "w": 191,
+     "h": 60,
+     "src": [
+      191,
+      60
+     ]
+    },
+    {
+     "name": "floor_light/fls_9_0",
+     "w": 191,
+     "h": 60,
+     "src": [
+      191,
+      60
+     ]
+    },
+    {
+     "name": "floor_light/fls_11_1",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_11_2",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_11_3",
+     "w": 191,
+     "h": 59,
+     "src": [
+      191,
+      59
+     ]
+    },
+    {
+     "name": "floor_light/fls_12_1",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_12_2",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_12_3",
+     "w": 191,
+     "h": 59,
+     "src": [
+      191,
+      59
+     ]
+    },
+    {
+     "name": "floor_light/fls_13_1",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_13_2",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_13_3",
+     "w": 191,
+     "h": 59,
+     "src": [
+      191,
+      59
+     ]
+    },
+    {
+     "name": "floor_light/fls_14_1",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_14_2",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_14_3",
+     "w": 191,
+     "h": 59,
+     "src": [
+      191,
+      59
+     ]
+    },
+    {
+     "name": "floor_light/fls_15_1",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_15_2",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_15_3",
+     "w": 191,
+     "h": 59,
+     "src": [
+      191,
+      59
+     ]
+    },
+    {
+     "name": "floor_light/fls_16_1",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_16_2",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_16_3",
+     "w": 191,
+     "h": 59,
+     "src": [
+      191,
+      59
+     ]
+    },
+    {
+     "name": "floor_light/fls_17_1",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_17_2",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_17_3",
+     "w": 191,
+     "h": 59,
+     "src": [
+      191,
+      59
+     ]
+    },
+    {
+     "name": "floor_light/fls_18_1",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_18_2",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_18_3",
+     "w": 191,
+     "h": 59,
+     "src": [
+      191,
+      59
+     ]
+    },
+    {
+     "name": "floor_light/fls_19_2",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_19_3",
+     "w": 191,
+     "h": 59,
+     "src": [
+      191,
+      59
+     ]
+    },
+    {
+     "name": "floor_light/fls_1_1",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_1_2",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_1_3",
+     "w": 191,
+     "h": 59,
+     "src": [
+      191,
+      59
+     ]
+    },
+    {
+     "name": "floor_light/fls_20_2",
+     "w": 107,
+     "h": 119,
+     "src": [
+      107,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_20_3",
+     "w": 107,
+     "h": 59,
+     "src": [
+      107,
+      59
+     ]
+    },
+    {
+     "name": "floor_light/fls_21_3",
+     "w": 11,
+     "h": 59,
+     "src": [
+      11,
+      59
+     ]
+    },
+    {
+     "name": "floor_light/fls_2_1",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_2_2",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_2_3",
+     "w": 191,
+     "h": 59,
+     "src": [
+      191,
+      59
+     ]
+    },
+    {
+     "name": "floor_light/fls_3_1",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_3_2",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_3_3",
+     "w": 191,
+     "h": 59,
+     "src": [
+      191,
+      59
+     ]
+    },
+    {
+     "name": "floor_light/fls_4_0",
+     "w": 191,
+     "h": 60,
+     "src": [
+      191,
+      60
+     ]
+    },
+    {
+     "name": "floor_light/fls_4_1",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_4_2",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_4_3",
+     "w": 191,
+     "h": 59,
+     "src": [
+      191,
+      59
+     ]
+    },
+    {
+     "name": "floor_light/fls_5_0",
+     "w": 191,
+     "h": 60,
+     "src": [
+      191,
+      60
+     ]
+    },
+    {
+     "name": "floor_light/fls_5_1",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_5_2",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_5_3",
+     "w": 191,
+     "h": 59,
+     "src": [
+      191,
+      59
+     ]
+    },
+    {
+     "name": "floor_light/fls_6_0",
+     "w": 191,
+     "h": 60,
+     "src": [
+      191,
+      60
+     ]
+    },
+    {
+     "name": "floor_light/fls_6_1",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_6_2",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_6_3",
+     "w": 191,
+     "h": 59,
+     "src": [
+      191,
+      59
+     ]
+    },
+    {
+     "name": "floor_light/fls_7_0",
+     "w": 191,
+     "h": 60,
+     "src": [
+      191,
+      60
+     ]
+    },
+    {
+     "name": "floor_light/fls_7_1",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_7_2",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_7_3",
+     "w": 191,
+     "h": 59,
+     "src": [
+      191,
+      59
+     ]
+    },
+    {
+     "name": "floor_light/fls_8_0",
+     "w": 191,
+     "h": 60,
+     "src": [
+      191,
+      60
+     ]
+    },
+    {
+     "name": "floor_light/fls_8_1",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_8_2",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_8_3",
+     "w": 191,
+     "h": 59,
+     "src": [
+      191,
+      59
+     ]
+    },
+    {
+     "name": "floor_light/fls_9_1",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_9_2",
+     "w": 191,
+     "h": 119,
+     "src": [
+      191,
+      119
+     ]
+    },
+    {
+     "name": "floor_light/fls_9_3",
+     "w": 191,
+     "h": 59,
+     "src": [
+      191,
+      59
+     ]
+    },
+    {
+     "name": "halo0",
+     "w": 323,
+     "h": 637,
+     "src": [
+      323,
+      637
+     ]
+    },
+    {
+     "name": "halo1",
+     "w": 367,
+     "h": 637,
+     "src": [
+      367,
+      637
+     ]
+    },
+    {
+     "name": "halo2",
+     "w": 348,
+     "h": 635,
+     "src": [
+      348,
+      635
+     ]
+    },
+    {
+     "name": "sky0",
+     "w": 386,
+     "h": 637,
+     "src": [
+      386,
+      637
+     ]
+    },
+    {
+     "name": "sky2",
+     "w": 366,
+     "h": 635,
+     "src": [
+      366,
+      635
+     ]
+    },
+    {
+     "name": "tree0",
+     "w": 323,
+     "h": 637,
+     "src": [
+      323,
+      637
+     ]
+    },
+    {
+     "name": "tree1",
+     "w": 367,
+     "h": 637,
+     "src": [
+      367,
+      637
+     ]
+    },
+    {
+     "name": "tree2",
+     "w": 348,
+     "h": 635,
+     "src": [
+      348,
+      635
+     ]
+    },
+    {
+     "name": "room",
+     "w": 1932,
+     "h": 940,
+     "src": [
+      1932,
+      940
+     ]
+    },
+    {
+     "name": "sky1",
+     "w": 408,
+     "h": 637,
+     "src": [
+      408,
+      637
+     ]
+    }
+   ],
+   "sizeIssues": [],
+   "noSource": [],
+   "unusedRegions": [],
+   "neverShown": [],
+   "meshes": [
+    {
+     "skin": "default",
+     "slot": "mask",
+     "attachment": "mask",
+     "type": "clipping",
+     "vertices": null
+    },
+    {
+     "skin": "default",
+     "slot": "tree0",
+     "attachment": "tree0",
+     "type": "mesh",
+     "vertices": 72
+    },
+    {
+     "skin": "default",
+     "slot": "tree1",
+     "attachment": "tree1",
+     "type": "mesh",
+     "vertices": 72
+    },
+    {
+     "skin": "default",
+     "slot": "tree2",
+     "attachment": "tree2",
+     "type": "mesh",
+     "vertices": 72
+    }
+   ],
+   "overlaps": {}
+  },
+  "bg_bonus": {
+   "folder": "bg_fone_bonus",
+   "kind": "scene",
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png"
+   ],
+   "pages": [
+    {
+     "page": "animation.png",
+     "file": "animation.png",
+     "size": "1936,1230",
+     "pma": true
+    }
+   ],
+   "naming": [],
+   "spine": "4.1-from-4.2.43",
+   "bounds": [
+    -966,
+    -470,
+    1932.04,
+    940
+   ],
+   "animations": {
+    "idle": 10.0
+   },
+   "skins": [
+    "default"
+   ],
+   "statics": [],
+   "regions": [
+    {
+     "name": "b_beam",
+     "w": 90,
+     "h": 520,
+     "src": [
+      90,
+      520
+     ]
+    },
+    {
+     "name": "b_glow",
+     "w": 128,
+     "h": 128,
+     "src": [
+      128,
+      128
+     ]
+    },
+    {
+     "name": "b_rays",
+     "w": 300,
+     "h": 300,
+     "src": [
+      300,
+      300
+     ]
+    },
+    {
+     "name": "b_refl",
+     "w": 48,
+     "h": 220,
+     "src": [
+      48,
+      220
+     ]
+    },
+    {
+     "name": "b_spark",
+     "w": 20,
+     "h": 20,
+     "src": [
+      20,
+      20
+     ]
+    },
+    {
+     "name": "b_twinkle",
+     "w": 24,
+     "h": 24,
+     "src": [
+      24,
+      24
+     ]
+    },
+    {
+     "name": "bg",
+     "w": 1932,
+     "h": 940,
+     "src": [
+      1932,
+      940
+     ]
+    }
+   ],
+   "sizeIssues": [],
+   "noSource": [],
+   "unusedRegions": [],
+   "neverShown": [],
+   "meshes": [
+    {
+     "skin": "default",
+     "slot": "mask",
+     "attachment": "mask",
+     "type": "clipping",
+     "vertices": null
+    }
+   ],
+   "overlaps": {}
+  }
+ },
+ "delivered": {
+  "a": {
+   "naming": [
+    "файл «animation..json» — по ТЗ «animation.json»",
+    "текстура «animation..png» — по ТЗ «animation.png»",
+    "атлас ссылается на «A.png», а не на «animation.png»"
+   ],
+   "files": [
+    "animation..json",
+    "animation..png",
+    "animation.atlas",
+    "static.png"
+   ]
+  },
+  "j": {
+   "naming": [
+    "атлас ссылается на «J.png», а не на «animation.png»"
+   ],
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "static.png"
+   ]
+  },
+  "k": {
+   "naming": [
+    "атлас ссылается на «K.png», а не на «animation.png»"
+   ],
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "static.png"
+   ]
+  },
+  "q": {
+   "naming": [
+    "атлас ссылается на «Q.png», а не на «animation.png»"
+   ],
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "static.png"
+   ]
+  },
+  "hair": {
+   "naming": [
+    "атлас ссылается на «hair.png», а не на «animation.png»"
+   ],
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "static.png"
+   ]
+  },
+  "docs": {
+   "naming": [
+    "атлас ссылается на «notebooks.png», а не на «animation.png»"
+   ],
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "static.png"
+   ]
+  },
+  "jet": {
+   "naming": [
+    "атлас ссылается на «plane.png», а не на «animation.png»"
+   ],
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "static.png"
+   ]
+  },
+  "wild": {
+   "naming": [
+    "атлас ссылается на «icon_wild.png», а не на «animation.png»"
+   ],
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "static_wild.png",
+    "static_x2.png",
+    "static_x3.png",
+    "static_x5.png",
+    "static_x7.png",
+    "static_x9.png"
+   ]
+  },
+  "scatter": {
+   "naming": [
+    "атлас ссылается на «scatter.png», а не на «animation.png»"
+   ],
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "static.png"
+   ]
+  },
+  "hero": {
+   "naming": [
+    "атлас ссылается на «hero.png», а не на «animation.png»"
+   ],
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "static.png"
+   ]
+  },
+  "hero_bonus": {
+   "naming": [
+    "атлас ссылается на «hero_bonus.png», а не на «animation.png»"
+   ],
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "static.png"
+   ]
+  },
+  "bg_base": {
+   "naming": [
+    "атлас ссылается на «bg_fone.png», а не на «animation.png»",
+    "текстура «animation_2.png» — по ТЗ «animation-p2.png»",
+    "атлас ссылается на «bg_fone_2.png», а не на «animation-p2.png»"
+   ],
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png",
+    "animation_2.png"
+   ]
+  },
+  "bg_bonus": {
+   "naming": [
+    "атлас ссылается на «bg_fone_bonus.png», а не на «animation.png»"
+   ],
+   "files": [
+    "animation.atlas",
+    "animation.json",
+    "animation.png"
+   ]
+  }
+ },
+ "fixed": "scripts/great_uniqorn_fix_exports.py"
+}
