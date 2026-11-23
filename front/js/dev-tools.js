@@ -208,7 +208,8 @@
     if (sets.length) {
       host.appendChild(h('div', { class: 'dt-sets' }, sets.map((st, si) => {
         const cur = lab.setVariantIndex(si);
-        const count = Math.max(...st.keys.map((k) => lab.event(k).variants.length), 0);
+        // st.count: how many set variants there are (else the longest list)
+        const count = st.count || Math.max(...st.keys.map((k) => lab.event(k).variants.length), 0);
         return h('div', { class: 'dt-set' },
           h('div', { class: 'dt-set__title' }, st.title, h('small', {}, cur >= 0 ? ` · сейчас ${String.fromCharCode(65 + cur)}` : ' · смешано')),
           st.note ? h('div', { class: 'dt-note' }, st.note) : null,
