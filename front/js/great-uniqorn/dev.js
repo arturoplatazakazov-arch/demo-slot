@@ -1,5 +1,6 @@
 // Great Uniqorn — adapter for the shared dev panel (js/dev-tools.js), the same
-// DEV / ♪ as Gangsta Casino. Shown on localhost or with ?dev=1 (js/config.js).
+// DEV / ♪ as Gangsta Casino. Unlike the other games it is ON on the deployed
+// page too (the client reviews states and sound there); ?dev=0 hides it.
 //
 // Combinations and events are FRONT-ONLY: each builds a grid, evaluates it the
 // way the backend does (app/seed/great_uniqorn.py — 11 lines, wilds substitute
@@ -13,6 +14,10 @@
 // scatter, x2 x3 x5 x7 x9 = a wild that turns into that multiplier.
 (function () {
   if (!window.DevTools) return;
+  if (new URLSearchParams(location.search).get('dev') !== '0') {
+    window.SLOT_CONFIG = window.SLOT_CONFIG || {};
+    window.SLOT_CONFIG.showDevPanels = true;
+  }
 
   const LINES = [ // payline n = LINES[n-1]: row per reel
     [1, 1, 1, 1, 1], [0, 0, 0, 0, 0], [2, 2, 2, 2, 2], [0, 1, 2, 1, 0], [2, 1, 0, 1, 2], [1, 0, 1, 0, 1],
