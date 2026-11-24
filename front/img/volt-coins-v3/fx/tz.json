@@ -1,0 +1,66 @@
+{
+ "seven": {
+  "tier": "cheap",
+  "name": "7",
+  "art": "seven_v3",
+  "glow": false,
+  "win": 1.3,
+  "idle": 3.0
+ },
+ "bar": {
+  "tier": "cheap",
+  "name": "BAR",
+  "art": "bar_v3",
+  "glow": false,
+  "win": 1.3,
+  "idle": 3.0
+ },
+ "star": {
+  "tier": "cheap",
+  "name": "Звезда",
+  "art": "star_v3",
+  "glow": false,
+  "win": 1.3,
+  "idle": 3.0
+ },
+ "horseshoe": {
+  "tier": "cheap",
+  "name": "Подкова",
+  "art": "horseshoe_v3",
+  "glow": false,
+  "win": 1.3,
+  "idle": 3.0
+ },
+ "bell": {
+  "tier": "rich",
+  "name": "Колокол",
+  "art": "bell_v3",
+  "glow": true,
+  "win": 1.3,
+  "idle": 3.0
+ },
+ "battery": {
+  "tier": "rich",
+  "name": "Батарейка",
+  "art": "ingot_battery",
+  "glow": true,
+  "win": 1.3,
+  "idle": 3.0
+ },
+ "diamond": {
+  "tier": "rich",
+  "name": "Бриллиант",
+  "art": "diamond",
+  "glow": true,
+  "win": 1.3,
+  "idle": 3.0
+ },
+ "wild": {
+  "tier": "wild",
+  "name": "Wild",
+  "art": "wild",
+  "glow": false,
+  "win": 1.3,
+  "idle": 3.0
+ }
+}

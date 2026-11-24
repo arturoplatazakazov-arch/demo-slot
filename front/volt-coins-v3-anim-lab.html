@@ -95,6 +95,17 @@
     padding: 18px; display: flex; align-items: center; justify-content: center;
   }
 
+  /* соответствие ТЗ аниматоров (fx/tz_report.json, scripts/volt_coins_v3_tz_check.py) */
+  .tzb { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; margin-left: 8px;
+    border-radius: 50%; font-size: 14px; font-weight: 800; vertical-align: 2px; cursor: help; }
+  .tzb.ok { background: #1f9d55; color: #fff; } .tzb.no { background: #d6453d; color: #fff; }
+  details.tzd { margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+  details.tzd summary { cursor: pointer; color: var(--text); }
+  details.tzd ul { margin: 6px 0 0; padding-left: 0; list-style: none; }
+  details.tzd li { margin: 3px 0; line-height: 1.3; }
+  details.tzd li b { display: inline-block; width: 16px; }
+  details.tzd li.ok b { color: #3ddc84; } details.tzd li.no b { color: #ff6b61; }
+  details.tzd li span { opacity: 0.75; }
   canvas#lab { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 3; }
 
   /* неон в желобе рамы — копия .v3-neon из css/volt-coins-v3.css */
@@ -313,6 +324,8 @@
     let speed = 1;
     const players = [];      // {run} — всё, что перезапускается кнопкой «Повторить все»
     const fmt = (s) => `${String(s).replace('.', ',')} с`;
+    const TZR = await fetch(`${FX}/tz_report.json?v=${V}`).then((r) => r.json()).catch(() => ({}));
+    BOX.tz = { x: -240, y: -190.5, width: 480, height: 381 };
 
     // ---------- разметка ----------
     let cat = null;
@@ -326,11 +339,23 @@
     };
     const sub = (t) => cat.insertAdjacentHTML('beforeend', `<div class="sub">${t}</div>`);
     // строка: подпись + сцены; возвращает контейнер сцен
-    const row = ({ title, clip, text, kind }) => {
+    // tz: ключ отчёта fx/tz_report.json → ✓ / ✗ у заголовка + список пунктов ТЗ
+    const tzHtml = (key) => {
+      const t = TZR[key];
+      if (!t) return ['', ''];
+      const n = t.checks.filter((c) => c.ok).length;
+      const tip = t.checks.map((c) => `${c.ok ? '✓' : '✗'} ${c.title}${c.ok ? '' : ` — ${c.detail}`}`).join('\n').replace(/"/g, '&quot;');
+      const badge = `<span class="tzb ${t.ok ? 'ok' : 'no'}" title="${tip}">${t.ok ? '✓' : '✗'}</span>`;
+      const list = `<details class="tzd"><summary>ТЗ: ${n} из ${t.checks.length}${t.ok ? ' — всё по ТЗ' : ''}</summary><ul>${t.checks.map((c) =>
+        `<li class="${c.ok ? 'ok' : 'no'}"><b>${c.ok ? '✓' : '✗'}</b>${c.title}${c.detail ? ` <span>· ${c.detail}</span>` : ''}</li>`).join('')}</ul></details>`;
+      return [badge, list];
+    };
+    const row = ({ title, clip, text, kind, tz }) => {
       const r = document.createElement('div');
       r.className = 'row';
-      r.innerHTML = `<div class="cap"><h3>${title}</h3>${clip ? `<div class="clip">${clip}</div>` : ''}
-        ${text ? `<p>${text}</p>` : ''}<span class="kind">${kind}</span></div><div class="stages"></div>`;
+      const [badge, list] = tz ? tzHtml(tz) : ['', ''];
+      r.innerHTML = `<div class="cap"><h3>${title}${badge}</h3>${clip ? `<div class="clip">${clip}</div>` : ''}
+        ${text ? `<p>${text}</p>` : ''}<span class="kind">${kind}</span>${list}</div><div class="stages"></div>`;
       cat.appendChild(r);
       return r.querySelector('.stages');
     };
@@ -457,6 +482,48 @@
     }
 
     // =====================================================================
+    // Символы по ТЗ аниматоров (2026-11-24): scripts/volt_coins_v3_symbol_tz.py → fx/tz_<code>/,
+    // проверка scripts/volt_coins_v3_tz_check.py → fx/tz_report.json. idle — у всех, один ритм
+    // (3 с, как у монет), win — 1,3 с; idle и win не делят ключи → играют вместе на 2 треках.
+    category('tz', 'Символы по ТЗ', 'idle + win, Spine 4.1',
+      'Новые скелеты символов по ТЗ: у всех idle (петля 3 с, все дышат и ловят блик в одном ритме) и win 1,3 с; статика = кадр 0 = последний кадр. Свечение колокола, батарейки и бриллианта, которое в игре рисовал CSS, теперь в Spine и в статике. Значок у названия — проверка по каждому пункту ТЗ (раскрой список под описанием). В игру пока не поставлены.');
+    {
+      const TZM = await fetch(`${FX}/tz.json?v=${V}`).then((r) => r.json()).catch(() => ({}));
+      const TIER_RU = { cheap: 'Дешёвый', rich: 'Дорогой', wild: 'Wild' };
+      const IDLE_TXT = {
+        cheap: 'idle: символ едва заметно дышит (+1,8%), на 1,1–1,8 с по нему проходит блик.',
+        rich: 'idle: дышит сильнее (+2,6%), ореол в цвет символа разгорается к середине петли, блик и две искорки.',
+        wild: 'idle: дышит (+3,2%), ореол буквы W, три коротких разряда по краю плашки, блик.',
+      };
+      const PADS = 'left:-13.333%;top:-16.798%;width:126.667%;height:133.596%';
+      for (const [code, m] of Object.entries(TZM)) {
+        const s = row({ title: m.name, clip: `tz_${code}: idle ${fmt(m.idle)} петля · win ${fmt(m.win)}`,
+          text: `${TIER_RU[m.tier]}. ${IDLE_TXT[m.tier]}${m.glow ? ' Свечение — слой cssglow под артом (то, что было CSS drop-shadow).' : ''}`, kind: 'Spine', tz: `tz_${code}` });
+        st(s, `<div class="tilebox"><img src="${FX}/tz_static/${code}.png?v=${V}" style="${PADS}" alt=""></div>`, 'статика');
+        const a = st(s, '<div class="tilebox"></div>', 'idle');
+        spinePlayer(a, `${FX}/tz_${code}`, [['idle', true]], { box: BOX.tz });
+        const b = st(s, '<div class="tilebox"></div>', 'win');
+        spinePlayer(b, `${FX}/tz_${code}`, [['win', false]], { box: BOX.tz, every: m.win * 1000 + 900 });
+        // idle на треке 0 + win на треке 1, как в игре: выигрыш поверх ожидания
+        const c = st(s, '<div class="tilebox"></div>', 'idle + win (2 трека)');
+        const res = await loadRes(`${FX}/tz_${code}`);
+        const inst = res.createInstance();
+        inst.anchorEl = c; inst.fit = 1; inst.boundsOverride = BOX.tz;
+        stage.addBase(inst);
+        const run = () => {
+          clearTimeout(c.t);
+          inst.animationState.timeScale = speed;
+          inst.animationState.setAnimation(0, 'idle', true);
+          const win = () => { inst.animationState.setAnimation(1, 'win', false); c.t = setTimeout(win, 3300 / speed); };
+          c.t = setTimeout(win, 1200 / speed);
+        };
+        c.addEventListener('click', run);
+        players.push({ run });
+        run();
+      }
+    }
+
+    // =====================================================================
     category('reels', 'Выигрыш на барабанах', 'символы, ячейки, разряды',
       'Анимация выигрыша каждого символа (первый и последний кадр = статика), молния по периметру выигрышной ячейки и разряд катушки в монету.');
     const sym = await fetch(`${FX}/sym.json?v=${V}`).then((r) => r.json());
@@ -469,7 +536,7 @@
     sub('Символы · Spine fx/sym_*');
     for (const [code, title, tier] of SYMS) {
       const d = sym.dur[code];
-      const s = row({ title, clip: `win · ${fmt(d)}`, text: `${tier[0].toUpperCase()}${tier.slice(1)}. Играет поверх ячейки, пока показан выигрыш линии; повтор с паузой.`, kind: 'Spine' });
+      const s = row({ title: `${title} — в игре сейчас`, clip: `sym_${code} · win · ${fmt(d)}`, text: `${tier[0].toUpperCase()}${tier.slice(1)}. Играет поверх ячейки, пока показан выигрыш линии; повтор с паузой. Версия по ТЗ — в разделе «Символы по ТЗ».`, kind: 'Spine', tz: `sym_${code}` });
       st(s, `<div class="tilebox"><img src="${IMG}/symbols/${artOf[code]}.png" alt=""></div>`, 'статика');
       const a = st(s, '<div class="tilebox"></div>', 'анимация');
       spinePlayer(a, `${FX}/sym_${code}`, [['win', false]], { box: BOX.cell, every: d * 1000 + 900 });
@@ -1032,7 +1099,7 @@
     const TT = { mini: 'MINI', minor: 'MINOR', major: 'MAJOR' };
     for (const [face, m] of Object.entries(m3)) {
       const s = row({ title: `Монета ${TT[face] || face}`, clip: `фон v1 · петля · win ${fmt(m.win_dur)} → фон`,
-        text: `${Math.round(m.diam * 100)}% высоты ячейки · молнии ${Math.round(m.power * 100)}% · искр ${m.sparks}.`, kind: 'Spine' });
+        text: `${Math.round(m.diam * 100)}% высоты ячейки · молнии ${Math.round(m.power * 100)}% · искр ${m.sparks}.`, kind: 'Spine', tz: `sym_coin_${face}` });
       st(s, `<div class="tilebox"><img src="${FX}/lab3_static/${face}.png?v=${V}" alt=""></div>`, 'статика');
       const a = st(s, '<div class="tilebox"></div>', 'фон (лежит на барабане)');
       spinePlayer(a, `${FX}/lab3_coin_${face}`, [['v1', true]], { box: BOX.cell });

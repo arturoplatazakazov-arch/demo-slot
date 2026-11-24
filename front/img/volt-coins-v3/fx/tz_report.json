@@ -1,0 +1,2066 @@
+{
+ "tz_seven": {
+  "title": "7 (по ТЗ)",
+  "ok": true,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": true,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.atlas, animation.json, animation.png"
+   },
+   {
+    "id": "clips",
+    "ok": true,
+    "title": "Анимации только win и idle",
+    "detail": "idle, win"
+   },
+   {
+    "id": "win",
+    "ok": true,
+    "title": "win = 1,3 с",
+    "detail": "1.30 с"
+   },
+   {
+    "id": "idle",
+    "ok": true,
+    "title": "idle — бесшовная петля",
+    "detail": "3.00 с · шов 0.00% / p99 0.0"
+   },
+   {
+    "id": "rhythm",
+    "ok": true,
+    "title": "Один ритм с остальными (win 1,3 · idle 3,0)",
+    "detail": "win 1.30 · idle 3.00"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "source",
+    "ok": true,
+    "title": "Статика близка к исходнику PSD",
+    "detail": "0.03% / p99 1 (размытие 1 px)"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.01% / p99 0"
+   },
+   {
+    "id": "textures",
+    "ok": true,
+    "title": "Текстуры в размер PSD",
+    "detail": ""
+   },
+   {
+    "id": "unused",
+    "ok": true,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "130 картинок, все в деле"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": true,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "ключи не пересекаются"
+   }
+  ]
+ },
+ "sym_seven": {
+  "title": "7 (в игре сейчас)",
+  "ok": false,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": false,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.png?v=ca006bcd"
+   },
+   {
+    "id": "clips",
+    "ok": false,
+    "title": "Анимации только win и idle",
+    "detail": "win"
+   },
+   {
+    "id": "win",
+    "ok": false,
+    "title": "win = 1,3 с",
+    "detail": "1.00 с"
+   },
+   {
+    "id": "idle",
+    "ok": false,
+    "title": "idle — бесшовная петля",
+    "detail": "нет клипа idle"
+   },
+   {
+    "id": "rhythm",
+    "ok": false,
+    "title": "Один ритм с остальными (win 1,3 · idle 3,0)",
+    "detail": "win 1.00 · idle 0.00"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "source",
+    "ok": true,
+    "title": "Статика близка к исходнику PSD",
+    "detail": "0.03% / p99 1 (размытие 1 px)"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.01% / p99 0"
+   },
+   {
+    "id": "textures",
+    "ok": false,
+    "title": "Текстуры в размер PSD",
+    "detail": "tile 480×381 ≠ 320×254; rim17_1 14×32 > 13×30; rim22_2 10×41 > 9×38; rim23_2 8×21 > 7×19 … ещё 2"
+   },
+   {
+    "id": "unused",
+    "ok": true,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "116 картинок, все в деле"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": false,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "нет пары idle + win в одном скелете"
+   }
+  ]
+ },
+ "tz_bar": {
+  "title": "BAR (по ТЗ)",
+  "ok": true,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": true,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.atlas, animation.json, animation.png"
+   },
+   {
+    "id": "clips",
+    "ok": true,
+    "title": "Анимации только win и idle",
+    "detail": "idle, win"
+   },
+   {
+    "id": "win",
+    "ok": true,
+    "title": "win = 1,3 с",
+    "detail": "1.30 с"
+   },
+   {
+    "id": "idle",
+    "ok": true,
+    "title": "idle — бесшовная петля",
+    "detail": "3.00 с · шов 0.00% / p99 0.0"
+   },
+   {
+    "id": "rhythm",
+    "ok": true,
+    "title": "Один ритм с остальными (win 1,3 · idle 3,0)",
+    "detail": "win 1.30 · idle 3.00"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "source",
+    "ok": true,
+    "title": "Статика близка к исходнику PSD",
+    "detail": "0.08% / p99 2 (размытие 1 px)"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.03% / p99 0"
+   },
+   {
+    "id": "textures",
+    "ok": true,
+    "title": "Текстуры в размер PSD",
+    "detail": ""
+   },
+   {
+    "id": "unused",
+    "ok": true,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "132 картинок, все в деле"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": true,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "ключи не пересекаются"
+   }
+  ]
+ },
+ "sym_bar": {
+  "title": "BAR (в игре сейчас)",
+  "ok": false,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": false,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.png?v=ba1fa254"
+   },
+   {
+    "id": "clips",
+    "ok": false,
+    "title": "Анимации только win и idle",
+    "detail": "win"
+   },
+   {
+    "id": "win",
+    "ok": false,
+    "title": "win = 1,3 с",
+    "detail": "1.00 с"
+   },
+   {
+    "id": "idle",
+    "ok": false,
+    "title": "idle — бесшовная петля",
+    "detail": "нет клипа idle"
+   },
+   {
+    "id": "rhythm",
+    "ok": false,
+    "title": "Один ритм с остальными (win 1,3 · idle 3,0)",
+    "detail": "win 1.00 · idle 0.00"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "source",
+    "ok": true,
+    "title": "Статика близка к исходнику PSD",
+    "detail": "0.08% / p99 2 (размытие 1 px)"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.04% / p99 1"
+   },
+   {
+    "id": "textures",
+    "ok": false,
+    "title": "Текстуры в размер PSD",
+    "detail": "plate0 328×82 ≠ 219×55; plate1 328×84 ≠ 219×56; plate2 328×82 ≠ 219×55; dot 43×43 > 36×36 … ещё 2"
+   },
+   {
+    "id": "unused",
+    "ok": true,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "118 картинок, все в деле"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": false,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "нет пары idle + win в одном скелете"
+   }
+  ]
+ },
+ "tz_star": {
+  "title": "Звезда (по ТЗ)",
+  "ok": true,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": true,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.atlas, animation.json, animation.png"
+   },
+   {
+    "id": "clips",
+    "ok": true,
+    "title": "Анимации только win и idle",
+    "detail": "idle, win"
+   },
+   {
+    "id": "win",
+    "ok": true,
+    "title": "win = 1,3 с",
+    "detail": "1.30 с"
+   },
+   {
+    "id": "idle",
+    "ok": true,
+    "title": "idle — бесшовная петля",
+    "detail": "3.00 с · шов 0.00% / p99 0.0"
+   },
+   {
+    "id": "rhythm",
+    "ok": true,
+    "title": "Один ритм с остальными (win 1,3 · idle 3,0)",
+    "detail": "win 1.30 · idle 3.00"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "source",
+    "ok": true,
+    "title": "Статика близка к исходнику PSD",
+    "detail": "0.03% / p99 1 (размытие 1 px)"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.01% / p99 0"
+   },
+   {
+    "id": "textures",
+    "ok": true,
+    "title": "Текстуры в размер PSD",
+    "detail": ""
+   },
+   {
+    "id": "unused",
+    "ok": true,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "130 картинок, все в деле"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": true,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "ключи не пересекаются"
+   }
+  ]
+ },
+ "sym_star": {
+  "title": "Звезда (в игре сейчас)",
+  "ok": false,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": false,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.png?v=0d90182d"
+   },
+   {
+    "id": "clips",
+    "ok": false,
+    "title": "Анимации только win и idle",
+    "detail": "win"
+   },
+   {
+    "id": "win",
+    "ok": false,
+    "title": "win = 1,3 с",
+    "detail": "1.00 с"
+   },
+   {
+    "id": "idle",
+    "ok": false,
+    "title": "idle — бесшовная петля",
+    "detail": "нет клипа idle"
+   },
+   {
+    "id": "rhythm",
+    "ok": false,
+    "title": "Один ритм с остальными (win 1,3 · idle 3,0)",
+    "detail": "win 1.00 · idle 0.00"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "source",
+    "ok": true,
+    "title": "Статика близка к исходнику PSD",
+    "detail": "0.03% / p99 1 (размытие 1 px)"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.01% / p99 0"
+   },
+   {
+    "id": "textures",
+    "ok": false,
+    "title": "Текстуры в размер PSD",
+    "detail": "tile 480×381 ≠ 320×254; dot 45×45 > 33×33; rim9_0 10×19 > 9×17"
+   },
+   {
+    "id": "unused",
+    "ok": true,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "116 картинок, все в деле"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": false,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "нет пары idle + win в одном скелете"
+   }
+  ]
+ },
+ "tz_horseshoe": {
+  "title": "Подкова (по ТЗ)",
+  "ok": true,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": true,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.atlas, animation.json, animation.png"
+   },
+   {
+    "id": "clips",
+    "ok": true,
+    "title": "Анимации только win и idle",
+    "detail": "idle, win"
+   },
+   {
+    "id": "win",
+    "ok": true,
+    "title": "win = 1,3 с",
+    "detail": "1.30 с"
+   },
+   {
+    "id": "idle",
+    "ok": true,
+    "title": "idle — бесшовная петля",
+    "detail": "3.00 с · шов 0.00% / p99 0.0"
+   },
+   {
+    "id": "rhythm",
+    "ok": true,
+    "title": "Один ритм с остальными (win 1,3 · idle 3,0)",
+    "detail": "win 1.30 · idle 3.00"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "source",
+    "ok": true,
+    "title": "Статика близка к исходнику PSD",
+    "detail": "0.02% / p99 1 (размытие 1 px)"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.01% / p99 0"
+   },
+   {
+    "id": "textures",
+    "ok": true,
+    "title": "Текстуры в размер PSD",
+    "detail": ""
+   },
+   {
+    "id": "unused",
+    "ok": true,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "130 картинок, все в деле"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": true,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "ключи не пересекаются"
+   }
+  ]
+ },
+ "sym_horseshoe": {
+  "title": "Подкова (в игре сейчас)",
+  "ok": false,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": false,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.png?v=83727b7f"
+   },
+   {
+    "id": "clips",
+    "ok": false,
+    "title": "Анимации только win и idle",
+    "detail": "win"
+   },
+   {
+    "id": "win",
+    "ok": false,
+    "title": "win = 1,3 с",
+    "detail": "1.00 с"
+   },
+   {
+    "id": "idle",
+    "ok": false,
+    "title": "idle — бесшовная петля",
+    "detail": "нет клипа idle"
+   },
+   {
+    "id": "rhythm",
+    "ok": false,
+    "title": "Один ритм с остальными (win 1,3 · idle 3,0)",
+    "detail": "win 1.00 · idle 0.00"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "source",
+    "ok": true,
+    "title": "Статика близка к исходнику PSD",
+    "detail": "0.02% / p99 1 (размытие 1 px)"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.01% / p99 0"
+   },
+   {
+    "id": "textures",
+    "ok": false,
+    "title": "Текстуры в размер PSD",
+    "detail": "tile 480×381 ≠ 320×254; dot 45×45 > 36×36; rim6_2 8×20 > 7×18; rim6_3 8×19 > 7×17 … ещё 2"
+   },
+   {
+    "id": "unused",
+    "ok": true,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "116 картинок, все в деле"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": false,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "нет пары idle + win в одном скелете"
+   }
+  ]
+ },
+ "tz_bell": {
+  "title": "Колокол (по ТЗ)",
+  "ok": true,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": true,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.atlas, animation.json, animation.png"
+   },
+   {
+    "id": "clips",
+    "ok": true,
+    "title": "Анимации только win и idle",
+    "detail": "idle, win"
+   },
+   {
+    "id": "win",
+    "ok": true,
+    "title": "win = 1,3 с",
+    "detail": "1.30 с"
+   },
+   {
+    "id": "idle",
+    "ok": true,
+    "title": "idle — бесшовная петля",
+    "detail": "3.00 с · шов 0.00% / p99 0.0"
+   },
+   {
+    "id": "rhythm",
+    "ok": true,
+    "title": "Один ритм с остальными (win 1,3 · idle 3,0)",
+    "detail": "win 1.30 · idle 3.00"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "source",
+    "ok": true,
+    "title": "Статика близка к исходнику PSD",
+    "detail": "0.18% / p99 9 (размытие 1 px)"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.03% / p99 1"
+   },
+   {
+    "id": "textures",
+    "ok": true,
+    "title": "Текстуры в размер PSD",
+    "detail": ""
+   },
+   {
+    "id": "unused",
+    "ok": true,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "140 картинок, все в деле"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": true,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "ключи не пересекаются"
+   }
+  ]
+ },
+ "sym_bell": {
+  "title": "Колокол (в игре сейчас)",
+  "ok": false,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": false,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.png?v=6d5634f9"
+   },
+   {
+    "id": "clips",
+    "ok": false,
+    "title": "Анимации только win и idle",
+    "detail": "win"
+   },
+   {
+    "id": "win",
+    "ok": false,
+    "title": "win = 1,3 с",
+    "detail": "1.20 с"
+   },
+   {
+    "id": "idle",
+    "ok": false,
+    "title": "idle — бесшовная петля",
+    "detail": "нет клипа idle"
+   },
+   {
+    "id": "rhythm",
+    "ok": false,
+    "title": "Один ритм с остальными (win 1,3 · idle 3,0)",
+    "detail": "win 1.20 · idle 0.00"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 1.0 px"
+   },
+   {
+    "id": "source",
+    "ok": true,
+    "title": "Статика близка к исходнику PSD",
+    "detail": "0.18% / p99 9 (размытие 1 px)"
+   },
+   {
+    "id": "frames",
+    "ok": false,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 1.70% / p99 106; win кадр 0: 1.70% / p99 106; win последний: 1.70% / p99 106"
+   },
+   {
+    "id": "textures",
+    "ok": false,
+    "title": "Текстуры в размер PSD",
+    "detail": "p_body 343×329 ≠ 228×219; p_bolt 97×111 ≠ 64×73; p_clapper 85×91 ≠ 57×61; p_rim 322×252 ≠ 215×168 … ещё 9"
+   },
+   {
+    "id": "unused",
+    "ok": true,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "123 картинок, все в деле"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": false,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "нет пары idle + win в одном скелете"
+   }
+  ]
+ },
+ "tz_battery": {
+  "title": "Батарейка (по ТЗ)",
+  "ok": true,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": true,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.atlas, animation.json, animation.png"
+   },
+   {
+    "id": "clips",
+    "ok": true,
+    "title": "Анимации только win и idle",
+    "detail": "idle, win"
+   },
+   {
+    "id": "win",
+    "ok": true,
+    "title": "win = 1,3 с",
+    "detail": "1.30 с"
+   },
+   {
+    "id": "idle",
+    "ok": true,
+    "title": "idle — бесшовная петля",
+    "detail": "3.00 с · шов 0.00% / p99 0.0"
+   },
+   {
+    "id": "rhythm",
+    "ok": true,
+    "title": "Один ритм с остальными (win 1,3 · idle 3,0)",
+    "detail": "win 1.30 · idle 3.00"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "source",
+    "ok": true,
+    "title": "Статика близка к исходнику PSD",
+    "detail": "0.43% / p99 22 (размытие 1 px)"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "win кадр 0: 0.04% / p99 1"
+   },
+   {
+    "id": "textures",
+    "ok": true,
+    "title": "Текстуры в размер PSD",
+    "detail": ""
+   },
+   {
+    "id": "unused",
+    "ok": true,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "147 картинок, все в деле"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": true,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "ключи не пересекаются"
+   }
+  ]
+ },
+ "sym_battery": {
+  "title": "Батарейка (в игре сейчас)",
+  "ok": false,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": false,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.png?v=fa47de9b"
+   },
+   {
+    "id": "clips",
+    "ok": false,
+    "title": "Анимации только win и idle",
+    "detail": "win"
+   },
+   {
+    "id": "win",
+    "ok": false,
+    "title": "win = 1,3 с",
+    "detail": "1.20 с"
+   },
+   {
+    "id": "idle",
+    "ok": false,
+    "title": "idle — бесшовная петля",
+    "detail": "нет клипа idle"
+   },
+   {
+    "id": "rhythm",
+    "ok": false,
+    "title": "Один ритм с остальными (win 1,3 · idle 3,0)",
+    "detail": "win 1.20 · idle 0.00"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.5 px"
+   },
+   {
+    "id": "source",
+    "ok": true,
+    "title": "Статика близка к исходнику PSD",
+    "detail": "0.43% / p99 22 (размытие 1 px)"
+   },
+   {
+    "id": "frames",
+    "ok": false,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 1.29% / p99 77; win кадр 0: 1.29% / p99 77; win последний: 1.29% / p99 77"
+   },
+   {
+    "id": "textures",
+    "ok": false,
+    "title": "Текстуры в размер PSD",
+    "detail": "p_bolt 178×73 ≠ 118×48; p_cap_back 191×180 ≠ 127×119; p_cap_bottom 190×189 ≠ 127×126; p_cap_front 213×215 ≠ 142×143 … ещё 2"
+   },
+   {
+    "id": "unused",
+    "ok": true,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "131 картинок, все в деле"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": false,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "нет пары idle + win в одном скелете"
+   }
+  ]
+ },
+ "tz_diamond": {
+  "title": "Бриллиант (по ТЗ)",
+  "ok": true,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": true,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.atlas, animation.json, animation.png"
+   },
+   {
+    "id": "clips",
+    "ok": true,
+    "title": "Анимации только win и idle",
+    "detail": "idle, win"
+   },
+   {
+    "id": "win",
+    "ok": true,
+    "title": "win = 1,3 с",
+    "detail": "1.30 с"
+   },
+   {
+    "id": "idle",
+    "ok": true,
+    "title": "idle — бесшовная петля",
+    "detail": "3.00 с · шов 0.00% / p99 0.0"
+   },
+   {
+    "id": "rhythm",
+    "ok": true,
+    "title": "Один ритм с остальными (win 1,3 · idle 3,0)",
+    "detail": "win 1.30 · idle 3.00"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "source",
+    "ok": true,
+    "title": "Статика близка к исходнику PSD",
+    "detail": "0.08% / p99 1 (размытие 1 px)"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.01% / p99 0"
+   },
+   {
+    "id": "textures",
+    "ok": true,
+    "title": "Текстуры в размер PSD",
+    "detail": ""
+   },
+   {
+    "id": "unused",
+    "ok": true,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "45 картинок, все в деле"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": true,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "ключи не пересекаются"
+   }
+  ]
+ },
+ "sym_diamond": {
+  "title": "Бриллиант (в игре сейчас)",
+  "ok": false,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": false,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.png?v=8616012f"
+   },
+   {
+    "id": "clips",
+    "ok": false,
+    "title": "Анимации только win и idle",
+    "detail": "win"
+   },
+   {
+    "id": "win",
+    "ok": false,
+    "title": "win = 1,3 с",
+    "detail": "1.20 с"
+   },
+   {
+    "id": "idle",
+    "ok": false,
+    "title": "idle — бесшовная петля",
+    "detail": "нет клипа idle"
+   },
+   {
+    "id": "rhythm",
+    "ok": false,
+    "title": "Один ритм с остальными (win 1,3 · idle 3,0)",
+    "detail": "win 1.20 · idle 0.00"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 1.0 px"
+   },
+   {
+    "id": "source",
+    "ok": true,
+    "title": "Статика близка к исходнику PSD",
+    "detail": "0.08% / p99 1 (размытие 1 px)"
+   },
+   {
+    "id": "frames",
+    "ok": false,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 2.04% / p99 55; win кадр 0: 2.04% / p99 55; win последний: 2.04% / p99 55"
+   },
+   {
+    "id": "textures",
+    "ok": false,
+    "title": "Текстуры в размер PSD",
+    "detail": "tile 480×381 ≠ 320×254; spark 44×44 > 40×40"
+   },
+   {
+    "id": "unused",
+    "ok": true,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "29 картинок, все в деле"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": false,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "нет пары idle + win в одном скелете"
+   }
+  ]
+ },
+ "tz_wild": {
+  "title": "Wild (по ТЗ)",
+  "ok": true,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": true,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.atlas, animation.json, animation.png"
+   },
+   {
+    "id": "clips",
+    "ok": true,
+    "title": "Анимации только win и idle",
+    "detail": "idle, win"
+   },
+   {
+    "id": "win",
+    "ok": true,
+    "title": "win = 1,3 с",
+    "detail": "1.30 с"
+   },
+   {
+    "id": "idle",
+    "ok": true,
+    "title": "idle — бесшовная петля",
+    "detail": "3.00 с · шов 0.00% / p99 0.0"
+   },
+   {
+    "id": "rhythm",
+    "ok": true,
+    "title": "Один ритм с остальными (win 1,3 · idle 3,0)",
+    "detail": "win 1.30 · idle 3.00"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "source",
+    "ok": true,
+    "title": "Статика близка к исходнику PSD",
+    "detail": "0.22% / p99 17 (размытие 1 px)"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.08% / p99 3"
+   },
+   {
+    "id": "textures",
+    "ok": true,
+    "title": "Текстуры в размер PSD",
+    "detail": ""
+   },
+   {
+    "id": "unused",
+    "ok": true,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "142 картинок, все в деле"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": true,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "ключи не пересекаются"
+   }
+  ]
+ },
+ "sym_wild": {
+  "title": "Wild (в игре сейчас)",
+  "ok": false,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": false,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.png?v=4a56b1d6"
+   },
+   {
+    "id": "clips",
+    "ok": false,
+    "title": "Анимации только win и idle",
+    "detail": "win"
+   },
+   {
+    "id": "win",
+    "ok": false,
+    "title": "win = 1,3 с",
+    "detail": "1.40 с"
+   },
+   {
+    "id": "idle",
+    "ok": false,
+    "title": "idle — бесшовная петля",
+    "detail": "нет клипа idle"
+   },
+   {
+    "id": "rhythm",
+    "ok": false,
+    "title": "Один ритм с остальными (win 1,3 · idle 3,0)",
+    "detail": "win 1.40 · idle 0.00"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.5 px"
+   },
+   {
+    "id": "source",
+    "ok": true,
+    "title": "Статика близка к исходнику PSD",
+    "detail": "0.22% / p99 17 (размытие 1 px)"
+   },
+   {
+    "id": "frames",
+    "ok": false,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.20% / p99 27; win кадр 0: 0.20% / p99 27; win последний: 0.20% / p99 27"
+   },
+   {
+    "id": "textures",
+    "ok": false,
+    "title": "Текстуры в размер PSD",
+    "detail": "wp_bolt_a 384×305 ≠ 320×254; wp_plate 480×381 ≠ 320×254; wp_w 480×381 ≠ 320×254; dot 45×45 > 38×38 … ещё 1"
+   },
+   {
+    "id": "unused",
+    "ok": true,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "138 картинок, все в деле"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": false,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "нет пары idle + win в одном скелете"
+   }
+  ]
+ },
+ "sym_coin_x1": {
+  "title": "Монета X1 (в игре сейчас)",
+  "ok": false,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": false,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.png?v=173c5173"
+   },
+   {
+    "id": "clips",
+    "ok": false,
+    "title": "Анимации только win и idle",
+    "detail": "win · idle в отдельном скелете lab3_coin_x1"
+   },
+   {
+    "id": "win",
+    "ok": false,
+    "title": "win = 1,3 с",
+    "detail": "1.20 с"
+   },
+   {
+    "id": "idle",
+    "ok": false,
+    "title": "idle — бесшовная петля",
+    "detail": "нет клипа idle"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.00% / p99 0"
+   },
+   {
+    "id": "textures",
+    "ok": false,
+    "title": "Текстуры в размер PSD",
+    "detail": "base 312×248 ≠ 260×206; face 312×248 ≠ 260×206"
+   },
+   {
+    "id": "unused",
+    "ok": false,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "r1, r2"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": false,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "нет пары idle + win в одном скелете"
+   }
+  ]
+ },
+ "sym_coin_x2": {
+  "title": "Монета X2 (в игре сейчас)",
+  "ok": false,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": false,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.png?v=77f3bffd"
+   },
+   {
+    "id": "clips",
+    "ok": false,
+    "title": "Анимации только win и idle",
+    "detail": "win · idle в отдельном скелете lab3_coin_x2"
+   },
+   {
+    "id": "win",
+    "ok": false,
+    "title": "win = 1,3 с",
+    "detail": "1.20 с"
+   },
+   {
+    "id": "idle",
+    "ok": false,
+    "title": "idle — бесшовная петля",
+    "detail": "нет клипа idle"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.00% / p99 0"
+   },
+   {
+    "id": "textures",
+    "ok": false,
+    "title": "Текстуры в размер PSD",
+    "detail": "base 323×256 ≠ 269×213; face 323×256 ≠ 269×213"
+   },
+   {
+    "id": "unused",
+    "ok": false,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "g0, d0"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": false,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "нет пары idle + win в одном скелете"
+   }
+  ]
+ },
+ "sym_coin_x3": {
+  "title": "Монета X3 (в игре сейчас)",
+  "ok": false,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": false,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.png?v=8b1af585"
+   },
+   {
+    "id": "clips",
+    "ok": false,
+    "title": "Анимации только win и idle",
+    "detail": "win · idle в отдельном скелете lab3_coin_x3"
+   },
+   {
+    "id": "win",
+    "ok": false,
+    "title": "win = 1,3 с",
+    "detail": "1.20 с"
+   },
+   {
+    "id": "idle",
+    "ok": false,
+    "title": "idle — бесшовная петля",
+    "detail": "нет клипа idle"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.00% / p99 0"
+   },
+   {
+    "id": "textures",
+    "ok": false,
+    "title": "Текстуры в размер PSD",
+    "detail": "base 334×265 ≠ 278×220; face 334×265 ≠ 278×220"
+   },
+   {
+    "id": "unused",
+    "ok": false,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "g0, d0"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": false,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "нет пары idle + win в одном скелете"
+   }
+  ]
+ },
+ "sym_coin_x5": {
+  "title": "Монета X5 (в игре сейчас)",
+  "ok": false,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": false,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.png?v=db604fc9"
+   },
+   {
+    "id": "clips",
+    "ok": false,
+    "title": "Анимации только win и idle",
+    "detail": "win · idle в отдельном скелете lab3_coin_x5"
+   },
+   {
+    "id": "win",
+    "ok": false,
+    "title": "win = 1,3 с",
+    "detail": "1.20 с"
+   },
+   {
+    "id": "idle",
+    "ok": false,
+    "title": "idle — бесшовная петля",
+    "detail": "нет клипа idle"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.00% / p99 0"
+   },
+   {
+    "id": "textures",
+    "ok": false,
+    "title": "Текстуры в размер PSD",
+    "detail": "base 345×274 ≠ 287×228; face 345×274 ≠ 287×228"
+   },
+   {
+    "id": "unused",
+    "ok": false,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "g0, d0, g1, d1"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": false,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "нет пары idle + win в одном скелете"
+   }
+  ]
+ },
+ "sym_coin_x10": {
+  "title": "Монета X10 (в игре сейчас)",
+  "ok": false,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": false,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.png?v=bf78a92b"
+   },
+   {
+    "id": "clips",
+    "ok": false,
+    "title": "Анимации только win и idle",
+    "detail": "win · idle в отдельном скелете lab3_coin_x10"
+   },
+   {
+    "id": "win",
+    "ok": false,
+    "title": "win = 1,3 с",
+    "detail": "1.20 с"
+   },
+   {
+    "id": "idle",
+    "ok": false,
+    "title": "idle — бесшовная петля",
+    "detail": "нет клипа idle"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.00% / p99 0"
+   },
+   {
+    "id": "textures",
+    "ok": false,
+    "title": "Текстуры в размер PSD",
+    "detail": "base 355×282 ≠ 296×235; face 355×282 ≠ 296×235"
+   },
+   {
+    "id": "unused",
+    "ok": false,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "g0, d0, g1, d1"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": false,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "нет пары idle + win в одном скелете"
+   }
+  ]
+ },
+ "sym_coin_x15": {
+  "title": "Монета X15 (в игре сейчас)",
+  "ok": false,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": false,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.png?v=5a6c3461"
+   },
+   {
+    "id": "clips",
+    "ok": false,
+    "title": "Анимации только win и idle",
+    "detail": "win · idle в отдельном скелете lab3_coin_x15"
+   },
+   {
+    "id": "win",
+    "ok": false,
+    "title": "win = 1,3 с",
+    "detail": "1.20 с"
+   },
+   {
+    "id": "idle",
+    "ok": false,
+    "title": "idle — бесшовная петля",
+    "detail": "нет клипа idle"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.00% / p99 0"
+   },
+   {
+    "id": "textures",
+    "ok": false,
+    "title": "Текстуры в размер PSD",
+    "detail": "base 366×291 ≠ 305×242; face 366×291 ≠ 305×242"
+   },
+   {
+    "id": "unused",
+    "ok": false,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "g0, d0, g1, d1"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": false,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "нет пары idle + win в одном скелете"
+   }
+  ]
+ },
+ "sym_coin_x25": {
+  "title": "Монета X25 (в игре сейчас)",
+  "ok": false,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": false,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.png?v=169cea4c"
+   },
+   {
+    "id": "clips",
+    "ok": false,
+    "title": "Анимации только win и idle",
+    "detail": "win · idle в отдельном скелете lab3_coin_x25"
+   },
+   {
+    "id": "win",
+    "ok": false,
+    "title": "win = 1,3 с",
+    "detail": "1.20 с"
+   },
+   {
+    "id": "idle",
+    "ok": false,
+    "title": "idle — бесшовная петля",
+    "detail": "нет клипа idle"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.00% / p99 0"
+   },
+   {
+    "id": "textures",
+    "ok": false,
+    "title": "Текстуры в размер PSD",
+    "detail": "base 377×299 ≠ 314×249; face 377×299 ≠ 314×249"
+   },
+   {
+    "id": "unused",
+    "ok": false,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "g0, d0, g1, d1"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": false,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "нет пары idle + win в одном скелете"
+   }
+  ]
+ },
+ "sym_coin_mini": {
+  "title": "Монета MINI (в игре сейчас)",
+  "ok": false,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": false,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.png?v=72b1fa2e"
+   },
+   {
+    "id": "clips",
+    "ok": false,
+    "title": "Анимации только win и idle",
+    "detail": "win · idle в отдельном скелете lab3_coin_mini"
+   },
+   {
+    "id": "win",
+    "ok": false,
+    "title": "win = 1,3 с",
+    "detail": "1.20 с"
+   },
+   {
+    "id": "idle",
+    "ok": false,
+    "title": "idle — бесшовная петля",
+    "detail": "нет клипа idle"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.00% / p99 0"
+   },
+   {
+    "id": "textures",
+    "ok": false,
+    "title": "Текстуры в размер PSD",
+    "detail": "base 386×306 ≠ 321×255; face 386×306 ≠ 321×255"
+   },
+   {
+    "id": "unused",
+    "ok": false,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "g0, d0, g1, d1"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": false,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "нет пары idle + win в одном скелете"
+   }
+  ]
+ },
+ "sym_coin_minor": {
+  "title": "Монета MINOR (в игре сейчас)",
+  "ok": false,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": false,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.png?v=447f545f"
+   },
+   {
+    "id": "clips",
+    "ok": false,
+    "title": "Анимации только win и idle",
+    "detail": "win · idle в отдельном скелете lab3_coin_minor"
+   },
+   {
+    "id": "win",
+    "ok": false,
+    "title": "win = 1,3 с",
+    "detail": "1.20 с"
+   },
+   {
+    "id": "idle",
+    "ok": false,
+    "title": "idle — бесшовная петля",
+    "detail": "нет клипа idle"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.00% / p99 0"
+   },
+   {
+    "id": "textures",
+    "ok": false,
+    "title": "Текстуры в размер PSD",
+    "detail": "base 399×317 ≠ 332×263; face 399×317 ≠ 332×263"
+   },
+   {
+    "id": "unused",
+    "ok": false,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "g0, d0, g1, d1"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": false,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "нет пары idle + win в одном скелете"
+   }
+  ]
+ },
+ "sym_coin_major": {
+  "title": "Монета MAJOR (в игре сейчас)",
+  "ok": false,
+  "checks": [
+   {
+    "id": "spine",
+    "ok": true,
+    "title": "Версия Spine 4.1",
+    "detail": "4.1.24"
+   },
+   {
+    "id": "files",
+    "ok": false,
+    "title": "Файлы animation.json / .atlas / .png (-p2…)",
+    "detail": "animation.png?v=35fa9d77"
+   },
+   {
+    "id": "clips",
+    "ok": false,
+    "title": "Анимации только win и idle",
+    "detail": "win · idle в отдельном скелете lab3_coin_major"
+   },
+   {
+    "id": "win",
+    "ok": false,
+    "title": "win = 1,3 с",
+    "detail": "1.20 с"
+   },
+   {
+    "id": "idle",
+    "ok": false,
+    "title": "idle — бесшовная петля",
+    "detail": "нет клипа idle"
+   },
+   {
+    "id": "center",
+    "ok": true,
+    "title": "Объект по центру, как в PSD",
+    "detail": "смещение 0.0 px"
+   },
+   {
+    "id": "frames",
+    "ok": true,
+    "title": "Статика = кадр 0 = последний кадр",
+    "detail": "сетап ↔ статика: 0.00% / p99 0"
+   },
+   {
+    "id": "textures",
+    "ok": false,
+    "title": "Текстуры в размер PSD",
+    "detail": "base 412×327 ≠ 343×272; face 412×327 ≠ 343×272"
+   },
+   {
+    "id": "unused",
+    "ok": false,
+    "title": "Нет лишних картинок и анимаций",
+    "detail": "g0, d0, g1, d1"
+   },
+   {
+    "id": "mesh",
+    "ok": true,
+    "title": "Без мешей и масок",
+    "detail": "нет"
+   },
+   {
+    "id": "tracks",
+    "ok": false,
+    "title": "idle и win не конфликтуют на разных треках",
+    "detail": "нет пары idle + win в одном скелете"
+   }
+  ]
+ }
+}
