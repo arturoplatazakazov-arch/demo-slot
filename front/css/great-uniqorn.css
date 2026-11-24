@@ -952,14 +952,20 @@ body.is-feature-screen .to-catalog-btn { visibility: hidden; }
   line-height: 86px;
   font-size: 72px;
 }
+/* FREE SPINS WIN: бейдж и надпись подняты на 150 (scripts/great_uniqorn_popups.py,
+   2026-11-24) — на широком десктопе они уходили под бар. Композиция
+   (рог y 132 .. низ надписи y 987) центрируется своим центром ~y 560. У
+   плоского PNG (.is-static) бейдж остался на месте макета. */
+.game-popup.is-spine.is-spins { --pop-content-dy: 148px; }
 .game-popup.is-spins .game-popup__amount {
   left: 329px;
-  top: 688.5px;
+  top: 538.5px;
   width: 120px;
   height: 120px;
   line-height: 120px;
   font-size: 96px;
 }
+.game-popup.is-static.is-spins .game-popup__amount { top: 688.5px; }
 
 /* Телефон: по ширине — на всю ширину экрана, по центру; по высоте центр
    композиции на 40% высоты экрана (отступ снизу 60%). Сцена здесь прижата к

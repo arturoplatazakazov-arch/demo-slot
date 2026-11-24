@@ -113,7 +113,9 @@ POPUPS = {
                     tint=(255, 214, 120)),
     # FREE SPINS TOTAL WIN was dropped (2026-11-05): every round ends on
     # BONUS SPINS TOTAL WIN, which took over its money-waving hero.
-    'fswin': dict(hero=('fswin_hero', 69, 112), txt=('fswin_txt', 24, 820), plate=('fswin_badge', 238, 601),
+    # The badge and the title are lifted by FSWIN_LIFT (2026-11-24): on the
+    # mockup's spot they sat under the bar on a wide desktop screen.
+    'fswin': dict(hero=('fswin_hero', 69, 112), txt=('fswin_txt', 24, 820 - 150), plate=('fswin_badge', 238, 601 - 150),
                   particles=['ticket_a', 'ticket_b', 'gold_ribbon', 'gold_ribbon_s', 'coin', 'coin2'],
                   tint=(255, 214, 120)),
 }
@@ -356,19 +358,24 @@ def build(pop, layout):
 
     # ---- hero ---------------------------------------------------------------
     # Pivot at his feet, so the breathe and the sway read as a body, not a card.
+    # The hero art is cut off at the legs; the cut hides under the title / the
+    # plate. So he only appears once those have landed (2026-11-24: he used to
+    # jump in from below at t=0 and the cut showed), and his intro never moves
+    # the feet line: he grows out of it (scale on the feet pivot) instead.
     sk.image(hero_name, hero_im)
     feet = hy - hero_im.height / 2
+    h0, h1 = 0.6, 1.05
     sk.bone('hero', x=hx, y=feet)
     sk.slot('hero', 'hero', hero_name, y=hero_im.height / 2)
     sk.both('hero', 'translate',
-            lambda t: (hx, feet - seg(t, 0.0, 0.5, 160, 0, ease=out_cubic)),
+            lambda t: (hx, feet),
             lambda t: (hx, feet + 6 * (1 - math.cos(2 * math.pi * t / 3.0)) / 2))
     sk.both('hero', 'scale',
-            lambda t: (seg(t, 0.0, 0.55, 0.7, 1.0, ease=out_back), seg(t, 0.0, 0.55, 0.7, 1.0, ease=out_back)),
+            lambda t: (seg(t, h0, h1, 0.55, 1.0, ease=out_back),) * 2,
             lambda t: (1 - 0.008 * (1 - math.cos(2 * math.pi * t / 3.0)) / 2,
                        1 + 0.018 * (1 - math.cos(2 * math.pi * t / 3.0)) / 2))
-    sk.both('hero', 'rotate', lambda t: seg(t, 0.0, 0.55, -6, 0, ease=out_back), lambda t: 1.2 * wave(t, 6.0))
-    sk.both('hero', 'alpha', lambda t: seg(t, 0.0, 0.18, 0, 1), lambda t: 1)
+    sk.both('hero', 'rotate', lambda t: 0, lambda t: 1.2 * wave(t, 6.0))
+    sk.both('hero', 'alpha', lambda t: 0 if t < h0 else seg(t, h0, h0 + 0.12, 0, 1), lambda t: 1)
 
     def add_plate():
         # ---- plate / badge -----------------------------------------------------

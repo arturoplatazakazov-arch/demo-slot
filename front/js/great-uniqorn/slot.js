@@ -1108,7 +1108,7 @@ function formatPopupAmount(n) {
 // skeleton is anchored to its DOM frame (.game-popup, the mockup's 780x1416
 // popup frame) — the skeleton is authored on exactly that frame (origin at its
 // centre), so fit=1 + these bounds put every layer where the mockup has it.
-const POPUP_SPINE_VERSION = '7';
+const POPUP_SPINE_VERSION = '8';
 const POPUP_FRAME_BOUNDS = { x: -390, y: -708, width: 780, height: 1416 };
 // How long a popup may wait for its skeleton before falling back to the PNG.
 const POPUP_SPINE_WAIT_MS = 1500;
