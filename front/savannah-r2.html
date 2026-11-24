@@ -6,7 +6,7 @@
 <title>Savannah Kings · R2</title>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/preloader.css?v=1">
-<link rel="stylesheet" href="css/savannah-r2.css?v=11">
+<link rel="stylesheet" href="css/savannah-r2.css?v=12">
 <link rel="stylesheet" href="css/savannah-r2-layouts.css?v=1">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 <link rel="stylesheet" href="css/dev-tools.css?v=6">
@@ -18,6 +18,11 @@
     <div class="preloader__bar"><div class="preloader__fill" id="preloaderFill"></div></div>
     <div class="preloader__pct" id="preloaderPct">0%</div>
   </div>
+
+  <a class="to-catalog-btn" href="games.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    В каталог
+  </a>
 
   <div class="screen" id="screen" data-mode="base" data-layout="1">
     <!-- Day and night backgrounds both live in the DOM and cross-fade
@@ -222,6 +227,8 @@
   <script src="js/telegram.js?v=3"></script>
   <script src="js/preloader.js?v=1"></script>
   <script src="js/config.js?v=2"></script>
+  <!-- R2 is a client review build: the DEV + ♪ pult stays on everywhere (also on Pages); ?dev=0 hides it. -->
+  <script>if (new URLSearchParams(location.search).get('dev') !== '0') window.SLOT_CONFIG.showDevPanels = true;</script>
   <script src="js/api.js?v=2"></script>
   <!-- Нижний бар V3 — контракт data-action / id / классов не менять. -->
   <div class="v3-bar" id="v3Bar">
@@ -318,7 +325,7 @@
   <script src="js/savannah-r2/app.js?v=3"></script>
   <script src="js/savannah-r2/living-bg.js?v=18"></script>
   <script src="js/savannah-r2/layouts.js?v=33"></script>
-  <!-- Пульт DEV + ♪ (js/dev-tools.js), виден на localhost и по ?dev=1; адаптер js/savannah-r2/dev.js. -->
+  <!-- Пульт DEV + ♪ (js/dev-tools.js), в R2 виден всегда (кроме ?dev=0); адаптер js/savannah-r2/dev.js. -->
   <script src="js/dev-tools.js?v=6"></script>
   <script src="js/savannah-r2/dev.js?v=3"></script>
   <script src="js/ui-bar-v3.js?v=4"></script>

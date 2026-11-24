@@ -1513,3 +1513,14 @@ body.is-portrait .wheel-overlay__title { width: 860px; }
 .wheel__label--minor { fill: #f2f7ff; stroke: #0c2452; }
 .wheel__label--major { fill: #fff4cf; stroke: #6a3300; }
 .wheel__label--grand { fill: #ffe7a6; stroke: #5a0814; font-size: 30px; }
+
+/* Back to the catalog (telegram.js points it at tg.html inside the bot) */
+.to-catalog-btn {
+  position: fixed; top: 10px; right: 10px; z-index: 110;
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px;
+  background: rgba(30, 14, 6, 0.82); border: 1px solid rgba(232, 178, 60, 0.6);
+  color: #ffd75a; font-family: var(--serif); font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-decoration: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45); backdrop-filter: blur(4px);
+}
+.to-catalog-btn:hover { background: rgba(48, 22, 8, 0.95); border-color: #ffd75a; }
+.to-catalog-btn svg { width: 14px; height: 14px; }
