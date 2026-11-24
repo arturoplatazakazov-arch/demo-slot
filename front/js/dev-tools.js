@@ -288,9 +288,21 @@
         val,
         h('button', { type: 'button', class: `dt-mini${e.muted ? ' is-on' : ''}`, title: 'заглушить событие', onclick: () => { lab.setMute(key, !lab.event(key).muted); refreshRow(lab, key); } }, 'M'),
         h('button', { type: 'button', class: 'dt-mini', title: 'добавить файл из библиотеки', onclick: () => libraryPicker(lab, key, row) }, '+'),
+        // Только для движков, умеющих загрузку (SoundKit); у игр со своим
+        // sound.js её может не быть — тогда кнопки просто нет.
+        lab.addUpload ? h('button', { type: 'button', class: 'dt-mini', title: 'загрузить свой файл (только на эту сессию)', onclick: () => pickUpload(lab, key) }, '⤒') : null,
       ),
       e.note ? h('div', { class: 'dt-note' }, e.note) : null,
+      uploadList(lab, key),
     );
+    // Drag a file straight onto the event — same as the ⤒ button.
+    row.addEventListener('dragover', (ev) => { ev.preventDefault(); row.classList.add('is-drop'); });
+    row.addEventListener('dragleave', () => row.classList.remove('is-drop'));
+    row.addEventListener('drop', (ev) => {
+      ev.preventDefault();
+      row.classList.remove('is-drop');
+      addUploads(lab, key, ev.dataTransfer && ev.dataTransfer.files);
+    });
     rowsByKey[key] = row;
     return row;
   }
@@ -299,6 +311,40 @@
     const old = rowsByKey[key];
     if (!old || !old.isConnected) return;
     old.replaceWith(soundRow(lab, key));
+  }
+
+  // --- the sound designer's own files (session only) --------------------------
+  // Files dropped here never leave the browser and are gone on reload — the
+  // point is auditioning a take on the real slot, not storing it.
+  function pickUpload(lab, key) {
+    const input = h('input', { type: 'file', accept: 'audio/*', multiple: true, style: 'display:none' });
+    input.addEventListener('change', () => { addUploads(lab, key, input.files); input.remove(); });
+    document.body.appendChild(input);
+    input.click();
+  }
+
+  function addUploads(lab, key, files) {
+    if (!lab.addUpload || !files || !files.length) return;
+    const audio = [...files].filter((f) => f.type.startsWith('audio/') || /\.(wav|mp3|ogg|m4a|aac|flac|opus|webm)$/i.test(f.name));
+    if (!audio.length) { setStatus('это не аудиофайл', 'err'); return; }
+    Promise.all(audio.map((f) => lab.addUpload(key, f))).then(() => {
+      refreshRow(lab, key);
+      lab.preview(key); // слышно сразу
+      setStatus(audio.length === 1 ? `загружен ${audio[0].name}` : `загружено файлов: ${audio.length}`, 'ok');
+    });
+  }
+
+  function uploadList(lab, key) {
+    const mine = lab.uploads ? lab.uploads(key) : [];
+    if (!mine.length) return null;
+    const active = lab.event(key).active;
+    return h('div', { class: 'dt-ups' },
+      mine.map((u) => h('div', { class: `dt-ups__item${u.path === active ? ' is-on' : ''}` },
+        h('button', { type: 'button', class: 'dt-mini', title: 'послушать', onclick: () => { lab.setVariant(key, u.path); refreshRow(lab, key); lab.preview(key); } }, '▶'),
+        h('span', { class: 'dt-ups__name', title: u.name }, u.name),
+        h('button', { type: 'button', class: 'dt-mini', title: 'убрать файл', onclick: () => { lab.removeVariant(key, u.path); refreshRow(lab, key); } }, '×'),
+      )),
+    );
   }
 
   function libraryPicker(lab, key, row) {

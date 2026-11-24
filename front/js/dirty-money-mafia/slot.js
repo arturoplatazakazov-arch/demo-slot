@@ -1726,27 +1726,7 @@ function showBonusScreen(spins) {
 }
 
 // --- Dev panel --------------------------------------------------------------
-
-function setupDevPanel() {
-  const toggleBtn = document.getElementById('devToggle');
-  toggleBtn.addEventListener('click', () => {
-    const next = currentMode() === 'base' ? 'freespins' : 'base';
-    setFreeSpinsMode(next === 'freespins', 10); // demo spins count for the intro popup
-    toggleBtn.textContent = `mode: ${next}`;
-  });
-
-  document.querySelectorAll('[data-popup]').forEach((btn) => {
-    btn.addEventListener('click', () => playPopup(btn.dataset.popup, 12345));
-  });
-
-  // Dev button previews the non-winning expansion (move, then hold); clicking a
-  // wild cell previews the winning one (move -> win-big).
-  const bigWildBtn = document.getElementById('devBigWild');
-  if (bigWildBtn) bigWildBtn.addEventListener('click', () => previewBigWild(Math.floor(GRID_COLS / 2), false));
-
-  document.getElementById('devFeatureScreen')?.addEventListener('click', () => showFeatureScreen());
-  document.getElementById('devBonusScreen')?.addEventListener('click', () => showBonusScreen(15));
-}
+// Заменён общим пультом: js/dev-tools.js + адаптер js/dirty-money-mafia/dev.js.
 
 // --- Viewport / background --------------------------------------------------
 //
@@ -1821,7 +1801,6 @@ async function init() {
 
   buildReelGrid();
   stage = new SpineEngine.SpineStage(document.getElementById('spineCanvas'));
-  setupDevPanel();
   // Preview screens for the current orientation load alongside the symbols
   // (the other orientation loads on rotate).
   const fsParam = !new URLSearchParams(location.search).has('nofs');

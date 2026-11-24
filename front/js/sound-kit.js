@@ -33,6 +33,19 @@
     try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* private mode */ }
   }
 
+  // --- uploaded files (the sound designer's own takes) ------------------------
+  //
+  // A designer drops a WAV/MP3 onto an event in the panel and hears it in the
+  // running slot straight away — no repo, no deploy, nothing for us to do in
+  // between. Deliberately SESSION-ONLY (product): the file lives as an object
+  // URL in memory under a virtual path `upload:<n>·<name>`, and a reload wipes
+  // the lot. So nothing about an upload is written to localStorage — not the
+  // file, not the choice of it — and `resolveSrc` maps the virtual path onto
+  // its object URL so the rest of the kit (buffer decoding, <audio> for music)
+  // never has to know the difference.
+  const UPLOAD_PREFIX = 'upload:';
+  const isUpload = (path) => typeof path === 'string' && path.startsWith(UPLOAD_PREFIX);
+
   function create(cfg) {
     const game = cfg.game || 'slot';
     const storeKey = `soundlab.${game}`;
@@ -66,18 +79,30 @@
     state.extra = state.extra || {};
     const save = () => writeJson(storeKey, state);
 
+    // Session-only uploads: key -> [{ path, name, url }]. Never persisted, so
+    // they are kept apart from `state.extra` (which is saved to localStorage).
+    const uploads = {};
+    const uploadUrl = {}; // virtual path -> object URL
+    let uploadSeq = 0;
+    // The chosen variant when it is an upload — in memory, for the same reason.
+    const uploadChoice = {};
+    const resolveSrc = (path) => (isUpload(path) ? uploadUrl[path] : path) || null;
+
     function variantsOf(key) {
       const e = events[key];
       if (!e) return [];
       // extras saved earlier from outside this game's own folder are dropped
       const extra = (state.extra[key] || []).filter((p) => !cfg.libraryPrefix || p.startsWith(cfg.libraryPrefix));
-      return [...e.src, ...extra.filter((p) => !e.src.includes(p))];
+      const mine = (uploads[key] || []).map((u) => u.path);
+      return [...e.src, ...extra.filter((p) => !e.src.includes(p)), ...mine];
     }
     function activePath(key) {
       const e = events[key];
       if (!e) return null;
       const list = variantsOf(key);
       const s = state.ev[key];
+      // An upload picked this session wins over whatever is saved on disk.
+      if (uploadChoice[key] && list.includes(uploadChoice[key])) return uploadChoice[key];
       if (s && s.off) return null; // "без звука" chosen as a variant
       if (s && s.v) {
         // a saved choice survives a pack version bump (?p=N on the paths)
@@ -136,7 +161,9 @@
       if (!ctx || !path) return Promise.resolve(null);
       if (buffers[path]) return Promise.resolve(buffers[path]);
       if (!loading[path]) {
-        loading[path] = fetch(path)
+        const url = resolveSrc(path);
+        if (!url) return Promise.resolve(null);
+        loading[path] = fetch(url)
           .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(r.status))))
           .then((ab) => new Promise((res, rej) => ctx.decodeAudioData(ab, res, rej)))
           .then((buf) => { buffers[path] = buf; return buf; })
@@ -231,7 +258,10 @@
       if (!musicEls[path]) {
         const gains = [];
         const els = path.split(LAYER_SEP).map((p) => {
-          const [src, k] = p.trim().split('@');
+          // An uploaded file has no layers and no @gain — resolve it straight
+          // to its object URL; everything else keeps the old "src@gain" form.
+          const [raw, k] = isUpload(path) ? [path, null] : p.trim().split('@');
+          const src = resolveSrc(raw);
           gains.push(k ? Number(k) : 1);
           const a = new Audio();
           a.preload = 'none';
@@ -321,7 +351,7 @@
     const lab = {
       game,
       // optional per-game naming of variant files and library scope
-      variantName: (path) => (cfg.variantName ? cfg.variantName(path) : null),
+      variantName: (path) => (isUpload(path) ? `⤒ ${path.split('·').slice(1).join('·')}` : (cfg.variantName ? cfg.variantName(path) : null)),
       libraryPrefix: cfg.libraryPrefix || null,
       groups() {
         const out = [];
@@ -381,8 +411,16 @@
       },
       setVariant(key, path) {
         const s = evState(key);
-        if (path === null) { s.off = true; delete s.v; } else { s.off = false; s.v = path; }
-        save();
+        if (isUpload(path)) {
+          // Session-only: remember it in memory and leave localStorage alone,
+          // or a reload would restore a choice whose file is long gone.
+          uploadChoice[key] = path;
+          s.off = false;
+        } else {
+          delete uploadChoice[key];
+          if (path === null) { s.off = true; delete s.v; } else { s.off = false; s.v = path; }
+          save();
+        }
         if (path) loadBuffer(path);
         if (events[key] && events[key].kind === 'music' && currentMusicKey === key) playMusic(key, { force: true });
       },
@@ -404,9 +442,32 @@
         lab.setVariant(key, path);
       },
       removeVariant(key, path) {
+        if (isUpload(path)) {
+          uploads[key] = (uploads[key] || []).filter((u) => u.path !== path);
+          if (uploadUrl[path]) { URL.revokeObjectURL(uploadUrl[path]); delete uploadUrl[path]; }
+          if (uploadChoice[key] === path) delete uploadChoice[key];
+          delete buffers[path];
+          delete loading[path];
+          return;
+        }
         state.extra[key] = (state.extra[key] || []).filter((p) => p !== path);
         if (state.ev[key] && state.ev[key].v === path) delete state.ev[key].v;
         save();
+      },
+      // --- the sound designer's own files, for this session only -------------
+      isUpload,
+      uploads: (key) => (uploads[key] || []).map((u) => ({ path: u.path, name: u.name })),
+      // Takes a File (file picker or drag-and-drop), adds it as a variant of
+      // `key` and selects it. Resolves with the virtual path.
+      addUpload(key, file) {
+        if (!events[key] || !file) return Promise.resolve(null);
+        const path = `${UPLOAD_PREFIX}${++uploadSeq}·${file.name}`;
+        uploadUrl[path] = URL.createObjectURL(file);
+        (uploads[key] = uploads[key] || []).push({ path, name: file.name });
+        lab.setVariant(key, path);
+        // Decode now so the first play is instant and a broken/unsupported
+        // file shows up immediately rather than on the first spin.
+        return loadBuffer(path).then(() => path);
       },
       // Audition: SFX once (a loop is cut after 3 s); music switches track.
       preview(key) {
@@ -433,10 +494,14 @@
         const out = { game, master: { sfx: master('sfx'), music: master('music') }, events: {} };
         for (const key of order) {
           const s = state.ev[key] || {};
-          const changed = s.off != null || s.v || s.vol != null || s.mute || (state.extra[key] || []).length;
+          const changed = s.off != null || s.v || s.vol != null || s.mute
+            || (state.extra[key] || []).length || uploadChoice[key];
           if (!changed) continue;
+          const active = s.off && !uploadChoice[key] ? null : activePath(key);
           out.events[key] = {
-            variant: s.off ? null : activePath(key),
+            // An uploaded take isn't a path we can resolve later — name the
+            // file instead, so whoever bakes the pack knows what goes where.
+            ...(isUpload(active) ? { upload: active.split('·').slice(1).join('·') } : { variant: active }),
             volume: eventVolume(key),
             ...(s.mute ? { muted: true } : {}),
           };
@@ -444,6 +509,11 @@
         return out;
       },
       reset() {
+        for (const key of Object.keys(uploads)) {
+          for (const u of uploads[key]) if (uploadUrl[u.path]) URL.revokeObjectURL(uploadUrl[u.path]);
+          delete uploads[key];
+          delete uploadChoice[key];
+        }
         state = { master: {}, ev: {}, extra: {} };
         save();
         if (sfxMaster) sfxMaster.gain.value = master('sfx');

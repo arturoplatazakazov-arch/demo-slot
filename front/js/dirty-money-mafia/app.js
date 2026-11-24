@@ -101,8 +101,12 @@ async function applySpinResult(data) {
   }
 }
 
-async function runSpin(request) {
-  if (gameState.isSpinning || !gameState.sessionId) return;
+// `dev: true` — a made-up response from the DEV panel (js/dirty-money-mafia/
+// dev.js) played through this very pipeline, so it needs no backend session.
+// That is what makes the panel usable on the deployed page, where the API
+// answers 401 until an access code is entered.
+async function runSpin(request, { dev = false } = {}) {
+  if (gameState.isSpinning || (!dev && !gameState.sessionId)) return;
   gameState.isSpinning = true;
 
   const spinBtn = document.querySelector('[data-action="spin"]');
@@ -254,6 +258,11 @@ function setupInfoPopup() {
     }
   });
 }
+
+// Dev panel (js/dirty-money-mafia/dev.js): a made-up spin response played
+// through the real pipeline — reels, anticipation, wins, wheel, popups,
+// sounds — with no backend involved.
+window.__devSpin = (data) => runSpin(() => Promise.resolve({ balance: gameState.balance, ...data }), { dev: true });
 
 setupBetStepper();
 setupSpinButton();

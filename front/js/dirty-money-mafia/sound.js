@@ -1,94 +1,59 @@
-// Dirty Money / MAFIA — central sound manager, same mechanics as the other
-// games' sound.js (overlappable one-shot SFX, crossfading looped music unlocked
-// on first user gesture; `new Audio(src).play()` fails soft when a file is
-// missing). No sound pack was delivered for this theme — the slot-builder
-// manifest ships zero sounds — so the GAME paths below 404 harmlessly until
-// audio lands; the shared UI/reel cues in sound/common/ still play.
+// Dirty Money / MAFIA — sound through the shared SoundKit (js/sound-kit.js),
+// so the ♪ button of the DEV panel can audition variants, set per-event
+// volumes and mute single events right on the running slot. The game keeps
+// calling Sound.playSfx / Sound.playMusic exactly as before.
+//
+// No bespoke pack was ever made for this theme: `sound/dirty-money-mafia/` is
+// empty, so the events below point at the shared cues in `sound/common/` where
+// one fits and are left EMPTY otherwise. An empty event still shows up in the
+// panel as «нет звука», and its "+" library offers every file in
+// front/sound/library.json (1000+ cues from the other games) — that is how a
+// pack gets picked here before anything is recorded for this slot.
 const COMMON = 'sound/common/';
-const GAME = 'sound/dirty-money-mafia/';
 
-const SOUND_FILES = {
-  // unique to this game — not delivered yet (404 harmless until it lands)
-  smallWin: GAME + 'WIN_Small.mp3',
-  bigWin: GAME + 'WIN_Big.mp3',
-  megaWin: GAME + 'WIN_Mega.mp3',
-  epicWin: GAME + 'WIN_Epic.mp3',
-  wildGrow: GAME + 'WILD_Scale.mp3', // wild expanding over its reel
-  wildWin: GAME + 'WILD_Win.mp3',
-  wheelSpin: GAME + 'WHEEL_Spin.mp3', // Wheel of Fortune drum spinning up
-  // shared / repeating (already present in sound/common/)
-  spinStart: COMMON + 'reel-start.mp3',
-  reelStop: COMMON + 'Reel_stop_slot.mp3',
-  finalReelStop: COMMON + 'REELS_final_stop.mp3',
-  anticipation: COMMON + 'REELS_anticipation.mp3',
-  click: COMMON + 'Click_UI.mp3',
-  popupOpen: COMMON + 'Popup-open.mp3',
-  popupClose: COMMON + 'Popup-close.mp3',
-};
+window.Sound = SoundKit.create({
+  game: 'dirty-money-mafia',
+  sfxVolume: 0.7,
+  musicVolume: 0.35,
+  events: {
+    // --- Барабаны ---
+    spinStart: { group: 'Барабаны', label: 'Старт спина', src: [COMMON + 'reel-start.mp3'] },
+    reelStop: { group: 'Барабаны', label: 'Стоп барабана', src: [COMMON + 'Reel_stop_slot.mp3'] },
+    finalReelStop: { group: 'Барабаны', label: 'Стоп последнего барабана', src: [COMMON + 'REELS_final_stop.mp3'] },
+    anticipation: { group: 'Барабаны', label: 'Антисипация', src: [COMMON + 'REELS_anticipation.mp3'] },
 
-const MUSIC_FILES = {
-  base: GAME + 'BG_Base.mp3',
-  bonus: GAME + 'BG_Bonus.mp3',
-};
+    // --- Выигрыши ---
+    smallWin: { group: 'Выигрыши', label: 'Мелкий выигрыш (без попапа)', src: [] },
+    bigWin: { group: 'Выигрыши', label: 'BIG WIN', src: [] },
+    megaWin: { group: 'Выигрыши', label: 'MEGA WIN', src: [] },
+    epicWin: { group: 'Выигрыши', label: 'EPIC WIN', src: [] },
 
-const SFX_VOLUME = 0.7;
-const MUSIC_VOLUME = 0.35;
+    // --- Фичи ---
+    wildGrow: { group: 'Фичи', label: 'WILD раскрывается на барабан', src: [] },
+    wildWin: { group: 'Фичи', label: 'Раскрытый WILD в выигрыше', src: [] },
+    wheelSpin: { group: 'Фичи', label: 'Колесо фортуны крутится', src: [], loop: true },
 
-let muted = localStorage.getItem('slot.muted') === '1';
-let currentMusic = null;
-let currentMusicKey = null;
-let musicUnlocked = false;
-let pendingMusicKey = 'base';
+    // --- Интерфейс ---
+    click: { group: 'Интерфейс', label: 'Клик по кнопке', src: [COMMON + 'Click_UI.mp3'] },
+    popupOpen: { group: 'Интерфейс', label: 'Попап открылся', src: [COMMON + 'Popup-open.mp3'] },
+    popupClose: { group: 'Интерфейс', label: 'Попап закрылся', src: [COMMON + 'Popup-close.mp3'] },
 
-function playSfx(name) {
-  if (muted) return;
-  const src = SOUND_FILES[name];
-  if (!src) return;
-  const audio = new Audio(src);
-  audio.volume = SFX_VOLUME;
-  audio.play().catch(() => {}); // autoplay-blocked / missing file — fine to ignore
-}
+    // --- Музыка ---
+    base: { kind: 'music', group: 'Музыка', label: 'База', src: [] },
+    bonus: { kind: 'music', group: 'Музыка', label: 'Фриспины', src: [] },
+  },
+});
 
-function playMusic(key) {
-  pendingMusicKey = key;
-  if (!musicUnlocked || currentMusicKey === key) return;
-  if (currentMusic) currentMusic.pause();
-
-  const src = MUSIC_FILES[key];
-  if (!src) return;
-  const audio = new Audio(src);
-  audio.loop = true;
-  audio.volume = muted ? 0 : MUSIC_VOLUME;
-  audio.play().catch(() => {});
-  currentMusic = audio;
-  currentMusicKey = key;
-}
-
-// Browsers block audio until the user interacts with the page — start the
-// pending music track on the first gesture.
-function unlockMusic() {
-  if (musicUnlocked) return;
-  musicUnlocked = true;
-  const key = pendingMusicKey;
-  currentMusicKey = null;
-  playMusic(key);
-}
-window.addEventListener('pointerdown', unlockMusic, { once: true });
-window.addEventListener('keydown', unlockMusic, { once: true });
-
-function setMuted(value) {
-  muted = value;
-  localStorage.setItem('slot.muted', muted ? '1' : '0');
-  if (currentMusic) currentMusic.volume = muted ? 0 : MUSIC_VOLUME;
+// The old sound.js exposed the mute state through the bar's ♪-less button and
+// kept the icon in sync; SoundKit owns muting now, so only the icon is left.
+function updateSoundIcon() {
   document.querySelectorAll('[data-action="sound"]').forEach((btn) => {
-    btn.classList.toggle('is-muted', muted);
+    btn.classList.toggle('is-muted', window.Sound.isMuted());
   });
 }
-
-function toggleMuted() {
-  setMuted(!muted);
-}
-
-document.addEventListener('DOMContentLoaded', () => setMuted(muted));
-
-window.Sound = { playSfx, playMusic, toggleMuted, setMuted, isMuted: () => muted };
+const origToggleMuted = window.Sound.toggleMuted;
+window.Sound.toggleMuted = function () {
+  origToggleMuted.call(window.Sound);
+  updateSoundIcon();
+};
+document.addEventListener('DOMContentLoaded', updateSoundIcon);

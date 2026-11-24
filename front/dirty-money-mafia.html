@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/dirty-money-mafia.css?v=7">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
+<link rel="stylesheet" href="css/dev-tools.css?v=6">
 </head>
 <body>
 
@@ -15,20 +16,10 @@
     В каталог
   </a>
 
-  <!-- DEV-ONLY панель: переключение режима и ручной запуск анимаций без бэкенда. -->
-  <div class="dev-panel">
-    <button class="dev-btn" id="devToggle" type="button">mode: base</button>
-    <button class="dev-btn" data-popup="bigWin" type="button">Big Win</button>
-    <button class="dev-btn" data-popup="epicWin" type="button">Epic Win</button>
-    <button class="dev-btn" data-popup="megaWin" type="button">Mega Win</button>
-    <button class="dev-btn" data-popup="bonusSpinsWin" type="button">Bonus Spins Win</button>
-    <button class="dev-btn" data-popup="bonusSpinsTotalWin" type="button">Bonus Total Win</button>
-    <button class="dev-btn" data-popup="buyFreeSpins" type="button">Buy Free Spins</button>
-    <button class="dev-btn" id="devBigWild" type="button">Big Wild</button>
-    <button class="dev-btn" id="devFeatureScreen" type="button">Feature Screen</button>
-    <button class="dev-btn" id="devBonusScreen" type="button">Bonus Screen</button>
-    <span class="dev-hint">клик по WILD в сетке — превью расширения; по остальным — win-анимация</span>
-  </div>
+  <!-- Пульт DEV + ♪ — общий (js/dev-tools.js), виден только на localhost и по
+       ?dev=1. Адаптер игры: js/dirty-money-mafia/dev.js. Его подставные спины
+       не ходят на бек, поэтому пульт работает и без кода доступа. -->
+
 
   <div class="screen" id="screen" data-mode="base">
 
@@ -235,9 +226,13 @@
   <script src="js/reel-math.js?v=6"></script>
   <script src="js/reel-spin.js?v=2"></script>
   <script src="js/buy-bonus.js?v=1"></script>
-  <script src="js/dirty-money-mafia/sound.js?v=2"></script>
-  <script src="js/dirty-money-mafia/slot.js?v=14"></script>
-  <script src="js/dirty-money-mafia/app.js?v=4"></script>
+  <script src="js/sound-kit.js?v=8"></script>
+  <script src="js/dirty-money-mafia/sound.js?v=3"></script>
+  <script src="js/dirty-money-mafia/slot.js?v=15"></script>
+  <script src="js/dirty-money-mafia/app.js?v=5"></script>
+  <!-- Пульт DEV + ♪ (localhost / ?dev=1) -->
+  <script src="js/dev-tools.js?v=6"></script>
+  <script src="js/dirty-money-mafia/dev.js?v=1"></script>
   <!-- Поведение нижнего бара V3: флайаут, тултипы, заглушки авто/турбо. -->
   <script src="js/ui-bar-v3.js?v=4"></script>
 </body>

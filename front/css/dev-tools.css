@@ -216,6 +216,21 @@
 }
 .dt-lib__add:hover { background: rgba(255, 255, 255, 0.08); color: var(--dt-fg); }
 
+/* Файлы, загруженные звукарём с диска: живут только до перезагрузки. */
+.dt-srow.is-drop { outline: 1px dashed var(--dt-acc); outline-offset: -2px; }
+.dt-ups { display: grid; gap: 2px; margin: 2px 0 6px; }
+.dt-ups__item { display: flex; gap: 4px; align-items: center; min-width: 0; }
+.dt-ups__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--dt-dim);
+}
+.dt-ups__item.is-on .dt-ups__name { color: var(--dt-fg); }
+
 .dt-log {
   max-height: 32%;
   min-height: 90px;
