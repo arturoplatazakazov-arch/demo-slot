@@ -25,6 +25,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v6
+      # Localisation review material (loc-*.html + img/*/loc/ screenshots) is
+      # internal only — keep it off the public site even if a merge brings it back.
+      - name: Drop localisation review pages
+        run: rm -rf front/loc-*.html front/img/*/loc
       - uses: actions/upload-pages-artifact@v5
         with:
           path: front
