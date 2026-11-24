@@ -198,6 +198,48 @@ class HoldAndWinFeature(BonusFeature):
                             landed_this_round.append(
                                 {"reel": reel_index, "row": row_index, "value": str(value), "kind": kind}
                             )
+                # Volt Coins (2026-11-23, product): the round's first respins
+                # always bring a jackpot coin, in this order (["mini", "minor",
+                # "major"]): one coin of the respin turns into that tier, or —
+                # if nothing landed — the tier lands on a random empty cell.
+                # Unset (every other game) changes nothing.
+                forced = config.get("forced_respin_jackpots") or []
+                ri = len(respins)
+                if ri < len(forced) and forced[ri] in jackpot_values:
+                    tier = forced[ri]
+                    tier_value = Decimal(str(jackpot_values[tier]))
+                    # a forced respin shows exactly this one tier: other random
+                    # jackpot coins of the respin redraw as plain faces
+                    plain_table = {k: w for k, w in value_weights.items() if k not in jackpot_values}
+                    seen_tier = False
+                    for c in landed_this_round:
+                        if c["kind"] == tier and not seen_tier:
+                            seen_tier = True
+                        elif c["kind"] in jackpot_values:
+                            k, v = self._draw_coin_value(plain_table, grand_multiplier, game_state.rng, jackpot_values)
+                            c["kind"], c["value"] = k, str(v)
+                            locked[(c["reel"], c["row"])] = v
+                            kinds[(c["reel"], c["row"])] = k
+                    plain = [c for c in landed_this_round if c["kind"] not in jackpot_values]
+                    if landed_this_round and not any(c["kind"] == tier for c in landed_this_round) and plain:
+                        c = plain[game_state.rng.randbelow(len(plain))]
+                        c["kind"], c["value"] = tier, str(tier_value)
+                        locked[(c["reel"], c["row"])] = tier_value
+                        kinds[(c["reel"], c["row"])] = tier
+                    elif not landed_this_round:
+                        empty = [
+                            (reel_index, row_index)
+                            for reel_index in range(num_reels)
+                            for row_index in range(num_rows)
+                            if (reel_index, row_index) not in locked
+                        ]
+                        if empty:
+                            reel_index, row_index = empty[game_state.rng.randbelow(len(empty))]
+                            locked[(reel_index, row_index)] = tier_value
+                            kinds[(reel_index, row_index)] = tier
+                            landed_this_round.append(
+                                {"reel": reel_index, "row": row_index, "value": str(tier_value), "kind": tier}
+                            )
                 if new_collectors:
                     collected = sum(
                         (v for pos, v in locked.items()
@@ -486,6 +528,16 @@ class HoldAndWinFeature(BonusFeature):
                     "type": "boolean",
                     "default": False,
                     "description": "Lock the triggering coins with the faces coin_multiplier drew for them.",
+                },
+                "forced_respin_jackpots": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "default": [],
+                    "description": (
+                        "Classic mode: jackpot tiers guaranteed on the round's first respins, in order "
+                        "(Volt Coins: mini, minor, major) — one landed coin becomes the tier, or it lands "
+                        "on a random empty cell if the respin brought nothing."
+                    ),
                 },
                 "full_grid_jackpot": {
                     "type": "string",

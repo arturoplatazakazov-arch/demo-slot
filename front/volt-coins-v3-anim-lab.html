@@ -162,6 +162,7 @@
   /* табличка респинов — копия .v3resp (горизонтальная, как на мобиле) */
   .respduo { align-items: center; gap: 0; padding: 40px 36px; }
   .respduo .duo-gap { width: 300px; }
+  .jpduo .duo-gap { width: 110px; }
   .respbox { position: relative; width: 320px; aspect-ratio: 424 / 89; cursor: pointer; }
   .respbox .v3resp__art { display: block; width: 100%; height: 100%; }
   .v3resp__n {
@@ -196,6 +197,18 @@
   .respbox.is-tick { animation: v3resp-shake 420ms ease-out; }
   .respbox.is-tick .v3resp__art { animation: v3resp-dim 700ms ease-out; }
 
+  /* пустые ячейки в Hold & Win (варианты 2026-11-24) */
+  .idlebox { padding: 22px; flex-direction: column; gap: 14px; }
+  .igrid { position: relative; display: grid; grid-template-columns: repeat(3, 190px); grid-template-rows: repeat(3, 151px);
+    border-radius: 10px; background: url(img/volt-coins-v3/v3/reel_bg.png) 0 0 / 100% 100%; cursor: pointer; }
+  .igrid .ic { position: relative; }
+  .igrid .ic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .igrid .ic img.is-pop { animation: idle-pop 420ms cubic-bezier(0.2, 1.5, 0.4, 1); }
+  @keyframes idle-pop { 0% { transform: scale(0.3); opacity: 0; filter: brightness(2.2); } 60% { transform: scale(1.12); opacity: 1; } 100% { transform: scale(1); filter: none; } }
+  .idlebox .respbox { width: 260px; }
+  .idlebox .lvl { font-size: 13px; color: var(--muted); min-height: 1.2em; }
+  .vpick { display: flex; flex-wrap: wrap; gap: 6px; }
+  .vpick button { font-size: 13px; padding: 4px 12px; }
   /* сбор монет (как slot.js collectCoins) */
   .collectbox { padding: 26px; }
   .cgrid { position: relative; display: grid; grid-template-columns: repeat(3, 132px); grid-template-rows: repeat(3, 120px);
@@ -600,6 +613,58 @@
         players.push({ run });
         run();
       }
+      // Джекпот-монета на респине (2026-11-23, как fx.js jackpotStrike):
+      // монета подлетает, обе катушки бьют в неё молнией (arc travel, золото),
+      // по ободу бегут две молнии, через секунду монета садится на место.
+      {
+        const meta = await fetch(`${FX}/jp_strike.json?v=${Date.now()}`).then((r) => r.json()).catch(() => null);
+        if (meta) {
+          const s = row({ title: 'Джекпот-монета: удар молнии', clip: `jp_strike_&lt;tier&gt;: strike ${fmt(meta.dur)} · подъём 0,4 с → удар ${fmt(meta.hit)} → молния по ободу 1 с → посадка ${fmt(meta.drop)}–1,85 с`,
+            text: 'Выпала MINI / MINOR / MAJOR на респине: монета подлетает над ячейкой, в неё бьют молнии обеих катушек, по ободу бегут две молнии с искрящим следом, кольцо под монетой разгорается, монета дрожит от заряда. Через секунду монета опускается на место с отскоком, раунд продолжается. В игре в момент удара загорается плашка джекпота.', kind: 'Spine + DOM' });
+          for (const tier of ['mini', 'minor', 'major']) {
+            const coilHtml = (side) => `<div class="artbox coilbox coilbox--duo"><img class="back" src="${IMG}/v3/coil_${side}.png" alt=""></div>`;
+            const box = st(s, `<div class="darkstage duo jpduo">${coilHtml('l')}<div class="duo-gap"></div><div class="tilebox duo-coin"></div><div class="duo-gap"></div>${coilHtml('r')}</div>`, tier.toUpperCase());
+            const tile = box.querySelector('.duo-coin');
+            const coils = [...box.querySelectorAll('.coilbox')].map((coil, i) => {
+              const side = i ? 'r' : 'l';
+              const imgs = ['flash', 'flash2'].map((n) => {
+                const img = document.createElement('img');
+                img.className = 'flash';
+                img.src = `${IMG}/v3/${n}_${side}.webp`;
+                const [l, t, w, h] = FLASH_R[side][n];
+                Object.assign(img.style, { left: `${l}%`, top: `${t}%`, width: `${w}%`, height: `${h}%`, filter: BONUS_FLASH_FILTER });
+                coil.appendChild(img);
+                return img;
+              });
+              return { imgs, head: () => ctr(coil, 0.5, 0.03) };
+            });
+            const res = await loadRes(`${FX}/jp_strike_${tier}`);
+            const inst = res.createInstance();
+            inst.anchorEl = tile; inst.fit = 1; inst.boundsOverride = BOX.cell;
+            stage.addBase(inst);
+            const lifted = () => { const r = tile.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height * (0.5 - meta.lift) }; };
+            const run = () => {
+              clearTimeout(box.t);
+              inst.animationState.timeScale = speed;
+              inst.play('strike', false);
+              const hitMs = meta.hit * 1000;
+              coils.forEach((c, i) => {
+                const lead = Math.max(0, hitMs - HIT - i * 40);
+                for (const img of c.imgs) {
+                  img.animate([{ opacity: 0 }, { opacity: 1, offset: 0.12 }, { opacity: 0.45, offset: 0.3 }, { opacity: 1, offset: 0.45 }, { opacity: 0 }],
+                    { duration: 650 / speed, easing: 'ease-out' });
+                }
+                setTimeout(() => zapPts(c.head, lifted, 'travel', 1, BONUS_TINT), lead / speed);
+                setTimeout(() => zapPts(c.head, lifted, 'travel', 1, BONUS_TINT), (lead + 70) / speed);
+              });
+              box.t = setTimeout(run, (meta.dur * 1000 + 1600) / speed);
+            };
+            box.addEventListener('click', run);
+            players.push({ run });
+            run();
+          }
+        }
+      }
       {
         const s = row({ title: 'Катушка — искры в бонусе', clip: 'spin 420 мс + 3–5 разрядов у головы · каждые 0,9–2,2 с',
           text: 'Пока идёт Hold & Win, катушки искрят постоянно (в базе — раз в 4–8 с). Иногда обе разом. Не перебивают разряды «катушка → монета».', kind: 'DOM + Spine' });
@@ -715,6 +780,114 @@
         box.addEventListener('click', run);
         players.push({ run });
         run();
+      }
+      // Пустые ячейки в Hold & Win (коммент клиента 2026-11-24, 2-й заход: первые 4 варианта отклонены).
+      // scripts/volt_coins_v3_cell_idle.py → fx/cell_charge_{ghost,leader,plasma,ladder}:
+      // idle (петля между респинами) · charge 1 с (пока крутится респин — заряд нарастает)
+      // · fizzle 0,5 с (пусто — заряд срывается) · land 0,5 с (монета упала — разряд в неё).
+      {
+        const VARIANTS = [
+          ['ghost', 'Призрак монеты',
+            'Ячейку обводит кольцо молний ровно по контуру будущей монеты. На респине из углов бьют разряды в кольцо, а внутри мерцает и проступает сама монета — «вот-вот появится». Пусто — кольцо рвётся и разлетается искрами; выпала — вспышка, и призрак становится настоящей монетой.'],
+          ['leader', 'Молния ищет путь',
+            'Как настоящая молния перед ударом: сверху рывками спускаются 2–3 «лидера» с ответвлениями, из центра им навстречу тянется встречный разряд. Пусто — гаснут, не дотянувшись совсем чуть-чуть; выпала — смыкаются вспышкой.'],
+          ['plasma', 'Плазменный шар',
+            'В центре ячейки — ядро, от него к стенкам тянутся живые нити плазмы. На респине нитей становится больше, они бьются быстрее, ядро раздувается. Пусто — нити втягиваются, ядро лопается искрами.'],
+          ['ladder', 'Лестница Иакова',
+            'Дуга между боковыми стенками ползёт снизу вверх, как в высоковольтном разряднике. На респине — две дуги взлетают одна за другой, всё ярче. Пусто — дуга срывается наверху и осыпается искрами.'],
+        ];
+        // в игре — «призрак монеты» (выбран 2026-11-24); остальные варианты скрыты
+        VARIANTS.splice(1);
+        // уровни: 0 — 3 респина, 1 — 2, 2 — 1 респин, 3 — последняя пустая ячейка
+        const ALPHA = [0.7, 0.85, 1, 1];
+        const PACE = [1, 1.25, 1.6, 2];
+        const mkCell = async (anchor, kind) => {
+          const res = await loadRes(`${FX}/cell_charge_${kind}`);
+          const inst = res.createInstance();
+          inst.anchorEl = anchor; inst.fit = 1; inst.boundsOverride = BOX.cell;
+          stage.addBase(inst);
+          (window.__idleInst ||= []).push({ kind, inst, anchor });   // для отладки из консоли
+          const st8 = inst.animationState; const col = inst.skeleton.color;
+          let lv = 0; let tok = 0;
+          const set = (clip, loop, pace = 1) => { st8.timeScale = speed * pace; return st8.setAnimation(0, clip, loop); };
+          return {
+            idle(l = lv) {
+              lv = l; col.a = ALPHA[lv];
+              const e = set('idle', true, PACE[lv]);
+              e.trackTime = Math.random() * e.animation.duration;
+            },
+            level(l) { if (l === lv) return; lv = l; col.a = ALPHA[lv]; if (st8.getCurrent(0)?.animation.name === 'idle') st8.timeScale = speed * PACE[lv]; },
+            charge() { tok++; col.a = 1; set('charge', false); },
+            fizzle() { const k = ++tok; set('fizzle', false); setTimeout(() => { if (k === tok) this.idle(lv); }, 500 / speed); },
+            land() { tok++; col.a = 1; set('land', false); },
+            stop() { tok++; st8.clearTracks(); col.a = 0; },
+          };
+        };
+        const COINS = { 0: 'x5', 2: 'x10', 4: 'mini', 7: 'x3' };
+        const coinImg = (f, pop) => `<img${pop ? ' class="is-pop"' : ''} src="${FX}/lab3_static/${f}.png?v=${V}" alt="">`;
+        const gridHtml = () => `<div class="igrid">${Array.from({ length: 9 }, (_, i) => `<div class="ic">${COINS[i] ? coinImg(COINS[i]) : ''}</div>`).join('')}</div>`;
+        // сценарий раунда: null — пустой респин, [клетка, монета] — монета упала
+        const SCRIPT = [null, [1, 'x2'], null, null, [6, 'x5'], null, [3, 'x1'], [8, 'x15'], null, null, null];
+        const LV_TXT = ['3 респина', '2 респина — заряд сильнее', '1 респин — горячо', 'последняя пустая ячейка — максимум'];
+        for (const [kind, title, text] of VARIANTS) {
+          const s = row({ title: `Пустые ячейки — ${title.toLowerCase()}`,
+            clip: `cell_charge_${kind}: idle петля 2,4 с · charge 1 с (респин) · fizzle 0,5 с / land 0,5 с`,
+            text: `${text} Чем меньше респинов, тем ярче и нервнее; последняя пустая ячейка горит сильнее всех (шанс на GRAND). Здесь мини-раунд по кругу, клик — заново.`,
+            kind: 'Spine + CSS' });
+          const box = st(s, `<div class="darkstage idlebox">${PLATE}${gridHtml()}<div class="lvl"></div></div>`);
+          const plate = box.querySelector('.respbox');
+          const grid = box.querySelector('.igrid');
+          const lvlEl = box.querySelector('.lvl');
+          const cellEls = [...grid.querySelectorAll('.ic')];
+          const ctl = await Promise.all(cellEls.map((c) => mkCell(c, kind)));
+          let gen = 0;
+          const sleep = (ms) => new Promise((r) => setTimeout(r, ms / speed));
+          const run = async () => {
+            const my = ++gen;
+            const coins = { ...COINS };
+            cellEls.forEach((c, i) => { c.innerHTML = coins[i] ? coinImg(coins[i]) : ''; ctl[i].stop(); });
+            let left = 3;
+            setPlate(plate, 3);
+            const empties = () => cellEls.map((c, i) => i).filter((i) => !coins[i]);
+            const lvlOf = () => (empties().length === 1 ? 3 : 3 - left);
+            const showLvl = () => { lvlEl.textContent = LV_TXT[lvlOf()]; };
+            empties().forEach((i) => ctl[i].idle(0));
+            showLvl();
+            for (const ev of SCRIPT) {
+              await sleep(1500);
+              if (my !== gen) return;
+              // респин крутится: все пустые заряжаются (чуть вразнобой)
+              lvlEl.textContent = 'респин…';
+              const em = empties();
+              em.forEach((i) => setTimeout(() => ctl[i].charge(), Math.random() * 120 / speed));
+              await sleep(1080);
+              if (my !== gen) return;
+              if (ev) {
+                const [ci, f] = ev;
+                coins[ci] = f;
+                ctl[ci].land();
+                cellEls[ci].innerHTML = coinImg(f, true);
+                left = 3;
+                setPlate(plate, 3, { reset: true });
+              } else {
+                left -= 1;
+                setPlate(plate, left, { tick: true });
+              }
+              const l = lvlOf();
+              em.filter((i) => !coins[i]).forEach((i) => { ctl[i].level(l); ctl[i].fizzle(); });
+              showLvl();
+              if (left === 0) break;
+            }
+            lvlEl.textContent = 'раунд окончен';
+            await sleep(600);
+            cellEls.forEach((c, i) => ctl[i].stop());
+            await sleep(1800);
+            if (my === gen) run();
+          };
+          grid.addEventListener('click', run);
+          players.push({ run });
+          run();
+        }
       }
       {
         // молния по кругу рамы — как fx.js frameLap: две молнии из противоположных углов

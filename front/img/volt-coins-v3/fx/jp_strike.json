@@ -1,0 +1,12 @@
+{
+ "dur": 1.9,
+ "hit": 0.45,
+ "lift": 0.17,
+ "grow": 0.14,
+ "drop": 1.45,
+ "tiers": [
+  "major",
+  "mini",
+  "minor"
+ ]
+}

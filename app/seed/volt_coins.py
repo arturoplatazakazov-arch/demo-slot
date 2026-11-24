@@ -213,6 +213,10 @@ def build_game_config() -> tuple[Game, GameConfig]:
             "coin_value_weights": COIN_FACE_WEIGHTS,
             "jackpot_values": JACKPOT_VALUES,
             "full_grid_jackpot": "grand",
+            # 2026-11-23 (product): respins 1/2/3 of every round always bring
+            # MINI, MINOR, MAJOR (shows the jackpot strike); later — random.
+            # Raises the round's RTP — not rebalanced yet.
+            "forced_respin_jackpots": ["mini", "minor", "major"],
         },
         display_order=1,
     )

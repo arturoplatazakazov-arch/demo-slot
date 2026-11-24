@@ -1800,7 +1800,21 @@ async function enterHoldAndWinWaitingState(result) {
   paintLockedCoins(locked);
   setRespinCounter(RESPIN_COUNT);
   setRoundCharge(locked.size);
+  syncChargeCells(locked, RESPIN_COUNT);
   return locked;
+}
+
+// Пустые ячейки раунда «заряжаются» (fx.js cellIdleSync, ?cells=…): уровень
+// растёт, когда респинов меньше; последняя пустая ячейка — максимум.
+function chargeLevel(locked, respinsLeft) {
+  const empty = GRID_COLS * GRID_ROWS - locked.size;
+  return empty === 1 ? 3 : Math.max(0, Math.min(2, RESPIN_COUNT - respinsLeft));
+}
+function emptyCellEls(locked) {
+  return cellInfos.filter((info) => info && !locked.has(coinKey(info.row, info.col))).map((info) => info.cell);
+}
+function syncChargeCells(locked, respinsLeft) {
+  fx('cellIdleSync', emptyCellEls(locked), chargeLevel(locked, respinsLeft));
 }
 
 async function runHoldAndWinSequence(result, locked, baseGrid = null) {
@@ -1816,6 +1830,7 @@ async function runHoldAndWinSequence(result, locked, baseGrid = null) {
     // звук нажатия на спин — как у базового спина, иначе респин звучит глухо
     Sound.playSfx('spinStart');
     v3NeonSpeed(2);
+    fx('cellCharge');
     await respinEmptyCells(locked, landing);
     v3NeonSpeed(1);
     if (respin.landed.length) v3NeonBoost(2.5, 1500);
@@ -1825,6 +1840,8 @@ async function runHoldAndWinSequence(result, locked, baseGrid = null) {
     setRoundCharge(locked.size);
 
     respinsLeft = respin.landed.length ? RESPIN_COUNT : respinsLeft - 1;
+    fx('cellResolve', respin.landed.map((c) => cellInfos[c.row * GRID_COLS + c.col]?.cell).filter(Boolean),
+      chargeLevel(locked, respinsLeft));
     // 2026-11-09: без монеты — цифра гаснет с ударом; с монетой табличка
     // заполняется, когда в неё попадёт молния от монеты (ниже), не сразу.
     let refilled = false;
@@ -1834,17 +1851,39 @@ async function runHoldAndWinSequence(result, locked, baseGrid = null) {
       setRespinCounter(RESPIN_COUNT, true);
       Sound.playSfx('resetCounter');
     };
-    if (respin.landed.length) setTimeout(refill, 1500);   // страховка, если FX нет
+    const strikeLanded = respin.landed.some((c) => JACKPOT_TIERS.includes(c.kind) && fx('hasStrike', c.kind));
+    if (respin.landed.length) setTimeout(refill, strikeLanded ? 2800 : 1500);   // страховка, если FX нет
     else {
       setRespinCounter(Math.max(0, respinsLeft), false, true);
       Sound.playSfx('respinCount');
     }
     const counterEl = document.getElementById('v3Resp');
 
+    const strikes = [];
     for (const [ci, c] of respin.landed.entries()) {
       noteTier(c.kind);
       const info = cellInfos[c.row * GRID_COLS + c.col];
       if (!info) continue;
+      // 2026-11-23: джекпот-монета подлетает, в неё бьют молнии катушек, по ободу
+      // бежит молния, через ~секунду монета садится на место (fx/jp_strike_<tier>);
+      // раунд ждёт конца клипа. Нет скелета — прежняя цепочка ниже.
+      if (JACKPOT_TIERS.includes(c.kind) && fx('hasStrike', c.kind)) {
+        dropSymbolFx(info);
+        info.cell.classList.add('is-fx');
+        const plate = document.querySelector(`.jp--${c.kind}`);
+        const ms = fx('jackpotStrike', info.cell, c.kind, () => {
+          Sound.playSfx('jackpotCoin');
+          fx('arcToPlate', info.cell, plate);
+          lightJackpot(c.kind);
+          if (c.kind !== 'grand') v3NeonTone(c.kind, 2500);
+        });
+        strikes.push(wait(ms).then(() => {
+          info.cell.classList.remove('is-fx');
+          Sound.playSfx('coinLock');
+          if (!fx('coinToCounter', info.cell, counterEl, refill)) refill();
+        }));
+        continue;
+      }
       // Hold & Win (2026-11-06): катушка искрит, молния бежит в монету,
       // при попадании монета играет выигрыш.
       // затем молния монета → табличка респинов, та заполняется
@@ -1869,9 +1908,14 @@ async function runHoldAndWinSequence(result, locked, baseGrid = null) {
       setTimeout(() => Sound.playSfx('coinLock'), 260);
     }
     // новая монета: молния катушка → монета (0,65 с) и её выигрыш успевают до следующего респина
-    await wait(respin.landed.length ? HOLD_AND_WIN_COIN_PAUSE_MS : HOLD_AND_WIN_RESPIN_PAUSE_MS);
+    if (strikes.length) {
+      // джекпот-монета: удар + молния по ободу, затем табличка респинов
+      await Promise.all(strikes);
+      await wait(700);
+    } else await wait(respin.landed.length ? HOLD_AND_WIN_COIN_PAUSE_MS : HOLD_AND_WIN_RESPIN_PAUSE_MS);
   }
 
+  fx('cellIdleClear');
   await wait(300);
   // выплаты раунда — выигрыш: неон ×2.5 до выхода в базу
   v3NeonSpeed(2.5);
@@ -2089,6 +2133,7 @@ function setupTestPanel() {
     B('pop:holdWinTotal', 'Total Win'), B('pop:maxWin', 'Max Win'),
     B('combo', `Комбинация · ${TEST_COMBO_NAME[TEST_COMBO[0]]}`),
     B('coins', 'Все монеты'),
+    B('hwjp', 'H&W · джекпот-монеты'),
   ].join('') + '</div>';
   document.body.appendChild(panel);
   // на телефоне столбик закрыл бы барабаны: свёрнут, открывается тапом по «Тест»
@@ -2125,6 +2170,23 @@ function setupTestPanel() {
       await testSpin(grid, [], [{ payline: 1, amount: bet * TEST_COMBO_PAY[code], positions: [0, 1, 2].map((col) => ({ row: 1, col })) }]);
       testComboIndex = (testComboIndex + 1) % TEST_COMBO.length;
       comboBtn.textContent = `Комбинация · ${TEST_COMBO_NAME[TEST_COMBO[testComboIndex]]}`;
+    } else if (kind === 'hwjp') {
+      // Локальный раунд Hold & Win без сервера: линия из трёх монет по центру,
+      // на респинах падают MINI, MINOR и MAJOR — каждая играет удар молнии
+      // (fx/jp_strike_<tier>). Раунд стартует по кнопке Spin, как настоящий.
+      if (gameState.isSpinning || gameState.pendingHoldAndWin) return;
+      const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+      const fill = FILLER_CODES.filter((c) => c !== 'wild');
+      const initial = [2, 5, 3].map((value, col) => ({ row: 1, col, kind: 'value', value }));
+      const grid = [0, 1, 2].map((r) => [0, 1, 2].map(() => (r === 1 ? 'coin' : pick(fill))));
+      await testSpin(grid, initial);
+      const jp = (row, col, k) => ({ row, col, kind: k, value: JACKPOT_VALUE_BY_TIER[k] });
+      const respins = [[jp(0, 1, 'mini')], [], [jp(2, 0, 'minor')], [jp(0, 2, 'major')], [], [], []]
+        .map((landed) => ({ landed }));
+      const x = 10 + ['mini', 'minor', 'major'].reduce((a, k) => a + JACKPOT_VALUE_BY_TIER[k], 0);
+      const hw = { triggered: true, initial, respins, full_grid_jackpot: false, total_win: bet * x };
+      gameState.pendingHoldAndWin = hw;
+      gameState.pendingHoldAndWinLocked = await enterHoldAndWinWaitingState(hw);
     } else if (kind === 'coins') {
       const faces = [['value', 1], ['value', 3], ['value', 5], ['value', 10], ['value', 15], ['value', 25], ['mini', 0], ['minor', 0], ['major', 0]]
         .map(([k, v], i) => ({ row: Math.floor(i / 3), col: i % 3, kind: k, value: v }));

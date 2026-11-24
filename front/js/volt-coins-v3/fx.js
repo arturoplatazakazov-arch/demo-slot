@@ -20,7 +20,7 @@
   const ROOT = 'img/volt-coins-v3/fx';
   // Версия atlas/json скелетов — поднимать при каждой пересборке fx
   // (PNG-страницы версионируются хешем в самом атласе).
-  const FX_V = 51;
+  const FX_V = 53;
   const BOX = {
     bg_desk: { x: -899, y: -437.5, width: 1798, height: 875 },
     bg_mob: { x: -465.5, y: -845, width: 931, height: 1690 },
@@ -404,7 +404,7 @@
         if (!v3) front.addOverlay(c.inst);
       });
       document.body.classList.add('fx-ready');
-      if (document.body.classList.contains('v3')) loadSymFx();
+      if (document.body.classList.contains('v3')) { loadSymFx(); loadStrikeFx(); loadCellFx(); }
       ambientTimer = setTimeout(ambientGlow, 2500);
       load(back, isMobile() ? 'bg_desk' : 'bg_mob').catch(() => {});
       window.addEventListener('resize', () => {
@@ -848,6 +848,130 @@
     inst.play(code, false);
     front.addBase(inst);
     return inst;
+  };
+
+  // Hold & Win (2026-11-23): джекпот-монета (MINI/MINOR/MAJOR) подлетает,
+  // в неё бьют молнии обеих катушек, по ободу бегут две молнии, через секунду
+  // монета садится обратно (scripts/volt_coins_v3_jp_strike.py → fx/jp_strike_<tier>,
+  // тайминги в fx/jp_strike.json). Молния катушка → монета — тот же arc `travel`,
+  // нацеленный в поднятую монету. Возвращает длительность клипа в мс (0 — нет скелета).
+  let strikeMeta = null;
+  function loadStrikeFx() {
+    fetch(`${ROOT}/jp_strike.json?v=${FX_V}`).then((r) => r.json()).then((m) => {
+      strikeMeta = m;
+      m.tiers.forEach((t) => load(front, `jp_strike_${t}`).catch(() => {}));
+    }).catch(() => {});
+  }
+  VoltFx.hasStrike = (tier) => Boolean(strikeMeta && res[`jp_strike_${tier}`]);
+  VoltFx.jackpotStrike = function jackpotStrike(cellEl, tier, onHit) {
+    if (!VoltFx.hasStrike(tier)) return 0;
+    const m = strikeMeta;
+    const inst = res[`jp_strike_${tier}`].createInstance();
+    inst.anchorEl = cellEl;
+    inst.fit = 1;
+    inst.play('strike', false);
+    inst.onSettle = () => front.removeBase(inst);
+    front.addBase(inst);
+    // куда бить: центр поднятой монеты (подъём — доля высоты ячейки)
+    const r = cellEl.getBoundingClientRect();
+    const p = { x: r.left + r.width / 2, y: r.top + r.height / 2 - r.height * m.lift };
+    const hitMs = m.hit * 1000;
+    if (hasTravel()) {
+      coils.forEach((c, i) => {
+        const lead = Math.max(0, hitMs - TRAVEL_HIT_MS - i * 40);
+        setTimeout(() => coilSparks(c), Math.max(0, lead - SPARK_LEAD_MS));
+        zap(coilHead(c), p, lead, 'travel');
+        zap(coilHead(c), p, lead + 70, 'travel');
+      });
+    }
+    if (onHit) setTimeout(onHit, hitMs);
+    return Math.round(m.dur * 1000);
+  };
+
+  // Hold & Win (2026-11-24, коммент клиента, на пробу): пустые ячейки «заряжаются».
+  // scripts/volt_coins_v3_cell_idle.py → fx/cell_charge_<kind>: idle (петля между
+  // респинами) · charge 1 с (крутится респин) · fizzle (пусто) · land (монета упала).
+  // Выбран «призрак монеты» (2026-11-24). ?cells=off — выключить (остальные
+  // варианты генератора — ?cells=leader|plasma|ladder, только локально).
+  const CELL_KINDS = ['ghost', 'leader', 'plasma', 'ladder'];
+  const cellKind = (() => {
+    const k = new URLSearchParams(location.search).get('cells');
+    if (k === 'off') return null;
+    return CELL_KINDS.includes(k) ? k : 'ghost';
+  })();
+  const CELL_ALPHA = [0.7, 0.85, 1, 1];      // уровень: 0 — 3 респина, 1 — 2, 2 — 1, 3 — последняя пустая
+  const CELL_PACE = [1, 1.25, 1.6, 2];
+  const cellFx = new Map();                  // cellEl -> { inst, lv, tok }
+  function loadCellFx() {
+    if (cellKind) load(front, `cell_charge_${cellKind}`).catch(() => {});
+  }
+  const cellRes = () => cellKind && res[`cell_charge_${cellKind}`];
+  function cellIdle(c, lv) {
+    c.lv = lv;
+    c.inst.skeleton.color.a = CELL_ALPHA[lv];
+    const e = c.inst.animationState.setAnimation(0, 'idle', true);
+    e.trackTime = Math.random() * e.animation.duration;
+    c.inst.animationState.timeScale = CELL_PACE[lv];
+  }
+  function dropCell(el) {
+    const c = cellFx.get(el);
+    if (!c) return;
+    c.tok++;
+    front.removeBase(c.inst);
+    cellFx.delete(el);
+  }
+  // пустые ячейки раунда: у каждой свой инстанс в idle; лишние снимаются
+  VoltFx.cellIdleSync = function cellIdleSync(emptyEls, lv = 0) {
+    const r = cellRes();
+    if (!r) return;
+    for (const el of [...cellFx.keys()]) if (!emptyEls.includes(el)) dropCell(el);
+    for (const el of emptyEls) {
+      let c = cellFx.get(el);
+      if (!c) {
+        const inst = r.createInstance();
+        inst.anchorEl = el;
+        inst.fit = 1;
+        front.addBase(inst);
+        c = { inst, lv, tok: 0 };
+        cellFx.set(el, c);
+        cellIdle(c, lv);
+      } else if (c.lv !== lv) {
+        c.lv = lv;
+        c.inst.skeleton.color.a = CELL_ALPHA[lv];
+        if (c.inst.animationState.getCurrent(0)?.animation.name === 'idle') c.inst.animationState.timeScale = CELL_PACE[lv];
+      }
+    }
+  };
+  // респин пошёл: все пустые заряжаются, чуть вразнобой
+  VoltFx.cellCharge = function cellCharge() {
+    for (const c of cellFx.values()) {
+      const k = ++c.tok;
+      setTimeout(() => {
+        if (k !== c.tok) return;
+        c.inst.skeleton.color.a = 1;
+        c.inst.animationState.timeScale = 1;
+        c.inst.animationState.setAnimation(0, 'charge', false);
+      }, Math.random() * 120);
+    }
+  };
+  // респин встал: куда упала монета — разряд в неё (и инстанс уходит), остальные срываются
+  VoltFx.cellResolve = function cellResolve(landedEls, lv) {
+    for (const [el, c] of [...cellFx.entries()]) {
+      const k = ++c.tok;
+      c.inst.animationState.timeScale = 1;
+      if (landedEls.includes(el)) {
+        c.inst.skeleton.color.a = 1;
+        c.inst.animationState.setAnimation(0, 'land', false);
+        cellFx.delete(el);
+        setTimeout(() => front.removeBase(c.inst), 520);
+      } else {
+        c.inst.animationState.setAnimation(0, 'fizzle', false);
+        setTimeout(() => { if (k === c.tok) cellIdle(c, lv); }, 500);
+      }
+    }
+  };
+  VoltFx.cellIdleClear = function cellIdleClear() {
+    for (const el of [...cellFx.keys()]) dropCell(el);
   };
 
   VoltFx.dropSymbol = function dropSymbol(inst) {
