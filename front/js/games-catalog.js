@@ -162,10 +162,6 @@ const CRE8_TOP_CARDS = [
   njs('tubes'), njs('stage'), njs('reels'),
   // the earlier Illuminator Neon Joker Spins (Rock Chrome), moved here (2026-11-18)
   njs('c', { name: 'Neon Joker Spins', badge: null, desc: null }),
-  // the five earlier Savannah variants, moved out of Illuminator (2026-11-17)
-  savannah('carved'), savannah('canyon'), savannah('toon'), savannah('timber'), savannah('crisp'),
-  koi('silk'), koi('jade'), koi('lantern'), koi('paper'),
-  sugar('forest'), sugar('meadow'), sugar('gummy'), sugar('night'),
   'olympus-thunder', 'olympus-thunder-v2', 'olympus-thunder-v3',
   ot('sunny'), ot('realms'), ot('heights'), ot('tides'),
 ];
@@ -197,18 +193,11 @@ const SPIN_FACTORY_EXTRA_CARDS = [
   savannah('classic'),
   savannah('prideRock'),
 ];
-const CRE8_CODES = new Set([
-  // provider2
-  'rad-raiders', 'jade-paws', 'ghoul-groove', 'gummy-gold-rush', 'whisker-noir',
-  'cogwork-skies', 'hex-hollow', 'bayou-bedlam', 'jaguar-eclipse', 'trident-vs-titan',
-  // provider3
-  'gladiator-gig', 'pyramid-pals', 'piggy-bankers', 'grit-and-gold', 'barnyard-bonanza',
-  'stone-age-stash', 'tnt-tunnels', 'vault-runners', 'big-top-bonkers', 'parrot-plunder',
-  'skull-harbor', 'sugar-rush-dj', 'pup-fishermen', 'pharaoh-hippo', 'bison-thunder',
-  'evolve-rush', 'cash-kingpin',
-  // earlier Cre8Pics reskins
-  'deep-fortune', 'mariachi-muertos', 'monster-factory',
-]);
+// Prod (pages, 2026-11-24): the Secret Room keeps only Neon Joker Spins and
+// Olympus Thunder — the Cre8Pics analogues, Savannah V1-V5, Koi Fortune and
+// Sugar Blast were taken off the site (GitHub Pages hit its 1 GB limit).
+// They stay in the dev catalog (main / the local checkout).
+const CRE8_CODES = new Set([]);
 
 
 const UNIQORN_MASCOT_CODES = new Set([]);
