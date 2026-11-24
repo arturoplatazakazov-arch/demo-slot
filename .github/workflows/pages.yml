@@ -17,11 +17,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  # Upload and deploy are two jobs (GitHub's own Pages template): with both in
+  # one job deploy-pages often could not see the ~700 MB artifact it had just
+  # uploaded ("No artifacts named github-pages were found", 7 of 9 runs on
+  # 2026-11-24). A separate job starts only once the artifact is committed.
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v6
@@ -32,5 +33,12 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: front
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v5
