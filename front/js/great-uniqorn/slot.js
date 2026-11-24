@@ -1108,7 +1108,7 @@ function formatPopupAmount(n) {
 // skeleton is anchored to its DOM frame (.game-popup, the mockup's 780x1416
 // popup frame) — the skeleton is authored on exactly that frame (origin at its
 // centre), so fit=1 + these bounds put every layer where the mockup has it.
-const POPUP_SPINE_VERSION = '8';
+const POPUP_SPINE_VERSION = '9';
 const POPUP_FRAME_BOUNDS = { x: -390, y: -708, width: 780, height: 1416 };
 // How long a popup may wait for its skeleton before falling back to the PNG.
 const POPUP_SPINE_WAIT_MS = 1500;
@@ -1150,24 +1150,22 @@ function mountPopupSpine(resource, node) {
   inst.anchorEl = node;
   inst.fit = 1;
   inst.boundsOverride = POPUP_FRAME_BOUNDS;
-  inst.play('intro', false);
+  // start = the popup appearing, idle = the loop while the amount counts up,
+  // end = the popup closing (scripts/great_uniqorn_popups.py)
+  inst.play('start', false);
   inst.queue('idle', true);
   spineStage.addOverlay(inst);
   return inst;
 }
 
-// Fades the skeleton out alongside the DOM frame's own opacity transition.
-function fadeOutPopupSpine(inst, ms) {
-  return new Promise((resolve) => {
-    const start = performance.now();
-    const tick = (now) => {
-      const k = Math.min(1, (now - start) / ms);
-      inst.skeleton.color.a = 1 - k;
-      if (k < 1) requestAnimationFrame(tick);
-      else resolve();
-    };
-    requestAnimationFrame(tick);
-  }).finally(() => spineStage && spineStage.removeOverlay(inst));
+// Closes the skeleton with its own `end` clip (mixed in from wherever idle
+// is), alongside the DOM frame's opacity transition.
+const POPUP_END_MS = 550;
+const POPUP_END_MIX_S = 0.15;
+function playPopupEnd(inst) {
+  const entry = inst.animationState.setAnimation(0, 'end', false);
+  entry.mixDuration = POPUP_END_MIX_S;
+  return wait(POPUP_END_MS + 40).finally(() => spineStage && spineStage.removeOverlay(inst));
 }
 
 // Thousands split with spaces, as on the mockup's plates («1 000 000 USD»).
@@ -1318,7 +1316,7 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
       Sound.playSfx('popupClose');
       node.classList.remove('is-in');
       node.classList.add('is-out');
-      if (inst) await fadeOutPopupSpine(inst, POPUP_EXIT_MS);
+      if (inst) await playPopupEnd(inst);
       else await wait(POPUP_EXIT_MS);
       inst = null;
       finish();

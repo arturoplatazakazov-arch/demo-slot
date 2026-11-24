@@ -242,7 +242,15 @@ class Skel:
         self.res_of = {}  # region -> res override (soft fx survive a lower one)
         self.need = {}
         self.anims = {'intro': {'bones': {}, 'slots': {}}, 'idle': {'bones': {}, 'slots': {}}}
+        self.durs = {'intro': intro, 'idle': idle}
+        self.rename = {}     # clip name in the file, e.g. {'intro': 'start'}
+        self.recorded = []   # (clip, target, prop, fn) as authored, for add_clip users
         self._bone_names = {'root'}
+
+    def add_clip(self, name, dur):
+        """An extra clip besides intro / idle (e.g. an `end`)."""
+        self.anims[name] = {'bones': {}, 'slots': {}}
+        self.durs[name] = dur
 
     def image(self, region, im):
         self.images[region] = im
@@ -328,7 +336,8 @@ class Skel:
     def anim(self, which, target, prop, fn):
         """`translate` is authored as the bone's absolute local position; Spine
         adds timeline values to the setup pose, so the setup x/y is taken off."""
-        dur = self.intro if which == 'intro' else self.idle
+        dur = self.durs[which]
+        self.recorded.append((which, target, prop, fn))
         if prop == 'translate':
             b = next(b for b in self.bones if b['name'] == target)
             bx, by = b.get('x', 0), b.get('y', 0)
@@ -390,7 +399,7 @@ class Skel:
             'bones': self.bones,
             'slots': self.slots,
             'skins': [{'name': 'default', 'attachments': self.atts}],
-            'animations': self.anims,
+            'animations': {self.rename.get(k, k): v for k, v in self.anims.items()},
         }
         with open(os.path.join(out, 'animation.json'), 'w') as f:
             json.dump(data, f, separators=(',', ':'))

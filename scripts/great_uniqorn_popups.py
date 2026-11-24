@@ -18,7 +18,8 @@ Two kinds of layers, as the product asked:
               half transparent, slow; near = big, softly blurred, fast, in
               front of everything. The mid band is the plain art.
 
-Clips: `intro` (1.2s) -> `idle` (6s, seamless). Every rain particle's period
+Clips: `start` (1.2s, the popup appearing) -> `idle` (6s, seamless, loops
+while the amount counts up) -> `end` (0.55s, the popup closing). Every rain particle's period
 divides the idle length and its fall wraps while it is off screen and fully
 transparent, so the loop never pops. `desk` spreads the rain over the whole
 desktop screen (the popup frame there is ~1/3 of the width); `mob` keeps it
@@ -40,7 +41,7 @@ from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from spine_screen_kit import (  # noqa: E402
-    Skel, flash_of, in_out_sine, lerp, out_back, out_cubic, rays, seg, soft_glow, trim, wave,
+    Skel, flash_of, in_cubic, in_out_sine, lerp, out_back, out_cubic, rays, seg, soft_glow, trim, wave,
 )
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -52,7 +53,7 @@ SRC_V1 = os.path.join(ROOT, 'front/img/great-uniqorn/src/popup_layers_v1')
 OUT = os.path.join(ROOT, 'front/img/great-uniqorn/popups')
 
 FW, FH = 780, 1416
-INTRO, IDLE = 1.2, 6.0
+INTRO, IDLE, END = 1.2, 6.0, 0.55
 
 
 def X(fx):
@@ -425,7 +426,39 @@ def build(pop, layout):
     add_burst(lay['burst'])
     add_rain('near', lay['near'], behind=False)
 
+    add_end(sk, hx, feet, is_badge)
+    sk.rename = {'intro': 'start'}
     sk.write()
+
+
+def add_end(sk, hx, feet, is_badge):
+    """`end` (END s): the popup closing, played from any point of `idle`
+    (the game mixes into it). The hero goes first — back into his feet line,
+    so the cut legs stay under the title / plate — then the plate shrinks
+    away, the title flares and zooms off; rays, glow, backdrop and the rain
+    fade out while still moving. Every timeline `idle` keys is keyed here
+    too, so nothing snaps to the setup pose."""
+    sk.add_clip('end', END)
+    fade = lambda t: seg(t, 0.05, 0.45, 1, 0, ease=in_out_sine)  # noqa: E731
+    over = {
+        ('hero', 'translate'): lambda t: (hx, feet),
+        ('hero', 'rotate'): lambda t: 0,
+        ('hero', 'scale'): lambda t: (seg(t, 0.0, 0.22, 1.0, 0.6, ease=in_cubic),) * 2,
+        ('hero', 'alpha'): lambda t: seg(t, 0.05, 0.2, 1, 0),
+        ('plate', 'scale'): lambda t: (seg(t, 0.22, 0.42, 1.0, 0.0 if is_badge else 0.2, ease=in_cubic),) * 2,
+        ('plate', 'rotate'): lambda t: seg(t, 0.22, 0.42, 0, 180 if is_badge else 0, ease=in_cubic),
+        ('plate', 'alpha'): lambda t: seg(t, 0.3, 0.42, 1, 0),
+        ('txt', 'scale'): lambda t: (seg(t, 0.28, 0.52, 1.0, 1.25, ease=in_cubic),) * 2,
+        ('txt', 'alpha'): lambda t: seg(t, 0.32, 0.52, 1, 0),
+        ('txt_sheen', 'alpha'): lambda t: 0 if t < 0.26 else seg(t, 0.26, 0.42, 0.7, 0),
+    }
+    for clip, target, prop, fn in list(sk.recorded):
+        if clip != 'idle':
+            continue
+        f = over.get((target, prop))
+        if f is None:
+            f = (lambda fn: lambda t: fn(t) * fade(t))(fn) if prop == 'alpha' else fn
+        sk.anim('end', target, prop, f)
 
 
 if __name__ == '__main__':

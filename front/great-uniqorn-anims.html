@@ -462,9 +462,9 @@
     const AMOUNT_BOX = {
       win:   { l: 121, t: 734, w: 539, h: 75, fs: 56, text: '1 250 000', cur: 'FUN', delay: 720 },
       total: { l: 120, t: 831, w: 541, h: 86, fs: 72, text: '842 500', cur: 'FUN', delay: 720 },
-      spins: { l: 329, t: 688.5, w: 120, h: 120, fs: 96, text: '10', cur: '', delay: 900 },
+      spins: { l: 329, t: 538.5, w: 120, h: 120, fs: 96, text: '10', cur: '', delay: 900 },
     };
-    category('popups', 'Попапы', 'Spine · intro 1,2 с → idle 6 с (петля)',
+    category('popups', 'Попапы', 'Spine · start 1,2 с → idle 6 с (петля, пока насчитывается сумма) → end 0,55 с',
       'Скелеты popups/&lt;попап&gt;_desk|mob (scripts/great_uniqorn_popups.py): лучи, плашка, надпись, герой из-за надписи, летящие купюры / ленты / монеты. Сумма — DOM-текст поверх плашки, проявляется, когда плашка уже выпрыгнула. На десктопе попап — по центру сцены (×0,74), на телефоне — во всю ширину.');
     for (const [key, title, kind, text] of [
       ['big', 'BIG WIN', 'win', 'Выигрыш от 10× ставки (звук WIN_Bigwin).'],
@@ -488,9 +488,15 @@
         const fitFont = () => { am.style.fontSize = `${a.fs * frame.clientWidth / 780}px`; };
         new ResizeObserver(fitFont).observe(frame);
         let t = null;
-        spine(frame.querySelector('.spine'), `${IMG}/popups/${key}_${v}`, [['intro', false], ['idle', true]], {
-          box: FRAME.mob, every: 7500, clickEl: box,
-          onRun: () => { am.classList.remove('is-in'); clearTimeout(t); t = setTimeout(() => am.classList.add('is-in'), a.delay / speed); },
+        let t2 = null;
+        // start -> один проход idle -> end, как в игре (там idle крутится, пока идёт счёт)
+        spine(frame.querySelector('.spine'), `${IMG}/popups/${key}_${v}`, [['start', false], ['idle', false], ['end', false]], {
+          box: FRAME.mob, every: 9000, clickEl: box,
+          onRun: () => {
+            am.classList.remove('is-in'); clearTimeout(t); clearTimeout(t2);
+            t = setTimeout(() => am.classList.add('is-in'), a.delay / speed);
+            t2 = setTimeout(() => am.classList.remove('is-in'), 7200 / speed);
+          },
         });
       }
     }
