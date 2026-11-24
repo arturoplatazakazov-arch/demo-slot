@@ -257,7 +257,7 @@ const R2_LINE_COLOURS = ['#ffd24a', '#ff6b4a', '#4ad7ff', '#8cff5a', '#ff5ad0', 
 // The skeleton follows the line style: 'a' = Silk (the client's pick,
 // scripts/savannah_r2_silk.py), 'r2' = frames + numbers (scripts/savannah_r2_winlines.py).
 const WINLINES_DIR = `${ASSET_ROOT}/spine/${winLineStyle() === 'a' ? 'silk' : 'winlines'}`;
-const WINLINES_VERSION = '4';
+const WINLINES_VERSION = '6';
 const WINLINES_STAGGER_S = 0.08;
 let spineStage = null;
 let winLinesInst = null;
