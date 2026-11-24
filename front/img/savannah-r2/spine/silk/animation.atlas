@@ -1,0 +1,16 @@
+animation.png
+size:512,322
+filter:Linear,Linear
+pma:true
+glow
+bounds:0,0,64,64
+body
+bounds:66,0,64,16
+core
+bounds:132,0,64,8
+cap
+bounds:198,0,64,64
+pulse
+bounds:264,0,128,32
+ring
+bounds:0,66,256,256

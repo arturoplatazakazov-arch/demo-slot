@@ -98,6 +98,9 @@ const SAVANNAH_VARIANTS = {
   lodge: { page: 'savannah-lodge.html', name: 'Savannah Kings · Lodge', badge: 'V6',
     desc: 'Тёплый закат и стилизованный реализм: рама из дерева с верёвками, живой фон — леопард на акации, стада, птицы.',
     cover: 'img/savannah-lodge/cover.jpg?v=2' },
+  r2: { page: 'savannah-r2.html', name: 'Savannah Kings', badge: 'R2',
+    desc: 'Правки клиента, раунд 2: новая иерархия символов, колесо на 12 секторов, Spine-попапы, ночной бонус с леопардом.',
+    cover: 'img/savannah-r2/cover.jpg?v=1' },
 };
 const OT_VARIANTS = {
   sunny: { page: 'olympus-thunder-sunny.html', name: 'Olympus Thunder · Sunny', badge: 'Midday',
@@ -173,7 +176,7 @@ const ILLUMINATOR_CARDS = [
   'volt-coins',
   njs('r1'),   // Neon Joker Spins R1 (client round 1) — in the main grid where NJS always stood
   ot('tides2'),
-  savannah('lodge'),
+  savannah('r2'),   // client round 2 (2026-11-24) — the version in work; Lodge stays by direct link
   'gold-of-baku',
   'gold-of-baku-2',
 ];

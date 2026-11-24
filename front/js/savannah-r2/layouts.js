@@ -1,0 +1,367 @@
+// Desktop layout options for the Savannah Kings art variants (see
+// css/savannah-layouts.css). The «Варианты» switch sets #screen[data-layout]
+// to 1 / 2 / 3 and remembers the pick per page, like Great Uniqorn.
+//
+// Layouts 2 and 3 are placed here, in stage px (the 1920x1080 design frame),
+// from the variant's real frame geometry (--frame-win-* in its stylesheet)
+// and the plaque/logo art proportions, so one rule set fits all five frames:
+//   2  GRAND over MINI · MINOR · MAJOR, sitting on the frame's top border;
+//      the reels grow until the frame meets the control pill, and the
+//      plaques never reach down into the symbol window.
+//   3  logo top centre, GRAND MAJOR MINOR MINI in one row on the frame's
+//      top border, reels as large as layout 2's.
+//   1  (main) one-line title banner on the frame, WIN/BUY left, jackpots right,
+//      the frame centred on x at 45% of the stage height
+//      (60% of it below); the left column (logo, WIN, BUY BONUS) and the
+//      right column (jackpots, MINI at the bottom) are exactly as tall as the
+//      frame, items scaled up as far as the column width allows, equal gaps.
+(function () {
+  const screen = document.getElementById('screen');
+  const sw = document.getElementById('layoutSwitch');
+  if (!screen) return;   // the «Варианты» switch is optional (savannah-lodge has none)
+  const KEY = `savannah.layout.v2.${location.pathname.split('/').pop()}`;
+
+  const W = 1920, H = 1080;
+  const WIN_W = 880, WIN_H = 528, REEL_LEFT = 520;
+  const PILL_TOP = 976;           // .bar top: frames stay above it
+  const MEDAL_SIDE = 340;         // layout 2: medallions own x < 340 and x > 1580
+
+  const $ = (s) => document.querySelector(s);
+  const reel = $('.reel');
+  const logo = $('.logo');
+  const sys = $('.sys');
+  const ladder = $('.crown--ladder');
+  const buy = $('.medal--buy');
+  const status = $('.medal--status');
+  const plaques = ladder ? [...ladder.querySelectorAll('.jp')] : [];
+  // Layout 3's one-line title banner, a sibling of the stacked logo.
+  const logoWide = document.createElement('img');
+  logoWide.className = 'logo logo--wide';
+  logoWide.alt = '';
+  logoWide.src = `${window.SK_ASSET_ROOT || 'img/savannah-kings'}/img/logo_wide.webp`;
+  logoWide.style.display = 'none';
+  if (logo) logo.after(logoWide);
+  const touched = [reel, logo, sys, ladder, buy, status, ...plaques].filter(Boolean);
+
+  function reset() {
+    for (const el of touched) el.removeAttribute('style');
+    logoWide.setAttribute('style', 'display: none');
+  }
+
+  function cssNum(name) {
+    return parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
+  }
+
+  // The frame art's box relative to the reel's top-left, unscaled.
+  function frameBox() {
+    const fw = WIN_W / cssNum('--frame-win-w');
+    const fh = WIN_H / cssNum('--frame-win-h');
+    return { w: fw, h: fh, x: -fw * cssNum('--frame-win-l'), y: -fh * cssNum('--frame-win-t') };
+  }
+
+  function ratio(img, fallback) {
+    return img && img.naturalWidth ? img.naturalHeight / img.naturalWidth : fallback;
+  }
+
+  // Plaque widths keep layout 1's proportion: GRAND is 350/310 of the rest.
+  const GRAND_K = 350 / 310;
+  function plaqueRatios() {
+    return plaques.map((p) => ({ el: p, grand: p.classList.contains('jp--grand'), r: ratio(p.querySelector('img'), 0.35) }));
+  }
+  function sizePlaque(p, w) {
+    p.el.style.width = `${w}px`;
+    p.el.style.fontSize = `${Math.round(w * 0.088)}px`;
+  }
+
+  // --- 2: two floors on the frame's top border ---------------------------
+  function layout2() {
+    const f = frameBox();
+    const ps = plaqueRatios();
+    const wRow = 250, wGrand = 320, gap = 6;
+    ps.forEach((p) => sizePlaque(p, p.grand ? wGrand : wRow));
+    const hGrand = ps.filter((p) => p.grand).reduce((a, p) => a + p.r * wGrand, 0);
+    const hRow = Math.max(...ps.filter((p) => !p.grand).map((p) => p.r * wRow));
+    const crownTop = 14;
+    const winTop = crownTop + hGrand + gap + hRow + 10;      // plaques end above the symbols
+    const below = f.y + f.h - WIN_H;                          // frame under the window
+    let s = (PILL_TOP - 12 - winTop) / (WIN_H + below);
+    s = Math.min(s, (W - 2 * MEDAL_SIDE) / f.w);
+    Object.assign(reel.style, { top: `${winTop}px`, transform: `scale(${s})`, transformOrigin: '50% 0' });
+    Object.assign(ladder.style, { top: `${crownTop}px` });
+  }
+
+  // --- 1 (main): title banner on the frame, WIN/BUY left, jackpots right --------
+  // The jackpots (GRAND JP_W wide) stand JP_FRAME_GAP right of the frame;
+  // the frame is centred, so it is as wide as that leaves on both sides.
+  // The one-line logo (logo_wide.webp) rests on the frame's top border and
+  // never reaches down into the symbols; WIN and BUY BONUS stack on the
+  // left, centred on the frame.
+  const L3_CY = H * 0.45;      // frame centre: 45% from the top
+  const EDGE = 28;             // outer margin of the left column
+  const JP_EDGE = 14;          // jackpot column to the stage edge
+  const JP_FRAME_GAP = 10;     // jackpots / WIN-BUY to the frame
+  const GAP = 16;              // between items in a column
+  const JP_W = 360;            // GRAND width (1.5x the old 240 column)
+  const BANNER_K = 0.8;        // logo banner width vs the frame width
+  const L3_MEDAL_W = 200;      // WIN / BUY BONUS disc width
+
+  function layoutSides() {
+    const f = frameBox();
+    buy.style.zoom = '1';
+    const ps = plaqueRatios();
+    const bannerR = logoWide.naturalWidth ? logoWide.naturalHeight / logoWide.naturalWidth : 0.18;
+
+    // Largest centred frame that leaves the jackpots their room, then
+    // shrink until banner top >= 6 and frame bottom stays above the pill.
+    let fW = W - 2 * (JP_FRAME_GAP + JP_W + JP_EDGE), s, fH, top, winTop, bannerW, bannerH;
+    for (;;) {
+      s = fW / f.w; fH = f.h * s;
+      top = L3_CY - fH / 2;
+      winTop = top - f.y * s;
+      bannerW = fW * BANNER_K; bannerH = bannerW * bannerR;
+      if ((winTop - 4 - bannerH >= 6 && top + fH <= PILL_TOP - 12) || fW < 700) break;
+      fW -= 8;
+    }
+    const fLeft = W / 2 - fW / 2, fRight = W / 2 + fW / 2;
+    const dx = f.x + f.w / 2 - WIN_W / 2;
+    const dy = f.y + f.h / 2 - WIN_H / 2;
+    Object.assign(reel.style, {
+      left: `${W / 2 - WIN_W / 2 - dx * s}px`, top: `${L3_CY - WIN_H / 2 - dy * s}px`,
+      transform: `scale(${s})`, transformOrigin: '50% 50%',
+    });
+
+    // Title banner: bottom just above the symbol window, over the top border.
+    logo.style.display = 'none';
+    Object.assign(logoWide.style, {
+      display: 'block', left: `${W / 2 - bannerW / 2}px`, top: `${winTop - 4 - bannerH}px`, width: `${bannerW}px`,
+      zIndex: '7',   // over the frame's crest
+    });
+
+    // Right: jackpots, MINI at the bottom, JP_FRAME_GAP from the frame.
+    ps.forEach((q) => sizePlaque(q, q.grand ? JP_W : JP_W / GRAND_K));
+    const stackH = ps.reduce((a, q) => a + q.r * (q.grand ? JP_W : JP_W / GRAND_K), 0) + 3 * GAP;
+    const stackTop = L3_CY - stackH / 2;
+    Object.assign(ladder.style, {
+      left: `${fRight + JP_FRAME_GAP}px`, right: 'auto', width: `${JP_W}px`,
+      top: `${stackTop}px`, height: `${stackH}px`, transform: 'none',
+      justifyContent: 'center', alignItems: 'center', gap: `${GAP}px`, zIndex: '6',   // one centre axis: GRAND over MAJOR
+    });
+
+    // Left: WIN and BUY BONUS spanning exactly the jackpot block's height:
+    // WIN's top on GRAND's top, BUY's chip bottom on MINI's bottom.
+    const room = fLeft - JP_FRAME_GAP - EDGE;
+    const md0 = 256, medalH0 = buy.offsetHeight;
+    const wC = Math.min(room, L3_MEDAL_W, ((stackH - GAP) / 2) * (md0 / medalH0));
+    const k = wC / md0, medalH = medalH0 * k;
+    const lcx = (EDGE + fLeft - JP_FRAME_GAP) / 2;
+    const place = (el, y) => Object.assign(el.style, {
+      zoom: String(k), left: `${(lcx - wC / 2) / k}px`, right: 'auto', top: `${y / k}px`,
+    });
+    place(status, stackTop);
+    place(buy, stackTop + stackH - medalH);
+
+    // The system buttons move off the jackpot column, next to the pill.
+    Object.assign(sys.style, { top: `${PILL_TOP + 12}px`, right: '48px' });
+  }
+
+  // --- 3: logo on top, then GRAND MAJOR MINOR MINI in one row on the frame
+  // The layout-2 recipe with one floor of plaques and the logo above them:
+  // the plaques rest on the frame's top border, never on the symbols, and
+  // the reels grow until the frame meets the pill.
+  function layoutTop() {
+    const f = frameBox();
+    const ps = plaqueRatios();
+    const logoW = 230, logoTop = 6;
+    const logoH = logoW * ratio(logo, 0.6);
+    Object.assign(logo.style, { left: `${W / 2 - logoW / 2}px`, top: `${logoTop}px`, width: `${logoW}px` });
+    const wGrand = 250, wRow = 210;
+    ps.forEach((p) => sizePlaque(p, p.grand ? wGrand : wRow));
+    const crownTop = logoTop + logoH + 4;
+    const crownH = Math.max(...ps.map((p) => p.r * (p.grand ? wGrand : wRow)));
+    // DOM order is MINI MINOR MAJOR GRAND: row-reverse reads GRAND -> MINI.
+    Object.assign(ladder.style, { top: `${crownTop}px`, flexDirection: 'row-reverse', zIndex: '6' });
+    const winTop = crownTop + crownH + 10;
+    const below = f.y + f.h - WIN_H;
+    let s = (PILL_TOP - 12 - winTop) / (WIN_H + below);
+    s = Math.min(s, (W - 2 * MEDAL_SIDE) / f.w);
+    Object.assign(reel.style, { top: `${winTop}px`, transform: `scale(${s})`, transformOrigin: '50% 0' });
+  }
+
+  // --- Portrait (phones): the jackpot ladder (5% larger) on top, then the
+  // frame with the one-line title banner lying over its top border (never
+  // over the symbols); the medallions follow the frame.
+  const P_SCALE = 1.034;
+  function layoutPortrait() {
+    const f = frameBox();
+    const ps = plaqueRatios();
+    // SK_PORTRAIT_ROW (lodge): MINI..GRAND in ONE row, a smaller banner and
+    // a calm band under the reels for the win, so the field sits higher.
+    const ROW = !!window.SK_PORTRAIT_ROW;
+    document.body.classList.toggle('is-jp-row', ROW);
+    const wGrand = ROW ? 300 : 380 * 1.05, wRow = ROW ? 232 : 300 * 1.05;
+    ps.forEach((q) => sizePlaque(q, q.grand ? wGrand : wRow));
+    const crownTop = ROW ? 104 : 20;   // ROW: the sun glows in the notch band above
+    const crownH = ROW
+      ? Math.max(...ps.map((q) => q.r * (q.grand ? wGrand : wRow)))
+      : ps.filter((q) => q.grand).reduce((a, q) => a + q.r * wGrand, 0)
+        + 8 + Math.max(...ps.filter((q) => !q.grand).map((q) => q.r * wRow));
+    Object.assign(ladder.style, { top: `${crownTop}px` });
+
+    // SK_PORTRAIT_R2 (client round 2): the same hierarchy as the desktop.
+    // Logo on top (over the sun), a big GRAND under it, then MAJOR MINOR
+    // MINI in one row on the frame; the spins counter and BONUS WIN sit in
+    // one row right under the reels, the band over the buttons stays calm.
+    if (window.SK_PORTRAIT_R2) {
+      document.body.classList.remove('is-jp-row', 'is-jp-sides');
+      document.body.classList.add('is-jp-r2');
+      const byTier = (t) => ps.find((q) => q.el.classList.contains(`jp--${t}`));
+      const g = byTier('grand');
+      const row = ['major', 'minor', 'mini'].map(byTier);
+      const rowR = Math.max(...row.map((q) => q.r));
+      const lr = ratio(logo, 0.704);
+      const PS = P_SCALE * 1.02;                // the slot 2% larger than the other variants
+      const frameIn = -f.y * PS;                 // frame top above the reel window top
+      const frameH0 = f.h * P_SCALE;             // the approved size: the reference keeps its frame bottom
+      const frameH = f.h * PS;
+      // The stage is 1080x1920 fitted into the screen; on a taller phone the
+      // screen reaches above and below it: the viewport is [-off, 1920 + off]
+      // in stage px. The V3 bar is fixed in CSS px at the bottom.
+      const s0 = Math.min(window.innerWidth / 1080, window.innerHeight / 1920);
+      const Hs = window.innerHeight / s0;
+      const off = (Hs - 1920) / 2;
+      const barH = 190 / s0;
+      // Reference phone (390x844, the usual iPhone): the round-2 layout as
+      // approved, with the slot and the logo raised by 5% of the screen and
+      // the logo 15% larger. Header = logo + GRAND + MAJOR·MINOR·MINI.
+      const REF = { w: 390, h: 844 };
+      const refS = REF.w / 1080, refHs = REF.h / refS, refOff = (refHs - 1920) / 2, refBar = 190 / refS;
+      const oldLh = 330 * lr;
+      const jpH = (k) => (g.r * 560 + 4 + rowR * 316) * k + 4;     // GRAND + gap + row + gap to the frame
+      const oldFrameTop = 18 + oldLh - 14 + jpH(1);                 // stage px, as before
+      const lift = 0.05 * refHs;
+      const refFrameBottom = refOff + oldFrameTop + frameH0 - lift;   // screen px on the reference
+      const clear = refHs - refBar - refFrameBottom;                 // frame bottom -> bar top
+      const LW = 330 * 1.15, LH = LW * lr;
+      const TOP_K = 0.02;                                            // the logo's top margin, share of the screen
+      const refAvail = refOff + oldFrameTop - lift - TOP_K * refHs;  // logo top -> frame top on the reference
+      const kj = Math.min(1.2, (refAvail - (LH - 14) - 4) / (jpH(1) - 4)); // plaques fill what the logo leaves
+      // This screen: the slot keeps its place over the bar; the header fits
+      // into what is above it, scaled as one piece and resting on the frame.
+      let frameTop = Hs - barH - clear - frameH - off;
+      const topMin = -off + TOP_K * Hs;                              // the logo's top margin
+      const minK = 0.68;
+      frameTop = Math.max(frameTop, topMin + refAvail * minK);
+      const k = Math.min(1.12, (frameTop - topMin) / refAvail);     // taller phones: a little larger, then sky
+      const lw = LW * k, lh = LH * k, gW = 560 * kj * k, rW = 316 * kj * k, gap = 12 * k;
+      const rBottom = frameTop - 4 * k;
+      const rTop = rBottom - rowR * rW;
+      const gTop = rTop - 4 * k - g.r * gW;
+      const logoTop = gTop - lh + 14 * k;
+      Object.assign(logo.style, { display: 'block', left: `${(1080 - lw) / 2}px`, top: `${logoTop}px`, width: `${lw}px`, zIndex: '7' });
+      // GRAND at 0.95 x 0.9 x 0.9 of its slot, centred in it: the logo keeps its 2%
+      // line and the row keeps resting on the frame.
+      // The plaques sit half as far from the frame as the layout gives them
+      // (the art's own margins leave ~42 px between plaque and log).
+      const near = 21 * k;
+      const gW2 = gW * 0.7695, gTop2 = gTop + (g.r * (gW - gW2)) / 2 + near;
+      sizePlaque(g, gW2);
+      Object.assign(g.el.style, { left: `${(1080 - gW2) / 2}px`, top: `${gTop2}px` });
+      row.forEach((q) => sizePlaque(q, rW));
+      const x0 = (1080 - (3 * rW + 2 * gap)) / 2;
+      row.forEach((q, i) => Object.assign(q.el.style, { left: `${x0 + i * (rW + gap)}px`, top: `${rBottom - q.r * rW + near}px` }));
+      Object.assign(ladder.style, { top: '0px' });
+      const winTop = frameTop + frameIn;
+      Object.assign(reel.style, { top: `${winTop}px`, transform: `scale(${PS})`, transformOrigin: '50% 0' });
+      const fb = winTop + (f.y + f.h) * PS;
+      // right of the leopard, which lies under the reels on the left
+      Object.assign(status.style, { top: `${fb + 24}px`, left: '350px', right: 'auto' });
+      return;
+    }
+    document.body.classList.remove('is-jp-r2');
+    // SK_PORTRAIT_LOGO (lodge): the desktop (stacked) logo centred on the
+    // frame's top border, jackpots in two columns either side of it:
+    // left GRAND over MAJOR, right MINOR over MINI.
+    if (window.SK_PORTRAIT_LOGO) {
+      document.body.classList.remove('is-jp-row');
+      document.body.classList.add('is-jp-sides');
+      const wP = 310, gap = 10, edge = 22;
+      ps.forEach((q) => sizePlaque(q, wP));
+      const DY = 1920 * (window.SK_PORTRAIT_DROP || 0);   // whole group lower by a share of the height
+      const lw = 380, lh = lw * ratio(logo, 0.704), logoTop = 36 + DY;
+      const cy = logoTop + lh / 2;
+      const byTier = (t) => ps.find((q) => q.el.classList.contains(`jp--${t}`));
+      let colBottom = 0;
+      const column = (top, bottom, x) => {
+        const hT = top.r * wP, hB = bottom.r * wP;
+        const y0 = Math.max(24 + DY, cy - (hT + gap + hB) / 2);
+        Object.assign(top.el.style, { left: `${x}px`, top: `${y0}px` });
+        Object.assign(bottom.el.style, { left: `${x}px`, top: `${y0 + hT + gap}px` });
+        colBottom = Math.max(colBottom, y0 + hT + gap + hB);
+      };
+      column(byTier('grand'), byTier('major'), edge);
+      column(byTier('minor'), byTier('mini'), 1080 - edge - wP);
+      Object.assign(ladder.style, { top: '0px' });
+      // logo sits on the top border; the plaque columns stay above the frame
+      const winTop = Math.max(logoTop + lh - 6, colBottom + 6 - f.y * P_SCALE);
+      Object.assign(logo.style, { display: 'block', left: `${(1080 - lw) / 2}px`, top: `${logoTop}px`, width: `${lw}px`, zIndex: '7' });
+      Object.assign(reel.style, { top: `${winTop}px`, transform: `scale(${P_SCALE})`, transformOrigin: '50% 0' });
+      const fb = winTop + (f.y + f.h) * P_SCALE;
+      status.style.top = `${fb + 110}px`;
+      buy.style.top = `${fb + 110}px`;
+      return;
+    }
+    document.body.classList.remove('is-jp-sides');
+    const bannerR = logoWide.naturalWidth ? logoWide.naturalHeight / logoWide.naturalWidth : 0.2;
+    const bannerW = ROW ? Math.min(620, f.w * P_SCALE * 0.6) : Math.min(900, f.w * P_SCALE * BANNER_K);
+    const bannerH = bannerW * bannerR;
+    const bannerTop = crownTop + crownH + 10;
+    const winTop = bannerTop + bannerH + 4;
+    logo.style.display = 'none';
+    Object.assign(logoWide.style, {
+      display: 'block', left: `${(1080 - bannerW) / 2}px`, top: `${bannerTop}px`, width: `${bannerW}px`, zIndex: '7',
+    });
+    Object.assign(reel.style, { top: `${winTop}px`, transform: `scale(${P_SCALE})`, transformOrigin: '50% 0' });
+    const frameBottom = winTop + (f.y + f.h) * P_SCALE;
+    const calm = ROW ? 150 : 16;
+    status.style.top = `${frameBottom + calm}px`;
+    buy.style.top = `${frameBottom + calm}px`;
+  }
+
+  function arrange() {
+    reset();
+    if (document.body.classList.contains('is-portrait')) { layoutPortrait(); return; }
+    const v = screen.dataset.layout;
+    if (v === '2') layout2();
+    else if (v === '3') layoutTop();
+    else layoutSides();
+  }
+
+  function set(v) {
+    const next = ['1', '2', '3'].includes(String(v)) ? String(v) : '1';
+    screen.dataset.layout = next;
+    if (sw) sw.querySelectorAll('[data-layout]').forEach((b) => {
+      b.setAttribute('aria-pressed', String(b.dataset.layout === next));
+    });
+    try { localStorage.setItem(KEY, next); } catch (e) { /* private mode */ }
+    arrange();
+  }
+
+  if (new URLSearchParams(location.search).has('shot')) document.body.classList.add('is-shot');
+  // SK_FORCE_LAYOUT: one fixed layout, no switch, nothing remembered.
+  let saved = window.SK_FORCE_LAYOUT || new URLSearchParams(location.search).get('layout');
+  if (!saved) { try { saved = localStorage.getItem(KEY); } catch (e) { /* ignore */ } }
+  set(saved || window.SK_DEFAULT_LAYOUT || '1');
+  if (sw) sw.querySelectorAll('[data-layout]').forEach((b) => {
+    b.addEventListener('click', () => {
+      if (window.Sound && Sound.playSfx) { try { Sound.playSfx('click'); } catch (e) { /* no sfx */ } }
+      set(b.dataset.layout);
+    });
+  });
+  // Art proportions are known once images load; portrait flips on resize
+  // (slot.js toggles body.is-portrait in its own resize handler first).
+  window.addEventListener('load', arrange);
+  window.addEventListener('resize', () => requestAnimationFrame(arrange));
+  [logo, logoWide, ...plaques.map((p) => p.querySelector('img'))].forEach((img) => {
+    if (img && !img.complete) img.addEventListener('load', arrange, { once: true });
+  });
+})();

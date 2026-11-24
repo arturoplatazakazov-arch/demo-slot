@@ -1,0 +1,82 @@
+{
+ "big_win": {
+  "amount": {
+   "box": [
+    531,
+    153
+   ]
+  }
+ },
+ "mega_win": {
+  "amount": {
+   "box": [
+    562,
+    167
+   ]
+  }
+ },
+ "epic_win": {
+  "amount": {
+   "box": [
+    590,
+    161
+   ]
+  }
+ },
+ "jp_mini": {
+  "amount": {
+   "box": [
+    516,
+    149
+   ]
+  }
+ },
+ "jp_minor": {
+  "amount": {
+   "box": [
+    547,
+    162
+   ]
+  }
+ },
+ "jp_major": {
+  "amount": {
+   "box": [
+    577,
+    171
+   ]
+  }
+ },
+ "jp_grand": {
+  "amount": {
+   "box": [
+    606,
+    165
+   ]
+  }
+ },
+ "fs_more": {
+  "count": {
+   "box": [
+    180,
+    189
+   ]
+  }
+ },
+ "fs_intro": {
+  "count": {
+   "box": [
+    205,
+    215
+   ]
+  }
+ },
+ "fs_total": {
+  "amount": {
+   "box": [
+    590,
+    161
+   ]
+  }
+ }
+}
