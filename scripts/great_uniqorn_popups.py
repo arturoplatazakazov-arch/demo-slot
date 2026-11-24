@@ -287,12 +287,14 @@ def build(pop, layout):
             def frac(gt, period=period, phase=phase):
                 return (gt / period + phase) % 1.0
 
-            def pos(gt, x0=x0, sway=sway, sway_k=sway_k):
+            # frac is bound here, not looked up later: the `end` clip replays
+            # these functions after the loop, when the name points elsewhere
+            def pos(gt, x0=x0, sway=sway, sway_k=sway_k, frac=frac):
                 f = frac(gt)
                 return (x0 + sway * math.sin(2 * math.pi * sway_k * gt / IDLE),
                         lerp(FALL_TOP, FALL_BOTTOM, f))
 
-            def alpha(gt, intro_t=None, b=b):
+            def alpha(gt, intro_t=None, b=b, frac=frac):
                 f = frac(gt)
                 edge = 1.0 if 0.025 < f < 0.975 else 0.0     # hidden while it wraps (off screen)
                 a = b['alpha'] * edge
