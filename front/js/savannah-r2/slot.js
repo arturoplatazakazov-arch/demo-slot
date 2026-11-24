@@ -1030,34 +1030,58 @@ const SECTOR_STYLE = {
   grand: { a: '#e0303f', b: '#6b0a1a', text: '#ffe7a6', label: 'GRAND' },
 };
 
+// R2: richer sectors that still read at a glance — each tier a deep radial
+// lacquer (dark at the hub, bright mid-band, darker at the rim), a carved
+// bevel (dark + gold seam between sectors), a soft sheen over the whole
+// disc, an inner gold ring round the hub; labels light with a dark outline.
+// Labels sit in the middle of the visible band of their sector: from the
+// hub's gold ring (0.34 R) to the studs under the rim (0.93 R).
+const LABEL_R = (0.34 + 0.93) / 2;
+
 function wheelSvg(segments) {
   const n = segments.length;
   const R = 300;
   const parts = [`<svg viewBox="-${R} -${R} ${2 * R} ${2 * R}" class="wheel__svg">`, '<defs>'];
-  for (const [tier, s] of Object.entries(SECTOR_STYLE)) {
+  for (const [tier, st] of Object.entries(SECTOR_STYLE)) {
     parts.push(`<radialGradient id="wg-${tier}" cx="0" cy="0" r="${R}" gradientUnits="userSpaceOnUse">
-      <stop offset="0.18" stop-color="${s.b}"/><stop offset="0.7" stop-color="${s.a}"/><stop offset="1" stop-color="${s.b}"/></radialGradient>`);
+      <stop offset="0.2" stop-color="${st.b}"/><stop offset="0.62" stop-color="${st.a}"/><stop offset="0.86" stop-color="${st.a}"/><stop offset="1" stop-color="${st.b}"/></radialGradient>`);
   }
+  parts.push(`<radialGradient id="wg-shade" cx="0" cy="0" r="${R}" gradientUnits="userSpaceOnUse">
+      <stop offset="0.55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.42"/></radialGradient>
+    <radialGradient id="wg-sheen" cx="-0.25" cy="-0.45" r="0.9">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.32"/><stop offset="0.6" stop-color="#fff" stop-opacity="0"/></radialGradient>`);
   parts.push('</defs>');
   const step = 360 / n;
+  const p = (a, r) => `${(Math.cos(a) * r).toFixed(2)} ${(Math.sin(a) * r).toFixed(2)}`;
   segments.forEach((seg, i) => {
     const tier = seg.tier || 'mini';
     const a0 = ((i * step - step / 2 - 90) * Math.PI) / 180;
     const a1 = ((i * step + step / 2 - 90) * Math.PI) / 180;
-    const p = (a, r) => `${(Math.cos(a) * r).toFixed(2)} ${(Math.sin(a) * r).toFixed(2)}`;
-    parts.push(`<path d="M0 0 L${p(a0, R)} A${R} ${R} 0 0 1 ${p(a1, R)} Z" fill="url(#wg-${tier})" stroke="#2a1405" stroke-width="3"/>`);
-    // Label runs along the sector's axis, always readable: on the left
-    // half of the drum it would read bottom-to-top upside down, so it
-    // turns the other way there.
-    const a = i * step;
-    const turn = a > 0 && a < 180 ? -90 : 90;
-    parts.push(`<g transform="rotate(${a})"><text x="0" y="${-R * 0.62}" class="wheel__label wheel__label--${tier}"
-      text-anchor="middle" dominant-baseline="middle" transform="rotate(${a === 0 ? -90 : turn} 0 ${-R * 0.62})">${SECTOR_STYLE[tier].label}</text></g>`);
+    parts.push(`<path d="M0 0 L${p(a0, R)} A${R} ${R} 0 0 1 ${p(a1, R)} Z" fill="url(#wg-${tier})"/>`);
+    // a lighter inner edge on each sector: a thin arc band just inside the rim
+    parts.push(`<path d="M${p(a0, R * 0.9)} A${R * 0.9} ${R * 0.9} 0 0 1 ${p(a1, R * 0.9)}" fill="none" stroke="#fff" stroke-opacity="0.18" stroke-width="6"/>`);
   });
-  // Gold studs on the spokes.
+  parts.push(`<circle r="${R}" fill="url(#wg-shade)"/><circle r="${R}" fill="url(#wg-sheen)"/>`);
+  // carved seams between sectors
   segments.forEach((_, i) => {
     const a = ((i * step + step / 2 - 90) * Math.PI) / 180;
-    parts.push(`<circle cx="${(Math.cos(a) * R * 0.94).toFixed(1)}" cy="${(Math.sin(a) * R * 0.94).toFixed(1)}" r="7" fill="#ffd75a" stroke="#5a2b00" stroke-width="2"/>`);
+    parts.push(`<line x1="0" y1="0" x2="${(Math.cos(a) * R).toFixed(2)}" y2="${(Math.sin(a) * R).toFixed(2)}" stroke="#2a1405" stroke-width="9"/>`);
+    parts.push(`<line x1="0" y1="0" x2="${(Math.cos(a) * R).toFixed(2)}" y2="${(Math.sin(a) * R).toFixed(2)}" stroke="#f0c25a" stroke-width="3"/>`);
+  });
+  parts.push(`<circle r="${R * 0.32}" fill="none" stroke="#2a1405" stroke-width="10"/><circle r="${R * 0.32}" fill="none" stroke="#f0c25a" stroke-width="3"/>`);
+  segments.forEach((seg, i) => {
+    const tier = seg.tier || 'mini';
+    // Every label reads the same way, from the hub out to the rim, so the
+    // wheel looks even at any angle it stops at.
+    const a = i * step;
+    parts.push(`<g transform="rotate(${a})"><text x="0" y="${-R * LABEL_R}" class="wheel__label wheel__label--${tier}"
+      text-anchor="middle" dominant-baseline="central" transform="rotate(-90 0 ${-R * LABEL_R})">${SECTOR_STYLE[tier].label}</text></g>`);
+  });
+  // Gold studs on the seams.
+  segments.forEach((_, i) => {
+    const a = ((i * step + step / 2 - 90) * Math.PI) / 180;
+    parts.push(`<circle cx="${(Math.cos(a) * R * 0.94).toFixed(1)}" cy="${(Math.sin(a) * R * 0.94).toFixed(1)}" r="8" fill="#ffd75a" stroke="#5a2b00" stroke-width="2.5"/>`);
+    parts.push(`<circle cx="${(Math.cos(a) * R * 0.94 - 2).toFixed(1)}" cy="${(Math.sin(a) * R * 0.94 - 2).toFixed(1)}" r="2.6" fill="#fff6d0"/>`);
   });
   parts.push('</svg>');
   return parts.join('');

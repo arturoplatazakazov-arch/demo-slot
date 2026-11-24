@@ -6,7 +6,7 @@
 <title>Savannah Kings · R2</title>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/preloader.css?v=1">
-<link rel="stylesheet" href="css/savannah-r2.css?v=7">
+<link rel="stylesheet" href="css/savannah-r2.css?v=11">
 <link rel="stylesheet" href="css/savannah-r2-layouts.css?v=1">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
 <link rel="stylesheet" href="css/dev-tools.css?v=6">
@@ -150,11 +150,22 @@
     <div class="screen-dim" id="screenDim"></div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+    <!-- Jackpot Wheel backdrop: dims the WHOLE screen (the stage letterboxes on
+         other aspect ratios) and grows savanna bushes in the corners. -->
+    <div class="wheel-scene" id="wheelScene" aria-hidden="true">
+      <img class="wheel-scene__bush wheel-scene__bush--bl" src="img/savannah-r2/img/bush_bl.webp?v=1" alt="">
+      <img class="wheel-scene__bush wheel-scene__bush--br" src="img/savannah-r2/img/bush_br.webp?v=1" alt="">
+      <img class="wheel-scene__bush wheel-scene__bush--tl" src="img/savannah-r2/img/bush_tl.webp?v=1" alt="">
+      <img class="wheel-scene__bush wheel-scene__bush--tr" src="img/savannah-r2/img/bush_tr.webp?v=1" alt="">
+      <img class="wheel-scene__bush wheel-scene__bush--gl" src="img/savannah-r2/img/bush_grass.webp?v=1" alt="">
+      <img class="wheel-scene__bush wheel-scene__bush--gr" src="img/savannah-r2/img/bush_grass_r.webp?v=1" alt="">
+    </div>
+
     <!-- Popups, the wheel and the buy window are scaled with the stage too. -->
     <div class="overlays stage" id="overlays">
 
       <div class="wheel-overlay" id="wheelOverlay" hidden>
-        <img class="wheel-overlay__title" src="img/savannah-r2/img/title_jackpot.webp" alt="Jackpot">
+        <img class="wheel-overlay__title" src="img/savannah-r2/img/title_jackpot_wheel.webp?v=1" alt="Jackpot Wheel">
         <div class="jackpots jackpots--wheel">
           <div class="jp jp--grand"><img src="img/savannah-r2/img/jp_grand.webp" alt="Grand"><span data-jp-value="grand"></span></div>
           <div class="jp jp--major"><img src="img/savannah-r2/img/jp_major.webp" alt="Major"><span data-jp-value="major"></span></div>
@@ -168,8 +179,9 @@
           <div class="wheel__lights" id="wheelLights"></div>
           <img class="wheel__hub" src="img/savannah-r2/img/wheel_hub.webp" alt="">
           <img class="wheel__pointer" id="wheelPointer" src="img/savannah-r2/img/wheel_pointer.webp" alt="">
+          <!-- R2: the spin button is the hub itself, it pulses until pressed -->
+          <button class="wheel__btn" id="wheelSpinBtn" type="button" disabled><span>SPIN</span></button>
         </div>
-        <button class="wheel__btn" id="wheelSpinBtn" type="button" disabled>SPIN THE WHEEL</button>
         <div class="wheel-award" id="wheelAward" hidden>
           <div class="wheel-award__rays"></div>
           <div class="wheel-award__tier"></div>
@@ -302,7 +314,7 @@
   <script src="js/reel-spin.js?v=2"></script>
   <script src="js/buy-bonus.js?v=1"></script>
   <script src="js/savannah-r2/fx.js?v=1"></script>
-  <script src="js/savannah-r2/slot.js?v=20"></script>
+  <script src="js/savannah-r2/slot.js?v=25"></script>
   <script src="js/savannah-r2/app.js?v=3"></script>
   <script src="js/savannah-r2/living-bg.js?v=18"></script>
   <script src="js/savannah-r2/layouts.js?v=33"></script>
