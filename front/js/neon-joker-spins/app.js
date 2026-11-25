@@ -224,15 +224,38 @@ function setupSpinButton() {
   });
 }
 
+// Demo money (client, 2026-11-23: "buy the bonuses whatever the balance"): a purchase the
+// balance cannot cover first opens a fresh session, which starts with the full demo balance.
+const FS_BUY_COST_MULTIPLIER = 100;
+async function ensureFunds(cost) {
+  if (gameState.balance >= cost) return;
+  const data = await Api.startSession(GAME_ID);
+  gameState.sessionId = data.session_id;
+  gameState.balance = data.balance;
+  try { localStorage.setItem(SESSION_KEY, gameState.sessionId); } catch { /* ignore */ }
+  renderBalance();
+}
+
 function setupBuyButton() {
   // Buy Bonus lives in the V3 menu flyout (data-buy-open); the stage sign #buyBtn is hidden by CSS.
   const open = async () => {
     // Недоступна во время фич и в автоигре (GDD §7.4).
     if (gameState.isSpinning || gameState.inFreeSpins || gameState.autoSpinsLeft > 0) return;
     const bet = currentBet();
+    window.__njsBuyKind = null;
     const ok = await showBuyDialog(bet * BUY_COST_MULTIPLIER, gameState.currency);
     if (!ok) return;
-    runSpin(() => Api.buyFeature(gameState.sessionId, BUY_ID, bet), bet, { anticipate: false });
+    // R1 buy window has two cards: Hold & Win (the real buy) and Free Spins (a forced
+    // scatter spin, /dev/force-free-spins, until the server sells it)
+    const kind = window.__njsBuyKind || 'hw';
+    window.__njsBuyKind = null;
+    const cost = bet * (kind === 'fs' ? FS_BUY_COST_MULTIPLIER : BUY_COST_MULTIPLIER);
+    runSpin(async () => {
+      await ensureFunds(cost);
+      return kind === 'fs'
+        ? Api.devForceFreeSpins(gameState.sessionId, bet)
+        : Api.buyFeature(gameState.sessionId, BUY_ID, bet);
+    }, bet, { anticipate: false });
   };
   document.getElementById('buyBtn').addEventListener('click', open);
   document.querySelectorAll('[data-buy-open]').forEach((b) => b.addEventListener('click', () => {

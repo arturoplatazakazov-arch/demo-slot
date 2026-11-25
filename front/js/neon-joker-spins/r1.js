@@ -6,10 +6,73 @@
   const stage = document.getElementById('stage');
   if (!stage) return;
   const SYM = 'img/neon-joker-spins/skins/c/sets/r1/symbols';
+  // Free Spins background: the dressing room (css/njs-r1.css .bg__img--room)
+  const bgLayer = document.getElementById('bgLayer');
+  if (bgLayer && !bgLayer.querySelector('.bg__img--room')) {
+    const room = document.createElement('div');
+    room.className = 'bg__img bg__img--room';
+    bgLayer.appendChild(room);
+  }
   const HINTS = [
     { cls: 'fs', img: `${SYM}/scatter.webp?v=3`, n: '3+', what: 'FREE SPINS', sub: 'JOKERS ANYWHERE' },
     { cls: 'hw', img: `${SYM}/coin.webp?v=3`, n: '5+', what: 'HOLD & WIN', sub: 'COINS ANYWHERE' },
   ];
+
+  // Bonus HUD (client, 2026-11-23): the counter sits in the middle of the frame's bottom tube
+  // (Hold & Win: plate with slots 1-2-3, the digits up to the respins left are lit, like Volt
+  // Coins; Free Spins: plate with the spins left), TOTAL WIN on the info-plaque art at the side.
+  // slot.js keeps driving its own #hwPanel / #fsPanel (hidden); this mirrors them.
+  const G = 'img/neon-joker-spins/skins/c/glyphs';
+  const UI = 'img/neon-joker-spins/skins/c/sets/r1/ui';
+  const lamps = document.querySelector('#hwPanel .hw-lamps');
+  const hud = document.createElement('div');
+  hud.className = 'obj r1-count';
+  hud.innerHTML = `<div class="r1-resp"><img class="r1-resp__art" src="${UI}/respins.webp?v=1" alt="">`
+    + [1, 2, 3].map((n) => `<span class="r1-resp__n" data-n="${n}"><img src="${G}/${n}.webp?v=3" alt="${n}"></span>`).join('')
+    + `</div><div class="r1-fsc"><img class="r1-fsc__art" src="${UI}/fs_count.webp?v=1" alt=""><span class="r1-fsc__n glyphs"></span></div>`;
+  stage.appendChild(hud);
+  const total = document.createElement('div');
+  total.className = 'obj r1-total';
+  total.innerHTML = '<div class="r1-total__face"><span class="r1-total__label">TOTAL WIN</span><span class="r1-total__value glyphs"></span></div>';
+  stage.appendChild(total);
+  const mirror = (src, dst) => {
+    if (!src || !dst) return;
+    const copy = () => { dst.innerHTML = src.innerHTML; };
+    new MutationObserver(copy).observe(src, { childList: true, subtree: true, characterData: true, attributes: true });
+    copy();
+  };
+  mirror(document.getElementById('fsLeft'), hud.querySelector('.r1-fsc__n'));
+  const totalValue = total.querySelector('.r1-total__value');
+  const hwTotal = document.getElementById('hwTotal');
+  const fsWin = document.getElementById('fsWin');
+  const screenEl = document.getElementById('screen');
+  const syncTotal = () => {
+    const src = screenEl.classList.contains('is-hw') ? hwTotal : fsWin;
+    if (src) totalValue.innerHTML = src.innerHTML;
+  };
+  [hwTotal, fsWin, screenEl].forEach((el) => el && new MutationObserver(syncTotal).observe(el, el === screenEl
+    ? { attributes: true, attributeFilter: ['class'] } : { childList: true, subtree: true, characterData: true }));
+  syncTotal();
+  if (lamps) {
+    const resp = hud.querySelector('.r1-resp');
+    const nums = [...resp.querySelectorAll('.r1-resp__n')];
+    let prev = -1;
+    const sync = () => {
+      const lit = lamps.querySelectorAll('.hw-lamp.is-lit').length;
+      nums.forEach((el) => {
+        const on = Number(el.dataset.n) <= lit;
+        if (prev > lit && !on && el.classList.contains('is-on')) { el.classList.remove('is-tick'); void el.offsetWidth; el.classList.add('is-tick'); }
+        el.classList.toggle('is-on', on);
+      });
+      if (lamps.classList.contains('is-reset') && !resp.classList.contains('is-reset')) {
+        resp.classList.add('is-reset');
+        setTimeout(() => resp.classList.remove('is-reset'), 700);
+      }
+      prev = lit;
+    };
+    new MutationObserver(sync).observe(lamps, { attributes: true, subtree: true, attributeFilter: ['class'] });
+    sync();
+  }
 
   // ONE info plaque (neon sign, img/.../r1/img/plaque.webp): FREE SPINS flickers on, holds, goes
   // dark, then HOLD & WIN does the same, round and round. Desktop: under the jackpots; phones: the
@@ -56,7 +119,7 @@
     card.classList.add('r1-buy');
     card.querySelector('.buy-dialog__title').textContent = 'BUY BONUS';
     const text = card.querySelector('.buy-dialog__text');
-    if (text) text.textContent = 'Выберите бонус. Hold & Win — за 34.5× ставки; Free Spins — макет будущей покупки.';
+    if (text) text.textContent = 'Выберите бонус: Free Spins или Hold & Win.';
     const cards = document.createElement('div');
     cards.className = 'r1-buy__cards';
     cards.innerHTML = `
@@ -81,9 +144,8 @@
     new MutationObserver(upd).observe(price, { childList: true, characterData: true, subtree: true });
     upd();
     cards.querySelector('.r1-buy__card--hw').addEventListener('click', () => yes.click());
-    cards.querySelector('.r1-buy__card--fs').addEventListener('click', () => {
-      note.textContent = 'Buy Free Spins — статичный макет: в этой сборке покупается только Hold & Win.';
-    });
+    // Free Spins: app.js reads the kind and opens the round with a forced scatter spin
+    cards.querySelector('.r1-buy__card--fs').addEventListener('click', () => { window.__njsBuyKind = 'fs'; yes.click(); });
   }
 })();
 

@@ -211,6 +211,16 @@
 
 /* Hold & Win plays on the concert stage too (client, 2026-11-23: concert background on the bonus screens) */
 .screen.is-hw .bg__img--fs { opacity: 1; }
+/* Free Spins = the Joker's backstage dressing room (client, 2026-11-23: base = the back door,
+   Hold & Win = the concert stage, Free Spins = the dressing room). The layer is added by r1.js. */
+.bg__img--room { background-image: url('../img/neon-joker-spins/skins/c/sets/r1/img/bg_room.jpg?v=1'); opacity: 0;
+  filter: brightness(0.8) saturate(0.95) !important; }
+.screen.is-fs .bg__img--room { opacity: 1; }
+.screen.is-fs:not(.is-hw) .bg__img--fs { opacity: 0; }
+.screen.is-hw .bg__img--room { opacity: 0; }
+@media (orientation: portrait) {
+  .bg__img--room { background-image: url('../img/neon-joker-spins/skins/c/sets/r1/img/bg_room_mob.jpg?v=1'); }
+}
 
 /* symbol sizes (client, 2026-11-23): 7 / bell / star +10 %, scatter +15 %, lows -5 %.
    The R1 assets have matching even canvases (396 / 414 / 342 px against 360). */
@@ -264,6 +274,55 @@ body.hero-lean .mascot { left: var(--r1-edge, 0px) !important; top: 70px !import
 @media (orientation: portrait) { .r1-heroes { display: none !important; } }
 
 /* desktop: the frame picture got a wider glow margin (2026-11-23) — keep the jackpot column where it was */
-@media (orientation: landscape) { :root:not(.is-land) .jp { margin-left: -40px; } }
+@media (orientation: landscape) { :root:not(.is-land) .jp { margin-left: 3.5px; } }  /* centred on the plaque / TOTAL WIN under them (client, 2026-11-23) */
 /* the hero switcher steps aside while the buy window is open */
 .buy-dialog:not([hidden]) ~ .r1-heroes { display: none !important; }
+
+/* ---------- bonus HUD (r1.js): counter on the frame's bottom tube, TOTAL WIN at the side ---------- */
+#hwPanel, #fsPanel { display: none !important; }
+.r1-count { left: 670px; top: 666px; width: 260px; aspect-ratio: 1000 / 330; z-index: 6; pointer-events: none; }
+.r1-total {
+  left: 1140px; top: 618px; width: 300px; aspect-ratio: 2.8037; z-index: 5; pointer-events: none;
+  --u: calc(300px / 100);
+  background: url('../img/neon-joker-spins/skins/c/sets/r1/img/plaque.webp?v=1') center / 100% 100% no-repeat;
+}
+.r1-count, .r1-total { opacity: 0; visibility: hidden; transform: scale(0.92);
+  transition: opacity 400ms ease, transform 400ms cubic-bezier(0.3, 1.4, 0.5, 1), visibility 0s linear 400ms; }
+.screen.is-hw .r1-count, .screen.is-fs .r1-count, .screen.is-hw .r1-total, .screen.is-fs .r1-total {
+  opacity: 1; visibility: visible; transform: none; transition: opacity 400ms ease, transform 400ms cubic-bezier(0.3, 1.4, 0.5, 1), visibility 0s; }
+.r1-resp, .r1-fsc { position: absolute; inset: 0; display: none; }
+.screen.is-hw .r1-resp { display: block; }
+.screen.is-fs:not(.is-hw) .r1-fsc { display: block; }
+.r1-resp__art, .r1-fsc__art { position: absolute; inset: 0; width: 100%; height: 100%; }
+.r1-resp__n {
+  position: absolute; top: 57.6%; height: 30%; display: flex; justify-content: center;
+  transform: translate(-50%, -50%);
+  opacity: 0.22; filter: grayscale(0.7) brightness(0.55);
+  transition: opacity 260ms ease, filter 260ms ease;
+}
+.r1-resp__n img, .r1-fsc__n img, .r1-total__value img { height: 100%; width: auto; }
+.r1-resp__n[data-n="1"] { left: 26.66%; }
+.r1-resp__n[data-n="2"] { left: 50.05%; }
+.r1-resp__n[data-n="3"] { left: 73.41%; }
+.r1-resp__n.is-on { opacity: 1; filter: drop-shadow(0 0 4px #fff2b0) drop-shadow(0 0 12px rgba(255, 60, 172, 0.95)); }
+@keyframes r1-resp-tick { 0% { transform: translate(-50%, -50%) scale(1.35); opacity: 1; filter: brightness(2.2) drop-shadow(0 0 14px #ff3cac); } 100% { transform: translate(-50%, -50%) scale(1); } }
+.r1-resp__n.is-tick { animation: r1-resp-tick 420ms ease-out; }
+@keyframes r1-resp-reset { 0% { filter: brightness(1.9); transform: scale(1.06); } 100% { filter: brightness(1); transform: none; } }
+.r1-resp.is-reset { animation: r1-resp-reset 620ms ease-out; }
+.r1-resp.is-reset .r1-resp__n.is-on { animation: r1-resp-tick 520ms ease-out backwards; }
+.r1-resp.is-reset .r1-resp__n[data-n="2"] { animation-delay: 90ms; }
+.r1-resp.is-reset .r1-resp__n[data-n="3"] { animation-delay: 180ms; }
+.r1-fsc__n { position: absolute; left: 50%; top: var(--fsc-y, 57%); height: 34%; display: flex; justify-content: center;
+  transform: translate(-50%, -50%); filter: drop-shadow(0 0 4px #fff2b0) drop-shadow(0 0 12px rgba(255, 60, 172, 0.9)); }
+.r1-total__face { position: absolute; left: 9%; right: 8%; top: 33%; bottom: 13%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+.r1-total__label { font-family: 'Luckiest Guy', system-ui, sans-serif; font-size: calc(var(--u) * 5.2); letter-spacing: 0.08em; color: #fff;
+  text-shadow: 0 0 calc(var(--u) * 0.8) #ff3cac, 0 0 calc(var(--u) * 2.4) #ff3cac; }
+.r1-total__value { display: flex; height: calc(var(--u) * 11); margin-top: calc(var(--u) * 1.2); }
+/* portrait: counter on the bottom tube in the middle, TOTAL WIN to its right */
+@media (orientation: portrait) {
+  .r1-count { left: 245px; top: 1043px; width: 230px; z-index: 8; }
+  .r1-total { left: 484px; top: 1040px; width: 226px; --u: calc(226px / 100); z-index: 8; }
+}
+.is-land .r1-count { left: 630px; top: 487px; width: 220px; }
+.is-land .r1-total { left: 862px; top: 484px; width: 206px; --u: calc(206px / 100); }
