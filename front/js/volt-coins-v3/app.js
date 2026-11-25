@@ -105,9 +105,10 @@ async function applySpinResult(data, betAmount) {
 }
 
 // opts.bought: купленный раунд — исход известен заранее, антиципация
-// последнего барабана была бы обманом.
+// последнего барабана была бы обманом. opts.dev: подставной ответ DEV-пульта
+// (js/volt-coins-v3/dev.js) — без сервера, поэтому и без сессии.
 async function runSpin(request, betAmount, opts = {}) {
-  if (gameState.isSpinning || !gameState.sessionId) return;
+  if (gameState.isSpinning || (!gameState.sessionId && !opts.dev)) return;
   gameState.isSpinning = true;
   const spinBtn = document.querySelector('[data-action="spin"]');
   spinBtn.classList.add('is-spinning');
@@ -190,6 +191,14 @@ function setupDevHoldAndWinButton() {
     runSpin(() => Api.devForceHoldAndWin(gameState.sessionId, betAmount), betAmount);
   });
 }
+
+// DEV-пульт: ответ в форме серверного, проигранный настоящим путём спина —
+// барабаны, антисипация, линии, попапы, вход в Hold & Win и все звуки как в
+// живой игре. Баланс не меняется.
+window.__devSpin = (data, opts = {}) => {
+  if (gameState.pendingHoldAndWin) return Promise.resolve();
+  return runSpin(() => Promise.resolve({ balance: gameState.balance, ...data }), currentBet(), { ...opts, dev: true });
+};
 
 async function bootstrapSession() {
   try {

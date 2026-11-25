@@ -141,13 +141,14 @@
     }
     if (sec.matrix) {
       const m = sec.matrix;
+      const colName = m.colLabel || ((c) => `×${c}`);   // подпись столбца (по умолчанию ×N)
       const table = h('table', { class: 'dt-matrix' },
-        h('tr', {}, h('th', {}, ''), m.cols.map((c) => h('th', {}, `×${c}`))),
+        h('tr', {}, h('th', {}, ''), m.cols.map((c) => h('th', {}, colName(c)))),
         m.rows.map((r) => h('tr', {},
           h('td', { class: 'dt-sym' }, r.img ? h('img', { src: r.img, alt: '' }) : null, h('span', {}, r.label)),
           m.cols.map((c) => h('td', {}, h('button', {
             type: 'button', class: 'dt-btn dt-btn--cell',
-            onclick: () => runItem(`${r.label} ×${c}`, () => m.run(r, c)),
+            onclick: () => runItem(`${r.label} · ${colName(c)}`, () => m.run(r, c)),
           }, '▶'))),
         )),
       );

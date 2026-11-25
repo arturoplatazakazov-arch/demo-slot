@@ -2769,3 +2769,6 @@ html body.v3 .screen[data-mode="bonus"] .field-vignette {
 
 /* служебная съёмка для Figma (?shot=1): без тест-панели */
 body.is-shot .test-panel { display: none !important; }
+
+/* DEV-пульт (js/dev-tools.js) занимает левый верх — тест-панель под ним */
+body:has(.dt-root) .test-panel { top: 50px; }

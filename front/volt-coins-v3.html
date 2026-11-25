@@ -10,8 +10,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@900&display=swap">
 <link rel="stylesheet" href="css/preloader.css?v=1">
-<link rel="stylesheet" href="css/volt-coins-v3.css?v=208">
+<link rel="stylesheet" href="css/volt-coins-v3.css?v=209">
 <link rel="stylesheet" href="css/ui-bar-v3.css?v=6">
+<link rel="stylesheet" href="css/dev-tools.css?v=6">
 </head>
 <body>
 
@@ -26,21 +27,8 @@
     В каталог
   </a>
 
-  <!-- DEV-ONLY: попапы и раунд без ожидания триггера, плюс тумблер света. -->
-  <details class="dev-panel">
-    <summary class="dev-btn dev-panel__toggle">DEV</summary>
-    <button class="dev-btn" data-popup="bigWin" type="button">Big Win</button>
-    <button class="dev-btn" data-popup="megaWin" type="button">Mega Win</button>
-    <button class="dev-btn" data-popup="epicWin" type="button">Epic Win</button>
-    <button class="dev-btn" id="devHoldAndWin" type="button">Hold &amp; Win</button>
-    <button class="dev-btn" id="devJackpot" type="button">Jackpots</button>
-    <button class="dev-btn" id="devLines" type="button">Win lines</button>
-    <button class="dev-btn" id="devAntic" type="button">Anticipation</button>
-    <button class="dev-btn" id="devLight" type="button" aria-pressed="false">Turn off light</button>
-    <button class="dev-btn" id="devFeatureScreen" type="button">Feature screen</button>
-    <button class="dev-btn" id="devBonusScreen" type="button">Bonus screen</button>
-    <span class="dev-hint">клик по символу — его win-анимация</span>
-  </details>
+  <!-- Пульт DEV + ♪ — общий (js/dev-tools.js), виден только на localhost и по
+       ?dev=1. Адаптер игры: js/volt-coins-v3/dev.js. -->
 
   <div class="screen" id="screen" data-mode="base">
 
@@ -248,11 +236,14 @@
   <script src="vendor/spine-webgl.js"></script>
   <script src="js/spine-engine.js?v=10"></script>
   <script src="js/volt-coins-v3/fx.js?v=217"></script>
-  <script src="js/volt-coins-v3/sound.js?v=187"></script>
+  <script src="js/sound-kit.js?v=8"></script>
+  <script src="js/volt-coins-v3/sound.js?v=188"></script>
   <script src="js/volt-coins-v3/review.js?v=188"></script>
   <script src="js/volt-coins-v3/popup-fx.js?v=6"></script>
   <script src="js/volt-coins-v3/slot.js?v=229"></script>
-  <script src="js/volt-coins-v3/app.js?v=183"></script>
+  <script src="js/volt-coins-v3/app.js?v=184"></script>
+  <script src="js/dev-tools.js?v=7"></script>
+  <script src="js/volt-coins-v3/dev.js?v=1"></script>
   <script src="js/ui-bar-v3.js?v=4"></script>
 </body>
 </html>
