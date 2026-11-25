@@ -10,15 +10,21 @@
 const GC_SOUND = 'sound/gangsta-casino/';
 // Bump on every re-render of the pack: the files keep their names, so the
 // browser would otherwise play the cached old ones.
-const GC_PACK_VERSION = 3;
+const GC_PACK_VERSION = 4;
 // Variant names ("Рок-гитара · октава · эхо", "фанк"…) written by the generator.
 let GC_NAMES = {};
 fetch(`${GC_SOUND}names.json?p=${GC_PACK_VERSION}`).then((r) => r.json()).then((n) => { GC_NAMES = n; if (window.DevTools) DevTools.refresh(); }).catch(() => {});
 const GC_LOOPS = new Set(['reelLoop', 'anticipation', 'countLoop']);
 
+// The music and the win fanfares were made in 10 genres; only Latino (v04)
+// was kept for them, the other nine genres are deleted.
+const GC_LATINO_ONLY = new Set(['base', 'bonus', 'bigWin', 'megaWin', 'epicWin', 'bonusSpinsWin', 'bonusTotalWin']);
+const GC_LATINO = 4;
+
 function gcVariants(key) {
   const ext = GC_LOOPS.has(key) ? 'wav' : 'mp3';
-  return Array.from({ length: 10 }, (_, i) => `${GC_SOUND}${key}/v${String(i + 1).padStart(2, '0')}.${ext}?p=${GC_PACK_VERSION}`);
+  const nums = GC_LATINO_ONLY.has(key) ? [GC_LATINO] : Array.from({ length: 10 }, (_, i) => i + 1);
+  return nums.map((n) => `${GC_SOUND}${key}/v${String(n).padStart(2, '0')}.${ext}?p=${GC_PACK_VERSION}`);
 }
 
 // One win event per symbol (code -> paytable name, app/seed/gangsta_casino.py).
@@ -92,17 +98,8 @@ window.Sound = SoundKit.create({
     return m && GC_NAMES[m[1]] ? GC_NAMES[m[1]][Number(m[2]) - 1] || null : null;
   },
   libraryPrefix: GC_SOUND,
-  // Variant N of the music and of every win fanfare is the same GENRE
-  // (scripts/gc_sound/pack.py GENRES), so they switch as one set.
   sets: [
-    {
-      title: 'Музыкальный сет',
-      note: 'фон базы + фон фриспинов + все фанфары (BIG / MEGA / EPIC / YOU WON / TOTAL)',
-      keys: ['base', 'bonus', 'bigWin', 'megaWin', 'epicWin', 'bonusSpinsWin', 'bonusTotalWin'],
-      names: ['синтвейв', 'трэп', 'фанк', 'латино', 'джаз-лаунж', 'рок', 'чиптюн', 'нуар-оркестр', 'диско', 'лоу-фай'],
-      preview: () => (typeof currentMode === 'function' && currentMode() === 'freespins' ? 'bonus' : 'base'),
-    },
-    { title: 'Весь звук на один вариант', note: 'все 50 событий разом; у разных событий одна буква = разные идеи', keys: '*' },
+    { title: 'Весь звук на один вариант', note: 'все события разом; у разных событий один номер = разные идеи; музыка и фанфары — только латино', keys: '*' },
   ],
   events: GC_EVENTS,
 });

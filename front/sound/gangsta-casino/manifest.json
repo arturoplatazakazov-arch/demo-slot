@@ -252,40 +252,13 @@
   "sound/gangsta-casino/winLine/v10.mp3"
  ],
  "bigWin": [
-  "sound/gangsta-casino/bigWin/v01.mp3",
-  "sound/gangsta-casino/bigWin/v02.mp3",
-  "sound/gangsta-casino/bigWin/v03.mp3",
-  "sound/gangsta-casino/bigWin/v04.mp3",
-  "sound/gangsta-casino/bigWin/v05.mp3",
-  "sound/gangsta-casino/bigWin/v06.mp3",
-  "sound/gangsta-casino/bigWin/v07.mp3",
-  "sound/gangsta-casino/bigWin/v08.mp3",
-  "sound/gangsta-casino/bigWin/v09.mp3",
-  "sound/gangsta-casino/bigWin/v10.mp3"
+  "sound/gangsta-casino/bigWin/v04.mp3"
  ],
  "megaWin": [
-  "sound/gangsta-casino/megaWin/v01.mp3",
-  "sound/gangsta-casino/megaWin/v02.mp3",
-  "sound/gangsta-casino/megaWin/v03.mp3",
-  "sound/gangsta-casino/megaWin/v04.mp3",
-  "sound/gangsta-casino/megaWin/v05.mp3",
-  "sound/gangsta-casino/megaWin/v06.mp3",
-  "sound/gangsta-casino/megaWin/v07.mp3",
-  "sound/gangsta-casino/megaWin/v08.mp3",
-  "sound/gangsta-casino/megaWin/v09.mp3",
-  "sound/gangsta-casino/megaWin/v10.mp3"
+  "sound/gangsta-casino/megaWin/v04.mp3"
  ],
  "epicWin": [
-  "sound/gangsta-casino/epicWin/v01.mp3",
-  "sound/gangsta-casino/epicWin/v02.mp3",
-  "sound/gangsta-casino/epicWin/v03.mp3",
-  "sound/gangsta-casino/epicWin/v04.mp3",
-  "sound/gangsta-casino/epicWin/v05.mp3",
-  "sound/gangsta-casino/epicWin/v06.mp3",
-  "sound/gangsta-casino/epicWin/v07.mp3",
-  "sound/gangsta-casino/epicWin/v08.mp3",
-  "sound/gangsta-casino/epicWin/v09.mp3",
-  "sound/gangsta-casino/epicWin/v10.mp3"
+  "sound/gangsta-casino/epicWin/v04.mp3"
  ],
  "countLoop": [
   "sound/gangsta-casino/countLoop/v01.wav",
@@ -516,28 +489,10 @@
   "sound/gangsta-casino/bonusToBase/v10.mp3"
  ],
  "bonusSpinsWin": [
-  "sound/gangsta-casino/bonusSpinsWin/v01.mp3",
-  "sound/gangsta-casino/bonusSpinsWin/v02.mp3",
-  "sound/gangsta-casino/bonusSpinsWin/v03.mp3",
-  "sound/gangsta-casino/bonusSpinsWin/v04.mp3",
-  "sound/gangsta-casino/bonusSpinsWin/v05.mp3",
-  "sound/gangsta-casino/bonusSpinsWin/v06.mp3",
-  "sound/gangsta-casino/bonusSpinsWin/v07.mp3",
-  "sound/gangsta-casino/bonusSpinsWin/v08.mp3",
-  "sound/gangsta-casino/bonusSpinsWin/v09.mp3",
-  "sound/gangsta-casino/bonusSpinsWin/v10.mp3"
+  "sound/gangsta-casino/bonusSpinsWin/v04.mp3"
  ],
  "bonusTotalWin": [
-  "sound/gangsta-casino/bonusTotalWin/v01.mp3",
-  "sound/gangsta-casino/bonusTotalWin/v02.mp3",
-  "sound/gangsta-casino/bonusTotalWin/v03.mp3",
-  "sound/gangsta-casino/bonusTotalWin/v04.mp3",
-  "sound/gangsta-casino/bonusTotalWin/v05.mp3",
-  "sound/gangsta-casino/bonusTotalWin/v06.mp3",
-  "sound/gangsta-casino/bonusTotalWin/v07.mp3",
-  "sound/gangsta-casino/bonusTotalWin/v08.mp3",
-  "sound/gangsta-casino/bonusTotalWin/v09.mp3",
-  "sound/gangsta-casino/bonusTotalWin/v10.mp3"
+  "sound/gangsta-casino/bonusTotalWin/v04.mp3"
  ],
  "fsCounter": [
   "sound/gangsta-casino/fsCounter/v01.mp3",
@@ -576,27 +531,9 @@
   "sound/gangsta-casino/screenTap/v10.mp3"
  ],
  "base": [
-  "sound/gangsta-casino/base/v01.mp3",
-  "sound/gangsta-casino/base/v02.mp3",
-  "sound/gangsta-casino/base/v03.mp3",
-  "sound/gangsta-casino/base/v04.mp3",
-  "sound/gangsta-casino/base/v05.mp3",
-  "sound/gangsta-casino/base/v06.mp3",
-  "sound/gangsta-casino/base/v07.mp3",
-  "sound/gangsta-casino/base/v08.mp3",
-  "sound/gangsta-casino/base/v09.mp3",
-  "sound/gangsta-casino/base/v10.mp3"
+  "sound/gangsta-casino/base/v04.mp3"
  ],
  "bonus": [
-  "sound/gangsta-casino/bonus/v01.mp3",
-  "sound/gangsta-casino/bonus/v02.mp3",
-  "sound/gangsta-casino/bonus/v03.mp3",
-  "sound/gangsta-casino/bonus/v04.mp3",
-  "sound/gangsta-casino/bonus/v05.mp3",
-  "sound/gangsta-casino/bonus/v06.mp3",
-  "sound/gangsta-casino/bonus/v07.mp3",
-  "sound/gangsta-casino/bonus/v08.mp3",
-  "sound/gangsta-casino/bonus/v09.mp3",
-  "sound/gangsta-casino/bonus/v10.mp3"
+  "sound/gangsta-casino/bonus/v04.mp3"
  ]
 }

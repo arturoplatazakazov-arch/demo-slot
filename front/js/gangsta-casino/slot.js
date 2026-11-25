@@ -176,10 +176,6 @@ function teardownCellInstances() {
   winSequenceEpoch += 1;
   clearWinLines();
   clearMultiplierBadges();
-  if (multiLineSequenceTimeout) {
-    clearTimeout(multiLineSequenceTimeout);
-    multiLineSequenceTimeout = null;
-  }
   clearBigWilds();
   for (const info of cellInfos) {
     if (!info) continue;
@@ -352,64 +348,15 @@ function setCellDimmed(info, dimmed) {
   if (chip) chip.inst.skeleton.color.set(dim ? 0.4 : 1, dim ? 0.4 : 1, dim ? 0.4 : 1, 1);
 }
 
-let multiLineSequenceTimeout = null;
-
-// Phase -1 plays every winning cell together, then each payline on its own so
-// overlapping lines can be told apart — same cycle as the donor.
-// Bumped by teardownCellInstances: an in-flight sequence step that resolves
-// after a teardown must not schedule the next one.
+// Win presentation order lives in js/slot-flow.js (SlotFlow.presentWins).
+// Bumped by teardownCellInstances / a new presentation: a sequence step that
+// resolves after that must not schedule the next one.
 let winSequenceEpoch = 0;
 
 // The symbol a win group pays for (a wild only when the line is all wilds).
 function groupSymbol(infos) {
   const codes = infos.map((i) => i.symbol);
   return codes.find((c) => c !== 'wild') || codes[0];
-}
-// Resolves when the symbol's win melody has finished playing.
-function playSymbolWinSound(infos) {
-  const code = infos.length ? groupSymbol(infos) : null;
-  return code ? Sound.playSfx(`symWin_${code}`).done : Promise.resolve();
-}
-
-// Product 2026-11-19: a big/mega/epic popup opens only once the win has played
-// one full cycle — every line's animation AND its melody. Capped so a stuck
-// clip or sound can never hold the popup back for good.
-const WIN_CYCLE_MAX_MS = 9000;
-
-function playMultiLineWinSequence(groups, allWinInfos, firstSound, onFirstCycle) {
-  const epoch = winSequenceEpoch;
-  let groupIndex = -1;
-  let firstCycle = true;
-  const step = () => {
-    if (epoch !== winSequenceEpoch) { onFirstCycle(); return; }
-    const activeInfos = groupIndex === -1 ? allWinInfos : groups[groupIndex];
-    // Sounds only on the first pass: the sequence loops until the next spin.
-    // That pass also waits for each melody to end before the next line.
-    let sound = groupIndex === -1 ? firstSound : null;
-    if (firstCycle && groupIndex >= 0) {
-      const line = Sound.playSfx('winLine').done;
-      sound = Promise.all([line, playSymbolWinSound(activeInfos)]);
-    }
-    const activeSet = new Set(activeInfos);
-    if (groupIndex === -1) showWinLines(currentLineWins);
-    else showWinLines(currentLineWins[groupIndex] ? [currentLineWins[groupIndex]] : []);
-    for (const info of cellInfos) {
-      if (info) setCellDimmed(info, !activeSet.has(info));
-    }
-    const waits = activeInfos.map((info) => playWinAnimationOnce(info));
-    if (firstCycle && sound) waits.push(sound);
-    Promise.all(waits).then(() => {
-      if (epoch !== winSequenceEpoch) { onFirstCycle(); return; }
-      if (firstCycle && groupIndex === groups.length - 1) onFirstCycle();
-      multiLineSequenceTimeout = setTimeout(() => {
-        multiLineSequenceTimeout = null;
-        if (groupIndex === groups.length - 1) firstCycle = false;
-        groupIndex = (groupIndex + 1) % groups.length;
-        step();
-      }, WIN_LOOP_PAUSE_MS);
-    });
-  };
-  step();
 }
 
 // --- Game layer hidden under popups / screens -----------------------------
@@ -421,7 +368,6 @@ function playMultiLineWinSequence(groups, allWinInfos, firstSound, onFirstCycle)
 // it. Product 2026-11-19: nothing of the win may show through a popup or a
 // screen — while any is up the game layer is not drawn at all. Counted, since
 // a popup can open inside a screen's lifetime (bonus intro).
-let gameLayerHides = 0;
 function setGameLayerVisible(visible) {
   if (stage) stage.baseHidden = !visible;
   for (const el of bigWildEls) {
@@ -433,14 +379,9 @@ function setGameLayerVisible(visible) {
     else if (!visible) backStage.removeOverlay(winLinesInst);
   }
 }
-function hideGameLayer() {
-  gameLayerHides += 1;
-  if (gameLayerHides === 1) setGameLayerVisible(false);
-}
-function showGameLayer() {
-  gameLayerHides = Math.max(0, gameLayerHides - 1);
-  if (gameLayerHides === 0) setGameLayerVisible(true);
-}
+const gameLayer = SlotFlow.layerGuard(setGameLayerVisible);
+const hideGameLayer = () => gameLayer.hide();
+const showGameLayer = () => gameLayer.show();
 
 // --- Win lines (Spine, under the symbols) -----------------------------------
 //
@@ -510,7 +451,7 @@ function showWinLines(lineWins) {
       state.addAnimation(i, `line${n}_loop`, true, 0).mixDuration = 0;
     });
     backStage.removeOverlay(inst);
-    if (!gameLayerHides) backStage.addOverlay(inst);
+    if (!gameLayer.hidden) backStage.addOverlay(inst);
   }).catch((err) => console.warn('win lines:', err));
 }
 
@@ -521,10 +462,6 @@ function buildWinGroups(lineWins, countWins) {
 }
 
 function playWinCells(winningCells, lineWins, countWins) {
-  if (multiLineSequenceTimeout) {
-    clearTimeout(multiLineSequenceTimeout);
-    multiLineSequenceTimeout = null;
-  }
   const allWinInfos = (winningCells || [])
     .map(({ row, col }) => cellInfos[row * GRID_COLS + col])
     .filter(Boolean);
@@ -547,17 +484,25 @@ function playWinCells(winningCells, lineWins, countWins) {
   // Line i of the sequence == lineWins[i] (count wins come after them).
   currentLineWins = lineWins || [];
   showWinLines(currentLineWins);
-  if (!allWinInfos.length) return Promise.resolve();
-  // Resolves after one full cycle of the presentation (see WIN_CYCLE_MAX_MS).
-  let done;
-  const cycle = new Promise((res) => { done = res; });
-  const firstSound = groups.length ? playSymbolWinSound(groups[0]) : Promise.resolve();
-  if (groups.length > 1) {
-    playMultiLineWinSequence(groups, allWinInfos, firstSound, done);
-  } else {
-    Promise.all([...allWinInfos.map((info) => previewSymbolWin(info)), firstSound]).then(done);
-  }
-  return Promise.race([cycle, wait(WIN_CYCLE_MAX_MS)]);
+  const epoch = ++winSequenceEpoch;
+  // Shared order (SlotFlow): all lines together, then each on its own; the
+  // first pass sounds and resolves the promise (big/mega/epic wait for it).
+  return SlotFlow.presentWins({
+    groups,
+    allInfos: allWinInfos,
+    pauseMs: WIN_LOOP_PAUSE_MS,
+    symbolOf: groupSymbol,
+    isCurrent: () => epoch === winSequenceEpoch,
+    playPhase: (infos, index) => {
+      if (groups.length > 1) {
+        if (index === -1) showWinLines(currentLineWins);
+        else showWinLines(currentLineWins[index] ? [currentLineWins[index]] : []);
+        const active = new Set(infos);
+        for (const info of cellInfos) if (info) setCellDimmed(info, !active.has(info));
+      }
+      return Promise.all(infos.map((info) => playWinAnimationOnce(info)));
+    },
+  });
 }
 
 function applyGrid(grid) {
@@ -612,21 +557,12 @@ const EASE_IN_QUAD = 'cubic-bezier(0.55, 0.085, 0.68, 0.53)';
 const EASE_OUT_QUAD = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)';
 const reelState = []; // per column: { stripEl, anim, stopping }
 let reelLoopSound = null;   // the "reels spinning" loop, cut on the last stop
-let spinScatterCount = 0;   // scatters landed so far this spin (scatterLand1/2/3)
 function stopReelLoopSound() {
   if (reelLoopSound) reelLoopSound.stop(200);
   reelLoopSound = null;
 }
-// Landing sounds of the special symbols, once per symbol per stopped reel.
-function playLandSounds(finalCodes) {
-  for (const code of finalCodes) {
-    if (code === 'scatter') {
-      spinScatterCount += 1;
-      Sound.playSfx(`scatterLand${Math.min(3, spinScatterCount)}`);
-    } else if (code === 'wild') Sound.playSfx('wildLand');
-    else if (code === 'wof') Sound.playSfx('multLand');
-  }
-}
+// Landing sounds (SlotFlow rule 1): scatters 1/2/3+, the wild, the multiplier chip.
+const landSounds = SlotFlow.landing({ scatter: 'scatter', specials: { wild: 'wildLand', wof: 'multLand' } });
 
 function currentStripY(stripEl) {
   const m = new DOMMatrixReadOnly(getComputedStyle(stripEl).transform);
@@ -644,7 +580,7 @@ const reelMotion = {
     Sound.playSfx('spinStart');
     if (reelLoopSound) reelLoopSound.stop();
     reelLoopSound = Sound.playSfx('reelLoop');
-    spinScatterCount = 0;
+    landSounds.reset();
     const rs = rowStep, L = REEL_PHYS.LOOP_CELLS;
     for (let col = 0; col < GRID_COLS; col++) {
       const { stripEl } = reelCols[col];
@@ -741,7 +677,7 @@ const reelMotion = {
         st.anim = null;
         Sound.playSfx(col === GRID_COLS - 1 ? 'finalReelStop' : 'reelStop');
         if (col === GRID_COLS - 1) stopReelLoopSound();
-        playLandSounds(finalCodes);
+        landSounds.land(finalCodes);
         if (isAnticipating) reelCols[col].colEl.classList.remove('is-anticipating');
         stripEl.innerHTML = '';
         for (const c of resultCells) stripEl.appendChild(c);
@@ -877,7 +813,7 @@ async function revealExpandedWildSpine(col, win) {
   }
   // Overlay layer, not base: base draws in insertion order, so a cell's win
   // clip added after the grow would paint over the big wild.
-  if (!gameLayerHides) stage.addOverlay(overlay);
+  if (!gameLayer.hidden) stage.addOverlay(overlay);
   Sound.playSfx('wildGrow');
   await playClipOnce(overlay, 'expand');
   if (!el.isConnected) return el;
@@ -979,7 +915,7 @@ async function landReelsInner(grid, anticipationColumns, wildEvents, lineWins, c
   await Promise.all(leadTasks);
   if (firstAnticipationCol === GRID_COLS) return;
 
-  const anticipationSound = Sound.playSfx('anticipation');
+  const anticipation = SlotFlow.anticipation();
   // The remaining reels keep spinning; they stop one at a time.
   for (let col = firstAnticipationCol; col < GRID_COLS; col++) {
     const finalCodes = [grid[0][col], grid[1][col], grid[2][col]];
@@ -988,8 +924,7 @@ async function landReelsInner(grid, anticipationColumns, wildEvents, lineWins, c
     const cellEls = await landReel(col, finalCodes, REEL_PHYS.NEXT_REEL_DELAY_FIGURES, isAnticipating);
     if (isAnticipating) {
       // Hit = the trigger symbol landed on the anticipated reel; miss = it didn't.
-      anticipationSound.stop(150);
-      Sound.playSfx(finalCodes.includes(ANTICIPATION_SYMBOL) ? 'anticipationWin' : 'anticipationFail');
+      anticipation.resolve(finalCodes.includes(ANTICIPATION_SYMBOL));
     }
     settleColumnCells(cellEls, col, finalCodes);
     await celebrateExpandedWild(col, wildEvents, winningCols);
@@ -1017,44 +952,23 @@ function applyModeScreen(next) {
 
 const BONUS_INTRO_HOLD_MS = 3000;
 
-// Entering the bonus. From scatters (withPopup, product 2026-11-19): the
-// caller has let the scatters play one full win cycle; here the
-// "YOU WON N FREE SPINS" popup plays over the base game, then — its dim kept
-// on, so the light never comes back in between — a blackout, the club is
-// switched in, the bonus music starts together with the Spine bonus preview
-// screen (bfs, "TAP TO START"), and the tap reveals the bonus game.
-// Without withPopup (bought round, dev): straight into the blackout. Without
-// Spine the CSS "YOU WON" card stands in for the preview screen.
-async function enterBonusTransition(amount = 0, { withPopup = false, popupAmount = amount } = {}) {
-  if (withPopup) {
-    pushScreenDim(false);
-    await playPopupSequence('bonusSpinsWin', popupAmount, 2500, { ownDim: false });
-  }
-  Sound.playSfx('baseToBonus');
-  pushScreenDim(true);
-  await wait(DIM_TRANSITION_MS);
-  applyModeScreen('freespins');
-  Sound.playMusic('bonus');
-  const ran = await showBonusScreen(amount);
-  if (!ran && !withPopup) await playPopupSequence('bonusSpinsWin', amount, BONUS_INTRO_HOLD_MS);
-  await wait(DIM_TRANSITION_MS);
-  popScreenDim(true);
-  if (withPopup) popScreenDim(false);
-}
+// Bonus entry / exit order lives in js/slot-flow.js (rule 6); these are the
+// game's primitives: the YOU WON card over the base game, the dim, the club
+// switched in, and the Spine bonus preview screen (bfs, "TAP TO START").
+const bonusSteps = {
+  dimMs: DIM_TRANSITION_MS,
+  dimIn: (opaque) => pushScreenDim(opaque),
+  dimOut: (opaque) => popScreenDim(opaque),
+  popup: (amount) => playPopupSequence('bonusSpinsWin', amount, 2500, { ownDim: false }),
+  switchMode: (mode) => applyModeScreen(mode),
+  preview: (spins) => showBonusScreen(spins),
+};
 
 function setFreeSpinsMode(active, amount = 0, entry = {}) {
   const next = active ? 'freespins' : 'base';
   if (currentMode() === next) return Promise.resolve();
-  if (next === 'freespins') return enterBonusTransition(amount, entry);
-  Sound.playMusic('base');
-  Sound.playSfx('bonusToBase');
-  return withScreenDim(
-    async () => {
-      applyModeScreen(next);
-      await wait(DIM_TRANSITION_MS);
-    },
-    { opaque: true },
-  );
+  if (next === 'freespins') return SlotFlow.enterBonus(bonusSteps, { spins: amount, popupAmount: entry.popupAmount, withPopup: !!entry.withPopup });
+  return SlotFlow.exitBonus(bonusSteps);
 }
 
 // Three odometer windows on the counter art; zero-padded like a real drum.
@@ -1306,13 +1220,8 @@ const BILL_COUNT = 26;
 function countUp(el, target, ms, integer) {
   const start = performance.now();
   // Spin counts (integer) tick silently; money counts play the count loop.
-  const loop = integer || !target ? null : Sound.playSfx('countLoop');
-  let ended = false;
-  const end = () => {
-    if (ended) return;
-    ended = true;
-    if (loop) { loop.stop(120); Sound.playSfx('countEnd'); }
-  };
+  const counter = integer || !target ? null : SlotFlow.countSound();
+  const end = () => { if (counter) counter.end(); };
   return new Promise((resolveRaw) => {
     const resolve = () => { end(); resolveRaw(); };
     const tick = (now) => {

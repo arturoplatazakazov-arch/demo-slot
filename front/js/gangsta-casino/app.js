@@ -19,8 +19,6 @@ const gameState = {
   freeSpinsTrigger: null,
 };
 
-const TIER_POPUPS = new Set(['bigWin', 'megaWin', 'epicWin']);
-
 function formatNumber(n) {
   return Number(n).toLocaleString('en-US');
 }
@@ -59,53 +57,25 @@ function updateFreeSpinsCounter(remaining) {
   setFreeSpinsCounter(remaining);
 }
 
-// Shared tail end of both a normal spin and a bonus-buy response: update
-// balance/mode/counter, play whatever won, show a popup if the server sent one.
+// Shared tail end of both a normal spin and a bonus-buy response. The ORDER
+// (multipliers -> wins -> bonus entry / exit -> popup) is js/slot-flow.js's;
+// this only feeds it the game's steps.
 async function applySpinResult(data) {
   gameState.balance = data.balance;
   gameState.lastGrid = data.grid;
   renderBalance();
-
   const remaining = data.feature && data.feature.type === 'free_spins' ? data.feature.spins_remaining : 0;
   gameState.freeSpinsRemaining = remaining;
-  // Whether this spin enters the bonus from the base game — captured before
-  // setFreeSpinsMode flips the mode. Win cells (the scatters landing) play
-  // first, then the intro (blackout + bonusSpinsWin popup + reveal) runs.
-  const wasInRound = document.getElementById('screen').dataset.mode === 'freespins';
-  const enteringBonus = !wasInRound && remaining > 0;
-
-  // Multipliers flip in on their chips first (and fly into the plate when
-  // they count), then the wins play — total_win already includes them.
-  await playMultipliers(data.coin_multiplier, wasInRound);
-  const winCycle = playWinCells(data.winning_cells, data.line_wins, data.count_wins);
-
-  if (remaining > 0) updateFreeSpinsCounter(remaining);
-  // Scatter entry: the scatters play one full cycle (animation + win melody)
-  // first; the transition then shows the YOU WON popup, the blackout and the
-  // bonus preview screen (slot.js enterBonusTransition).
-  const scatterEntry = enteringBonus && !!data.popup && data.popup.type === 'bonusSpinsWin';
-  if (scatterEntry) await winCycle;
-  await setFreeSpinsMode(remaining > 0, remaining, { withPopup: scatterEntry, popupAmount: scatterEntry ? data.popup.amount : remaining });
-
-  if (data.popup) {
-    // The entry's bonusSpinsWin is shown by the intro transition itself; a
-    // re-trigger inside the bonus still shows its popup normally here.
-    const shownByIntro = enteringBonus && data.popup.type === 'bonusSpinsWin';
-    // buyFreeSpins: the purchase was already confirmed in our own ✓/✗ dialog
-    // — replaying a card for it after the fact would just repeat it.
-    if (!shownByIntro && data.popup.type !== 'buyFreeSpins') {
-      // Big/mega/epic: the lines first play one full cycle (animation +
-      // melody), then the popup opens. The tier sound comes with the popup.
-      // (a retrigger's YOU WON inside the bonus waits for the scatters too)
-      if (TIER_POPUPS.has(data.popup.type) || data.popup.type === 'bonusSpinsWin') await winCycle;
-      playPopup(data.popup.type, data.popup.amount);
-    }
-  } else if (data.total_win > 0) {
-    // Wins below the big/mega/epic threshold never get a popup — show the
-    // amount inline over the grid instead.
-    Sound.playSfx('smallWin');
-    showInlineWinAmount(data.total_win);
-  }
+  await SlotFlow.applyResult(data, {
+    isBonus: () => currentMode() === 'freespins',
+    mechanic: (d, inRound) => playMultipliers(d.coin_multiplier, inRound),
+    playWins: (d) => playWinCells(d.winning_cells, d.line_wins, d.count_wins),
+    setCounter: (n) => updateFreeSpinsCounter(n),
+    enterBonus: (o) => setFreeSpinsMode(true, o.spins, o),
+    exitBonus: () => setFreeSpinsMode(false),
+    popup: (type, amount) => playPopup(type, amount),
+    smallWin: (amount) => showInlineWinAmount(amount),
+  });
 }
 
 async function runSpin(request, { dev = false } = {}) {
