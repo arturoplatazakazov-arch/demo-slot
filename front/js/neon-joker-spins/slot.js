@@ -980,11 +980,16 @@ async function playHoldAndWin(hw, bet) {
 
   // 2. вывеска HOLD & WIN, режим раунда
   if (!(await showBonusScreen('hw'))) await playPopup('holdAndWin', 0, turbo ? 600 : 1300);
-  enterHoldAndWinMode();
   const initialSet = new Set(initial.map(idx));
-  cellInfos.forEach((info, i) => { if (info && !initialSet.has(i)) setCellEmpty(info); });
-  setRespinLamps(3);
-  setGlyphs(document.getElementById('hwTotal'), '0');
+  const toHwScreen = () => {
+    enterHoldAndWinMode();
+    cellInfos.forEach((info, i) => { if (info && !initialSet.has(i)) setCellEmpty(info); });
+    setRespinLamps(3);
+    setGlyphs(document.getElementById('hwTotal'), '0');
+  };
+  // a page can switch screens behind a transition (R1: stage curtains, js/neon-joker-spins/r1-curtain.js)
+  const curtain = window.NJS_HOOKS && window.NJS_HOOKS.curtain;
+  if (curtain) await curtain(toHwScreen, 'hw'); else toHwScreen();
 
   // 3. раскрытие номиналов
   for (const c of initial) {
@@ -1081,16 +1086,21 @@ async function playHoldAndWin(hw, bet) {
     total += value * bet;
     tweenHwTotal(total);
     await hwWait(260);
+    // a page can show its own jackpot popup here (R1: js/neon-joker-spins/r1-popups.js)
+    const jpHook = window.NJS_HOOKS && window.NJS_HOOKS.jackpot;
+    if (jpHook && isJackpotKind(coin.kind)) await jpHook(coin.kind, value * bet);
   }
   if (hw.full_grid_jackpot && JACKPOT_LADDER[hw.full_grid_jackpot]) {
     const tier = hw.full_grid_jackpot;
     await hwWait(300);
     cellInfos.forEach((info) => burstAtCell(info, 'spark', 3));
     hitPlate(tier);
-    confettiRain(1800);
+    const gHook = window.NJS_HOOKS && window.NJS_HOOKS.jackpot;
+    if (!gHook) confettiRain(1800);
     await hwWait(900);
     total += JACKPOT_LADDER[tier] * bet;
     tweenHwTotal(total, 600);
+    if (gHook) await gHook(tier, JACKPOT_LADDER[tier] * bet);    // 9 of 9 -> GRAND
   }
   Sound.ding(1.3);
   await hwWait(800);

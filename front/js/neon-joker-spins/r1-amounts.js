@@ -14,7 +14,7 @@
   if (!mode) { try { mode = localStorage.getItem(KEY); } catch (e) { /* noop */ } }
   if (mode !== 'x') mode = 'cash';
 
-  const MONEY = '#reelWinValue, #fsWin, #hwTotal, .jp__value, .game-popup__panel .glyphs, .r1-scene--summary .r1-scene__value';
+  const MONEY = '#reelWinValue, #fsWin, #hwTotal, .jp__value, .game-popup__panel .glyphs, .r1-scene--summary .r1-scene__value, .r1-pop__value';
   const bet = () => (typeof currentBet === 'function' ? currentBet() : 0) || 1;
   const parse = (t) => {
     const m = /^([\d,]+(?:\.\d+)?)([km]?)$/.exec(t);

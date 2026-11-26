@@ -58,8 +58,8 @@ body.r1-frame-hot .cabinet { filter: brightness(1.05) saturate(1.08); transition
   background: center / contain no-repeat; transition: transform 160ms ease, filter 160ms ease;
 }
 .r1-buy__card:hover { transform: translateY(-4px) scale(1.02); filter: brightness(1.12); }
-.r1-buy__card--fs { background-image: url('../img/neon-joker-spins/skins/c/sets/r1/img/buy_fs.webp?v=3'); }
-.r1-buy__card--hw { background-image: url('../img/neon-joker-spins/skins/c/sets/r1/img/buy_hw.webp?v=1'); }
+.r1-buy__card--fs { background-image: url('../img/neon-joker-spins/skins/c/sets/r1/img/buy_fs.webp?v=4'); }
+.r1-buy__card--hw { background-image: url('../img/neon-joker-spins/skins/c/sets/r1/img/buy_hw.webp?v=2'); }
 .r1-buy__price {
   position: absolute; left: 12%; right: 12%; top: 76.5%; height: 11%;
   display: flex; align-items: center; justify-content: center; gap: 6px;
@@ -159,7 +159,7 @@ body.r1-frame-hot .cabinet { filter: brightness(1.05) saturate(1.08); transition
 .r1-plaque {
   left: 1120px; top: 612px; width: 340px; aspect-ratio: 2.8037; z-index: 5; pointer-events: none;
   --u: calc(340px / 100); /* 1% of the plaque width */
-  background: url('../img/neon-joker-spins/skins/c/sets/r1/img/plaque.webp?v=1') center / 100% 100% no-repeat;
+  background: url('../img/neon-joker-spins/skins/c/sets/r1/img/plaque.webp?v=2') center / 100% 100% no-repeat;
   opacity: 0;
 }
 .r1-plaque.is-on { animation: r1-neon-on 3.6s linear forwards; }
@@ -303,7 +303,7 @@ body.hero-lean .mascot { left: var(--r1-edge, 0px) !important; top: 70px !import
 .r1-total {
   left: 1140px; top: 618px; width: 300px; aspect-ratio: 2.8037; z-index: 5; pointer-events: none;
   --u: calc(300px / 100);
-  background: url('../img/neon-joker-spins/skins/c/sets/r1/img/plaque.webp?v=1') center / 100% 100% no-repeat;
+  background: url('../img/neon-joker-spins/skins/c/sets/r1/img/plaque.webp?v=2') center / 100% 100% no-repeat;
 }
 .r1-count, .r1-total { opacity: 0; visibility: hidden; transform: scale(0.92);
   transition: opacity 400ms ease, transform 400ms cubic-bezier(0.3, 1.4, 0.5, 1), visibility 0s linear 400ms; }
@@ -435,3 +435,88 @@ body.r1-scene-on .stage .mascot, body.r1-scene-on .r1-hero-spine { opacity: 0; t
 .reel__cell.is-animating[data-symbol="seven"]::after, .reel__cell.is-animating[data-symbol="seven"]::before { display: none; }
 /* the comma likewise (51 of 116 px, and it hangs 30 % below the line like everywhere else) */
 .jp__value img.g-comma { transform: translateY(94%); }
+
+/* ---------- win / jackpot popups (js/neon-joker-spins/r1-popups.js) ----------
+   tiers t1..t4: each one bigger, brighter, denser than the one below */
+.r1-pops { position: absolute; left: 50%; top: 50%; width: var(--design-w); height: var(--design-h);
+  transform: translate(-50%, -50%) scale(var(--stage-scale)); z-index: 9; pointer-events: none; }
+.r1-pop { position: absolute; inset: 0; opacity: 0; transition: opacity 320ms ease; }
+.r1-pop.is-in { opacity: 1; }
+.r1-pop.is-out { opacity: 0; transition: opacity 340ms ease; }
+.r1-pop__coins { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; }
+.r1-pop__rays { position: absolute; left: 50%; top: 42%; width: 2400px; height: 2400px; margin: -1200px 0 0 -1200px; z-index: 0;
+  background: repeating-conic-gradient(from 0deg, var(--ray) 0deg 7deg, transparent 7deg 20deg);
+  -webkit-mask: radial-gradient(circle, #000 0, rgba(0,0,0,0.65) 22%, transparent 52%); mask: radial-gradient(circle, #000 0, rgba(0,0,0,0.65) 22%, transparent 52%);
+  opacity: 0; transition: opacity 600ms ease; animation: r1-rays var(--ray-t, 24s) linear infinite; }
+.r1-pop.is-in .r1-pop__rays { opacity: var(--ray-o, 0.35); }
+@keyframes r1-rays { to { transform: rotate(360deg); } }
+.r1-pop--bigWin { --ray: rgba(255, 70, 170, 0.55); --ray-o: 0.32; }
+.r1-pop--megaWin { --ray: rgba(44, 232, 255, 0.55); --ray-o: 0.5; --ray-t: 16s; }
+.r1-pop--epicWin { --ray: rgba(190, 90, 255, 0.65); --ray-o: 0.75; --ray-t: 10s; }
+.r1-pop--mini { --ray: rgba(80, 255, 120, 0.5); --ray-o: 0.32; }
+.r1-pop--minor { --ray: rgba(44, 232, 255, 0.55); --ray-o: 0.5; --ray-t: 16s; }
+.r1-pop--major { --ray: rgba(255, 60, 172, 0.62); --ray-o: 0.7; --ray-t: 11s; }
+.r1-pop--grand { --ray: rgba(255, 196, 60, 0.7); --ray-o: 0.95; --ray-t: 7s; }
+.r1-pop__decor { position: absolute; z-index: 2; width: var(--s); margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2);
+  rotate: var(--r); opacity: 0; scale: 0.2; filter: drop-shadow(0 0 10px rgba(255, 60, 172, 0.55));
+  transition: opacity 260ms ease var(--d), scale 480ms cubic-bezier(.2, .9, .3, 1.6) var(--d); }
+.r1-pop.is-in .r1-pop__decor { opacity: 1; scale: 1; animation: r1-decor-float var(--f) ease-in-out calc(var(--d) + 500ms) infinite; }
+@keyframes r1-decor-float { 50% { translate: 0 -10px; rotate: calc(var(--r) + 8deg); } }
+.r1-pop--t4 .r1-pop__decor, .r1-pop--t3 .r1-pop__decor { filter: drop-shadow(0 0 14px rgba(255, 196, 60, 0.6)); }
+.r1-pop__hero { position: absolute; left: 90px; bottom: 0; height: 840px; z-index: 1;
+  filter: drop-shadow(0 0 26px rgba(255, 60, 172, 0.45)); transform: translateX(-80px); transition: transform 560ms cubic-bezier(.2,.9,.3,1.2); }
+.r1-pop.is-in .r1-pop__hero { transform: none; }
+.r1-pop__col { position: absolute; left: 600px; top: 50%; width: 920px; z-index: 3; translate: 0 -50%;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  transform: scale(0.5); transition: transform 520ms cubic-bezier(.2,.9,.3,1.45); }
+.r1-pop.is-in .r1-pop__col { transform: none; }
+.r1-pop__title { width: var(--tw, 760px); max-width: 100%; filter: drop-shadow(0 0 20px var(--ray)); }
+.r1-pop--t2 .r1-pop__title { --tw: 860px; }
+.r1-pop--t3 .r1-pop__title { --tw: 920px; animation: r1-title-shake 2.4s ease-in-out 600ms infinite; }
+.r1-pop--t4 .r1-pop__title { --tw: 820px; animation: r1-title-shake 1.8s ease-in-out 600ms infinite; }
+.r1-pop--jp.r1-pop--t1 .r1-pop__title { --tw: 560px; } .r1-pop--jp.r1-pop--t2 .r1-pop__title { --tw: 640px; } .r1-pop--jp.r1-pop--t3 .r1-pop__title { --tw: 700px; }
+@keyframes r1-title-shake { 0%, 100% { rotate: 0deg; scale: 1; } 8% { rotate: -1.5deg; scale: 1.04; } 16% { rotate: 1.2deg; } 24% { rotate: 0deg; scale: 1; } }
+.r1-pop__panel { width: 600px; aspect-ratio: 900 / 264; background: url('../img/neon-joker-spins/skins/c/popups/panel.webp?v=3') center / 100% 100% no-repeat;
+  display: flex; align-items: center; justify-content: center; }
+.r1-pop--t3 .r1-pop__panel, .r1-pop--t4 .r1-pop__panel { width: 660px; }
+.r1-pop__panel .glyphs { height: 50%; display: flex; align-items: flex-end; justify-content: center; }
+.r1-pop__panel .glyphs img { height: 100%; width: auto; }
+/* phones: the plates in the middle, the punk above them cut at the waist, behind them */
+@media (orientation: portrait) {
+  .r1-pop__hero { left: 50%; top: 40px; bottom: auto; height: 860px; clip-path: inset(0 0 46% 0); transform: translate(-50%, 50px); }
+  .r1-pop.is-in .r1-pop__hero { transform: translateX(-50%); }
+  .r1-pop__col { left: 10px; top: 52%; width: 700px; }
+  .r1-pop__title { --tw: 640px !important; }
+  .r1-pop--jp.r1-pop--t1 .r1-pop__title { --tw: 520px !important; } .r1-pop--jp.r1-pop--t2 .r1-pop__title { --tw: 580px !important; }
+  .r1-pop__panel, .r1-pop--t3 .r1-pop__panel, .r1-pop--t4 .r1-pop__panel { width: 540px; }
+  .r1-pop__decor { width: calc(var(--s) * 0.8); }
+}
+.is-land .r1-pop__hero { left: 120px; height: 620px; }
+.is-land .r1-pop__col { left: 620px; width: 860px; }
+.is-land .r1-pop__title { --tw: 640px !important; }
+.is-land .r1-pop__panel { width: 480px !important; }
+.is-land .r1-pop__decor { width: calc(var(--s) * 0.8); }
+
+/* ---------- stage curtains between screens (js/neon-joker-spins/r1-curtain.js) ---------- */
+.r1-curtain { position: absolute; inset: 0; z-index: 40; pointer-events: none; visibility: hidden; overflow: hidden; }
+.r1-curtain.is-on { visibility: visible; pointer-events: auto; }
+.r1-curtain__half { position: absolute; top: 0; bottom: 0; width: 52%; background: var(--curtain) right center / cover no-repeat;
+  filter: drop-shadow(0 0 24px rgba(0, 0, 0, 0.85)); }
+.r1-curtain__half--l { left: 0; transform: translateX(-102%); }
+.r1-curtain__half--r { right: 0; transform: translateX(102%); background: none; }
+.r1-curtain__half--r::before { content: ''; position: absolute; inset: 0; background: var(--curtain) right center / cover no-repeat; transform: scaleX(-1); }
+.r1-curtain.is-shut .r1-curtain__half { transition: transform var(--close-ms) cubic-bezier(.55, .05, .7, .35); transform: none; }
+.r1-curtain[data-kind="hw"].is-shut .r1-curtain__half--l { animation: r1-curtain-sway-l 1s ease-in-out var(--close-ms) infinite; }
+.r1-curtain.is-open .r1-curtain__half { transition: transform var(--open-ms) cubic-bezier(.3, .6, .35, 1); }
+.r1-curtain.is-open .r1-curtain__half--l { transform: translateX(-102%); }
+.r1-curtain.is-open .r1-curtain__half--r { transform: translateX(102%); }
+.r1-curtain.is-shut .r1-curtain__half--r { transform: none; }
+@keyframes r1-curtain-sway-l { 50% { translate: -0.6% 0; } }   /* translate, not transform: the open slide must keep its transition */
+/* Free Spins: metal doors — they slam shut with a short bounce, no sway */
+.r1-curtain[data-kind="fs"].is-shut .r1-curtain__half { transition: transform var(--close-ms) cubic-bezier(.7, 0, .84, 0); }
+.r1-curtain[data-kind="fs"].is-shut .r1-curtain__half--l { animation: r1-door-bounce-l 260ms ease-out var(--close-ms); }
+.r1-curtain[data-kind="fs"].is-shut .r1-curtain__half--r { animation: r1-door-bounce-r 260ms ease-out var(--close-ms); }
+@keyframes r1-door-bounce-l { 35% { translate: -1.6% 0; } 70% { translate: 0.4% 0; } }
+@keyframes r1-door-bounce-r { 35% { translate: 1.6% 0; } 70% { translate: -0.4% 0; } }
+.r1-curtain[data-kind="fs"].is-open .r1-curtain__half { transition: transform var(--open-ms) cubic-bezier(.5, 0, .3, 1); }
+.r1-curtain[data-kind="fs"] .r1-curtain__half { width: 50.5%; }

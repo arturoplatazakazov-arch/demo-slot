@@ -85,6 +85,8 @@ function setBusyUi(busy) {
 // A page can stage the round itself (R1, client round 2: intro with the hero, +5, summary,
 // "NEXT" plate during the hold) through window.NJS_HOOKS; without them the generic popups play.
 const hooks = () => window.NJS_HOOKS || {};
+// screen switches go through the page's transition when it has one (R1: stage curtains)
+const curtainOr = async (fn, kind) => (hooks().curtain ? hooks().curtain(fn, kind) : fn());
 
 function enterFreeSpins(spins, bet) {
   gameState.inFreeSpins = true;
@@ -101,7 +103,7 @@ async function leaveFreeSpins(total, maxWin) {
   gameState.fsLeft = 0;
   if (hooks().fsSummary) await hooks().fsSummary(total, gameState.fsPlayed || 0, !!maxWin);
   else await playPopup('totalWin', total, 3200, maxWin ? { sub: 'MAX WIN 2 500×' } : {});
-  setFreeSpinsMode(false);
+  await curtainOr(() => setFreeSpinsMode(false), 'fs');
   gameState.fsBet = null;
   renderBet();
 }
@@ -128,9 +130,8 @@ async function presentResult(data, bet) {
     if (lineWin) await new Promise((r) => setTimeout(r, 1500));
     const hwTotal = await playHoldAndWin(hw, bet);
     await playPopup('totalWin', hw.total_win, 2600, hw.collector_total ? { sub: `COLLECTOR ${hw.collector_total}×` } : {});
-    exitHoldAndWinMode();
     // Поле раунда (монеты + пустые ячейки) уходит — возвращаем сетку спина.
-    await applyGrid(data.grid);
+    await curtainOr(async () => { exitHoldAndWinMode(); await applyGrid(data.grid); }, 'hw');
     void hwTotal;
   }
   if (hw && fsTriggeredNow && hooks().fsNext) hooks().fsNext(false);
@@ -142,7 +143,7 @@ async function presentResult(data, bet) {
       if (hooks().fsIntro) await hooks().fsIntro(fs.spins_awarded || fs.spins_remaining);
       else await playPopup('freeSpins', 0, 2000, { panelText: String(fs.spins_awarded || fs.spins_remaining) });
     }
-    enterFreeSpins(fs.spins_remaining, bet);
+    await curtainOr(() => enterFreeSpins(fs.spins_remaining, bet), 'fs');
   } else if (retrigger) {
     await celebrateScatters();
     flashRetrigger(fs.spins_awarded || 5);
