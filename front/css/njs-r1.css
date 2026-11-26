@@ -520,3 +520,46 @@ body.r1-scene-on .stage .mascot, body.r1-scene-on .r1-hero-spine { opacity: 0; t
 @keyframes r1-door-bounce-r { 35% { translate: 1.6% 0; } 70% { translate: -0.4% 0; } }
 .r1-curtain[data-kind="fs"].is-open .r1-curtain__half { transition: transform var(--open-ms) cubic-bezier(.5, 0, .3, 1); }
 .r1-curtain[data-kind="fs"] .r1-curtain__half { width: 50.5%; }
+
+/* ---------- Hold & Win concert spotlights (js/neon-joker-spins/r1-lights.js) ----------
+   beams hang from beyond the top edge and sweep the scene; calm between respins, wild during one */
+.r1-lights { inset: 0; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity 700ms ease;
+  --t: 6s; --o: 0.42; mix-blend-mode: screen; }
+.r1-lights--back { z-index: 1; }
+.r1-lights--front { z-index: 3; --o: 0; }
+.screen.is-hw .r1-lights { opacity: 1; }
+.r1-beam { position: absolute; top: -14%; width: 24%; height: 155%; margin-left: -12%; transform-origin: 50% 0;
+  background: linear-gradient(to bottom, rgba(var(--c), 0.95) 0%, rgba(var(--c), 0.42) 30%, rgba(var(--c), 0.12) 62%, transparent 88%);
+  clip-path: polygon(47% 0, 53% 0, 100% 100%, 0 100%); filter: blur(5px); opacity: var(--o);
+  animation: r1-beam-sweep var(--t) ease-in-out var(--d) infinite alternate; transition: opacity 400ms ease; }
+@keyframes r1-beam-sweep { from { rotate: var(--a0); } to { rotate: var(--a1); } }
+/* a respin runs: faster sweeps, brighter beams, a strobe, the thin beams over the stage switch on */
+body.r1-hw-spinning .r1-lights { --t: 1.3s; --o: 0.85; }
+body.r1-hw-spinning .r1-lights--front { --o: 0.32; }
+body.r1-hw-spinning .r1-lights--back { animation: r1-strobe 220ms steps(2, jump-none) infinite; }
+@keyframes r1-strobe { 50% { filter: brightness(1.35); } }
+/* a coin slams in: one bright flash */
+.r1-lights.is-flash { animation: r1-flash 380ms ease-out; }
+@keyframes r1-flash { 0% { filter: brightness(2.4); } 100% { filter: none; } }
+@media (orientation: portrait) { .r1-beam { width: 46%; margin-left: -23%; height: 120%; } }
+/* respins reset: wild burst -> all beams on the counter -> it rolls up to 3 in the spot */
+.r1-lights.is-burst { --t: 0.34s; --o: 1; }
+.r1-lights--front.is-burst { --o: 0.6; }
+.r1-lights.is-focus { --o: 1; }
+.r1-lights--front.is-focus { --o: 0.75; }
+.r1-lights.is-focus .r1-beam { clip-path: polygon(48.5% 0, 51.5% 0, 66% 100%, 34% 100%); }
+.r1-lights.is-hide .r1-beam { opacity: 0 !important; transition: opacity 160ms ease !important; }
+.r1-resp.is-spot { animation: r1-spot 900ms ease-out; }
+.r1-resp.is-spot .r1-cnt__n { filter: drop-shadow(0 0 6px #fff) drop-shadow(0 0 18px #ffe9a8) drop-shadow(0 0 30px rgba(255, 60, 172, 0.9)); }
+@keyframes r1-spot { 0% { filter: brightness(1); scale: 1; } 25% { filter: brightness(1.8); scale: 1.08; } 100% { filter: brightness(1.15); scale: 1; } }
+/* while aimed, the beams come over the stage and are brightest where they hit the counter */
+.r1-lights.is-focus { z-index: 7; }
+.r1-lights.is-focus .r1-beam { filter: blur(3px);
+  background: linear-gradient(to bottom, rgba(var(--c), 0.9) 0%, rgba(var(--c), 0.35) 45%, rgba(var(--c), 0.6) 92%, rgba(var(--c), 0.25) 100%); }
+.r1-lights--back.is-focus { --o: 0.7; }
+.r1-lights--front.is-focus { --o: 0.6; }
+.r1-spot { position: fixed; width: 460px; height: 220px; margin: -110px 0 0 -230px; pointer-events: none; z-index: 30; opacity: 0;
+  background: radial-gradient(ellipse at center, rgba(255, 233, 168, 0.34) 0%, rgba(255, 60, 172, 0.2) 40%, transparent 72%);
+  mix-blend-mode: screen; transition: opacity 260ms ease; }
+.r1-spot.is-on { opacity: 1; animation: r1-spot-pulse 700ms ease-in-out infinite; }
+@keyframes r1-spot-pulse { 50% { scale: 1.12; } }

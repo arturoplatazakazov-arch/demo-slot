@@ -1060,10 +1060,18 @@ async function playHoldAndWin(hw, bet) {
       locked.set(idx(c), { coin: c, info });
     }
     if (landed.length) {
+      // a page can stage the reset itself (R1: spotlights converge on the counter, js/neon-joker-spins/r1-lights.js)
+      const resetHook = window.NJS_HOOKS && window.NJS_HOOKS.respinReset;
+      const from = left;
       left = 3;
-      setRespinLamps(3);
-      restartClass(document.querySelector('#hwPanel .hw-lamps'), 'is-reset', 620);
-      await hwWait(700);
+      if (resetHook) {
+        await resetHook(from, 3, turbo);
+        setRespinLamps(3);
+      } else {
+        setRespinLamps(3);
+        restartClass(document.querySelector('#hwPanel .hw-lamps'), 'is-reset', 620);
+        await hwWait(700);
+      }
     } else {
       await hwWait(450);
     }
