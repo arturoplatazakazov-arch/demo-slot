@@ -191,6 +191,10 @@
           { label: 'MAJOR', run: () => hitPlate('major') }, { label: 'GRAND', run: () => hitPlate('grand') },
           { label: 'Маскот радуется', run: () => mascotCheer() },
         ] },
+        ...(window.R1Amounts ? [{ title: 'Суммы (валюта для казино, множители для крипто)', items: [
+          { label: 'В валюте', run: () => window.R1Amounts.set('cash') },
+          { label: 'В множителях ×', run: () => window.R1Amounts.set('x') },
+        ] }] : []),
       ] },
       { title: 'Комбинации', sections: [
         { title: '3 в ряд по линии (1 средняя · 2 верх · 3 низ · 4 ↘ · 5 ↗)', matrix: { rows: ROWS, cols: [1, 2, 3, 4, 5], run: (row, n) => lineCombo(row.key, n - 1) } },

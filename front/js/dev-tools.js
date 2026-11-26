@@ -43,6 +43,9 @@
   }
 
   function enabled() {
+    // a page can keep its DEV / ♪ pult on a deployed origin too (window.DEV_TOOLS_ALWAYS, e.g. the
+    // client build of Neon Joker Spins R1); ?dev=0 still hides it
+    if (window.DEV_TOOLS_ALWAYS && new URLSearchParams(location.search).get('dev') !== '0') return true;
     const cfg = window.SLOT_CONFIG;
     if (cfg && cfg.showDevPanels != null) return !!cfg.showDevPanels;
     return ['localhost', '127.0.0.1', ''].includes(location.hostname);

@@ -34,7 +34,7 @@ window.r1FitGlyphs = function (el, box, ratio = 0.8) {
   // Hint texts live here, apart from the art, so they can be localised (client, round 2):
   // one dictionary per language, ?lang=xx or the browser's language, English by default.
   const STRINGS = {
-    en: { fs: ['FREE SPINS', '3 JOKERS ANYWHERE'], hw: ['HOLD & WIN', 'COIN ON EVERY REEL'] },
+    en: { fs: ['FREE SPINS', '3 JOKERS ANYWHERE'], hw: ['HOLD & WIN', 'COIN ON EVERY REEL'], respins: 'RESPINS', fsLeft: 'FREE SPINS' },
   };
   const LANG = (new URLSearchParams(location.search).get('lang') || navigator.language || 'en').slice(0, 2).toLowerCase();
   const T = STRINGS[LANG] || STRINGS.en;
@@ -53,9 +53,10 @@ window.r1FitGlyphs = function (el, box, ratio = 0.8) {
   const lamps = document.querySelector('#hwPanel .hw-lamps');
   const hud = document.createElement('div');
   hud.className = 'obj r1-count';
-  hud.innerHTML = `<div class="r1-resp"><img class="r1-resp__art" src="${UI}/respins.webp?v=1" alt="">`
-    + [1, 2, 3].map((n) => `<span class="r1-resp__n" data-n="${n}"><img src="${G}/${n}.webp?v=3" alt="${n}"></span>`).join('')
-    + `</div><div class="r1-fsc"><img class="r1-fsc__art" src="${UI}/fs_count.webp?v=1" alt=""><span class="r1-fsc__n glyphs"></span></div>`;
+  // round 2 (client): ONE counter scheme for both bonuses, as in 3OAKS games — a plate with the
+  // label and a big number of what is LEFT (no "1 2 3" lamps); it pops on every change
+  hud.innerHTML = `<div class="r1-resp r1-cnt"><span class="r1-cnt__label">${T.respins}</span><span class="r1-cnt__n glyphs"></span></div>`
+    + `<div class="r1-fsc r1-cnt"><span class="r1-cnt__label">${T.fsLeft}</span><span class="r1-cnt__n glyphs r1-fsc__n"></span></div>`;
   stage.appendChild(hud);
   const total = document.createElement('div');
   total.className = 'obj r1-total';
@@ -81,24 +82,23 @@ window.r1FitGlyphs = function (el, box, ratio = 0.8) {
   syncTotal();
   // numbers stay inside their plates: TOTAL WIN, the free-spin counter, the jackpot windows
   window.r1FitGlyphs(totalValue, total.querySelector('.r1-total__face'), 0.9);
-  window.r1FitGlyphs(hud.querySelector('.r1-fsc__n'), hud.querySelector('.r1-fsc'), 0.56);
+  hud.querySelectorAll('.r1-cnt').forEach((c) => window.r1FitGlyphs(c.querySelector('.r1-cnt__n'), c, 0.3));
+  // pop the number whenever it changes
+  hud.querySelectorAll('.r1-cnt__n').forEach((n) => new MutationObserver(() => {
+    n.classList.remove('is-tick'); void n.offsetWidth; n.classList.add('is-tick');
+  }).observe(n, { childList: true }));
   document.querySelectorAll('.jp__value').forEach((el) => window.r1FitGlyphs(el, el, 0.94));
   if (lamps) {
+    // respins left = the lit lamps of slot.js's (hidden) panel; back to 3 = a reset flash
     const resp = hud.querySelector('.r1-resp');
-    const nums = [...resp.querySelectorAll('.r1-resp__n')];
-    let prev = -1;
+    const num = resp.querySelector('.r1-cnt__n');
     const sync = () => {
       const lit = lamps.querySelectorAll('.hw-lamp.is-lit').length;
-      nums.forEach((el) => {
-        const on = Number(el.dataset.n) <= lit;
-        if (prev > lit && !on && el.classList.contains('is-on')) { el.classList.remove('is-tick'); void el.offsetWidth; el.classList.add('is-tick'); }
-        el.classList.toggle('is-on', on);
-      });
+      setGlyphs(num, String(lit));
       if (lamps.classList.contains('is-reset') && !resp.classList.contains('is-reset')) {
         resp.classList.add('is-reset');
         setTimeout(() => resp.classList.remove('is-reset'), 700);
       }
-      prev = lit;
     };
     new MutationObserver(sync).observe(lamps, { attributes: true, subtree: true, attributeFilter: ['class'] });
     sync();
@@ -136,6 +136,24 @@ window.r1FitGlyphs = function (el, box, ratio = 0.8) {
     }, ON_MS);
   };
   show();
+  // frame state: hot while a win is shown (win strip / highlighted cells) and in the bonuses
+  {
+    const reelEl = document.getElementById('reel');
+    const winEl = document.getElementById('reelWin');
+    const scr = document.getElementById('screen');
+    let raf = 0;
+    const hot = () => {
+      raf = 0;
+      const on = (winEl && winEl.classList.contains('is-on'))
+        || (reelEl && !!reelEl.querySelector('.is-winning, .is-win-active'))
+        || scr.classList.contains('is-hw') || scr.classList.contains('is-fs');
+      document.body.classList.toggle('r1-frame-hot', on);
+    };
+    const later = () => { if (!raf) raf = requestAnimationFrame(hot); };
+    [winEl, scr].forEach((el) => el && new MutationObserver(later).observe(el, { attributes: true, attributeFilter: ['class'] }));
+    if (reelEl) new MutationObserver(later).observe(reelEl, { attributes: true, subtree: true, attributeFilter: ['class'] });
+    hot();
+  }
   const win = document.getElementById('reelWin');
   if (win) {
     const sync = () => plaque.classList.toggle('is-win', win.classList.contains('is-on'));

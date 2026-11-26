@@ -13,7 +13,10 @@
 /* ---------- focus: dim what is not the game ---------- */
 .bg__img--base { filter: brightness(0.58) saturate(0.82) !important; }
 .bg__img--fs { filter: brightness(0.8) saturate(0.95) !important; }
-.cabinet { filter: brightness(0.95) saturate(1); }  /* single tube: thicker + brighter (client, 2026-11-23) */
+/* two frame states (client round 2): at rest the tube is calm so the symbols and the jackpots are the
+   brightest thing on screen; a win, Hold & Win and Free Spins light it up (body.r1-frame-hot, r1.js) */
+.cabinet { filter: brightness(0.52) saturate(0.72); transition: filter 520ms ease; }
+body.r1-frame-hot .cabinet { filter: brightness(1.05) saturate(1.08); transition: filter 180ms ease-out; }
 /* the JOKER sign doubled the logo, ROCK / PUNK made him read as a rocker (feedback 3, "one small thing") */
 .graffiti .gf:has(text) { display: none; }
 .graffiti { opacity: 0.55; }
@@ -55,7 +58,7 @@
   background: center / contain no-repeat; transition: transform 160ms ease, filter 160ms ease;
 }
 .r1-buy__card:hover { transform: translateY(-4px) scale(1.02); filter: brightness(1.12); }
-.r1-buy__card--fs { background-image: url('../img/neon-joker-spins/skins/c/sets/r1/img/buy_fs.webp?v=2'); }
+.r1-buy__card--fs { background-image: url('../img/neon-joker-spins/skins/c/sets/r1/img/buy_fs.webp?v=3'); }
 .r1-buy__card--hw { background-image: url('../img/neon-joker-spins/skins/c/sets/r1/img/buy_hw.webp?v=1'); }
 .r1-buy__price {
   position: absolute; left: 12%; right: 12%; top: 76.5%; height: 11%;
@@ -296,7 +299,7 @@ body.hero-lean .mascot { left: var(--r1-edge, 0px) !important; top: 70px !import
 
 /* ---------- bonus HUD (r1.js): counter on the frame's bottom tube, TOTAL WIN at the side ---------- */
 #hwPanel, #fsPanel { display: none !important; }
-.r1-count { left: 670px; top: 666px; width: 260px; aspect-ratio: 1000 / 330; z-index: 6; pointer-events: none; }
+.r1-count { left: 645px; top: 670px; width: 310px; aspect-ratio: 800 / 188; z-index: 6; pointer-events: none; --cu: 3.1px; /* 1% of the plate width */ }
 .r1-total {
   left: 1140px; top: 618px; width: 300px; aspect-ratio: 2.8037; z-index: 5; pointer-events: none;
   --u: calc(300px / 100);
@@ -309,27 +312,20 @@ body.hero-lean .mascot { left: var(--r1-edge, 0px) !important; top: 70px !import
 .r1-resp, .r1-fsc { position: absolute; inset: 0; display: none; }
 .screen.is-hw .r1-resp { display: block; }
 .screen.is-fs:not(.is-hw) .r1-fsc { display: block; }
-.r1-resp__art, .r1-fsc__art { position: absolute; inset: 0; width: 100%; height: 100%; }
-.r1-resp__n {
-  position: absolute; top: 57.6%; height: 30%; display: flex; justify-content: center;
-  transform: translate(-50%, -50%);
-  opacity: 0.22; filter: grayscale(0.7) brightness(0.55);
-  transition: opacity 260ms ease, filter 260ms ease;
-}
 .r1-resp__n img, .r1-fsc__n img, .r1-total__value img { height: 100%; width: auto; }
-.r1-resp__n[data-n="1"] { left: 26.66%; }
-.r1-resp__n[data-n="2"] { left: 50.05%; }
-.r1-resp__n[data-n="3"] { left: 73.41%; }
-.r1-resp__n.is-on { opacity: 1; filter: drop-shadow(0 0 4px #fff2b0) drop-shadow(0 0 12px rgba(255, 60, 172, 0.95)); }
-@keyframes r1-resp-tick { 0% { transform: translate(-50%, -50%) scale(1.35); opacity: 1; filter: brightness(2.2) drop-shadow(0 0 14px #ff3cac); } 100% { transform: translate(-50%, -50%) scale(1); } }
-.r1-resp__n.is-tick { animation: r1-resp-tick 420ms ease-out; }
+/* one counter scheme (client round 2): crown-less plate, label left, big number of what is LEFT right */
+.r1-cnt { background: url('../img/neon-joker-spins/skins/c/sets/r1/ui/next_plate.webp?v=1') center / 100% 100% no-repeat; }
+.r1-cnt__label { position: absolute; left: 9%; top: 50%; transform: translateY(-50%); white-space: nowrap;
+  font-family: 'Luckiest Guy', system-ui, sans-serif; font-size: calc(var(--cu) * 9.5); letter-spacing: 0.05em; color: #fff;
+  text-shadow: 0 0 calc(var(--cu) * 0.8) #2ce8ff, 0 0 calc(var(--cu) * 2.6) #2ce8ff; }
+.r1-cnt__n { position: absolute; right: 9%; top: 52%; height: 58%; display: flex; align-items: flex-end; justify-content: flex-end;
+  transform: translateY(-50%); transform-origin: right center;
+  filter: drop-shadow(0 0 4px #fff2b0) drop-shadow(0 0 12px rgba(255, 60, 172, 0.95)); }
+.r1-cnt__n img { height: 100%; width: auto; }
+@keyframes r1-cnt-pop { 0% { scale: 1.45; filter: brightness(2.2) drop-shadow(0 0 16px #ff3cac); } 100% { scale: 1; } }
+.r1-cnt__n.is-tick { animation: r1-cnt-pop 420ms ease-out; }
 @keyframes r1-resp-reset { 0% { filter: brightness(1.9); transform: scale(1.06); } 100% { filter: brightness(1); transform: none; } }
 .r1-resp.is-reset { animation: r1-resp-reset 620ms ease-out; }
-.r1-resp.is-reset .r1-resp__n.is-on { animation: r1-resp-tick 520ms ease-out backwards; }
-.r1-resp.is-reset .r1-resp__n[data-n="2"] { animation-delay: 90ms; }
-.r1-resp.is-reset .r1-resp__n[data-n="3"] { animation-delay: 180ms; }
-.r1-fsc__n { position: absolute; left: 50%; top: var(--fsc-y, 57%); height: 34%; display: flex; justify-content: center;
-  transform: translate(-50%, -50%); filter: drop-shadow(0 0 4px #fff2b0) drop-shadow(0 0 12px rgba(255, 60, 172, 0.9)); }
 .r1-total__face { position: absolute; left: 9%; right: 8%; top: 33%; bottom: 13%;
   display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
 .r1-total__label { font-family: 'Luckiest Guy', system-ui, sans-serif; font-size: calc(var(--u) * 5.2); letter-spacing: 0.08em; color: #fff;
@@ -337,10 +333,10 @@ body.hero-lean .mascot { left: var(--r1-edge, 0px) !important; top: 70px !import
 .r1-total__value { display: flex; height: calc(var(--u) * 11); margin-top: calc(var(--u) * 1.2); }
 /* portrait: counter on the bottom tube in the middle, TOTAL WIN to its right */
 @media (orientation: portrait) {
-  .r1-count { left: 245px; top: 1043px; width: 230px; z-index: 8; }
-  .r1-total { left: 484px; top: 1040px; width: 226px; --u: calc(226px / 100); z-index: 8; }
+  .r1-count { left: 190px; top: 1050px; width: 300px; --cu: 3px; z-index: 8; }
+  .r1-total { left: 496px; top: 1036px; width: 216px; --u: calc(216px / 100); z-index: 8; }
 }
-.is-land .r1-count { left: 630px; top: 487px; width: 220px; }
+.is-land .r1-count { left: 605px; top: 490px; width: 270px; --cu: 2.7px; }
 .is-land .r1-total { left: 862px; top: 484px; width: 206px; --u: calc(206px / 100); }
 
 /* ---------- Free Spins staging (js/neon-joker-spins/r1-scenes.js, client round 2) ----------
@@ -413,3 +409,29 @@ body.r1-scene-on .stage .mascot, body.r1-scene-on .r1-hero-spine { opacity: 0; t
 /* jackpot windows centre their glyphs: the dot (38 of the digits' 116 px) drops by its own height
    to the baseline, so 2.5M does not read as 2·5M */
 .jp__value img[alt="."] { transform: translateY(100%); }
+
+/* the 7 is the most valuable of the three high symbols: more shine (client round 2) — a bit brighter,
+   a glint sweeping across it (masked by its own art, so it stays inside the outline) and two sparkles */
+.reel__cell[data-symbol="seven"] > img.sym { filter: brightness(1.1) saturate(1.15) drop-shadow(0 0 6px rgba(255, 70, 90, 0.55)); }
+.reel__cell[data-symbol="seven"]::after, .reel__cell[data-symbol="seven"]::before {
+  content: ''; position: absolute; inset: 0; margin: auto; pointer-events: none;
+  width: calc(100% * var(--sym)); height: calc(100% * var(--sym)); scale: 1.1;
+}
+.reel__cell[data-symbol="seven"]::after {
+  -webkit-mask: url('../img/neon-joker-spins/skins/c/sets/r1/symbols/seven.webp?v=3') center / contain no-repeat;
+  mask: url('../img/neon-joker-spins/skins/c/sets/r1/symbols/seven.webp?v=3') center / contain no-repeat;
+  background: linear-gradient(110deg, transparent 38%, rgba(255, 255, 255, 0.0) 42%, rgba(255, 252, 230, 0.95) 50%, rgba(255, 255, 255, 0) 58%, transparent 62%) 0 0 / 300% 100% no-repeat;
+  mix-blend-mode: plus-lighter; animation: r1-seven-glint 3.6s ease-in-out infinite;
+}
+.reel__cell[data-symbol="seven"]::before {
+  background:
+    radial-gradient(circle at 26% 22%, #fff 0 1.2%, rgba(255, 240, 200, 0.9) 2%, transparent 5.5%),
+    radial-gradient(circle at 74% 64%, #fff 0 1%, rgba(255, 240, 200, 0.85) 1.8%, transparent 4.8%);
+  z-index: 1; animation: r1-seven-twinkle 2.4s ease-in-out infinite;
+}
+@keyframes r1-seven-glint { 0%, 55% { background-position: 150% 0; } 85%, 100% { background-position: -50% 0; } }
+@keyframes r1-seven-twinkle { 0%, 100% { opacity: 0; scale: 0.9; } 35% { opacity: 1; scale: 1.14; } 60% { opacity: 0.2; } }
+.reel__cell.is-dimmed[data-symbol="seven"]::after, .reel__cell.is-dimmed[data-symbol="seven"]::before,
+.reel__cell.is-animating[data-symbol="seven"]::after, .reel__cell.is-animating[data-symbol="seven"]::before { display: none; }
+/* the comma likewise (51 of 116 px, and it hangs 30 % below the line like everywhere else) */
+.jp__value img.g-comma { transform: translateY(94%); }
