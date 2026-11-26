@@ -2,6 +2,24 @@
 // feature hints (desktop: next to the jackpots; portrait: rotating in the win strip), and a buy
 // window with both bonuses. The game only sells Hold & Win, so the Free Spins card is a static
 // mock of the future buy. Layout: css/njs-r1.css.
+// Numbers never leave their plate (client round 2): a glyph row wider than `ratio` of its box is
+// scaled down (the CSS `scale` property, so the element's own transform stays intact). Re-fits on
+// every change of the row (count-ups, counters).
+window.r1FitGlyphs = function (el, box, ratio = 0.8) {
+  if (!el || el.__r1fit) return;
+  el.__r1fit = true;
+  const fit = () => {
+    el.style.scale = '';
+    const need = [...el.children].reduce((w, c) => w + c.getBoundingClientRect().width, 0);
+    const room = (box || el.parentElement).getBoundingClientRect().width * ratio;
+    el.style.scale = need > room && need > 0 ? String((room / need).toFixed(3)) : '';
+  };
+  new MutationObserver(() => requestAnimationFrame(fit)).observe(el, { childList: true, subtree: true });
+  el.addEventListener('load', () => requestAnimationFrame(fit), true);
+  window.addEventListener('resize', () => requestAnimationFrame(fit));
+  requestAnimationFrame(fit);
+};
+
 (function () {
   const stage = document.getElementById('stage');
   if (!stage) return;
@@ -13,9 +31,17 @@
     room.className = 'bg__img bg__img--room';
     bgLayer.appendChild(room);
   }
+  // Hint texts live here, apart from the art, so they can be localised (client, round 2):
+  // one dictionary per language, ?lang=xx or the browser's language, English by default.
+  const STRINGS = {
+    en: { fs: ['FREE SPINS', '3 JOKERS ANYWHERE'], hw: ['HOLD & WIN', 'COIN ON EVERY REEL'] },
+  };
+  const LANG = (new URLSearchParams(location.search).get('lang') || navigator.language || 'en').slice(0, 2).toLowerCase();
+  const T = STRINGS[LANG] || STRINGS.en;
+  // the condition is drawn as well as written: 3 jokers / a coin in each of the 3 reels
   const HINTS = [
-    { cls: 'fs', img: `${SYM}/scatter.webp?v=3`, n: '3+', what: 'FREE SPINS', sub: 'JOKERS ANYWHERE' },
-    { cls: 'hw', img: `${SYM}/coin.webp?v=3`, n: '5+', what: 'HOLD & WIN', sub: 'COINS ANYWHERE' },
+    { cls: 'fs', img: `${SYM}/scatter.webp?v=3`, slots: false, what: T.fs[0], sub: T.fs[1] },
+    { cls: 'hw', img: `${SYM}/coin.webp?v=3`, slots: true, what: T.hw[0], sub: T.hw[1] },
   ];
 
   // Bonus HUD (client, 2026-11-23): the counter sits in the middle of the frame's bottom tube
@@ -53,6 +79,10 @@
   [hwTotal, fsWin, screenEl].forEach((el) => el && new MutationObserver(syncTotal).observe(el, el === screenEl
     ? { attributes: true, attributeFilter: ['class'] } : { childList: true, subtree: true, characterData: true }));
   syncTotal();
+  // numbers stay inside their plates: TOTAL WIN, the free-spin counter, the jackpot windows
+  window.r1FitGlyphs(totalValue, total.querySelector('.r1-total__face'), 0.9);
+  window.r1FitGlyphs(hud.querySelector('.r1-fsc__n'), hud.querySelector('.r1-fsc'), 0.56);
+  document.querySelectorAll('.jp__value').forEach((el) => window.r1FitGlyphs(el, el, 0.94));
   if (lamps) {
     const resp = hud.querySelector('.r1-resp');
     const nums = [...resp.querySelectorAll('.r1-resp__n')];
@@ -79,21 +109,23 @@
   // win strip (hidden while a win is shown and during the bonuses).
   const plaque = document.createElement('div');
   plaque.className = 'obj r1-plaque';
-  plaque.innerHTML = '<div class="r1-plaque__face"><img class="r1-plaque__icon" alt=""><span class="r1-plaque__text"><b></b><small></small></span></div>';
+  plaque.innerHTML = '<div class="r1-plaque__face"><span class="r1-plaque__art"></span><span class="r1-plaque__text"><b></b><small></small></span></div>';
   stage.appendChild(plaque);
   const face = plaque.firstElementChild;
-  const icon = face.querySelector('img');
+  const art = face.querySelector('.r1-plaque__art');
   const title = face.querySelector('b');
   const sub = face.querySelector('small');
+  // any text, any language: the whole face shrinks to the plate when it would overflow
+  window.r1FitGlyphs(face, plaque, 0.82);
   HINTS.forEach((h) => { const i = new Image(); i.src = h.img; });
   const ON_MS = 3600, OFF_MS = 520, GAP_MS = 900;
   let k = 0;
   const show = () => {
     const h = HINTS[k];
     plaque.dataset.k = h.cls;
-    icon.src = h.img;
+    art.innerHTML = [0, 1, 2].map(() => `<i class="${h.slots ? 'is-slot' : ''}"><img src="${h.img}" alt=""></i>`).join('');
     title.textContent = h.what;
-    sub.textContent = `${h.n} ${h.sub}`;
+    sub.textContent = h.sub;
     plaque.classList.remove('is-off');
     void plaque.offsetWidth;
     plaque.classList.add('is-on');
@@ -134,11 +166,11 @@
     const note = document.createElement('p');
     note.className = 'r1-buy__note';
     cards.after(note);
-    // Free Spins mock price = 100× bet (Hold & Win costs 34.5× bet)
+    // Free Spins mock price = 100× bet (Hold & Win costs 23.5× bet)
     const fsPrice = cards.querySelector('#r1BuyFs');
     const upd = () => {
       const v = parseFloat(price.textContent.replace(/[^\d.]/g, '')) || 0;
-      fsPrice.textContent = Math.round((v / 34.5) * 100).toLocaleString('en-US');
+      fsPrice.textContent = Math.round((v / 23.5) * 100).toLocaleString('en-US');
       note.textContent = '';
     };
     new MutationObserver(upd).observe(price, { childList: true, characterData: true, subtree: true });

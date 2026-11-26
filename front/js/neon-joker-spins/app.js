@@ -12,7 +12,7 @@
 const GAME_ID = 'neon-joker-spins';
 const BUY_ID = 'hold_and_win_buy';
 // Зеркалит BONUS_BUY_COST_MULTIPLIER сида — только для цены на кнопке.
-const BUY_COST_MULTIPLIER = 34.5;
+const BUY_COST_MULTIPLIER = 23.5;
 
 const gameState = {
   sessionId: null,
@@ -82,11 +82,15 @@ function setBusyUi(busy) {
 }
 
 // --- Free Spins ---------------------------------------------------------------
+// A page can stage the round itself (R1, client round 2: intro with the hero, +5, summary,
+// "NEXT" plate during the hold) through window.NJS_HOOKS; without them the generic popups play.
+const hooks = () => window.NJS_HOOKS || {};
 
 function enterFreeSpins(spins, bet) {
   gameState.inFreeSpins = true;
   gameState.fsLeft = spins;
   gameState.fsBet = bet;
+  gameState.fsPlayed = 0;
   setFreeSpinsMode(true);
   updateFreeSpinsPanel(spins, 0);
   renderBet();
@@ -95,7 +99,8 @@ function enterFreeSpins(spins, bet) {
 async function leaveFreeSpins(total, maxWin) {
   gameState.inFreeSpins = false;
   gameState.fsLeft = 0;
-  await playPopup('totalWin', total, 3200, maxWin ? { sub: 'MAX WIN 2 500×' } : {});
+  if (hooks().fsSummary) await hooks().fsSummary(total, gameState.fsPlayed || 0, !!maxWin);
+  else await playPopup('totalWin', total, 3200, maxWin ? { sub: 'MAX WIN 2 500×' } : {});
   setFreeSpinsMode(false);
   gameState.fsBet = null;
   renderBet();
@@ -116,7 +121,9 @@ async function presentResult(data, bet) {
   const lineWin = (data.line_wins || []).length || (data.count_wins || []).length;
   if (lineWin) playWinCells(data.winning_cells, data.line_wins, data.count_wins);
 
-  // 1. Hold & Win — всегда первым.
+  // 1. Hold & Win — всегда первым. Free spins won on the same spin wait: a "NEXT" plate hangs
+  // through the whole hold, then the round starts.
+  if (hw && fsTriggeredNow && hooks().fsNext) hooks().fsNext(true, fs.spins_awarded || fs.spins_remaining);
   if (hw) {
     if (lineWin) await new Promise((r) => setTimeout(r, 1500));
     const hwTotal = await playHoldAndWin(hw, bet);
@@ -126,20 +133,24 @@ async function presentResult(data, bet) {
     await applyGrid(data.grid);
     void hwTotal;
   }
+  if (hw && fsTriggeredNow && hooks().fsNext) hooks().fsNext(false);
 
   // 2. Free Spins: вход / ретриггер / счётчик / выход.
   if (fsTriggeredNow) {
     await celebrateScatters();
     if (!(await window.showBonusScreen('fs'))) {
-      await playPopup('freeSpins', 0, 2000, { panelText: String(fs.spins_awarded || fs.spins_remaining) });
+      if (hooks().fsIntro) await hooks().fsIntro(fs.spins_awarded || fs.spins_remaining);
+      else await playPopup('freeSpins', 0, 2000, { panelText: String(fs.spins_awarded || fs.spins_remaining) });
     }
     enterFreeSpins(fs.spins_remaining, bet);
   } else if (retrigger) {
     await celebrateScatters();
     flashRetrigger(fs.spins_awarded || 5);
+    if (hooks().fsRetrigger) await hooks().fsRetrigger(fs.spins_awarded || 5);
   }
 
   if (wasInFs && fs) {
+    gameState.fsPlayed = (gameState.fsPlayed || 0) + 1;
     gameState.fsLeft = fs.spins_remaining;
     updateFreeSpinsPanel(fs.spins_remaining, fs.total_win);
   }

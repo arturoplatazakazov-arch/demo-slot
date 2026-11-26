@@ -154,8 +154,8 @@
 
 /* ---------- info plaque: one neon sign, FREE SPINS and HOLD & WIN take turns (js/neon-joker-spins/r1.js) ---------- */
 .r1-plaque {
-  left: 1140px; top: 618px; width: 300px; aspect-ratio: 2.8037; z-index: 5; pointer-events: none;
-  --u: calc(300px / 100); /* 1% of the plaque width */
+  left: 1120px; top: 612px; width: 340px; aspect-ratio: 2.8037; z-index: 5; pointer-events: none;
+  --u: calc(340px / 100); /* 1% of the plaque width */
   background: url('../img/neon-joker-spins/skins/c/sets/r1/img/plaque.webp?v=1') center / 100% 100% no-repeat;
   opacity: 0;
 }
@@ -165,15 +165,22 @@
   position: absolute; left: 9%; right: 8%; top: 35%; bottom: 15%;
   display: flex; align-items: center; justify-content: center; gap: calc(var(--u) * 3);
 }
-.r1-plaque__icon { height: 150%; aspect-ratio: 1; object-fit: contain; flex: none; filter: drop-shadow(0 0 calc(var(--u) * 2) var(--c)); }
+/* the condition drawn: 3 jokers, or a coin in each of 3 mini reels (round 2: the line must be readable) */
+.r1-plaque__art { display: flex; gap: calc(var(--u) * 0.8); flex: none; align-items: center; }
+.r1-plaque__art i { display: block; width: calc(var(--u) * 8); aspect-ratio: 1; }
+.r1-plaque__art i.is-slot { width: calc(var(--u) * 7.4); aspect-ratio: 0.72; display: flex; align-items: center; justify-content: center;
+  border: calc(var(--u) * 0.45) solid var(--c2); border-radius: calc(var(--u) * 1.4); background: rgba(10, 4, 24, 0.75);
+  box-shadow: 0 0 calc(var(--u) * 1.2) var(--c), inset 0 0 calc(var(--u) * 1) var(--c); }
+.r1-plaque__art img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 calc(var(--u) * 1) var(--c)); }
+.r1-plaque__art i.is-slot img { width: 92%; height: auto; }
 .r1-plaque__text { display: flex; flex-direction: column; align-items: flex-start; line-height: 1; font-family: 'Luckiest Guy', system-ui, sans-serif; }
 .r1-plaque__text b {
-  font-weight: normal; font-size: calc(var(--u) * 9.6); letter-spacing: 0.03em; color: #fff;
+  font-weight: normal; font-size: calc(var(--u) * 8.4); letter-spacing: 0.03em; color: #fff; white-space: nowrap;
   text-shadow: 0 0 calc(var(--u) * 0.8) var(--c), 0 0 calc(var(--u) * 2.4) var(--c), 0 0 calc(var(--u) * 5) var(--c);
 }
 .r1-plaque__text small {
-  margin-top: calc(var(--u) * 1.2); font-size: calc(var(--u) * 4.4); letter-spacing: 0.06em; color: var(--c2);
-  text-shadow: 0 0 calc(var(--u) * 1.6) var(--c2);
+  margin-top: calc(var(--u) * 1.4); font-size: calc(var(--u) * 5.4); letter-spacing: 0.04em; color: #fff; white-space: nowrap;
+  text-shadow: 0 0 calc(var(--u) * 0.6) var(--c2), 0 0 calc(var(--u) * 1.8) var(--c);
 }
 .r1-plaque[data-k="fs"] { --c: #ff3cac; --c2: #9ff4ff; }
 .r1-plaque[data-k="hw"] { --c: #ffb52e; --c2: #ffe9a8; }
@@ -197,8 +204,17 @@
   100% { opacity: 0; }
 }
 .screen.is-fs .r1-plaque, .screen.is-hw .r1-plaque { visibility: hidden; }
+/* phones: a full-width neon strip instead of the small sign — one line, big type (round 2) */
 @media (orientation: portrait) {
-  .r1-plaque { left: 215px; top: 1078px; width: 290px; --u: calc(290px / 100); z-index: 6; }
+  /* the generated wide strip (sets/r1/ui/hint_strip.webp, 1392x160), as wide as the slot */
+  .r1-plaque { left: 10px; top: 1084px; width: 700px; height: 80px; aspect-ratio: auto; z-index: 6; --u: 6.4px;
+    background: url('../img/neon-joker-spins/skins/c/sets/r1/ui/hint_strip.webp?v=1') center / 100% 100% no-repeat; }
+  .r1-plaque__face { inset: 15px 44px 17px; gap: 14px; }
+  .r1-plaque__art i { width: 44px; }
+  .r1-plaque__art i.is-slot { width: 34px; border-width: 2px; border-radius: 7px; }
+  .r1-plaque__text { flex-direction: row; align-items: baseline; gap: 14px; }
+  .r1-plaque__text b { font-size: 30px; }
+  .r1-plaque__text small { margin-top: 0; font-size: 26px; }
   .r1-plaque.is-win { visibility: hidden; }
 }
 .is-land .r1-plaque { left: 575px; top: 520px; width: 330px; --u: calc(330px / 100); }
@@ -326,3 +342,74 @@ body.hero-lean .mascot { left: var(--r1-edge, 0px) !important; top: 70px !import
 }
 .is-land .r1-count { left: 630px; top: 487px; width: 220px; }
 .is-land .r1-total { left: 862px; top: 484px; width: 206px; --u: calc(206px / 100); }
+
+/* ---------- Free Spins staging (js/neon-joker-spins/r1-scenes.js, client round 2) ----------
+   a stage-sized layer above the dim: same design px and scale as .stage */
+.r1-scenes { position: absolute; left: 50%; top: 50%; width: var(--design-w); height: var(--design-h);
+  transform: translate(-50%, -50%) scale(var(--stage-scale)); z-index: 9; pointer-events: none; }
+.r1-scene { position: absolute; inset: 0; opacity: 0; transition: opacity 320ms ease; }
+.r1-scene.is-in { opacity: 1; }
+.r1-scene.is-out { opacity: 0; }
+.r1-scene__hero { position: absolute; left: 120px; bottom: 0; height: 830px; filter: drop-shadow(0 0 24px rgba(255, 60, 172, 0.45));
+  transform: translateX(-60px); transition: transform 520ms cubic-bezier(.2, .9, .3, 1.2); }
+.r1-scene.is-in .r1-scene__hero { transform: none; }
+.r1-scene__col { position: absolute; left: 640px; top: 170px; width: 820px; display: flex; flex-direction: column; align-items: center; gap: 14px;
+  transform: scale(0.7); transition: transform 460ms cubic-bezier(.2, .9, .3, 1.35); }
+.r1-scene.is-in .r1-scene__col { transform: none; }
+.r1-scene__sign { width: 760px; filter: drop-shadow(0 0 18px rgba(255, 60, 172, 0.6)); }
+.r1-scene__panel { width: 600px; aspect-ratio: 900 / 264; background: url('../img/neon-joker-spins/skins/c/popups/panel.webp?v=3') center / 100% 100% no-repeat;
+  display: flex; align-items: center; justify-content: center; }
+.r1-scene__panel .glyphs { height: 46%; display: flex; align-items: flex-end; justify-content: center; }
+.r1-scene__panel .glyphs img { height: 100%; width: auto; }
+.r1-scene--intro .r1-scene__panel .glyphs { height: 50%; }
+.r1-scene__line, .r1-scene__tap { font-family: 'Luckiest Guy', system-ui, sans-serif; letter-spacing: 0.04em; color: #fff; white-space: nowrap; }
+.r1-scene__line { font-size: 40px; text-shadow: 0 0 6px #2ce8ff, 0 0 18px #2ce8ff; }
+.r1-scene__tap { margin-top: 10px; font-size: 26px; color: #ffe9a8; text-shadow: 0 0 10px #ffb52e; animation: r1-tap 1.2s ease-in-out infinite; }
+@keyframes r1-tap { 50% { opacity: 0.35; } }
+@media (orientation: portrait) {
+  /* phones: the plates sit in the middle of the screen, the punk stands above them cut at the waist
+     (the cut hides behind the sign), the plates are in front of him */
+  .r1-scene__hero { left: 50%; top: 50px; bottom: auto; height: 880px; z-index: 1;
+    clip-path: inset(0 0 47% 0); transform: translate(-50%, 50px); }
+  .r1-scene.is-in .r1-scene__hero { transform: translateX(-50%); }
+  .r1-scene__col { left: 20px; top: 50%; width: 680px; z-index: 2; translate: 0 -50%; }
+  .r1-scene__sign { width: 660px; }
+  .r1-scene__panel { width: 520px; }
+  .r1-scene__line { font-size: 36px; }
+}
+.is-land .r1-scene__hero { left: 140px; height: 620px; }
+.is-land .r1-scene__col { left: 660px; top: 70px; width: 800px; gap: 10px; }
+.is-land .r1-scene__sign { width: 640px; }
+.is-land .r1-scene__panel { width: 500px; }
+
+/* +5 on a retrigger: a neon burst over the reels */
+.r1-plus { position: absolute; transform: translate(-50%, -50%) scale(0.3); opacity: 0; display: flex; flex-direction: column; align-items: center;
+  font-family: 'Luckiest Guy', system-ui, sans-serif; color: #fff; transition: transform 380ms cubic-bezier(.2, .9, .3, 1.5), opacity 200ms; }
+.r1-plus.is-in { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.r1-plus.is-out { transform: translate(-50%, -80%) scale(1.15); opacity: 0; transition: transform 300ms ease-in, opacity 300ms; }
+.r1-plus b { font-weight: normal; font-size: 230px; line-height: 0.9; text-shadow: 0 0 8px #ff3cac, 0 0 26px #ff3cac, 0 0 60px #ff3cac, 0 6px 0 #6a0b4a; }
+.r1-plus span { font-size: 54px; letter-spacing: 0.05em; text-shadow: 0 0 8px #2ce8ff, 0 0 22px #2ce8ff; }
+
+/* FREE SPINS ×10 NEXT: hangs in the logo's place through a Hold & Win won on the same spin */
+body.r1-fs-next .stage .logo { visibility: hidden; }
+body.r1-scene-on .stage .mascot, body.r1-scene-on .r1-hero-spine { opacity: 0; transition: opacity 240ms; }
+.r1-next { position: absolute; left: 610px; top: 6px; width: 380px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  animation: r1-next-pulse 1.6s ease-in-out infinite; }
+.r1-next img { width: 100%; filter: drop-shadow(0 0 12px rgba(255, 60, 172, 0.7)); }
+/* the counter plate is art (sets/r1/ui/next_plate.webp): it slides out from under the FREE SPINS
+   sign (the sign overlaps its top edge) and still sits above the reel frame (this layer is z 9) */
+.r1-next img { position: relative; z-index: 2; }
+.r1-next__row { position: relative; z-index: 1; margin-top: -26px; width: 290px; aspect-ratio: 800 / 188;
+  display: flex; align-items: center; justify-content: center; gap: 12px; padding-top: 6px;
+  background: url('../img/neon-joker-spins/skins/c/sets/r1/ui/next_plate.webp?v=1') center / 100% 100% no-repeat; }
+.r1-next__in { display: flex; align-items: center; gap: 12px; }
+.r1-next__row .glyphs { height: 34px; display: flex; align-items: flex-end; }
+.r1-next__row .glyphs img { height: 100%; width: auto; }
+.r1-next__row b { font-family: 'Luckiest Guy', system-ui, sans-serif; font-weight: normal; font-size: 32px; color: #fff; letter-spacing: 0.06em;
+  text-shadow: 0 0 6px #2ce8ff, 0 0 16px #2ce8ff; }
+@keyframes r1-next-pulse { 50% { filter: brightness(1.25); } }
+@media (orientation: portrait) { .r1-next { left: 170px; top: 286px; width: 380px; } }
+.is-land .r1-next { left: 30px; top: 10px; width: 350px; }
+/* jackpot windows centre their glyphs: the dot (38 of the digits' 116 px) drops by its own height
+   to the baseline, so 2.5M does not read as 2·5M */
+.jp__value img[alt="."] { transform: translateY(100%); }
