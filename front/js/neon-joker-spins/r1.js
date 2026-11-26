@@ -160,15 +160,13 @@
     { id: 'punk', name: 'Вполоборота' },
     { id: 'jester', name: 'Шут' },
   ];
-  const KEY = 'njs-r1-hero';
-  let cur = 'lean';
-  try { cur = localStorage.getItem(KEY) || 'lean'; } catch (e) { /* noop */ }
-  if (!HEROES.some((h) => h.id === cur)) cur = 'lean';
+  // the client picked the final hero (2026-11-26): 'lean' is locked, the switcher is no longer shown
+  const LOCKED = 'lean';
+  let cur = LOCKED;
   const mascot = document.getElementById('mascot');
   if (!mascot) return;
   const apply = (id) => {
     cur = id;
-    try { localStorage.setItem(KEY, id); } catch (e) { /* noop */ }
     HEROES.forEach((h) => document.body.classList.toggle(`hero-${h.id}`, h.id === id));
     mascot.src = `${IMG}/${id}.webp?v=1`;
     box.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === id)));
@@ -187,7 +185,6 @@
     box.classList.remove('is-open');
   });
   box.addEventListener('pointerdown', (e) => e.stopPropagation());
-  document.body.appendChild(box);
   apply(cur);
   // the stage is centred and scaled: on a screen wider than its 16:9 (or 9:16) there are side
   // margins, so "left: 0" is not the screen edge. --r1-edge = the screen's left edge in stage px.

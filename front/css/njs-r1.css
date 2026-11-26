@@ -55,7 +55,7 @@
   background: center / contain no-repeat; transition: transform 160ms ease, filter 160ms ease;
 }
 .r1-buy__card:hover { transform: translateY(-4px) scale(1.02); filter: brightness(1.12); }
-.r1-buy__card--fs { background-image: url('../img/neon-joker-spins/skins/c/sets/r1/img/buy_fs.webp?v=1'); }
+.r1-buy__card--fs { background-image: url('../img/neon-joker-spins/skins/c/sets/r1/img/buy_fs.webp?v=2'); }
 .r1-buy__card--hw { background-image: url('../img/neon-joker-spins/skins/c/sets/r1/img/buy_hw.webp?v=1'); }
 .r1-buy__price {
   position: absolute; left: 12%; right: 12%; top: 76.5%; height: 11%;

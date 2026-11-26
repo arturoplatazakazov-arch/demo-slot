@@ -8,7 +8,7 @@
   if (window.NeonFx || !window.SpineEngine || !window.spine) return;
   const PICK = { seven: 2, bell: 3, star: 1, cherry: 3, lemon: 3, plum: 3, grape: 3, wild: 2, scatter: 5, coin: 1, collector: 4 };
   const ROOT = 'img/neon-joker-spins/skins/c/sets/r1/spine/sym';
-  const VER = '2';
+  const VER = '3';
   const screen = document.getElementById('screen');
   const dim = document.getElementById('screenDim');
   if (!screen) return;
