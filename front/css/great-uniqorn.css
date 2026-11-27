@@ -314,11 +314,19 @@ body {
 .sign-buy-bonus:active { transform: scale(0.96); }
 .screen[data-mode="freespins"] .sign-buy-bonus { display: none; }
 
-/* Плашка FS LEFT пришла с впечатанным «FS LEFT: 100» — текст стёрт из
-   картинки, счётчик живой. Начертание — как в макете: белый жирный гротеск
-   с тёмно-красной обводкой. */
+/* Плашка FS LEFT — золотая из макета (slot/ui_elements → fs left, 321x63,
+   без текста; 2026-11-27). В макете она 321x63 против 321x66 у BUY BONUS и
+   стоит на 3px ниже его верха — то есть по центру того же места. Текст живой:
+   тёмно-коричневый жирный гротеск без обводки, ~35px на плашку 321 шириной. */
 .fs-counter { display: none; }
 .screen[data-mode="freespins"] .fs-counter { display: block; }
+.fs-counter img {
+  position: absolute;
+  left: 0;
+  top: 2.27%;
+  height: 95.45%;
+  filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.4));
+}
 /* Блочный, а не flex: во flex-контейнере текст «FS LEFT: » и число стали бы
    отдельными элементами, и пробел между ними схлопнулся бы. */
 .fs-counter__label {
@@ -326,15 +334,12 @@ body {
   inset: 0;
   display: block;
   text-align: center;
-  line-height: 56px;
-  font-family: 'Montserrat', 'Segoe UI', system-ui, sans-serif;
-  font-weight: 900;
-  font-size: 29px;
-  letter-spacing: 0.01em;
-  color: #fff;
-  -webkit-text-stroke: 3px var(--red-dark);
-  paint-order: stroke fill;
-  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.4);
+  line-height: 58px;
+  font-family: 'Roboto', 'Inter', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 33px;
+  color: #4a3109;
+  text-shadow: 0 1px 0 rgba(255, 238, 170, 0.55), 0 -1px 1px rgba(60, 35, 0, 0.35);
   white-space: nowrap;
   pointer-events: none;
 }
@@ -749,7 +754,7 @@ body.is-feature-screen .to-catalog-btn { visibility: hidden; }
     width: 321px;
     height: 66px;
   }
-  .fs-counter__label { font-size: 33px; line-height: 64px; }
+  .fs-counter__label { font-size: 38px; line-height: 66px; }
 }
 
 /* ---------- Boot preloader theme (структура в css/preloader.css) ---------- */
