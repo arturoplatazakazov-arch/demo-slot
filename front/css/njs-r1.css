@@ -333,8 +333,9 @@ body.hero-lean .mascot { left: var(--r1-edge, 0px) !important; top: 70px !import
 .r1-total__value { display: flex; height: calc(var(--u) * 11); margin-top: calc(var(--u) * 1.2); }
 /* portrait: counter on the bottom tube in the middle, TOTAL WIN to its right */
 @media (orientation: portrait) {
-  .r1-count { left: 190px; top: 1050px; width: 300px; --cu: 3px; z-index: 8; }
-  .r1-total { left: 496px; top: 1036px; width: 216px; --u: calc(216px / 100); z-index: 8; }
+  /* the counter on the frame's bottom tube, TOTAL WIN right under it, both centred above the spin button */
+  .r1-count { left: 225px; top: 1024px; width: 270px; --cu: 2.7px; z-index: 8; }
+  .r1-total { left: 252px; top: 1086px; width: 216px; --u: calc(216px / 100); z-index: 8; }
 }
 .is-land .r1-count { left: 605px; top: 490px; width: 270px; --cu: 2.7px; }
 .is-land .r1-total { left: 862px; top: 484px; width: 206px; --u: calc(206px / 100); }
