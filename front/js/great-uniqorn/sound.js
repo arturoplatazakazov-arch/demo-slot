@@ -35,6 +35,7 @@
   // (bar-aligned seamless loops cut by scratchpad loopfind/render_loop; lossless FLAC
   // so <audio loop> has no gap at the seam). The default for base/bonus.
   const SUNO = `${GAME}suno/`;
+  const OLD_SOUND = new URLSearchParams(location.search).get('sound') === 'old';
 
   const EVENTS = {
     base: { kind: 'music', group: 'Музыка', label: 'Музыка — база', src: v(`${GAME}MUSIC_Base.mp3${QUIET}`, `${LOUD}MUSIC_Base.mp3`, `${OLD}BG_Base.mp3`) },
@@ -126,29 +127,35 @@
   };
   for (const [key, vol] of Object.entries(DESIGNER_VOLUME)) EVENTS[key].volume = vol;
 
-  // Suno music: last variant of base/bonus, and the default to try it
-  EVENTS.base.src.push(`${SUNO}base_loop.flac?p=1`);
-  EVENTS.bonus.src.push(`${SUNO}bonus_loop.flac?p=1`);
-  EVENTS.base.variant = `${SUNO}base_loop.flac?p=1`;
-  EVENTS.bonus.variant = `${SUNO}bonus_loop.flac?p=1`;
-  // Suno stingers (Sounds tab), one at a time: the last variant + the default
-  // (several takes of one event = several variants, the first is the default)
-  const SUNO_SFX = {
-    baseToBonus: ['bonus_enter.mp3'],
-    bonusToBase: ['bonus_exit_1.mp3', 'bonus_exit_2.mp3'],
-    bigWin: ['big_win_1.mp3', 'big_win_2.mp3'],
-    megaWin: ['mega_win_1.mp3', 'mega_win_2.mp3'],
-    epicWin: ['epic_win_1.mp3', 'epic_win_2.mp3'],
-    fsWin: ['fs_win_1.mp3', 'fs_win_2.mp3'],
-    fsRetrigger: ['fs_retrigger_1.mp3', 'fs_retrigger_2.mp3'],
-    bonusTotalWin: ['total_win_1.mp3', 'total_win_2.mp3'],
-    countLoop: ['count_loop_1.wav', 'count_loop_2.wav'], // 1 bar / 2 bars, gapless wav
-  };
-  for (const [key, files] of Object.entries(SUNO_SFX)) {
-    const paths = files.map((f) => `${SUNO}${f}?p=1`);
-    EVENTS[key].src.push(...paths);
-    EVENTS[key].variant = paths[0];
-    delete EVENTS[key].off;
+  // ?sound=old (2026-11-27): the sound as it was before Suno — the composer's
+  // pack and the sets only, no intro, no FS WIN / retrigger jingles — to put
+  // side by side with the default (Suno) link. Its ♪ choices are kept apart.
+  if (OLD_SOUND) EVENTS.intro.src = [];
+  else {
+    // Suno music: last variant of base/bonus, and the default to try it
+    EVENTS.base.src.push(`${SUNO}base_loop.flac?p=1`);
+    EVENTS.bonus.src.push(`${SUNO}bonus_loop.flac?p=1`);
+    EVENTS.base.variant = `${SUNO}base_loop.flac?p=1`;
+    EVENTS.bonus.variant = `${SUNO}bonus_loop.flac?p=1`;
+    // Suno stingers (Sounds tab), one at a time: the last variant + the default
+    // (several takes of one event = several variants, the first is the default)
+    const SUNO_SFX = {
+      baseToBonus: ['bonus_enter.mp3'],
+      bonusToBase: ['bonus_exit_1.mp3', 'bonus_exit_2.mp3'],
+      bigWin: ['big_win_1.mp3', 'big_win_2.mp3'],
+      megaWin: ['mega_win_1.mp3', 'mega_win_2.mp3'],
+      epicWin: ['epic_win_1.mp3', 'epic_win_2.mp3'],
+      fsWin: ['fs_win_1.mp3', 'fs_win_2.mp3'],
+      fsRetrigger: ['fs_retrigger_1.mp3', 'fs_retrigger_2.mp3'],
+      bonusTotalWin: ['total_win_1.mp3', 'total_win_2.mp3'],
+      countLoop: ['count_loop_1.wav', 'count_loop_2.wav'], // 1 bar / 2 bars, gapless wav
+    };
+    for (const [key, files] of Object.entries(SUNO_SFX)) {
+      const paths = files.map((f) => `${SUNO}${f}?p=1`);
+      EVENTS[key].src.push(...paths);
+      EVENTS[key].variant = paths[0];
+      delete EVENTS[key].off;
+    }
   }
 
   // one-time: drop mixes saved in ♪ before the designer's mix became the
@@ -162,7 +169,7 @@
   } catch (err) { /* storage blocked */ }
 
   const kit = SoundKit.create({
-    game: 'great-uniqorn',
+    game: OLD_SOUND ? 'great-uniqorn-old' : 'great-uniqorn',
     sfxVolume: 0.18,
     musicVolume: 0.55,
     libraryPrefix: GAME,
