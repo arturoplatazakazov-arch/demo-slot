@@ -170,6 +170,55 @@ function blip(freq = 880) {
   tone(freq, sfxCtx.currentTime + 0.005, 0.18, { type: 'triangle', gain: 0.16, glideTo: freq * 1.5 });
 }
 
+// --- Hold & Win: tension, a coin lands, a respin brings nothing (synth, R1) ----------------
+const hwReady = (key) => { labEmit(key, 'sfx', labOff(key)); if (muted || labOff(key) || !sfxCtx) return false; if (sfxCtx.state === 'suspended') sfxCtx.resume(); return true; };
+// a cell stops empty: a dull, low knock
+function hwThud() {
+  if (!hwReady('hwThud')) return;
+  const t0 = sfxCtx.currentTime + 0.005;
+  tone(150, t0, 0.16, { type: 'sine', gain: 0.22, glideTo: 70 });
+  tone(300, t0, 0.05, { type: 'triangle', gain: 0.05 });
+}
+// tension tick while the last cells hold out: higher and louder each time
+function hwTick(k = 0) {
+  if (!hwReady('hwTick')) return;
+  const t0 = sfxCtx.currentTime + 0.005;
+  const f = 440 * Math.pow(1.06, k);
+  tone(f, t0, 0.07, { type: 'square', gain: 0.05 + Math.min(0.06, k * 0.012) });
+  tone(f * 0.5, t0, 0.12, { type: 'sine', gain: 0.12 });
+}
+// a coin lands: a quick rising major arpeggio + sparkle; the n-th coin of a respin plays higher
+function hwHit(n = 0) {
+  if (!hwReady('hwHit')) return;
+  const t0 = sfxCtx.currentTime + 0.005;
+  const k = Math.pow(2, Math.min(n, 6) * 2 / 12);
+  [523.3, 659.3, 784, 1046.5].forEach((f, i) => {
+    tone(f * k, t0 + i * 0.06, 0.22, { type: 'square', gain: 0.06 });
+    tone(f * k, t0 + i * 0.06, 0.3, { type: 'triangle', gain: 0.12 });
+  });
+  [2093, 2637, 3136].forEach((f, i) => tone(f * k, t0 + 0.26 + i * 0.04, 0.35, { type: 'sine', gain: 0.05 }));
+}
+// the respin is over and at least one coin came: a short brass-like fanfare
+function hwWin(n = 1) {
+  if (!hwReady('hwWin')) return;
+  const t0 = sfxCtx.currentTime + 0.01;
+  const chord = [392, 493.9, 587.3, 784];
+  chord.forEach((f, i) => tone(f, t0 + i * 0.03, 0.18, { type: 'sawtooth', gain: 0.045 }));
+  chord.forEach((f) => tone(f * 1.335, t0 + 0.2, 0.55 + Math.min(0.3, n * 0.08), { type: 'sawtooth', gain: 0.05 }));
+  tone(1568, t0 + 0.2, 0.6, { type: 'sine', gain: 0.07 });
+}
+// the respin brought nothing: a falling "wah-wah-wah-waah" (sadder when it was the last chance)
+function hwMiss(left = 2) {
+  if (!hwReady('hwMiss')) return;
+  const t0 = sfxCtx.currentTime + 0.01;
+  const notes = left <= 0 ? [392, 370, 349.2, 329.6] : [349.2, 329.6, 311.1];
+  notes.forEach((f, i) => {
+    const last = i === notes.length - 1;
+    tone(f, t0 + i * 0.22, last ? 0.75 : 0.2, { type: 'triangle', gain: 0.16, glideTo: last ? f * 0.86 : f * 0.97 });
+    tone(f / 2, t0 + i * 0.22, last ? 0.75 : 0.2, { type: 'sawtooth', gain: 0.03, glideTo: last ? f * 0.43 : f * 0.49 });
+  });
+}
+
 function unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
@@ -210,6 +259,9 @@ const LAB_META = {
   coinLand: ['Барабаны', 'Монета встала'],
   smallWin: ['Выигрыш', 'Малый выигрыш'], bigWin: ['Выигрыш', 'Big Win'], megaWin: ['Выигрыш', 'Mega Win'], epicWin: ['Выигрыш', 'Epic Win'],
   bonusEnter: ['Бонусы', 'Вход в бонус'], bonusExit: ['Бонусы', 'Выход из бонуса'],
+  hwThud: ['Hold & Win', 'Пустая ячейка (синтез)', 'synth'], hwTick: ['Hold & Win', 'Напряжение (синтез)', 'synth'],
+  hwHit: ['Hold & Win', 'Монета выпала (синтез)', 'synth'], hwWin: ['Hold & Win', 'Удачный респин (синтез)', 'synth'],
+  hwMiss: ['Hold & Win', 'Пустой респин (синтез)', 'synth'],
   spark: ['Бонусы', 'Искра Коллектора (синтез)', 'synth'], ding: ['Бонусы', 'Сбор «дзынь» (синтез)', 'synth'], blip: ['Бонусы', 'Монета / +5 (синтез)', 'synth'],
   popupOpen: ['Интерфейс', 'Попап открылся'], popupClose: ['Интерфейс', 'Попап закрылся'], click: ['Интерфейс', 'Клик'],
   autospin: ['Интерфейс', 'Автоигра'], betPlus: ['Интерфейс', 'Ставка +'], betMinus: ['Интерфейс', 'Ставка −'], menu: ['Интерфейс', 'Меню'], turbo: ['Интерфейс', 'Турбо'],
@@ -283,7 +335,7 @@ const soundLab = {
     unlockAudio();
     if (key.startsWith('music_')) { const k = key.slice(6); if (musicKind === k) music(null); else music(k); return null; }
     const was = muted; muted = false;
-    if ((LAB_META[key] || [])[2] === 'synth') ({ spark, ding, blip })[key]();
+    if ((LAB_META[key] || [])[2] === 'synth') ({ spark, ding, blip, hwThud, hwTick, hwHit, hwWin, hwMiss })[key]();
     else if ((LAB_META[key] || [])[2] === 'loop') { startLoop(key); setTimeout(() => stopLoop(key), 2500); }
     else playSfx(key);
     muted = was;
@@ -314,6 +366,11 @@ window.Sound = {
   spark,
   ding,
   blip,
+  hwThud,
+  hwTick,
+  hwHit,
+  hwWin,
+  hwMiss,
   setMuted,
   toggleMuted: () => setMuted(!muted),
   isMuted: () => muted,

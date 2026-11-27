@@ -1022,32 +1022,60 @@ async function playHoldAndWin(hw, bet) {
     const empties = cellInfos.filter((info, i) => info && !locked.has(i));
     empties.forEach((info) => info.cell.classList.add('is-hw-spin'));
     Sound.playSfx('spinStart');
-    await hwWait(380);
-    for (let col = 0; col < GRID_COLS; col++) {
-      await hwWait(220);
-      let stopped = false;
-      for (let row = 0; row < GRID_ROWS; row++) {
-        const i = row * GRID_COLS + col;
-        const info = cellInfos[i];
-        if (!info || locked.has(i)) continue;
-        info.cell.classList.remove('is-hw-spin');
-        stopped = true;
-        const c = landedByIdx.get(i);
-        if (collectorIdx.has(i)) {
-          // Коллектор встаёт сразу, но считает ПОСЛЕ монет этого респина.
-          setCoinFace(info, { kind: COLLECTOR_KIND, value: 0 });
-          restartClass(info.cell, 'is-slam', 440);
-          continue;
-        }
-        if (!c) continue;
-        setCoinFace(info, c);
+    // a page can set its own pace (R1: window.NJS_HW_PACE — cell by cell, slower towards the last cells)
+    // and react to every stop (NJS_HOOKS.hwCell) and to the whole respin (NJS_HOOKS.hwRespinEnd)
+    const pace = window.NJS_HW_PACE;
+    const H = window.NJS_HOOKS || {};
+    const stopCell = (i) => {
+      const info = cellInfos[i];
+      info.cell.classList.remove('is-hw-spin', 'is-tense');
+      const c = landedByIdx.get(i);
+      if (collectorIdx.has(i)) {
+        // Коллектор встаёт сразу, но считает ПОСЛЕ монет этого респина.
+        setCoinFace(info, { kind: COLLECTOR_KIND, value: 0 });
         restartClass(info.cell, 'is-slam', 440);
-        burstAtCell(info, 'spark', 5);
-        Sound.blip(990);
-        locked.set(i, { coin: c, info });
-        if (isJackpotKind(c.kind)) hitPlate(c.kind);
+        return 'collector';
       }
-      if (stopped) Sound.playSfx(col === GRID_COLS - 1 ? 'finalReelStop' : 'reelStop');
+      if (!c) return null;
+      setCoinFace(info, c);
+      restartClass(info.cell, 'is-slam', 440);
+      burstAtCell(info, 'spark', 5);
+      if (!pace) Sound.blip(990);
+      locked.set(i, { coin: c, info });
+      if (isJackpotKind(c.kind)) hitPlate(c.kind);
+      return c.kind;
+    };
+    if (pace) {
+      await hwWait(pace.before);
+      const order = [];
+      for (let col = 0; col < GRID_COLS; col++) for (let row = 0; row < GRID_ROWS; row++) {
+        const i = row * GRID_COLS + col;
+        if (cellInfos[i] && !locked.has(i)) order.push(i);
+      }
+      for (let k = 0; k < order.length; k++) {
+        const rest = order.length - k;
+        // the last cells stop slower and shake while they wait
+        const extra = rest <= pace.tenseLast ? pace.tense * (pace.tenseLast - rest + 1) : 0;
+        if (extra) order.slice(k).forEach((i) => cellInfos[i].cell.classList.add('is-tense'));
+        await hwWait(pace.cell + k * pace.grow + extra);
+        const hit = stopCell(order[k]);
+        if (H.hwCell) H.hwCell(cellInfos[order[k]], hit, k, order.length);
+        else Sound.playSfx('reelStop');
+      }
+      if (H.hwRespinEnd) await H.hwRespinEnd(landed.length, left, turbo);
+    } else {
+      await hwWait(380);
+      for (let col = 0; col < GRID_COLS; col++) {
+        await hwWait(220);
+        let stopped = false;
+        for (let row = 0; row < GRID_ROWS; row++) {
+          const i = row * GRID_COLS + col;
+          if (!cellInfos[i] || locked.has(i)) continue;
+          stopped = true;
+          stopCell(i);
+        }
+        if (stopped) Sound.playSfx(col === GRID_COLS - 1 ? 'finalReelStop' : 'reelStop');
+      }
     }
     // Коллекторы этого респина: сумма всех обычных монет на поле (без
     // джекпотов и других Коллекторов) — значение уже посчитал сервер.
@@ -1073,10 +1101,11 @@ async function playHoldAndWin(hw, bet) {
         await hwWait(700);
       }
     } else {
-      await hwWait(450);
+      await hwWait(pace ? pace.afterMiss : 450);
     }
+    if (pace) await hwWait(pace.between);
   }
-  cellInfos.forEach((info) => info && info.cell.classList.remove('is-hw-spin'));
+  cellInfos.forEach((info) => info && info.cell.classList.remove('is-hw-spin', 'is-tense'));
 
   // 5. сбор в TOTAL
   await hwWait(350);

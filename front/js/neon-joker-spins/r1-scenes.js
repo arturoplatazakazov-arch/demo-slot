@@ -67,11 +67,13 @@
 
   let nextEl = null;
   window.NJS_HOOKS = {
-    fsIntro: (spins) => scene({ cls: 'intro', hero: 'front', sign: 'freeSpins', value: `x${spins}`, lines: [], holdMs: 3200 }),
-    fsSummary: (total, played, maxWin) => scene({
-      cls: 'summary', hero: 'punk', sign: 'totalWin', value: total, count: true,
-      lines: [T.played(played), ...(maxWin ? [T.maxWin] : [])], holdMs: 4200,
-    }),
+    // the R1 popup look when r1-popups.js is on the page, the old scene otherwise
+    fsIntro: (spins) => (window.R1Popups ? window.R1Popups.show('fsIntro', 0, { text: `x${spins}` }) : scene({ cls: 'intro', hero: 'front', sign: 'freeSpins', value: `x${spins}`, lines: [], holdMs: 3200 })),
+    fsSummary: (total, played, maxWin) => {
+      const lines = [T.played(played), ...(maxWin ? [T.maxWin] : [])];
+      if (window.R1Popups) return window.R1Popups.show('fsTotal', total, { lines });
+      return scene({ cls: 'summary', hero: 'punk', sign: 'totalWin', value: total, count: true, lines, holdMs: 4200 });
+    },
     async fsRetrigger(added) {
       const reel = document.getElementById('reel');
       const el = document.createElement('div');
@@ -95,7 +97,7 @@
       if (!on) return;
       nextEl = document.createElement('div');
       nextEl.className = 'r1-next';
-      nextEl.innerHTML = `<img src="${POP}/freeSpins.webp?v=3" alt="FREE SPINS"><div class="r1-next__row"><span class="r1-next__in"><span class="glyphs"></span><b>${T.next}</b></span></div>`;
+      nextEl.innerHTML = `<img src="img/neon-joker-spins/skins/c/sets/r1/popups/freeSpins.webp?v=2" alt="FREE SPINS"><div class="r1-next__row"><span class="r1-next__in"><span class="glyphs"></span><b>${T.next}</b></span></div>`;
       layer.appendChild(nextEl);
       setGlyphs(nextEl.querySelector('.glyphs'), `x${spins}`);
       if (window.r1FitGlyphs) window.r1FitGlyphs(nextEl.querySelector('.r1-next__in'), nextEl.querySelector('.r1-next__row'), 0.72);
