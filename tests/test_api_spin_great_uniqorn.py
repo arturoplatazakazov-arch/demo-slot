@@ -138,3 +138,21 @@ async def test_three_scatters_trigger_free_spins(api_client, set_rng):
 
     assert body["feature"]["type"] == "free_spins"
     assert body["feature"]["spins_remaining"] == 10
+    assert body["feature"]["spins_remaining"] == 10
+
+
+async def test_buy_tops_up_a_short_balance(api_client, set_rng):
+    # demo_top_up: the bonus is always buyable — at the max bet the price
+    # (100 x 275 000 = 27.5M) is far over the 1M start, the server credits the
+    # shortfall instead of a 400, and the balance ends at this spin's own win.
+    session_id = await _start_session(api_client)
+    set_rng([_RAW_J] * 15)
+    response = await api_client.post(
+        "/api/v1/feature/buy",
+        json={"session_id": session_id, "feature_id": "free_spins_buy", "bet_amount": 275000},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["popup"] == {"type": "buyFreeSpins", "amount": 27_500_000}
+    assert body["feature"]["triggered"] is True
+    assert body["balance"] == body["total_win"]

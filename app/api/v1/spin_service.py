@@ -386,6 +386,7 @@ async def run_feature_buy(
     plan = prepare_feature_buy(
         game_config, state, feature_id, requested_bet_amount, len(paylines), balance_before
     )
+    balance_before += plan.top_up  # demo credit (bonus_buy.FeatureBuyPlan.top_up)
     bet_amount = plan.bet_amount
 
     # The purchase still spins real reels (TZ: server-authoritative, no fake

@@ -46,7 +46,13 @@ class FeatureBuyPlan:
     target_feature_id: str
     target_feature: BonusFeature
     target_config: FeatureConfig
+    # The bonus_buy product entry itself — per-product purchase-spin rules
+    # (Sugar Blast: forced symbols, excluded symbols, variant, wheel odds).
     product: dict
+    # Demo credit added to the balance before the charge when the product
+    # carries "demo_top_up": true and the balance is short (Great Uniqorn:
+    # the bonus can always be bought, whatever the bet). 0 otherwise.
+    top_up: Decimal = Decimal(0)
 
 
 def prepare_feature_buy(
@@ -76,8 +82,11 @@ def prepare_feature_buy(
         raise HTTPException(status_code=409, detail="bonus_buy target feature is not configured")
 
     cost = Decimal(str(product.get("cost_multiplier", 100))) * requested_bet_amount
+    top_up = Decimal(0)
     if balance_before < cost:
-        raise HTTPException(status_code=400, detail="insufficient balance for this purchase")
+        if not product.get("demo_top_up"):
+            raise HTTPException(status_code=400, detail="insufficient balance for this purchase")
+        top_up = cost - balance_before
 
     return FeatureBuyPlan(
         bet_amount=requested_bet_amount,
@@ -86,4 +95,5 @@ def prepare_feature_buy(
         target_feature=target_feature,
         target_config=target_config,
         product=product,
+        top_up=top_up,
     )

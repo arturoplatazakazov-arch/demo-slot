@@ -357,9 +357,11 @@ body {
   z-index: 25;
 }
 .screen-dim.is-active { opacity: 1; }
-/* Нижний бар стоит вне сцены (fixed поверх неё) — под попапом гасим и его. */
-.v3-bar { transition: filter 320ms ease; }
-body.is-screen-dimmed .v3-bar { filter: brightness(0.3); pointer-events: none; }
+/* Нижний бар стоит вне сцены (fixed, z 20 поверх неё). Пока открыт попап
+   (затемнение включено), вся сцена вместе с попапами поднимается НАД баром —
+   иначе на телефоне бар перекрывал кнопки попапа покупки (2026-11-27). Бар
+   при этом уходит под затемнённую сцену, как в макете. */
+body.is-screen-dimmed .screen { z-index: 21; }
 .screen-dim.is-opaque { background: #000; }
 
 /* Missing-asset placeholder (dev-time only). */

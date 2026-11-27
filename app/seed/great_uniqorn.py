@@ -155,7 +155,11 @@ def build_game_config() -> tuple[Game, GameConfig]:
         enabled=True,
         params={
             "products": [
-                {"buy_id": "free_spins_buy", "cost_multiplier": 100, "target_feature_id": "free_spins"},
+                {
+                    "buy_id": "free_spins_buy", "cost_multiplier": 100, "target_feature_id": "free_spins",
+                    # демо: бонус покупается всегда — нехватку баланса сервер докидывает
+                    "demo_top_up": True,
+                },
             ],
         },
         display_order=1,

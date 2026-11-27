@@ -203,6 +203,7 @@ async def run_avalanche_feature_buy(
     state = dict(session.state)
     balance_before = Decimal(str(session.balance))
     plan = prepare_feature_buy(game_config, state, feature_id, requested_bet_amount, 0, balance_before)
+    balance_before += plan.top_up  # demo credit (bonus_buy.FeatureBuyPlan.top_up)
     bet_amount = plan.bet_amount
 
     avalanche_result = _run_cascade(reel_set, rng, bet_amount, avalanche_config)

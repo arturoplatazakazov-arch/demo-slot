@@ -143,7 +143,9 @@ function setupBuyBonusButton() {
     if (open || gameState.freeSpinsRemaining > 0 || gameState.isSpinning || !gameState.sessionId) return;
     const bet = gameState.betSteps[gameState.betIndex];
     const price = bet * BUY_COST_MULTIPLIER;
-    const affordable = price <= gameState.balance;
+    // Always buyable (product, 2026-11-27): the seed's demo_top_up makes the
+    // server credit a short balance instead of refusing the purchase.
+    const affordable = true;
     document.getElementById('buySpins').textContent = BUY_SPINS;
     document.getElementById('buyPrice').textContent = formatPopupAmount(price);
     document.getElementById('buyCur').textContent = gameState.currency;
