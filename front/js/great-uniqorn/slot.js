@@ -726,7 +726,7 @@ function settleColumnCells(cellEls, col, finalCodes) {
 // hidden while the skeleton covers it, and comes back whenever the skeleton
 // can't run (no WebGL, failed load) or the reels spin off.
 const SYMBOL_SPINE_DIR = `${ASSET_ROOT}/spine/d`;
-const SYMBOL_SPINE_VERSION = '12';
+const SYMBOL_SPINE_VERSION = '13';
 const SYMBOL_SPINE_CODES = ['a', 'j', 'k', 'q', 'hair', 'docs', 'jet', 'wild', 'scatter'];
 const SYMBOL_SPINE_WIN_MS = { scatter: 1700, default: 1300 };
 let symbolFit = null;
@@ -980,6 +980,9 @@ async function landReels(grid, anticipationColumns = [], multiplierWilds = []) {
   if (firstAnticipationCol === GRID_COLS) return;
 
   const anticipation = SlotFlow.anticipation();
+  const stopHeroAnticipation = playHeroAnticipation();
+  const resolveOnce = anticipation.resolve.bind(anticipation);
+  anticipation.resolve = (hit) => { if (stopHeroAnticipation) stopHeroAnticipation(); return resolveOnce(hit); };
   let anticipationResolved = false;
   const lastAnticipated = Math.max(...anticipationColumns);
 
@@ -1468,6 +1471,20 @@ function playHeroWin() {
   st.setEmptyAnimation(1, 0);
   st.addAnimation(1, 'win', false, 0).mixDuration = HERO_WIN_MIX;
   st.addEmptyAnimation(1, 0.35, 0);
+}
+
+// Base game only: while the reels hold the scatter anticipation the hero plays
+// `win_spin` (animator, 2026-11-27) on track 1, looping (its first and last
+// frames are the setup pose), and mixes back into idle when it resolves.
+function playHeroAnticipation() {
+  const set = sceneMode === 'base' && sceneInsts.base;
+  if (!set || !set.hero.resource.skeletonData.findAnimation('win_spin')) return null;
+  const st = set.hero.animationState;
+  st.setAnimation(1, 'win_spin', true).mixDuration = HERO_WIN_MIX;
+  return () => {
+    const cur = st.getCurrent(1);
+    if (cur && cur.animation && cur.animation.name === 'win_spin') st.setEmptyAnimation(1, 0.35);
+  };
 }
 
 // The animated background covers the whole window, not just the 1932x940
