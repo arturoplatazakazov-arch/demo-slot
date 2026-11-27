@@ -105,8 +105,9 @@ POPUPS = {
                  backdrop=('epic_backdrop', 0, 317),
                  particles=['bill_curl', 'bill_flat', 'coin', 'gold_ribbon', 'gold_ribbon_s', 'coin2'],
                  tint=(214, 150, 255)),
+    # MEGA: no stock-chart backdrop behind the hero any more (product,
+    # 2026-11-27: "плохая картинка"); its art stays in popup_layers.
     'mega': dict(hero=('mega_hero', 95, 128), txt=('mega_txt', 23, 508), plate=('plate_red', 76, 707),
-                 backdrop=('mega_backdrop', 0, 0),
                  particles=['bill_curl', 'bill_flat', 'coin', 'coin2', 'gold_ribbon', 'gold_ribbon_s'],
                  tint=(255, 150, 110)),
     'bstotal': dict(hero=('fstotal_hero', 69, 141), txt=('bstotal_txt', 72, 550), plate=('plate_total', 76, 789),
