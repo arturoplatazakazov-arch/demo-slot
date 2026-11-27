@@ -112,6 +112,24 @@
       { full_grid_jackpot: 'grand' }),
   };
 
+  // Hold & Win and Free Spins on the same spin: a coin on every reel (top row) + 3 jokers below.
+  // The hold plays first with the "FREE SPINS x10 NEXT" plate, then the free spins start.
+  function hwPlusFs() {
+    need();
+    const g = filler();
+    const initial = [coin(0, 0, 5), coin(0, 1, 2), coin(0, 2, 10)];
+    for (const c of initial) g[c.row][c.col] = 'coin';
+    const jokers = [[1, 0], [2, 1], [1, 2]];
+    jokers.forEach(([r, c]) => { g[r][c] = 'scatter'; });
+    clearLines(g);
+    const respins = [{ landed: [coin(2, 0, 3)] }, { landed: [] }, { landed: [] }, { landed: [] }];
+    const hwTotal = [...initial, ...respins.flatMap((r) => r.landed)].reduce((a, c) => a + Number(c.value) * bet(), 0);
+    const counts = [{ symbol: 'scatter', count: 3, positions: jokers.map(([row, col]) => ({ row, col })), win_amount: JOKER_PAY[3] * bet() }];
+    fs = { left: 10, total: 0, n: 0, retriggerAt: -1 };
+    return play(response(g, { counts, hw: { triggered: true, initial, respins, total_win: hwTotal },
+      feature: { type: 'free_spins', triggered: true, spins_awarded: 10, spins_remaining: 10, total_win: 0 } }));
+  }
+
   // --- scenarios ---------------------------------------------------------------------
   function lineCombo(code, line) {
     need();
@@ -227,6 +245,7 @@
           { label: 'С Коллектором', run: HW.collector },
           { label: 'Джекпот MINI', run: () => HW.jackpot('mini') }, { label: 'MINOR', run: () => HW.jackpot('minor') },
           { label: 'MAJOR', run: () => HW.jackpot('major') }, { label: 'GRAND (9/9)', run: HW.grand },
+          { label: 'Hold & Win + Free Spins в одном спине', run: hwPlusFs },
         ] },
       ] },
       { title: 'Попапы', sections: [

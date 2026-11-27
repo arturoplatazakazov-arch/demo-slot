@@ -404,7 +404,7 @@ body.r1-scene-on .stage .mascot, body.r1-scene-on .r1-hero-spine { opacity: 0; t
 .r1-next__row b { font-family: 'Luckiest Guy', system-ui, sans-serif; font-weight: normal; font-size: 32px; color: #fff; letter-spacing: 0.06em;
   text-shadow: 0 0 6px #2ce8ff, 0 0 16px #2ce8ff; }
 @keyframes r1-next-pulse { 50% { filter: brightness(1.25); } }
-@media (orientation: portrait) { .r1-next { left: 170px; top: 286px; width: 380px; } }
+@media (orientation: portrait) { .r1-next { left: 210px; top: 258px; width: 300px; } .r1-next__row { width: 236px; margin-top: -20px; } .r1-next__row .glyphs { height: 28px; } .r1-next__row b { font-size: 26px; } }
 .is-land .r1-next { left: 30px; top: 10px; width: 350px; }
 /* jackpot windows centre their glyphs: the dot (38 of the digits' 116 px) drops by its own height
    to the baseline, so 2.5M does not read as 2·5M */
