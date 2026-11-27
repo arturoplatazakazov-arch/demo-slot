@@ -47,7 +47,9 @@
     bigWin: { group: 'Выигрыши', label: 'BIG WIN', src: v(`${GAME}WIN_Bigwin.mp3${QUIET}`, `${LOUD}WIN_Bigwin.mp3`, `${OLD}WIN_Big.mp3`) },
     megaWin: { group: 'Выигрыши', label: 'MEGA WIN', src: v(`${GAME}WIN_Megawin.mp3${QUIET}`, `${LOUD}WIN_Megawin.mp3`, `${OLD}WIN_Mega.mp3`) },
     epicWin: { group: 'Выигрыши', label: 'EPIC WIN', src: v(`${GAME}WIN_Epicwin.mp3${QUIET}`, `${LOUD}WIN_Epicwin.mp3`, `${OLD}WIN_Epic.mp3`) },
-    bonusTotalWin: { group: 'Выигрыши', label: 'BONUS SPINS TOTAL WIN', src: v(`${GAME}WIN_Bigwin.mp3${QUIET}`, `${LOUD}WIN_Bigwin.mp3`, `${OLD}WIN_Big.mp3`), note: 'своей дорожки нет — как BIG WIN' },
+    fsWin: { group: 'Выигрыши', label: 'FS WIN — выпали фриспины (попап)', src: [], off: true },
+    fsRetrigger: { group: 'Выигрыши', label: 'Ретриггер — +фриспины в бонусе (попап)', src: [], off: true },
+    bonusTotalWin: { group: 'Выигрыши', label: 'BONUS SPINS TOTAL WIN', src: v(`${GAME}WIN_Bigwin.mp3${QUIET}`, `${LOUD}WIN_Bigwin.mp3`, `${OLD}WIN_Big.mp3`), note: 'у композитора своей дорожки нет — как BIG WIN; у Suno своя' },
     winLine: { group: 'Выигрыши', label: 'Линия в показе выигрыша (каждая по очереди)', src: v(`${GAME}WIN_Line.mp3${QUIET}`, `${LOUD}WIN_Line.mp3`, `${OLD}WIN_Line.mp3`) },
     countLoop: { group: 'Выигрыши', label: 'Счётчик суммы (петля)', src: v(`${GAME}WIN_Cashloop.mp3${QUIET}`, `${LOUD}WIN_Cashloop.mp3`, `${OLD}WIN_CashLoop.mp3`), loop: true },
     countEnd: { group: 'Выигрыши', label: 'Счётчик суммы — конец' },
@@ -134,6 +136,13 @@
   const SUNO_SFX = {
     baseToBonus: ['bonus_enter.mp3'],
     bonusToBase: ['bonus_exit_1.mp3', 'bonus_exit_2.mp3'],
+    bigWin: ['big_win_1.mp3', 'big_win_2.mp3'],
+    megaWin: ['mega_win_1.mp3', 'mega_win_2.mp3'],
+    epicWin: ['epic_win_1.mp3', 'epic_win_2.mp3'],
+    fsWin: ['fs_win_1.mp3', 'fs_win_2.mp3'],
+    fsRetrigger: ['fs_retrigger_1.mp3', 'fs_retrigger_2.mp3'],
+    bonusTotalWin: ['total_win_1.mp3', 'total_win_2.mp3'],
+    countLoop: ['count_loop_1.wav', 'count_loop_2.wav'], // 1 bar / 2 bars, gapless wav
   };
   for (const [key, files] of Object.entries(SUNO_SFX)) {
     const paths = files.map((f) => `${SUNO}${f}?p=1`);
@@ -216,10 +225,64 @@
   }
   let level = 'base';
   let unlocked = false;
+
+  // --- one melody at a time (2026-11-27, user: «ждать пока одно событие
+  // закончится, потом после 0.5 секундной паузы начинать следующее») -------
+  // Fanfares and stingers queue up: the next starts MELODY_GAP_MS after the
+  // previous one ends, and the music under them steps back while one plays.
+  // A music change asked for meanwhile cuts the old music at once and starts
+  // the new one when the queue is quiet. Sound.whenQuiet() -> Promise lets
+  // the game hold a popup until it may speak.
+  const MELODY = new Set(['intro', 'symWin_scatter', 'fsWin', 'fsRetrigger', 'bigWin', 'megaWin', 'epicWin',
+    'bonusTotalWin', 'baseToBonus', 'bonusToBase']);
+  const MELODY_GAP_MS = 500;
+  let melodyChain = Promise.resolve();
+  let melodyPending = 0;
+  const waitMs = (ms) => new Promise((res) => setTimeout(res, ms));
+  function playMelody(key, opts) {
+    const e = kit.lab.event(key);
+    // nothing to hear: no slot in the queue, no pause
+    if (!e || !e.active || e.muted || kit.isMuted()) return kit.playSfx(key, opts);
+    let inner = null;
+    let cancelled = false;
+    let finish;
+    const done = new Promise((res) => { finish = res; });
+    melodyPending += 1;
+    melodyChain = melodyChain.then(async () => {
+      if (!cancelled) {
+        const release = duck();
+        inner = kit.playSfx(key, opts);
+        await inner.done;
+        release();
+      }
+      finish();
+      await waitMs(cancelled ? 0 : MELODY_GAP_MS);
+      melodyPending -= 1;
+    });
+    return {
+      key,
+      done,
+      get stopped() { return cancelled || (inner && inner.stopped); },
+      stop(fadeMs) { cancelled = true; if (inner) inner.stop(fadeMs); else finish(); },
+    };
+  }
+  function playSfx(key, opts) {
+    return MELODY.has(key) ? playMelody(key, opts) : kit.playSfx(key, opts);
+  }
+  const whenQuiet = () => melodyChain;
+
+  let musicRequest = 0;
   function playMusic(key, opts) {
     level = key;
-    kit.playMusic(key, opts);
-    if (unlocked) startAmbient(key);
+    const id = ++musicRequest;
+    const start = () => {
+      if (id !== musicRequest) return;
+      kit.playMusic(key, melodyPending ? { ...(opts || {}), force: true } : opts);
+      if (unlocked) startAmbient(key);
+    };
+    if (!melodyPending || !unlocked) { start(); return; }
+    if (kit.lab.currentMusic() !== key) kit.stopMusic();
+    melodyChain.then(start);
   }
   // the bed starts with the music on the first gesture (autoplay rules)
   // The intro (if it has a sound) plays first; the music starts when it ends.
@@ -228,7 +291,7 @@
     const intro = kit.lab.event('intro');
     if (intro && intro.active && !kit.isMuted()) {
       kit.stopMusic();
-      kit.playSfx('intro').done.then(() => { kit.playMusic(level, { force: true }); startAmbient(level); });
+      playMelody('intro').done.then(() => { kit.playMusic(level, { force: true }); startAmbient(level); });
       return;
     }
     startAmbient(level);
@@ -254,8 +317,27 @@
     if (!value && unlocked) { ambient = null; startAmbient(level); }
   }
 
+  // --- music ducking under the win popups (BIG/MEGA/EPIC, FS WIN, total) --
+  // Sound.duck() lowers the music and returns release(); the music comes back
+  // when the last holder releases.
+  const DUCK_LEVEL = 0.3; // about -10 dB
+  let duckHolders = 0;
+  function duck() {
+    duckHolders += 1;
+    if (duckHolders === 1) kit.duckMusic(DUCK_LEVEL, 300);
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      duckHolders = Math.max(0, duckHolders - 1);
+      if (!duckHolders) kit.duckMusic(1, 900);
+    };
+  }
+
   window.Sound = {
-    playSfx: kit.playSfx,
+    duck,
+    whenQuiet,
+    playSfx,
     stopSfx: kit.stopSfx,
     playMusic,
     stopMusic: kit.stopMusic,

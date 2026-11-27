@@ -283,9 +283,25 @@
       }
       return musicEls[path];
     }
+    // Ducking: a factor on the music volume (1 = full), ramped by duckMusic().
+    let duck = 1;
+    let duckTimer = null;
     function musicVolumeFor(key) {
       if (muted || eventMuted(key)) return 0;
-      return Math.max(0, Math.min(1, master('music') * eventVolume(key)));
+      return Math.max(0, Math.min(1, master('music') * eventVolume(key) * duck));
+    }
+    function duckMusic(target, ms = 300) {
+      clearInterval(duckTimer);
+      const from = duck;
+      const t0 = performance.now();
+      const step = () => {
+        const k = Math.min(1, (performance.now() - t0) / Math.max(1, ms));
+        duck = from + (target - from) * k;
+        refreshMusicVolume();
+        if (k >= 1) clearInterval(duckTimer);
+      };
+      duckTimer = setInterval(step, 30);
+      step();
     }
     function playMusic(key, { force = false } = {}) {
       pendingMusic = key;
@@ -526,6 +542,7 @@
       stopSfx,
       playMusic,
       stopMusic,
+      duckMusic,
       toggleMuted,
       setMuted,
       isMuted: () => muted,

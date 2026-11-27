@@ -1257,7 +1257,7 @@ function fitPopupText(node, amount) {
 // `ownDim` lets a caller that already owns the screen dim (the bonus intro
 // below) borrow the popup without it pushing/popping its own dim.
 // Each popup's fanfare (played by the popup itself, as js/slot-flow.js expects).
-const POPUP_SOUNDS = { bigWin: 'bigWin', megaWin: 'megaWin', epicWin: 'epicWin', bonusSpinsTotalWin: 'bonusTotalWin' };
+const POPUP_SOUNDS = { bigWin: 'bigWin', megaWin: 'megaWin', epicWin: 'epicWin', bonusSpinsWin: 'fsWin', bonusSpinsTotalWin: 'bonusTotalWin' };
 
 // Layer guard (js/slot-flow.js rule 8): the win layer — symbol skeletons and
 // the win line — is not drawn under a popup.
@@ -1281,6 +1281,8 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
     let inst = null;
     let dimmed = false;
     let done = false;
+    let markClosed;
+    const popupClosed = new Promise((res) => { markClosed = res; });
     const finish = () => {
       if (done) return;
       done = true;
@@ -1289,17 +1291,28 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
       if (inst && spineStage) spineStage.removeOverlay(inst);
       if (dimmed) popScreenDim(opaque);
       winLayer.show();
+      markClosed();
       resolve();
     };
-    const safetyTimer = setTimeout(finish, holdMs + 8000);
+    // generous: the popup may wait for the melody queue and for its fanfare
+    const safetyTimer = setTimeout(finish, holdMs + 40000);
     winLayer.hide(); // nothing of the win shows through a popup (rule 8)
 
     (async () => {
       const cfg = POPUP_CONFIG[key];
       // Start fetching the skeleton while the dim fades in.
       const resourcePromise = popupResourceOrNull(popupSpineFolder(cfg, bought));
+      // one melody at a time: the popup (and its fanfare) waits for the one
+      // still playing, plus the 0.5 s pause
+      if (Sound.whenQuiet) await Sound.whenQuiet();
       Sound.playSfx('popupOpen');
-      if (POPUP_SOUNDS[key]) Sound.playSfx(POPUP_SOUNDS[key]); // the popup plays its own fanfare
+      // the music steps back under the popup and its fanfare (both must end)
+      const unduck = Sound.duck ? Sound.duck() : () => {};
+      // inside the bonus a YOU WON card is a retrigger: its own short jingle
+      const inBonus = document.getElementById('screen') && document.getElementById('screen').dataset.mode === 'freespins';
+      const sound = key === 'bonusSpinsWin' && inBonus ? 'fsRetrigger' : POPUP_SOUNDS[key];
+      const fanfare = sound ? Sound.playSfx(sound) : null; // the popup plays its own fanfare
+      Promise.all([popupClosed, fanfare ? fanfare.done : null]).then(unduck);
       if (ownDim) {
         pushScreenDim(opaque);
         dimmed = true;
@@ -1315,7 +1328,8 @@ function playPopupSequence(key, amount = 0, holdMs = 2500, { ownDim = true, opaq
       node.classList.add('is-in');
       countUpPopupAmount(node, amount, resource ? POPUP_AMOUNT_DELAY_MS : 0);
 
-      await wait(POPUP_ENTER_MS + holdMs);
+      // the popup stays until its fanfare has played out
+      await Promise.all([wait(POPUP_ENTER_MS + holdMs), fanfare ? fanfare.done : null]);
       Sound.playSfx('popupClose');
       node.classList.remove('is-in');
       node.classList.add('is-out');
