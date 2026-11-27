@@ -1395,7 +1395,8 @@ function bgSrcFor(mode) {
   const bonus = mode === 'freespins';
   if (isMobileLayout()) {
     // with the animated hero on top, the room without him (product, 2026-11-23)
-    if (!bonus && mobileHeroReady('base')) return `${ASSET_ROOT}/img/bg_mob_base_room.jpg`;
+    // (bonus: the designer's empty terrace, 2026-11-27)
+    if (mobileHeroReady(mode)) return `${ASSET_ROOT}/img/${bonus ? 'bg_mob_bonus_room' : 'bg_mob_base_room'}.jpg`;
     return `${ASSET_ROOT}/img/${bonus ? 'bg_mob_bonus' : 'bg_mob_base'}.jpg`;
   }
   return `${ASSET_ROOT}/img/${bonus ? 'bg_desk_bonus' : 'bg_desk_base'}.jpg`;
@@ -1519,8 +1520,12 @@ function coverSceneBg() {
 // only the hero is animated, on the hero-less room bg_mob_base_room.jpg. His
 // place on the 780x1416 mobile frame: static.png at x1.09 with its top-left at
 // (-150, 720) — matched by eye to the old bg_mob_base.jpg, which had him drawn
-// in. The bonus has no hero-less mobile art yet, so it keeps its picture.
-const MOB_HERO = { base: { scale: 1.09, center: [-150 + 905 * 1.09 / 2, 720 + 626 * 1.09 / 2] } };
+// in. Bonus: on the empty terrace bg_mob_bonus_room.jpg, static.png at x0.785
+// with its top-left at (215, 753) — template-matched on the old bg_mob_bonus.jpg.
+const MOB_HERO = {
+  base: { scale: 1.09, center: [-150 + 905 * 1.09 / 2, 720 + 626 * 1.09 / 2] },
+  freespins: { scale: 0.785, center: [215 + 413 * 0.785 / 2, 753 + 664 * 0.785 / 2] },
+};
 const MOB_W_FRAME = 780;
 const MOB_H_FRAME = 1416;
 const mobileHeroReady = (mode) => !!(MOB_HERO[mode] && sceneInsts[mode]);
