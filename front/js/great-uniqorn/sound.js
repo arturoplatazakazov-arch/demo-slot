@@ -129,6 +129,18 @@
   EVENTS.bonus.src.push(`${SUNO}bonus_loop.flac?p=1`);
   EVENTS.base.variant = `${SUNO}base_loop.flac?p=1`;
   EVENTS.bonus.variant = `${SUNO}bonus_loop.flac?p=1`;
+  // Suno stingers (Sounds tab), one at a time: the last variant + the default
+  // (several takes of one event = several variants, the first is the default)
+  const SUNO_SFX = {
+    baseToBonus: ['bonus_enter.mp3'],
+    bonusToBase: ['bonus_exit_1.mp3', 'bonus_exit_2.mp3'],
+  };
+  for (const [key, files] of Object.entries(SUNO_SFX)) {
+    const paths = files.map((f) => `${SUNO}${f}?p=1`);
+    EVENTS[key].src.push(...paths);
+    EVENTS[key].variant = paths[0];
+    delete EVENTS[key].off;
+  }
 
   // one-time: drop mixes saved in ♪ before the designer's mix became the
   // default, so every browser starts from it (later ♪ choices are kept)
@@ -148,7 +160,7 @@
     variantName: (path) => {
       const m = path && /\/sets\/([a-z]+)\//.exec(path);
       if (m) return `сет · ${SET_NAMES[m[1]] || m[1]}`;
-      if (path && path.includes('/suno/')) return 'Suno';
+      if (path && path.includes('/suno/')) { const n = /_(\d+)\.\w+/.exec(path); return n ? `Suno · дубль ${n[1]}` : 'Suno'; }
       return path && path.includes('/synth_v1/') ? 'синтез (старый)' : path && path.includes('/pack_loud/') ? 'пак композитора — громкий (первый)' : path && path.startsWith(GAME) ? 'пак композитора' : null;
     },
     sets: [{
