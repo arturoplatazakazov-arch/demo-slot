@@ -21,10 +21,38 @@ const GC_LOOPS = new Set(['reelLoop', 'anticipation', 'countLoop']);
 const GC_LATINO_ONLY = new Set(['base', 'bonus', 'bigWin', 'megaWin', 'epicWin', 'bonusSpinsWin', 'bonusTotalWin']);
 const GC_LATINO = 4;
 
+// The sound designer's pack (2026-11-27): one file per event in designer/,
+// listed FIRST so it is what plays; our generated variants follow it.
+const GC_DESIGNER_PACK = 1;
+const GC_DESIGNER_WAV = new Set(['scatterLand1', 'scatterLand2', 'scatterLand3']);
+const GC_DESIGNER = new Set(['base', 'bonus', 'click', 'spinPress', 'betChange', 'buyOpen', 'buyConfirm', 'popupOpen', 'popupClose',
+  'spinStart', 'reelLoop', 'reelStop', 'finalReelStop', 'anticipation', 'anticipationWin', 'anticipationFail',
+  'scatterLand1', 'scatterLand2', 'scatterLand3', 'multLand', 'smallWin', 'bigWin', 'megaWin', 'epicWin', 'countLoop', 'countEnd',
+  'symWin_rare_purple', 'symWin_rare_yellow', 'symWin_rare_blue', 'symWin_rare_green', 'symWin_common_2', 'symWin_common_4',
+  'symWin_common_3', 'symWin_common_1', 'symWin_wild', 'symWin_scatter', 'wildLand', 'wildGrow', 'multReveal', 'multFly', 'multPlate',
+  'baseToBonus', 'bonusToBase', 'bonusSpinsWin', 'bonusTotalWin', 'screenOpen', 'fsCounter', 'winLine', 'screenTap']);
+
+// Choices saved before the designer pack would keep playing our old sounds:
+// drop the saved variant picks once (volumes and mutes stay).
+try {
+  const flag = 'soundlab.gangsta-casino.designer';
+  if (localStorage.getItem(flag) !== String(GC_DESIGNER_PACK)) {
+    const st = JSON.parse(localStorage.getItem('soundlab.gangsta-casino') || 'null');
+    if (st && st.ev) {
+      for (const s of Object.values(st.ev)) { delete s.v; delete s.off; }
+      localStorage.setItem('soundlab.gangsta-casino', JSON.stringify(st));
+    }
+    localStorage.setItem(flag, String(GC_DESIGNER_PACK));
+  }
+} catch (e) { /* private mode */ }
+
 function gcVariants(key) {
   const ext = GC_LOOPS.has(key) ? 'wav' : 'mp3';
   const nums = GC_LATINO_ONLY.has(key) ? [GC_LATINO] : Array.from({ length: 10 }, (_, i) => i + 1);
-  return nums.map((n) => `${GC_SOUND}${key}/v${String(n).padStart(2, '0')}.${ext}?p=${GC_PACK_VERSION}`);
+  const ours = nums.map((n) => `${GC_SOUND}${key}/v${String(n).padStart(2, '0')}.${ext}?p=${GC_PACK_VERSION}`);
+  if (!GC_DESIGNER.has(key)) return ours;
+  const dExt = GC_DESIGNER_WAV.has(key) ? 'wav' : 'mp3';
+  return [`${GC_SOUND}designer/${key}.${dExt}?d=${GC_DESIGNER_PACK}`, ...ours];
 }
 
 // One win event per symbol (code -> paytable name, app/seed/gangsta_casino.py).
@@ -94,6 +122,7 @@ window.Sound = SoundKit.create({
   musicVolume: 0.35,
   // ".../reelStop/v03.mp3" -> "фишки" in the panel
   variantName: (path) => {
+    if ((path || '').includes('/designer/')) return 'саунд-дизайнер';
     const m = /\/([^/]+)\/v(\d+)\.\w+(\?.*)?$/.exec(path || '');
     return m && GC_NAMES[m[1]] ? GC_NAMES[m[1]][Number(m[2]) - 1] || null : null;
   },
