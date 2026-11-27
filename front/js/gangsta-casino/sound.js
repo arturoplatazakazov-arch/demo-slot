@@ -1,28 +1,11 @@
 // Gangsta Casino — sound event catalogue (engine: js/sound-kit.js).
 //
-// The game's OWN pack only: every event has 10 variants made in code by
-// scripts/gc_sound/pack.py -> sound/gangsta-casino/<event>/v01..v10. The 10
-// variants of an event are different ideas (instrument x motif x effect,
-// different objects for hits, different genres for fanfares and music) to
-// compare in the dev sound panel (♪). Loops are WAV
-// (seamless), everything else MP3. v01 plays until a choice is made; once a
-// variant is approved, set it as `variant` here (or move it to v01).
-const GC_SOUND = 'sound/gangsta-casino/';
-// Bump on every re-render of the pack: the files keep their names, so the
-// browser would otherwise play the cached old ones.
-const GC_PACK_VERSION = 4;
-// Variant names ("Рок-гитара · октава · эхо", "фанк"…) written by the generator.
-let GC_NAMES = {};
-fetch(`${GC_SOUND}names.json?p=${GC_PACK_VERSION}`).then((r) => r.json()).then((n) => { GC_NAMES = n; if (window.DevTools) DevTools.refresh(); }).catch(() => {});
-const GC_LOOPS = new Set(['reelLoop', 'anticipation', 'countLoop']);
-
-// The music and the win fanfares were made in 10 genres; only Latino (v04)
-// was kept for them, the other nine genres are deleted.
-const GC_LATINO_ONLY = new Set(['base', 'bonus', 'bigWin', 'megaWin', 'epicWin', 'bonusSpinsWin', 'bonusTotalWin']);
-const GC_LATINO = 4;
-
-// The sound designer's pack (2026-11-27): one file per event in designer/,
-// listed FIRST so it is what plays; our generated variants follow it.
+// Only the sound designer's pack (2026-11-27): one file per event in
+// sound/gangsta-casino/designer/<event>.mp3 (the three scatter landings are
+// WAV). Our generated variants were removed. An event the pack has no file
+// for stays listed in the ♪ panel as «нет звука».
+const GC_SOUND = 'sound/gangsta-casino/designer/';
+// Bump when the designer sends a new version: the files keep their names.
 const GC_DESIGNER_PACK = 1;
 const GC_DESIGNER_WAV = new Set(['scatterLand1', 'scatterLand2', 'scatterLand3']);
 const GC_DESIGNER = new Set(['base', 'bonus', 'click', 'spinPress', 'betChange', 'buyOpen', 'buyConfirm', 'popupOpen', 'popupClose',
@@ -32,8 +15,8 @@ const GC_DESIGNER = new Set(['base', 'bonus', 'click', 'spinPress', 'betChange',
   'symWin_common_3', 'symWin_common_1', 'symWin_wild', 'symWin_scatter', 'wildLand', 'wildGrow', 'multReveal', 'multFly', 'multPlate',
   'baseToBonus', 'bonusToBase', 'bonusSpinsWin', 'bonusTotalWin', 'screenOpen', 'fsCounter', 'winLine', 'screenTap']);
 
-// Choices saved before the designer pack would keep playing our old sounds:
-// drop the saved variant picks once (volumes and mutes stay).
+// Choices saved before the designer pack pointed at our old files: drop the
+// saved variant picks once (volumes and mutes stay).
 try {
   const flag = 'soundlab.gangsta-casino.designer';
   if (localStorage.getItem(flag) !== String(GC_DESIGNER_PACK)) {
@@ -47,12 +30,8 @@ try {
 } catch (e) { /* private mode */ }
 
 function gcVariants(key) {
-  const ext = GC_LOOPS.has(key) ? 'wav' : 'mp3';
-  const nums = GC_LATINO_ONLY.has(key) ? [GC_LATINO] : Array.from({ length: 10 }, (_, i) => i + 1);
-  const ours = nums.map((n) => `${GC_SOUND}${key}/v${String(n).padStart(2, '0')}.${ext}?p=${GC_PACK_VERSION}`);
-  if (!GC_DESIGNER.has(key)) return ours;
-  const dExt = GC_DESIGNER_WAV.has(key) ? 'wav' : 'mp3';
-  return [`${GC_SOUND}designer/${key}.${dExt}?d=${GC_DESIGNER_PACK}`, ...ours];
+  if (!GC_DESIGNER.has(key)) return [];
+  return [`${GC_SOUND}${key}.${GC_DESIGNER_WAV.has(key) ? 'wav' : 'mp3'}?d=${GC_DESIGNER_PACK}`];
 }
 
 // One win event per symbol (code -> paytable name, app/seed/gangsta_casino.py).
@@ -120,15 +99,7 @@ window.Sound = SoundKit.create({
   game: 'gangsta-casino',
   sfxVolume: 0.7,
   musicVolume: 0.35,
-  // ".../reelStop/v03.mp3" -> "фишки" in the panel
-  variantName: (path) => {
-    if ((path || '').includes('/designer/')) return 'саунд-дизайнер';
-    const m = /\/([^/]+)\/v(\d+)\.\w+(\?.*)?$/.exec(path || '');
-    return m && GC_NAMES[m[1]] ? GC_NAMES[m[1]][Number(m[2]) - 1] || null : null;
-  },
+  variantName: (path) => (path ? 'саунд-дизайнер' : null),
   libraryPrefix: GC_SOUND,
-  sets: [
-    { title: 'Весь звук на один вариант', note: 'все события разом; у разных событий один номер = разные идеи; музыка и фанфары — только латино', keys: '*' },
-  ],
   events: GC_EVENTS,
 });
