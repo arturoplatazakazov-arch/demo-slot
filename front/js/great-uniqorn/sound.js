@@ -31,10 +31,15 @@
   const LOUD = `${GAME}pack_loud/`;
   const QUIET = '?p=2';
   const v = (...files) => files.filter(Boolean);
+  // 2026-11-27: music made in Suno, one track at a time with the user
+  // (bar-aligned seamless loops cut by scratchpad loopfind/render_loop; lossless FLAC
+  // so <audio loop> has no gap at the seam). The default for base/bonus.
+  const SUNO = `${GAME}suno/`;
 
   const EVENTS = {
     base: { kind: 'music', group: 'Музыка', label: 'Музыка — база', src: v(`${GAME}MUSIC_Base.mp3${QUIET}`, `${LOUD}MUSIC_Base.mp3`, `${OLD}BG_Base.mp3`) },
     bonus: { kind: 'music', group: 'Музыка', label: 'Музыка — фриспины', src: v(`${GAME}MUSIC_Bonus.mp3${QUIET}`, `${LOUD}MUSIC_Bonus.mp3`, `${OLD}BG_Bonus.mp3`) },
+    intro: { group: 'Музыка', label: 'Заставка (первый клик, потом музыка базы)', src: v(`${SUNO}intro.mp3?p=1`) },
     ambientBase: { group: 'Музыка', label: 'Эмбиент — база (под музыкой)', src: v(`${GAME}AMBIENT_Base.mp3`), loop: true, volume: 0.25 },
     ambientBonus: { group: 'Музыка', label: 'Эмбиент — фриспины (под музыкой)', src: v(`${GAME}AMBIENT_Bonus.mp3`), loop: true, volume: 0.25 },
 
@@ -119,6 +124,12 @@
   };
   for (const [key, vol] of Object.entries(DESIGNER_VOLUME)) EVENTS[key].volume = vol;
 
+  // Suno music: last variant of base/bonus, and the default to try it
+  EVENTS.base.src.push(`${SUNO}base_loop.flac?p=1`);
+  EVENTS.bonus.src.push(`${SUNO}bonus_loop.flac?p=1`);
+  EVENTS.base.variant = `${SUNO}base_loop.flac?p=1`;
+  EVENTS.bonus.variant = `${SUNO}bonus_loop.flac?p=1`;
+
   // one-time: drop mixes saved in ♪ before the designer's mix became the
   // default, so every browser starts from it (later ♪ choices are kept)
   try {
@@ -137,6 +148,7 @@
     variantName: (path) => {
       const m = path && /\/sets\/([a-z]+)\//.exec(path);
       if (m) return `сет · ${SET_NAMES[m[1]] || m[1]}`;
+      if (path && path.includes('/suno/')) return 'Suno';
       return path && path.includes('/synth_v1/') ? 'синтез (старый)' : path && path.includes('/pack_loud/') ? 'пак композитора — громкий (первый)' : path && path.startsWith(GAME) ? 'пак композитора' : null;
     },
     sets: [{
@@ -177,7 +189,7 @@
   // they would clash, so they only run while that music is the composer's.
   const composerMusic = (lvl) => {
     const a = kit.lab.event(lvl === 'bonus' ? 'bonus' : 'base').active;
-    return !!a && a.startsWith(GAME) && !a.includes('/sets/') && !a.includes('/synth_v1/');
+    return !!a && a.startsWith(GAME) && !a.includes('/sets/') && !a.includes('/synth_v1/') && !a.includes('/suno/');
   };
   function startAmbient(level) {
     const key = level === 'bonus' ? 'ambientBonus' : 'ambientBase';
@@ -198,7 +210,17 @@
     if (unlocked) startAmbient(key);
   }
   // the bed starts with the music on the first gesture (autoplay rules)
-  const unlock = () => { unlocked = true; startAmbient(level); };
+  // The intro (if it has a sound) plays first; the music starts when it ends.
+  const unlock = () => {
+    unlocked = true;
+    const intro = kit.lab.event('intro');
+    if (intro && intro.active && !kit.isMuted()) {
+      kit.stopMusic();
+      kit.playSfx('intro').done.then(() => { kit.playMusic(level, { force: true }); startAmbient(level); });
+      return;
+    }
+    startAmbient(level);
+  };
   // switching the music variant in ♪ (one event or a whole set) re-checks
   // the bed; applySet goes through lab.setVariant too
   const setVariant = kit.lab.setVariant;
