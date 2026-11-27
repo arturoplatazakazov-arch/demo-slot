@@ -191,6 +191,10 @@
           { label: 'MAJOR', run: () => hitPlate('major') }, { label: 'GRAND', run: () => hitPlate('grand') },
           { label: 'Маскот радуется', run: () => mascotCheer() },
         ] },
+        ...(window.NJS_HOOKS && window.NJS_HOOKS.curtain ? [{ title: 'Переходы между экранами', items: [
+          { label: 'Шторы (Hold & Win)', run: () => window.NJS_HOOKS.curtain(() => new Promise((r) => setTimeout(r, 400)), 'hw') },
+          { label: 'Двери (Free Spins)', run: () => window.NJS_HOOKS.curtain(() => new Promise((r) => setTimeout(r, 400)), 'fs') },
+        ] }] : []),
         ...(window.R1Amounts ? [{ title: 'Суммы (валюта для казино, множители для крипто)', items: [
           { label: 'В валюте', run: () => window.R1Amounts.set('cash') },
           { label: 'В множителях ×', run: () => window.R1Amounts.set('x') },

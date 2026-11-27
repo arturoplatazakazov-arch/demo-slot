@@ -563,3 +563,45 @@ body.r1-hw-spinning .r1-lights--back { animation: r1-strobe 220ms steps(2, jump-
   mix-blend-mode: screen; transition: opacity 260ms ease; }
 .r1-spot.is-on { opacity: 1; animation: r1-spot-pulse 700ms ease-in-out infinite; }
 @keyframes r1-spot-pulse { 50% { scale: 1.12; } }
+
+/* Hold & Win curtains, natural motion (2026-11-26): a wind-up outward, a sweep in with the fabric
+   leaning into the move, an overshoot past the middle and a damped settle; opening = a tug inward,
+   then the cloth swings out and gathers at the edge. Keyframes, not transitions. */
+.r1-curtain[data-kind="hw"] .r1-curtain__half--l { transform-origin: 0 50%; }
+.r1-curtain[data-kind="hw"] .r1-curtain__half--r { transform-origin: 100% 50%; }
+.r1-curtain[data-kind="hw"].is-shut .r1-curtain__half { transition: none; }
+.r1-curtain[data-kind="hw"].is-shut .r1-curtain__half--l { animation: r1-cur-close-l var(--close-ms) linear both, r1-curtain-sway-l 1.4s ease-in-out var(--close-ms) infinite; }
+.r1-curtain[data-kind="hw"].is-shut .r1-curtain__half--r { animation: r1-cur-close-r var(--close-ms) linear both; }
+.r1-curtain[data-kind="hw"].is-open .r1-curtain__half { transition: none; }
+.r1-curtain[data-kind="hw"].is-open .r1-curtain__half--l { animation: r1-cur-open-l var(--open-ms) linear both; }
+.r1-curtain[data-kind="hw"].is-open .r1-curtain__half--r { animation: r1-cur-open-r var(--open-ms) linear both; }
+@keyframes r1-cur-close-l {
+  0%   { transform: translateX(-102%) skewX(0deg); animation-timing-function: cubic-bezier(.3, 0, .6, 1); }
+  16%  { transform: translateX(-108%) skewX(2.5deg); animation-timing-function: cubic-bezier(.45, 0, .3, 1); }
+  66%  { transform: translateX(3%) skewX(-4deg) scaleX(1.03); animation-timing-function: cubic-bezier(.3, 0, .5, 1); }
+  80%  { transform: translateX(-1.6%) skewX(2deg); animation-timing-function: ease-in-out; }
+  91%  { transform: translateX(0.6%) skewX(-0.8deg); animation-timing-function: ease-in-out; }
+  100% { transform: none; }
+}
+@keyframes r1-cur-close-r {
+  0%   { transform: translateX(102%) skewX(0deg); animation-timing-function: cubic-bezier(.3, 0, .6, 1); }
+  16%  { transform: translateX(108%) skewX(-2.5deg); animation-timing-function: cubic-bezier(.45, 0, .3, 1); }
+  66%  { transform: translateX(-3%) skewX(4deg) scaleX(1.03); animation-timing-function: cubic-bezier(.3, 0, .5, 1); }
+  80%  { transform: translateX(1.6%) skewX(-2deg); animation-timing-function: ease-in-out; }
+  91%  { transform: translateX(-0.6%) skewX(0.8deg); animation-timing-function: ease-in-out; }
+  100% { transform: none; }
+}
+@keyframes r1-cur-open-l {
+  0%   { transform: none; animation-timing-function: cubic-bezier(.3, 0, .6, 1); }
+  14%  { transform: translateX(2.5%) skewX(-2deg); animation-timing-function: cubic-bezier(.5, 0, .2, 1); }
+  100% { transform: translateX(-102%) skewX(5deg) scaleX(0.82); }
+}
+@keyframes r1-cur-open-r {
+  0%   { transform: none; animation-timing-function: cubic-bezier(.3, 0, .6, 1); }
+  14%  { transform: translateX(-2.5%) skewX(2deg); animation-timing-function: cubic-bezier(.5, 0, .2, 1); }
+  100% { transform: translateX(102%) skewX(-5deg) scaleX(0.82); }
+}
+/* the curtains are a simulated cloth now (canvas, r1-curtain.js); the CSS halves only serve the doors */
+.r1-curtain__cloth { position: absolute; inset: 0; width: 100%; height: 100%; display: none; }
+.r1-curtain.is-cloth .r1-curtain__cloth { display: block; }
+.r1-curtain.is-cloth .r1-curtain__half { display: none; }
