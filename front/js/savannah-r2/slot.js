@@ -12,7 +12,7 @@
 // their own art folder with window.SK_ASSET_ROOT.
 const ASSET_ROOT = window.SK_ASSET_ROOT || 'img/savannah-kings';
 const GAME_CODE = 'savannah-kings';
-const ART_V = 5;
+const ART_V = 7;
 
 // Codes are the contract with app/seed/savannah_kings.py.
 const SYMBOL_CODES = ['wild', 'scatter', 'paw', 'elephant', 'buffalo', 'leopard', 'zebra', 'a', 'k', 'q', 'j'];
@@ -823,7 +823,7 @@ const SPINE_POPUPS = {
   freeSpinsIntro: 'fs_intro', freeSpinsMore: 'fs_more', freeSpinsTotal: 'fs_total',
 };
 const POPUPS_DIR = `${ASSET_ROOT}/spine/popups`;
-const POPUPS_VERSION = '6';
+const POPUPS_VERSION = '8';
 const POPUP_BOX = { land: { x: -900, y: -430, width: 1800, height: 1100 }, port: { x: -640, y: -470, width: 1280, height: 1240 } };
 // Portrait: the side decor (shields, spears, tusks, coins …) moves in by this
 // much, so the popup can be fitted to a narrower box and drawn larger.
